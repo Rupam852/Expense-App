@@ -14,8 +14,8 @@ class BudgetScreen extends StatefulWidget {
 
 class _BudgetScreenState extends State<BudgetScreen> {
   final _limitController = TextEditingController();
-  String _selectedCategory = 'Food';
-  final _categories = ['Food', 'Travel', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Investment', 'Others'];
+  String _selectedCategory = 'Total Budget';
+  final _categories = ['Total Budget', 'Food', 'Travel', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Investment', 'Others'];
 
   @override
   void dispose() {
@@ -28,7 +28,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
       _selectedCategory = existingBudget.category;
       _limitController.text = existingBudget.amountLimit.toStringAsFixed(0);
     } else {
-      _selectedCategory = 'Food';
+      _selectedCategory = 'Total Budget';
       _limitController.clear();
     }
 
@@ -151,21 +151,34 @@ class _BudgetScreenState extends State<BudgetScreen> {
     // Load active budgets
     final activeBudgets = expenseProvider.budgets.where((b) => b.monthYear == currentMonthStr).toList();
 
-    // Map spending categories
+    // Find active Total Budget if any
+    Budget? totalBudgetRecord;
+    try {
+      totalBudgetRecord = activeBudgets.firstWhere((b) => b.category == 'Total Budget');
+    } catch (_) {
+      totalBudgetRecord = null;
+    }
+
+    // Filter out Total Budget from category lists
+    final categoryBudgets = activeBudgets.where((b) => b.category != 'Total Budget').toList();
+
+    // Map spending categories and compute total monthly spent
     final Map<String, double> spendingMap = {};
+    double totalMonthlySpent = 0.0;
     expenseProvider.expenses.where((e) =>
       !e.isDeleted && DateFormat('yyyy-MM').format(e.transactionDate) == currentMonthStr
     ).forEach((e) {
       spendingMap[e.category] = (spendingMap[e.category] ?? 0.0) + e.amount;
+      totalMonthlySpent += e.amount;
     });
 
-    double totalBudget = 0.0;
-    double totalSpentOnBudgets = 0.0;
+    double totalCategoryBudgetSum = 0.0;
+    double totalSpentOnCategoryBudgets = 0.0;
 
-    final List<Map<String, dynamic>> budgetList = activeBudgets.map((b) {
+    final List<Map<String, dynamic>> budgetList = categoryBudgets.map((b) {
       final spent = spendingMap[b.category] ?? 0.0;
-      totalBudget += b.amountLimit;
-      totalSpentOnBudgets += spent;
+      totalCategoryBudgetSum += b.amountLimit;
+      totalSpentOnCategoryBudgets += spent;
 
       double percent = 0.0;
       if (b.amountLimit > 0) {
@@ -179,8 +192,16 @@ class _BudgetScreenState extends State<BudgetScreen> {
       };
     }).toList();
 
-    // Overall metrics
-    final overallPercent = totalBudget > 0 ? (totalSpentOnBudgets / totalBudget) : 0.0;
+    // Overall metrics calculation (Fallback to category sum if explicit Total Budget is missing)
+    final double overallBudgetLimit = totalBudgetRecord != null 
+        ? totalBudgetRecord.amountLimit 
+        : totalCategoryBudgetSum;
+
+    final double overallSpent = totalBudgetRecord != null 
+        ? totalMonthlySpent 
+        : totalSpentOnCategoryBudgets;
+
+    final overallPercent = overallBudgetLimit > 0 ? (overallSpent / overallBudgetLimit) : 0.0;
 
     return Scaffold(
       appBar: AppBar(
@@ -197,65 +218,79 @@ class _BudgetScreenState extends State<BudgetScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. Overall Progress Gauge Card
-            Container(
-              padding: const EdgeInsets.all(20.0),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF181B22) : Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
+            // 1. Overall Progress Gauge Card (Tapping configures/edits the Total Budget)
+            GestureDetector(
+              onTap: () => _openSetBudgetSheet(existingBudget: totalBudgetRecord),
+              child: Container(
+                padding: const EdgeInsets.all(20.0),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF181B22) : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
+                  ),
                 ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'TOTAL BUDGET SAVINGS',
-                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 0.8),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '₹${totalSpentOnBudgets.toStringAsFixed(2)} spent',
-                          style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          'of ₹${totalBudget.toStringAsFixed(2)} total limit',
-                          style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
-                        ),
-                      ],
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            totalBudgetRecord != null ? 'TOTAL MONTHLY BUDGET' : 'COMBINED CATEGORY LIMITS',
+                            style: GoogleFonts.inter(
+                              fontSize: 10, 
+                              fontWeight: FontWeight.bold, 
+                              color: Theme.of(context).primaryColor, 
+                              letterSpacing: 0.8
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '₹${overallSpent.toStringAsFixed(2)} spent',
+                            style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            overallBudgetLimit > 0
+                                ? 'of ₹${overallBudgetLimit.toStringAsFixed(2)} limit (Tap to edit)'
+                                : 'Tap card to set monthly Total Budget',
+                            style: GoogleFonts.inter(
+                              fontSize: 12, 
+                              color: overallBudgetLimit > 0 ? Colors.grey : Theme.of(context).primaryColor.withOpacity(0.8),
+                              fontWeight: overallBudgetLimit > 0 ? FontWeight.normal : FontWeight.bold
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  
-                  // Circular visual indicator
-                  SizedBox(
-                    height: 64,
-                    width: 64,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        CircularProgressIndicator(
-                          value: overallPercent > 1.0 ? 1.0 : overallPercent,
-                          strokeWidth: 8,
-                          backgroundColor: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
-                          color: overallPercent >= 1.0
-                              ? const Color(0xFFEB5757)
-                              : overallPercent >= 0.8
-                                  ? const Color(0xFFF2C94C)
-                                  : const Color(0xFF00D09C),
-                        ),
-                        Text(
-                          '${(overallPercent * 100).toInt()}%',
-                          style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold),
-                        ),
-                      ],
+                    const SizedBox(width: 16),
+                    
+                    // Circular visual indicator
+                    SizedBox(
+                      height: 64,
+                      width: 64,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          CircularProgressIndicator(
+                            value: overallPercent > 1.0 ? 1.0 : overallPercent,
+                            strokeWidth: 8,
+                            backgroundColor: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
+                            color: overallPercent >= 1.0
+                                ? const Color(0xFFEB5757)
+                                : overallPercent >= 0.8
+                                    ? const Color(0xFFF2C94C)
+                                    : const Color(0xFF00D09C),
+                          ),
+                          Text(
+                            '${(overallPercent * 100).toInt()}%',
+                            style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 24),

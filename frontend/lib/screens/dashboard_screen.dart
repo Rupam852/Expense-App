@@ -158,6 +158,69 @@ class DashboardScreen extends StatelessWidget {
     }
   }
 
+  void _showEditProfileDialog(BuildContext context, UserProvider userProvider) {
+    final nameController = TextEditingController(text: userProvider.userProfile?['name'] ?? '');
+    final photoUrlController = TextEditingController(text: userProvider.userProfile?['photo_url'] ?? '');
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Edit Profile Details',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Display Name',
+                  hintText: 'Enter your name',
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: photoUrlController,
+                decoration: const InputDecoration(
+                  labelText: 'Profile Image URL',
+                  hintText: 'Paste image link (optional)',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final name = nameController.text.trim();
+                final photoUrl = photoUrlController.text.trim();
+                if (name.isNotEmpty) {
+                  await userProvider.updateProfile(
+                    name: name,
+                    photoUrl: photoUrl.isNotEmpty ? photoUrl : null,
+                  );
+                }
+                if (context.mounted) Navigator.of(context).pop();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Save Changes'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showSettingsDrawer(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -209,6 +272,13 @@ class DashboardScreen extends StatelessWidget {
                               ),
                             ],
                           ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.edit_outlined, color: Theme.of(context).primaryColor, size: 22),
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            _showEditProfileDialog(context, userProvider);
+                          },
                         ),
                       ],
                     ),
@@ -651,15 +721,23 @@ class DashboardScreen extends StatelessWidget {
                           const SnackBar(content: Text('Transaction deleted.')),
                         );
                       },
-                      child: Container(
-                        padding: const EdgeInsets.all(16.0),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF181B22) : Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => ExpenseEntryScreen(editExpense: exp),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(16.0),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF181B22) : Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
+                            ),
                           ),
-                        ),
                         child: Row(
                           children: [
                             // Category Icon Rounded Wrapper
@@ -740,6 +818,7 @@ class DashboardScreen extends StatelessWidget {
                           ],
                         ),
                       ),
+                     ),
                     );
                   },
                 ),

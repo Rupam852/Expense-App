@@ -261,6 +261,7 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
       },
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
+        max_tokens: 1000,
         messages: [
           {
             role: 'user',
@@ -417,6 +418,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
         },
         body: JSON.stringify({
           model: 'google/gemini-2.5-flash',
+          max_tokens: 2500,
           messages: [
             {
               role: 'user',
@@ -453,7 +455,9 @@ router.post('/import', upload.single('file'), async (req, res) => {
       });
 
       if (!response.ok) {
-        return res.status(500).json({ error: 'AI processing of statement PDF failed.' });
+        const errText = await response.text();
+        console.error('OpenRouter Statement API error response:', errText);
+        return res.status(500).json({ error: `AI processing of statement PDF failed: ${errText}` });
       }
 
       const data = await response.json();
