@@ -22,7 +22,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -34,6 +34,19 @@ class DatabaseHelper {
         await db.execute('ALTER TABLE budgets ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0');
       } catch (e) {
         print('Budgets migration error: $e');
+      }
+    }
+    if (oldVersion < 3) {
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS deleted_records (
+            id TEXT PRIMARY KEY,
+            table_name TEXT NOT NULL,
+            created_at TEXT NOT NULL
+          )
+        ''');
+      } catch (e) {
+        print('Deleted records migration error: $e');
       }
     }
   }
@@ -81,6 +94,15 @@ class DatabaseHelper {
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         is_synced INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    // 4. Deleted Records SQLite Table
+    await db.execute('''
+      CREATE TABLE deleted_records (
+        id TEXT PRIMARY KEY,
+        table_name TEXT NOT NULL,
+        created_at TEXT NOT NULL
       )
     ''');
   }
@@ -136,28 +158,25 @@ class DatabaseHelper {
     );
   }
 
-  // Soft delete for syncing safety
+  // Hard delete and log inside deleted_records sync queue
   Future<int> deleteExpense(String id) async {
     final db = await instance.database;
-    final expense = await getExpenseById(id);
-    if (expense != null) {
-      final updated = expense.copyWith(
-        isDeleted: true,
-        updatedAt: DateTime.now(),
-      );
-      final map = updated.toMap();
-      map['is_synced'] = 0; // Mark unsynced soft-deleted record
-      return await db.update(
-        'expenses',
-        map,
-        where: 'id = ?',
-        whereArgs: [id],
-      );
-    }
-    return 0;
+    await db.insert(
+      'deleted_records',
+      {
+        'id': id,
+        'table_name': 'expenses',
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    return await db.delete(
+      'expenses',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
-  // Hard delete for post-sync sync logs cleanup or direct wipe
   Future<int> hardDeleteExpense(String id) async {
     final db = await instance.database;
     return await db.delete(
@@ -217,24 +236,23 @@ class DatabaseHelper {
     );
   }
 
+  // Hard delete and log inside deleted_records sync queue
   Future<int> deleteBudget(String id) async {
     final db = await instance.database;
-    final budget = await getBudgetById(id);
-    if (budget != null) {
-      final updated = budget.copyWith(
-        isDeleted: true,
-        updatedAt: DateTime.now(),
-      );
-      final map = updated.toMap();
-      map['is_synced'] = 0; // Mark unsynced soft-deleted record
-      return await db.update(
-        'budgets',
-        map,
-        where: 'id = ?',
-        whereArgs: [id],
-      );
-    }
-    return 0;
+    await db.insert(
+      'deleted_records',
+      {
+        'id': id,
+        'table_name': 'budgets',
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    return await db.delete(
+      'budgets',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   // ================= PAYMENT DETAILS CRUD =================
@@ -254,6 +272,36 @@ class DatabaseHelper {
     final db = await instance.database;
     final result = await db.query('payment_details');
     return result.map((json) => PaymentDetail.fromMap(json)).toList();
+  }
+
+  // ================= DELETIONS QUEUE UTILITIES =================
+
+  Future<List<Map<String, dynamic>>> getUnsyncedDeletions() async {
+    final db = await instance.database;
+    return await db.query('deleted_records');
+  }
+
+  Future<void> clearSyncedDeletions(List<String> ids) async {
+    final db = await instance.database;
+    if (ids.isEmpty) return;
+    await db.delete(
+      'deleted_records',
+      where: 'id IN (${ids.map((_) => '?').join(', ')})',
+      whereArgs: ids,
+    );
+  }
+
+  Future<void> applyDownloadedDeletions(List<dynamic> deletions) async {
+    final db = await instance.database;
+    await db.transaction((txn) async {
+      for (final del in deletions) {
+        final id = del['id'] as String;
+        final tableName = del['table_name'] as String;
+        if (tableName == 'expenses' || tableName == 'budgets' || tableName == 'payment_details') {
+          await txn.delete(tableName, where: 'id = ?', whereArgs: [id]);
+        }
+      }
+    });
   }
 
   // ================= SYNCHRONIZATION QUEUE QUERY UTILITIES =================
@@ -368,6 +416,7 @@ class DatabaseHelper {
     await db.delete('expenses');
     await db.delete('budgets');
     await db.delete('payment_details');
+    await db.delete('deleted_records');
   }
 
   Future<void> close() async {

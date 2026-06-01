@@ -79,12 +79,31 @@ router.post('/', authenticateToken, async (req, res) => {
 // 3. Batch Synchronization Route (/expenses/sync)
 // Pushes SQLite edits (unsynced rows) in bulk, runs upserts, and retrieves all fresh remote changes.
 router.post('/sync', authenticateToken, async (req, res) => {
-  const { expenses = [], budgets = [], payment_details = [], last_sync_time } = req.body;
+  const { expenses = [], budgets = [], payment_details = [], deleted_records = [], last_sync_time } = req.body;
   const userId = req.user.userId;
 
   try {
     // Begin transaction for database integrity
     await query('BEGIN');
+
+    // 1. Process deletions uploaded by the client (Hard delete from active tables and log)
+    for (const del of deleted_records) {
+      if (del.table_name === 'expenses') {
+        await query('DELETE FROM expenses WHERE id = $1 AND user_id = $2', [del.id, userId]);
+      } else if (del.table_name === 'budgets') {
+        await query('DELETE FROM budgets WHERE id = $1 AND user_id = $2', [del.id, userId]);
+      } else if (del.table_name === 'payment_details') {
+        await query('DELETE FROM payment_details WHERE id = $1 AND user_id = $2', [del.id, userId]);
+      }
+
+      // Log in remote deleted_records queue for cross-device sync propagation
+      await query(
+        `INSERT INTO deleted_records (id, user_id, table_name) 
+         VALUES ($1, $2, $3) 
+         ON CONFLICT (id) DO NOTHING`,
+        [del.id, userId, del.table_name]
+      );
+    }
 
     // Sync Expenses
     for (const exp of expenses) {
@@ -164,16 +183,18 @@ router.post('/sync', authenticateToken, async (req, res) => {
     await query('COMMIT');
 
     // Retrieve all fresh updates made in the cloud since the last synchronization timestamp
-    let freshExpenses, freshBudgets, freshPayments;
+    let freshExpenses, freshBudgets, freshPayments, freshDeletions;
     
     if (last_sync_time) {
       freshExpenses = await query('SELECT * FROM expenses WHERE user_id = $1 AND updated_at > $2', [userId, last_sync_time]);
       freshBudgets = await query('SELECT * FROM budgets WHERE user_id = $1 AND updated_at > $2', [userId, last_sync_time]);
       freshPayments = await query('SELECT * FROM payment_details WHERE user_id = $1 AND updated_at > $2', [userId, last_sync_time]);
+      freshDeletions = await query('SELECT id, table_name FROM deleted_records WHERE user_id = $1 AND deleted_at > $2', [userId, last_sync_time]);
     } else {
       freshExpenses = await query('SELECT * FROM expenses WHERE user_id = $1', [userId]);
       freshBudgets = await query('SELECT * FROM budgets WHERE user_id = $1', [userId]);
       freshPayments = await query('SELECT * FROM payment_details WHERE user_id = $1', [userId]);
+      freshDeletions = await query('SELECT id, table_name FROM deleted_records WHERE user_id = $1', [userId]);
     }
 
     res.status(200).json({
@@ -181,7 +202,8 @@ router.post('/sync', authenticateToken, async (req, res) => {
       server_time: new Date().toISOString(),
       expenses: freshExpenses.rows,
       budgets: freshBudgets.rows,
-      payment_details: freshPayments.rows
+      payment_details: freshPayments.rows,
+      deleted_records: freshDeletions.rows
     });
   } catch (error) {
     await query('ROLLBACK');
