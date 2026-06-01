@@ -1,4 +1,4 @@
-package com.rupam.expense_app
+package com.example.groww_expense_tracker
 
 import io.flutter.embedding.android.FlutterActivity
 
