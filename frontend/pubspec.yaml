@@ -38,7 +38,7 @@ dependencies:
 
   # Sharing & File Operations
   share_plus: ^9.0.0
-  open_file_plus: ^3.4.1
+  open_file: ^3.5.11
 
   # Authentication
   firebase_core: ^2.27.0
