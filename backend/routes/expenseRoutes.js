@@ -105,8 +105,18 @@ router.post('/sync', authenticateToken, async (req, res) => {
       );
     }
 
-    // Sync Expenses
+    // Sync Expenses (LWW Conflict Resolution)
     for (const exp of expenses) {
+      const existing = await query('SELECT updated_at FROM expenses WHERE id = $1', [exp.id]);
+      if (existing.rows.length > 0) {
+        const existingTime = new Date(existing.rows[0].updated_at).getTime();
+        const incomingTime = new Date(exp.updated_at || new Date()).getTime();
+        if (incomingTime <= existingTime) {
+          console.log(`LWW: Skipping older update for expense ${exp.id}`);
+          continue;
+        }
+      }
+
       await query(
         `INSERT INTO expenses (id, user_id, amount, currency, category, description, transaction_date, receipt_url, is_recurring, recurrence_period, is_deleted, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, COALESCE($12::timestamp, NOW()))
@@ -138,8 +148,18 @@ router.post('/sync', authenticateToken, async (req, res) => {
       );
     }
 
-    // Sync Budgets
+    // Sync Budgets (LWW Conflict Resolution)
     for (const bud of budgets) {
+      const existing = await query('SELECT updated_at FROM budgets WHERE id = $1', [bud.id]);
+      if (existing.rows.length > 0) {
+        const existingTime = new Date(existing.rows[0].updated_at).getTime();
+        const incomingTime = new Date(bud.updated_at || new Date()).getTime();
+        if (incomingTime <= existingTime) {
+          console.log(`LWW: Skipping older update for budget ${bud.id}`);
+          continue;
+        }
+      }
+
       await query(
         `INSERT INTO budgets (id, user_id, category, amount_limit, month_year, is_deleted, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7::timestamp, NOW()))
