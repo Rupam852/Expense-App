@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
+import 'package:path_provider/path_provider.dart';
 import 'database_helper.dart';
 import 'api_service.dart';
 import 'sync_service.dart';
@@ -155,13 +157,36 @@ class ExpenseProvider with ChangeNotifier {
 
   // ================= SMART OCR & STATEMENT IMPORTING ACTIONS =================
 
-  // Smart receipt OCR scanner trigger
+  // Smart receipt OCR scanner trigger with fast image compressor
   Future<Map<String, dynamic>?> scanReceiptOCR(String imagePath) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      final result = await _apiService.scanReceipt(imagePath);
+      String finalPath = imagePath;
+      try {
+        final file = File(imagePath);
+        final bytes = await file.readAsBytes();
+        final image = img.decodeImage(bytes);
+        if (image != null) {
+          // Downscale to max 1024px width for highly legible text at minimal file size
+          final resized = img.copyResize(image, width: image.width > 1024 ? 1024 : image.width);
+          final compressedBytes = img.encodeJpg(resized, quality: 75);
+          
+          final tempDir = await getTemporaryDirectory();
+          final tempFile = File('${tempDir.path}/compressed_ocr.jpg');
+          await tempFile.writeAsBytes(compressedBytes);
+          finalPath = tempFile.path;
+          
+          final originalKB = bytes.lengthInBytes / 1024;
+          final compressedKB = compressedBytes.lengthInBytes / 1024;
+          print('OCR image compressed: ${originalKB.toStringAsFixed(1)} KB -> ${compressedKB.toStringAsFixed(1)} KB');
+        }
+      } catch (e) {
+        print('Image compressor bypassed: $e');
+      }
+
+      final result = await _apiService.scanReceipt(finalPath);
       if (result['success'] == true) {
         return result['data']; // Extracted JSON fields
       } else {

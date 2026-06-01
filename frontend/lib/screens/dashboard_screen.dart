@@ -1,7 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:csv/csv.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../services/expense_provider.dart';
 import '../services/user_provider.dart';
 import 'expense_entry_screen.dart';
@@ -86,6 +90,61 @@ class DashboardScreen extends StatelessWidget {
               : expenseProvider.syncErrorMessage ?? 'Failed to parse file.'),
             backgroundColor: success ? const Color(0xFF00D09C) : Colors.red,
           ),
+        );
+      }
+    }
+  }
+
+  void _triggerCSVExport(BuildContext context) async {
+    final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+    final expenses = expenseProvider.expenses;
+
+    if (expenses.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No transaction logs to export.')),
+      );
+      return;
+    }
+
+    try {
+      // 1. Prepare CSV headers and rows
+      final List<List<dynamic>> csvData = [
+        ['ID', 'Date', 'Category', 'Amount (INR)', 'Description', 'Recurring', 'Period'],
+        ...expenses.map((e) => [
+          e.id,
+          DateFormat('yyyy-MM-dd HH:mm:ss').format(e.transactionDate),
+          e.category,
+          e.amount,
+          e.description,
+          e.isRecurring ? 'Yes' : 'No',
+          e.recurrencePeriod,
+        ]),
+      ];
+
+      // 2. Convert to CSV string using package:csv
+      final csvString = const ListToCsvConverter().convert(csvData);
+
+      // 3. Save as local file in app documents directory
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/Expense_Statement_${DateTime.now().millisecondsSinceEpoch}.csv');
+      await file.writeAsString(csvString);
+
+      // 4. Trigger share sheet using share_plus
+      await Share.shareXFiles([XFile(file.path)], text: 'My Expense Tracker Statement');
+
+      if (mountedContext(context)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Spreadsheet statement generated and shared successfully!'),
+            backgroundColor: Color(0xFF00D09C),
+          ),
+        );
+      }
+    } catch (e) {
+      print('CSV export error: $e');
+      if (mountedContext(context)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -386,7 +445,7 @@ class DashboardScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              // 2. Rapid Actions Hub (Imports and OCR Scans)
+                          // 2. Rapid Actions Hub (Imports, OCR Scans, and CSV Statement Export)
               Row(
                 children: [
                   Expanded(
@@ -400,7 +459,7 @@ class DashboardScreen extends StatelessWidget {
                       },
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
                         decoration: BoxDecoration(
                           color: isDark ? const Color(0xFF181B22) : Colors.white,
                           borderRadius: BorderRadius.circular(16),
@@ -411,19 +470,19 @@ class DashboardScreen extends StatelessWidget {
                         child: Column(
                           children: [
                             CircleAvatar(
-                              radius: 20,
+                              radius: 18,
                               backgroundColor: const Color(0xFF00D09C).withOpacity(0.1),
-                              child: const Icon(Icons.document_scanner_outlined, color: Color(0xFF00D09C)),
+                              child: const Icon(Icons.document_scanner_outlined, color: Color(0xFF00D09C), size: 18),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 8),
                             Text(
-                              'Smart OCR Scan',
-                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold),
+                              'Smart OCR',
+                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Auto-read receipts',
-                              style: GoogleFonts.inter(fontSize: 10, color: Colors.grey),
+                              'Read receipts',
+                              style: GoogleFonts.inter(fontSize: 9, color: Colors.grey),
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -431,13 +490,13 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: InkWell(
                       onTap: () => _triggerFileImport(context),
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
                         decoration: BoxDecoration(
                           color: isDark ? const Color(0xFF181B22) : Colors.white,
                           borderRadius: BorderRadius.circular(16),
@@ -448,19 +507,56 @@ class DashboardScreen extends StatelessWidget {
                         child: Column(
                           children: [
                             CircleAvatar(
-                              radius: 20,
+                              radius: 18,
                               backgroundColor: Colors.blue.withOpacity(0.1),
-                              child: const Icon(Icons.file_upload_outlined, color: Colors.blue),
+                              child: const Icon(Icons.file_upload_outlined, color: Colors.blue, size: 18),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 8),
                             Text(
-                              'Import statement',
-                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold),
+                              'Import File',
+                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'XLSX / PDF Bank list',
-                              style: GoogleFonts.inter(fontSize: 10, color: Colors.grey),
+                              'XLSX / PDF Bank',
+                              style: GoogleFonts.inter(fontSize: 9, color: Colors.grey),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _triggerCSVExport(context),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF181B22) : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 18,
+                              backgroundColor: Colors.purple.withOpacity(0.1),
+                              child: const Icon(Icons.table_view_outlined, color: Colors.purple, size: 18),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Export CSV',
+                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Excel statement',
+                              style: GoogleFonts.inter(fontSize: 9, color: Colors.grey),
                               textAlign: TextAlign.center,
                             ),
                           ],

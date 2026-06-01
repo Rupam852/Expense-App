@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../services/expense_provider.dart';
 import 'dashboard_screen.dart';
 import 'budget_screen.dart';
 import 'analytics_screen.dart';
@@ -13,8 +15,32 @@ class MainNavigation extends StatefulWidget {
   State<MainNavigation> createState() => _MainNavigationState();
 }
 
-class _MainNavigationState extends State<MainNavigation> {
+class _MainNavigationState extends State<MainNavigation> with WidgetsBindingObserver {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Trigger quiet sync immediately upon startup to catch any offline edits
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<ExpenseProvider>(context, listen: false).triggerQuietSync();
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      print('App lifecyle: Resumed from background. Initiating fast quiet sync.');
+      Provider.of<ExpenseProvider>(context, listen: false).triggerQuietSync();
+    }
+  }
 
   final List<Widget> _screens = [
     const DashboardScreen(),

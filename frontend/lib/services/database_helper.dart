@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:encrypt/encrypt.dart' as enc;
 import '../models/expense.dart';
 import '../models/budget.dart';
 import '../models/payment_detail.dart';
@@ -7,6 +8,52 @@ import '../models/payment_detail.dart';
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
+
+  // AES-256 Symmetric key and IV setup (Pure Dart cryptography)
+  static final _encryptionKey = enc.Key.fromUtf8('groww_secure_app_salt_32_bytes_k'); // 32 characters
+  static final _encryptionIV = enc.IV.fromUtf8('groww_sec_iv_16b'); // 16 characters
+  static final _crypter = enc.Encrypter(enc.AES(_encryptionKey, mode: enc.AESMode.cbc));
+
+  static String encryptVal(String plainText) {
+    if (plainText.isEmpty) return plainText;
+    try {
+      final encrypted = _crypter.encrypt(plainText, iv: _encryptionIV);
+      return encrypted.base64;
+    } catch (e) {
+      print('Encryption error: $e');
+      return plainText;
+    }
+  }
+
+  static String decryptVal(String cipherText) {
+    if (cipherText.isEmpty) return cipherText;
+    try {
+      final decrypted = _crypter.decrypt64(cipherText, iv: _encryptionIV);
+      return decrypted;
+    } catch (e) {
+      // Return plaintext if decryption fails (self-healing for legacy/plaintext rows)
+      return cipherText;
+    }
+  }
+
+  static List<Map<String, dynamic>> decryptExpenseMaps(List<Map<String, dynamic>> result) {
+    return result.map((row) {
+      final decryptedRow = Map<String, dynamic>.from(row);
+      decryptedRow['amount'] = decryptVal(row['amount']?.toString() ?? '');
+      decryptedRow['category'] = decryptVal(row['category']?.toString() ?? 'Others');
+      decryptedRow['description'] = decryptVal(row['description']?.toString() ?? '');
+      return decryptedRow;
+    }).toList();
+  }
+
+  static List<Map<String, dynamic>> decryptBudgetMaps(List<Map<String, dynamic>> result) {
+    return result.map((row) {
+      final decryptedRow = Map<String, dynamic>.from(row);
+      decryptedRow['category'] = decryptVal(row['category']?.toString() ?? 'Others');
+      decryptedRow['amount_limit'] = decryptVal(row['amount_limit']?.toString() ?? '0.0');
+      return decryptedRow;
+    }).toList();
+  }
 
   DatabaseHelper._init();
 
@@ -113,6 +160,9 @@ class DatabaseHelper {
     final db = await instance.database;
     final map = expense.toMap();
     map['is_synced'] = 0; // Unsynced
+    map['amount'] = encryptVal(map['amount'].toString());
+    map['category'] = encryptVal(map['category'].toString());
+    map['description'] = encryptVal(map['description'].toString());
     return await db.insert(
       'expenses',
       map,
@@ -127,7 +177,8 @@ class DatabaseHelper {
       where: 'is_deleted = 0',
       orderBy: 'transaction_date DESC',
     );
-    return result.map((json) => Expense.fromMap(json)).toList();
+    final decrypted = decryptExpenseMaps(result);
+    return decrypted.map((json) => Expense.fromMap(json)).toList();
   }
 
   Future<Expense?> getExpenseById(String id) async {
@@ -139,7 +190,8 @@ class DatabaseHelper {
     );
 
     if (maps.isNotEmpty) {
-      return Expense.fromMap(maps.first);
+      final decrypted = decryptExpenseMaps(maps);
+      return Expense.fromMap(decrypted.first);
     }
     return null;
   }
@@ -149,6 +201,9 @@ class DatabaseHelper {
     final map = expense.toMap();
     map['is_synced'] = 0; // Set to unsynced so background sync is triggered
     map['updated_at'] = DateTime.now().toIso8601String();
+    map['amount'] = encryptVal(map['amount'].toString());
+    map['category'] = encryptVal(map['category'].toString());
+    map['description'] = encryptVal(map['description'].toString());
 
     return await db.update(
       'expenses',
@@ -192,6 +247,8 @@ class DatabaseHelper {
     final db = await instance.database;
     final map = budget.toMap();
     map['is_synced'] = 0;
+    map['category'] = encryptVal(map['category'].toString());
+    map['amount_limit'] = encryptVal(map['amount_limit'].toString());
     return await db.insert(
       'budgets',
       map,
@@ -206,7 +263,8 @@ class DatabaseHelper {
       where: 'is_deleted = 0',
       orderBy: 'month_year DESC',
     );
-    return result.map((json) => Budget.fromMap(json)).toList();
+    final decrypted = decryptBudgetMaps(result);
+    return decrypted.map((json) => Budget.fromMap(json)).toList();
   }
 
   Future<Budget?> getBudgetById(String id) async {
@@ -217,7 +275,8 @@ class DatabaseHelper {
       whereArgs: [id],
     );
     if (maps.isNotEmpty) {
-      return Budget.fromMap(maps.first);
+      final decrypted = decryptBudgetMaps(maps);
+      return Budget.fromMap(decrypted.first);
     }
     return null;
   }
@@ -227,6 +286,8 @@ class DatabaseHelper {
     final map = budget.toMap();
     map['is_synced'] = 0;
     map['updated_at'] = DateTime.now().toIso8601String();
+    map['category'] = encryptVal(map['category'].toString());
+    map['amount_limit'] = encryptVal(map['amount_limit'].toString());
 
     return await db.update(
       'budgets',
@@ -366,6 +427,9 @@ class DatabaseHelper {
         } else {
           final map = exp.toMap();
           map['is_synced'] = 1; // Mark as clean synced
+          map['amount'] = encryptVal(map['amount'].toString());
+          map['category'] = encryptVal(map['category'].toString());
+          map['description'] = encryptVal(map['description'].toString());
           await txn.insert(
             'expenses',
             map,
@@ -385,6 +449,8 @@ class DatabaseHelper {
         } else {
           final map = bud.toMap();
           map['is_synced'] = 1;
+          map['category'] = encryptVal(map['category'].toString());
+          map['amount_limit'] = encryptVal(map['amount_limit'].toString());
           await txn.insert(
             'budgets',
             map,
