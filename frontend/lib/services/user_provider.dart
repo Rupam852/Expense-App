@@ -15,12 +15,14 @@ class UserProvider with ChangeNotifier {
   bool _isLoading = false;
   bool _biometricsEnabled = false;
   String? _errorMessage;
+  String? _userGeminiApiKey;
 
   Map<String, dynamic>? get userProfile => _userProfile;
   bool get isAuthenticated => _isAuthenticated;
   bool get isLoading => _isLoading;
   bool get biometricsEnabled => _biometricsEnabled;
   String? get errorMessage => _errorMessage;
+  String? get userGeminiApiKey => _userGeminiApiKey;
 
   fb.FirebaseAuth? _firebaseAuth;
   GoogleSignIn? _googleSignIn;
@@ -43,6 +45,7 @@ class UserProvider with ChangeNotifier {
     // Load cached profile instantly for fast visual boot
     try {
       final prefs = await SharedPreferences.getInstance();
+      _userGeminiApiKey = prefs.getString('user_gemini_api_key');
       final cachedProfileStr = prefs.getString('cached_user_profile');
       if (cachedProfileStr != null) {
         _userProfile = Map<String, dynamic>.from(json.decode(cachedProfileStr));
@@ -379,6 +382,23 @@ class UserProvider with ChangeNotifier {
     _isAuthenticated = true;
     await _saveProfileLocally();
     notifyListeners();
+  }
+
+  // Save/Clear User Custom Gemini API Key
+  Future<void> saveUserGeminiApiKey(String? key) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (key == null || key.trim().isEmpty) {
+        _userGeminiApiKey = null;
+        await prefs.remove('user_gemini_api_key');
+      } else {
+        _userGeminiApiKey = key.trim();
+        await prefs.setString('user_gemini_api_key', key.trim());
+      }
+      notifyListeners();
+    } catch (e) {
+      print('Error saving custom Gemini API key: $e');
+    }
   }
 
   // 7. Clear authentication states
