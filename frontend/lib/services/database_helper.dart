@@ -370,12 +370,27 @@ class DatabaseHelper {
   // Fetch all items not yet synced
   Future<List<Map<String, dynamic>>> getUnsyncedExpenses() async {
     final db = await instance.database;
-    return await db.query('expenses', where: 'is_synced = 0');
+    final result = await db.query('expenses', where: 'is_synced = 0');
+    final decrypted = decryptExpenseMaps(result);
+    return decrypted.map((row) {
+      final newRow = Map<String, dynamic>.from(row);
+      newRow['amount'] = double.tryParse(row['amount']?.toString() ?? '') ?? 0.0;
+      newRow['is_recurring'] = row['is_recurring'] == 1 || row['is_recurring'] == true;
+      newRow['is_deleted'] = row['is_deleted'] == 1 || row['is_deleted'] == true;
+      return newRow;
+    }).toList();
   }
 
   Future<List<Map<String, dynamic>>> getUnsyncedBudgets() async {
     final db = await instance.database;
-    return await db.query('budgets', where: 'is_synced = 0');
+    final result = await db.query('budgets', where: 'is_synced = 0');
+    final decrypted = decryptBudgetMaps(result);
+    return decrypted.map((row) {
+      final newRow = Map<String, dynamic>.from(row);
+      newRow['amount_limit'] = double.tryParse(row['amount_limit']?.toString() ?? '') ?? 0.0;
+      newRow['is_deleted'] = row['is_deleted'] == 1 || row['is_deleted'] == true;
+      return newRow;
+    }).toList();
   }
 
   Future<List<Map<String, dynamic>>> getUnsyncedPaymentDetails() async {

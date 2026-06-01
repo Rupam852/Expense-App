@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import 'api_service.dart';
 import 'biometric_service.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
@@ -38,6 +39,18 @@ class UserProvider with ChangeNotifier {
     }
 
     _biometricsEnabled = await _biometricService.isBiometricsEnabled();
+
+    // Load cached profile instantly for fast visual boot
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedProfileStr = prefs.getString('cached_user_profile');
+      if (cachedProfileStr != null) {
+        _userProfile = Map<String, dynamic>.from(json.decode(cachedProfileStr));
+        _isAuthenticated = true;
+      }
+    } catch (e) {
+      print('Error restoring cached profile: $e');
+    }
     
     // Check if we have an active JWT stored already (keeps user logged in)
     final token = await _apiService.getToken();
@@ -49,12 +62,25 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // Local caching helper
+  Future<void> _saveProfileLocally() async {
+    if (_userProfile != null) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_user_profile', json.encode(_userProfile));
+      } catch (e) {
+        print('Error saving profile locally: $e');
+      }
+    }
+  }
+
   // Quiet profile fetcher to sync database modifications
   Future<void> _fetchProfileQuietly() async {
     final result = await _fetchProfileDetails();
     if (result != null) {
       _userProfile = result;
       _isAuthenticated = true;
+      await _saveProfileLocally();
       notifyListeners();
     } else {
       // Token is stale or backend is down, we remain logged in locally (offline first) but log trace
@@ -94,6 +120,7 @@ class UserProvider with ChangeNotifier {
       if (result['success'] == true) {
         _userProfile = result['user'];
         _isAuthenticated = true;
+        await _saveProfileLocally();
         _isLoading = false;
         notifyListeners();
         return true;
@@ -136,6 +163,7 @@ class UserProvider with ChangeNotifier {
       if (result['success'] == true) {
         _userProfile = result['user'];
         _isAuthenticated = true;
+        await _saveProfileLocally();
         _isLoading = false;
         notifyListeners();
         return true;
@@ -201,6 +229,7 @@ class UserProvider with ChangeNotifier {
       if (result['success'] == true) {
         _userProfile = result['user'];
         _isAuthenticated = true;
+        await _saveProfileLocally();
         _isLoading = false;
         notifyListeners();
         return true;
@@ -255,31 +284,46 @@ class UserProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
+    // Instantly update local state to avoid network lag or offline delays!
+    if (_userProfile != null) {
+      final updated = Map<String, dynamic>.from(_userProfile!);
+      updated['name'] = name;
+      if (photoUrl != null) {
+        updated['photo_url'] = photoUrl;
+      }
+      _userProfile = updated;
+      await _saveProfileLocally();
+      notifyListeners();
+    }
+
     try {
+      // Synchronize changes quietly to remote servers
       final response = await _apiService.register(
         email: _userProfile?['email'] ?? '',
         name: name,
         photoUrl: photoUrl,
       ); // Falls back to upsert updates
 
-      // Alternatively update via /auth/profile
       final token = await _apiService.getToken();
-      if (token == null) return false;
-
-      final res = await httpPutProfile(name: name, photoUrl: photoUrl);
-      if (res != null) {
-        _userProfile = res;
+      if (token == null) {
         _isLoading = false;
         notifyListeners();
         return true;
       }
+
+      final res = await httpPutProfile(name: name, photoUrl: photoUrl);
+      if (res != null) {
+        _userProfile = res;
+        await _saveProfileLocally();
+      }
       _isLoading = false;
       notifyListeners();
-      return false;
+      return true;
     } catch (e) {
+      print('Quiet profile server update deferred (offline active): $e');
       _isLoading = false;
       notifyListeners();
-      return false;
+      return true; // Return true as offline update is complete
     }
   }
 
@@ -325,7 +369,7 @@ class UserProvider with ChangeNotifier {
   }
 
   // Guest Bypass Login (Enables immediate usage without backend connections)
-  void enterAsGuest() {
+  void enterAsGuest() async {
     _userProfile = {
       'id': 'guest-user-uuid',
       'email': 'guest@expensetracker.local',
@@ -333,6 +377,7 @@ class UserProvider with ChangeNotifier {
       'photo_url': null,
     };
     _isAuthenticated = true;
+    await _saveProfileLocally();
     notifyListeners();
   }
 
@@ -351,6 +396,10 @@ class UserProvider with ChangeNotifier {
     } catch (_) {}
 
     await _apiService.deleteToken();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('cached_user_profile');
+    } catch (_) {}
     _userProfile = null;
     _isAuthenticated = false;
     _isLoading = false;
