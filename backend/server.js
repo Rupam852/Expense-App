@@ -79,4 +79,16 @@ const startServer = async () => {
   }
 };
 
+// 10-Minute Self-Pinging Cron Job to prevent Render instance sleeping
+const pingSelf = () => {
+  const selfUrl = 'https://expense-tracker-backend-5pc1.onrender.com/';
+  console.log(`[Cron Job] Pinging self at ${selfUrl} to stay warm...`);
+  fetch(selfUrl)
+    .then(res => console.log(`[Cron Job] Ping response: ${res.status}`))
+    .catch(err => console.error(`[Cron Job] Ping failed:`, err.message));
+};
+
+// Ping every 10 minutes (600,000 milliseconds)
+setInterval(pingSelf, 10 * 60 * 1000);
+
 startServer();
