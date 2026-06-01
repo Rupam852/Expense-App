@@ -221,6 +221,147 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
+  void _showGeminiKeyDialog(BuildContext context, UserProvider userProvider) {
+    final keyController = TextEditingController(text: userProvider.userGeminiApiKey ?? '');
+    bool isObscured = true;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final hasKey = userProvider.userGeminiApiKey != null && userProvider.userGeminiApiKey!.isNotEmpty;
+            return AlertDialog(
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                ),
+              ),
+              title: Row(
+                children: [
+                  Icon(Icons.psychology_outlined, color: Theme.of(context).primaryColor, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Google AI Studio Key',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Apna personal free Gemini API key enter karein. Isse transaction scan aur statement import directly aapke key se free mein chalenge.',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: keyController,
+                    obscureText: isObscured,
+                    style: GoogleFonts.inter(fontSize: 14),
+                    decoration: InputDecoration(
+                      labelText: 'Gemini API Key',
+                      labelStyle: TextStyle(color: Theme.of(context).primaryColor),
+                      hintText: 'AIzaSy...',
+                      filled: true,
+                      fillColor: Theme.of(context).primaryColor.withOpacity(0.03),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          isObscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                          size: 20,
+                        ),
+                        onPressed: () => setState(() => isObscured = !isObscured),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SelectableText(
+                    'Key nahi hai? Free mein generate karein:\naistudio.google.com',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Theme.of(context).primaryColor,
+                      fontWeight: FontWeight.w600,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+              actionsPadding: const EdgeInsets.all(16),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(
+                    'Cancel',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                if (hasKey)
+                  TextButton(
+                    onPressed: () async {
+                      await userProvider.saveUserGeminiApiKey(null);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Custom API Key cleared successfully!')),
+                        );
+                        Navigator.of(context).pop();
+                      }
+                    },
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    child: Text(
+                      'Clear Key',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final keyVal = keyController.text.trim();
+                    await userProvider.saveUserGeminiApiKey(keyVal.isEmpty ? null : keyVal);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            keyVal.isEmpty
+                                ? 'Switched back to shared server key!'
+                                : 'Custom Gemini API Key saved successfully!',
+                          ),
+                        ),
+                      );
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text(
+                    'Save Key',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showSettingsDrawer(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -298,6 +439,23 @@ class DashboardScreen extends StatelessWidget {
                             SnackBar(content: Text(userProvider.errorMessage ?? 'Failed to enable biometrics.')),
                           );
                         }
+                      },
+                    ),
+                    
+                    // Custom Gemini API Key Setting Row
+                    ListTile(
+                      leading: Icon(Icons.vpn_key_outlined, color: Theme.of(context).primaryColor),
+                      title: const Text('Google AI Studio API Key'),
+                      subtitle: Text(
+                        userProvider.userGeminiApiKey != null && userProvider.userGeminiApiKey!.isNotEmpty
+                            ? 'Custom API Key active (Free Gemini processing)'
+                            : 'Using shared server (OpenRouter fallback)',
+                        style: GoogleFonts.inter(fontSize: 12),
+                      ),
+                      trailing: const Icon(Icons.chevron_right, size: 20),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        _showGeminiKeyDialog(context, userProvider);
                       },
                     ),
                     

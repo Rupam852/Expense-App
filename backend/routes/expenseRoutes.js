@@ -239,28 +239,43 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
   }
 
   try {
+    const userGeminiKey = req.headers['x-user-gemini-key'];
     const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: 'OpenRouter API key is not configured.' });
+
+    let apiEndpoint = 'https://openrouter.ai/api/v1/chat/completions';
+    let apiAuthHeader = `Bearer ${apiKey}`;
+    let apiModel = 'google/gemini-2.5-flash';
+    let extraHeaders = {
+      'HTTP-Referer': 'https://github.com/Rupam852/Expense-App',
+      'X-Title': 'Expense Tracker App'
+    };
+
+    if (userGeminiKey) {
+      console.log('Using User Custom Google AI Studio Gemini API Key for receipt scanning!');
+      apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+      apiAuthHeader = `Bearer ${userGeminiKey}`;
+      apiModel = 'gemini-2.5-flash';
+      extraHeaders = {};
+    } else if (!apiKey) {
+      return res.status(500).json({ error: 'Server AI key is not configured and no custom User key was provided.' });
     }
 
     // Convert file buffer to base64
     const base64Image = req.file.buffer.toString('base64');
     const mimeType = req.file.mimetype;
 
-    console.log(`Sending receipt image to OpenRouter using Gemini 2.5 Flash (${req.file.size} bytes)...`);
+    console.log(`Sending receipt image to AI Endpoint (${apiEndpoint}) using model ${apiModel} (${req.file.size} bytes)...`);
 
-    // Call OpenRouter with base64 image data
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    // Call AI Endpoint with base64 image data
+    const response = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': apiAuthHeader,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://github.com/Rupam852/Expense-App',
-        'X-Title': 'Expense Tracker App'
+        ...extraHeaders
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: apiModel,
         max_tokens: 1000,
         messages: [
           {
@@ -400,24 +415,39 @@ router.post('/import', upload.single('file'), async (req, res) => {
         return res.status(400).json({ error: 'Uploaded PDF file has no readable text.' });
       }
 
-      console.log(`Parsing PDF text (${textContent.length} chars) using Gemini 2.5 Flash via OpenRouter...`);
+      console.log(`Parsing PDF text (${textContent.length} chars) using Gemini...`);
 
+      const userGeminiKey = req.headers['x-user-gemini-key'];
       const apiKey = process.env.OPENROUTER_API_KEY;
-      if (!apiKey) {
-        return res.status(500).json({ error: 'OpenRouter API key is not configured.' });
+
+      let apiEndpoint = 'https://openrouter.ai/api/v1/chat/completions';
+      let apiAuthHeader = `Bearer ${apiKey}`;
+      let apiModel = 'google/gemini-2.5-flash';
+      let extraHeaders = {
+        'HTTP-Referer': 'https://github.com/Rupam852/Expense-App',
+        'X-Title': 'Expense Tracker App'
+      };
+
+      if (userGeminiKey) {
+        console.log('Using User Custom Google AI Studio Gemini API Key for statement parsing!');
+        apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+        apiAuthHeader = `Bearer ${userGeminiKey}`;
+        apiModel = 'gemini-2.5-flash';
+        extraHeaders = {};
+      } else if (!apiKey) {
+        return res.status(500).json({ error: 'Server AI key is not configured and no custom User key was provided.' });
       }
 
       // We send the PDF text content directly to the LLM to parse it into an array of structured expenses!
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': apiAuthHeader,
           'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://github.com/Rupam852/Expense-App',
-          'X-Title': 'Expense Tracker App'
+          ...extraHeaders
         },
         body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
+          model: apiModel,
           max_tokens: 2500,
           messages: [
             {

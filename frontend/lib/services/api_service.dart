@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // Standard cloud server URL deployed on Render
@@ -150,6 +151,17 @@ class ApiService {
         request.headers['Authorization'] = 'Bearer $token';
       }
 
+      // Check for user-defined custom Gemini API key
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final userKey = prefs.getString('user_gemini_api_key');
+        if (userKey != null && userKey.trim().isNotEmpty) {
+          request.headers['x-user-gemini-key'] = userKey.trim();
+        }
+      } catch (err) {
+        print('Error reading user_gemini_api_key: $err');
+      }
+
       request.files.add(
         await http.MultipartFile.fromPath('receipt', imagePath),
       );
@@ -176,6 +188,17 @@ class ApiService {
 
       if (token != null) {
         request.headers['Authorization'] = 'Bearer $token';
+      }
+
+      // Check for user-defined custom Gemini API key
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final userKey = prefs.getString('user_gemini_api_key');
+        if (userKey != null && userKey.trim().isNotEmpty) {
+          request.headers['x-user-gemini-key'] = userKey.trim();
+        }
+      } catch (err) {
+        print('Error reading user_gemini_api_key: $err');
       }
 
       request.files.add(
