@@ -104,22 +104,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // App Icon / Logo Accent
-                  Icon(
-                    Icons.account_balance_wallet_rounded,
-                    size: 64,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                  const SizedBox(height: 16),
+                  // App Icon / Logo Accent (Custom Theme-Adaptive AppLogo Widget)
+                  const AppLogo(size: 72),
+                  const SizedBox(height: 20),
                   
                   // App Title
                   Text(
-                    'EXPENSE TRACKER',
+                    'GROWWFLOW',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.outfit(
-                      fontSize: 28,
+                      fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 1.5,
+                      letterSpacing: 2.0,
                       color: Theme.of(context).primaryColor,
                     ),
                   ),
@@ -317,6 +313,44 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// Premium, Minimalist, Theme-Adaptive AppLogo Widget
+class AppLogo extends StatelessWidget {
+  final double size;
+  const AppLogo({super.key, this.size = 64});
+
+  @override
+  Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).primaryColor;
+    
+    return Center(
+      child: Container(
+        height: size,
+        width: size,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [primaryColor, primaryColor.withOpacity(0.75)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(size * 0.28),
+          boxShadow: [
+            BoxShadow(
+              color: primaryColor.withOpacity(0.25),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Icon(
+          Icons.show_chart_rounded, // Groww-style upward trend stock chart
+          color: Colors.white,
+          size: size * 0.55,
         ),
       ),
     );
