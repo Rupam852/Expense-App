@@ -6,8 +6,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
 
 class ApiService {
-  // Use http://10.0.2.2:5000 for Android Emulator loopback, or http://localhost:5000 for iOS
-  static const String baseUrl = 'http://10.0.2.2:5000';
+  // Standard cloud server URL deployed on Render
+  static const String baseUrl = 'https://expense-tracker-backend-5pc1.onrender.com';
   
   static final ApiService instance = ApiService._init();
   final _secureStorage = const FlutterSecureStorage();
