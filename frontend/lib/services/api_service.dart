@@ -113,6 +113,7 @@ class ApiService {
     required List<Map<String, dynamic>> expenses,
     required List<Map<String, dynamic>> budgets,
     required List<Map<String, dynamic>> paymentDetails,
+    required List<Map<String, dynamic>> deletedRecords,
     String? lastSyncTime,
   }) async {
     try {
@@ -124,6 +125,7 @@ class ApiService {
           'expenses': expenses,
           'budgets': budgets,
           'payment_details': paymentDetails,
+          'deleted_records': deletedRecords,
           if (lastSyncTime != null) 'last_sync_time': lastSyncTime,
         }),
       );

@@ -82,6 +82,16 @@ export const initDB = async () => {
       );
     `);
 
+    // 5. Deleted Records Queue Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS deleted_records (
+        id VARCHAR(36) PRIMARY KEY,
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        table_name VARCHAR(50) NOT NULL,
+        deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     console.log('Database tables successfully verified/created!');
   } catch (error) {
     console.error('Error initializing database:', error);
