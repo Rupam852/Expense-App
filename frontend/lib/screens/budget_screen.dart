@@ -23,7 +23,15 @@ class _BudgetScreenState extends State<BudgetScreen> {
     super.dispose();
   }
 
-  void _openSetBudgetSheet() {
+  void _openSetBudgetSheet({Budget? existingBudget}) {
+    if (existingBudget != null) {
+      _selectedCategory = existingBudget.category;
+      _limitController.text = existingBudget.amountLimit.toStringAsFixed(0);
+    } else {
+      _selectedCategory = 'Food';
+      _limitController.clear();
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -31,6 +39,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
+        final isEditing = existingBudget != null;
         return Padding(
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -43,12 +52,14 @@ class _BudgetScreenState extends State<BudgetScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Set Category Budget',
+                isEditing ? 'Edit Category Budget' : 'Set Category Budget',
                 style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text(
-                'Plan monthly budget constraints to avoid overspending alerts',
+                isEditing
+                    ? 'Update monthly budget constraints for this category'
+                    : 'Plan monthly budget constraints to avoid overspending alerts',
                 style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
               ),
               const SizedBox(height: 20),
@@ -58,7 +69,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 value: _selectedCategory,
                 decoration: const InputDecoration(labelText: 'Select Category'),
                 items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                onChanged: (val) {
+                onChanged: isEditing ? null : (val) {
                   if (val != null) {
                     setState(() {
                       _selectedCategory = val;
@@ -76,6 +87,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   hintText: '0.00',
                   labelText: 'Monthly Spending Limit (INR)',
                 ),
+                autofocus: true,
               ),
               const SizedBox(height: 24),
 
@@ -102,8 +114,26 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Save Budget', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: Text(isEditing ? 'Update Budget' : 'Save Budget', style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
+              if (isEditing) ...[
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+                    await expenseProvider.deleteBudget(existingBudget.id);
+                    _limitController.clear();
+                    if (context.mounted) Navigator.of(context).pop();
+                  },
+                  icon: const Icon(Icons.delete_outline, color: Color(0xFFEB5757)),
+                  label: const Text('Delete Budget Limit', style: TextStyle(color: Color(0xFFEB5757), fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: const BorderSide(color: Color(0xFFEB5757), width: 1.5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
               const SizedBox(height: 24),
             ],
           ),
@@ -296,40 +326,48 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
                   final double remaining = budget.amountLimit - spent;
 
-                  return Container(
-                    padding: const EdgeInsets.all(16.0),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF181B22) : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Category + Amounts
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              budget.category,
-                              style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
-                            ),
-                            Row(
-                              children: [
-                                Text(
-                                  '₹${spent.toStringAsFixed(0)}',
-                                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
-                                ),
-                                Text(
-                                  ' / ₹${budget.amountLimit.toStringAsFixed(0)}',
-                                  style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                          ],
+                  return GestureDetector(
+                    onTap: () => _openSetBudgetSheet(existingBudget: budget),
+                    child: Container(
+                      padding: const EdgeInsets.all(16.0),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF181B22) : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
                         ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Category + Amounts
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    budget.category,
+                                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Icon(Icons.edit_outlined, size: 14, color: Colors.grey),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  Text(
+                                    '₹${spent.toStringAsFixed(0)}',
+                                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
+                                  ),
+                                  Text(
+                                    ' / ₹${budget.amountLimit.toStringAsFixed(0)}',
+                                    style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         const SizedBox(height: 12),
 
                         // Progress bar with visual alerts
@@ -393,7 +431,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
                         ),
                       ],
                     ),
-                  );
+                  ),
+                );
                 },
               ),
           ],

@@ -61,10 +61,14 @@ export const initDB = async () => {
         category VARCHAR(50) NOT NULL,
         amount_limit NUMERIC(12, 2) NOT NULL,
         month_year VARCHAR(7) NOT NULL, -- Format: YYYY-MM
+        is_deleted BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    // Run schema migrations for users and budgets
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) UNIQUE;`);
+    await query(`ALTER TABLE budgets ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;`);
 
     // 4. Payment Details Table
     await query(`

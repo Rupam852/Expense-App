@@ -22,9 +22,20 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
+  }
+
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      try {
+        await db.execute('ALTER TABLE budgets ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0');
+      } catch (e) {
+        print('Budgets migration error: $e');
+      }
+    }
   }
 
   Future<void> _createDB(Database db, int version) async {
@@ -56,6 +67,7 @@ class DatabaseHelper {
         month_year TEXT NOT NULL,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
         is_synced INTEGER NOT NULL DEFAULT 0
       )
     ''');
@@ -170,8 +182,25 @@ class DatabaseHelper {
 
   Future<List<Budget>> getBudgets() async {
     final db = await instance.database;
-    final result = await db.query('budgets', orderBy: 'month_year DESC');
+    final result = await db.query(
+      'budgets',
+      where: 'is_deleted = 0',
+      orderBy: 'month_year DESC',
+    );
     return result.map((json) => Budget.fromMap(json)).toList();
+  }
+
+  Future<Budget?> getBudgetById(String id) async {
+    final db = await instance.database;
+    final maps = await db.query(
+      'budgets',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (maps.isNotEmpty) {
+      return Budget.fromMap(maps.first);
+    }
+    return null;
   }
 
   Future<int> updateBudget(Budget budget) async {
@@ -186,6 +215,26 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [budget.id],
     );
+  }
+
+  Future<int> deleteBudget(String id) async {
+    final db = await instance.database;
+    final budget = await getBudgetById(id);
+    if (budget != null) {
+      final updated = budget.copyWith(
+        isDeleted: true,
+        updatedAt: DateTime.now(),
+      );
+      final map = updated.toMap();
+      map['is_synced'] = 0; // Mark unsynced soft-deleted record
+      return await db.update(
+        'budgets',
+        map,
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    }
+    return 0;
   }
 
   // ================= PAYMENT DETAILS CRUD =================
@@ -283,13 +332,17 @@ class DatabaseHelper {
     final db = await instance.database;
     await db.transaction((txn) async {
       for (final bud in budgets) {
-        final map = bud.toMap();
-        map['is_synced'] = 1;
-        await txn.insert(
-          'budgets',
-          map,
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
+        if (bud.isDeleted) {
+          await txn.delete('budgets', where: 'id = ?', whereArgs: [bud.id]);
+        } else {
+          final map = bud.toMap();
+          map['is_synced'] = 1;
+          await txn.insert(
+            'budgets',
+            map,
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
       }
     });
   }

@@ -26,7 +26,8 @@ router.get('/summary', authenticateToken, async (req, res) => {
       `SELECT category, amount_limit 
        FROM budgets 
        WHERE user_id = $1 
-         AND month_year = $2`,
+         AND month_year = $2
+         AND is_deleted = FALSE`,
       [userId, currentMonthYear]
     );
 
