@@ -122,12 +122,13 @@ router.post('/sync', authenticateToken, async (req, res) => {
     // Sync Budgets
     for (const bud of budgets) {
       await query(
-        `INSERT INTO budgets (id, user_id, category, amount_limit, month_year, updated_at)
-         VALUES ($1, $2, $3, $4, $5, COALESCE($6::timestamp, NOW()))
+        `INSERT INTO budgets (id, user_id, category, amount_limit, month_year, is_deleted, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7::timestamp, NOW()))
          ON CONFLICT (id) DO UPDATE 
          SET category = EXCLUDED.category,
              amount_limit = EXCLUDED.amount_limit,
              month_year = EXCLUDED.month_year,
+             is_deleted = EXCLUDED.is_deleted,
              updated_at = NOW()`,
         [
           bud.id,
@@ -135,6 +136,7 @@ router.post('/sync', authenticateToken, async (req, res) => {
           bud.category,
           bud.amount_limit,
           bud.month_year,
+          bud.is_deleted === 1 || bud.is_deleted === true || false,
           bud.updated_at
         ]
       );

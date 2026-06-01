@@ -106,7 +106,7 @@ class ExpenseProvider with ChangeNotifier {
     final existingIdx = _budgets.indexWhere((b) => b.category == category && b.monthYear == monthYear);
 
     if (existingIdx != -1) {
-      final updated = _budgets[existingIdx].copyWith(amountLimit: amountLimit, updatedAt: DateTime.now());
+      final updated = _budgets[existingIdx].copyWith(amountLimit: amountLimit, isDeleted: false, updatedAt: DateTime.now());
       await _dbHelper.updateBudget(updated);
       _budgets[existingIdx] = updated;
     } else {
@@ -119,6 +119,13 @@ class ExpenseProvider with ChangeNotifier {
       await _dbHelper.insertBudget(budget);
       _budgets.add(budget);
     }
+    notifyListeners();
+    triggerQuietSync();
+  }
+
+  Future<void> deleteBudget(String id) async {
+    await _dbHelper.deleteBudget(id);
+    _budgets.removeWhere((b) => b.id == id);
     notifyListeners();
     triggerQuietSync();
   }
