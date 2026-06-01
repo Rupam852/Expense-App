@@ -90,6 +90,7 @@ class _MainNavigationState extends State<MainNavigation> {
         child: const Icon(Icons.add, size: 28),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.miniEndFloat,
+      ),
     );
   }
 }
