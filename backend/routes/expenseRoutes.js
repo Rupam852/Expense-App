@@ -413,7 +413,7 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
       try {
         console.log(`Sending receipt image to Google Gemini Native REST API using model ${model} (${req.file.size} bytes)...`);
 
-        const apiVersion = model.startsWith('gemini-1.5') ? 'v1' : 'v1beta';
+        const apiVersion = 'v1beta';
         const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userGeminiKey}`, {
           method: 'POST',
           headers: {
@@ -620,7 +620,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
         try {
           console.log(`Sending PDF text to Google Gemini Native REST API using model ${model} (${textContent.length} chars)...`);
 
-          const apiVersion = model.startsWith('gemini-1.5') ? 'v1' : 'v1beta';
+          const apiVersion = 'v1beta';
           const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userApiKey}`, {
             method: 'POST',
             headers: {
