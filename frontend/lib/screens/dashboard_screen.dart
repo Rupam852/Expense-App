@@ -21,26 +21,6 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
 
-  List<DateTime> _getAvailableMonths(List<Expense> expenses) {
-    final List<DateTime> months = [];
-    final now = DateTime.now();
-    final currentMonthStart = DateTime(now.year, now.month);
-    
-    // Always include the current month in history selection
-    months.add(currentMonthStart);
-    
-    for (final exp in expenses) {
-      final date = exp.transactionDate;
-      final monthStart = DateTime(date.year, date.month);
-      if (!months.any((m) => m.year == monthStart.year && m.month == monthStart.month)) {
-        months.add(monthStart);
-      }
-    }
-    
-    // Sort in descending order
-    months.sort((a, b) => b.compareTo(a));
-    return months;
-  }
 
   // Category Icon Mapper
   IconData _getCategoryIcon(String category) {
@@ -128,15 +108,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
 
       if (mountedContext(context)) {
-        if (importResult == 'success') {
+        if (importResult != null && (importResult == 'success' || importResult.startsWith('Parsed'))) {
+          final displayMsg = importResult == 'success'
+              ? '✅ Transactions imported successfully!'
+              : '✅ $importResult';
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text(
-                '✅ Transactions imported successfully!',
-                style: TextStyle(fontSize: 13),
+                displayMsg,
+                style: const TextStyle(fontSize: 13),
               ),
-              backgroundColor: Color(0xFF00D09C),
-              duration: Duration(seconds: 6),
+              backgroundColor: const Color(0xFF00D09C),
+              duration: const Duration(seconds: 6),
             ),
           );
         } else if (importResult == 'PasswordRequired' || importResult == 'InvalidPassword') {
@@ -268,15 +251,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     );
 
                     if (mountedContext(context)) {
-                      if (result == 'success') {
+                      if (result != null && (result == 'success' || result.startsWith('Parsed'))) {
+                        final displayMsg = result == 'success'
+                            ? '✅ Transactions imported successfully!'
+                            : '✅ $result';
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
+                          SnackBar(
                             content: Text(
-                              '✅ Transactions imported successfully!',
-                              style: TextStyle(fontSize: 13),
+                              displayMsg,
+                              style: const TextStyle(fontSize: 13),
                             ),
-                            backgroundColor: Color(0xFF00D09C),
-                            duration: Duration(seconds: 6),
+                            backgroundColor: const Color(0xFF00D09C),
+                            duration: const Duration(seconds: 6),
                           ),
                         );
                       } else if (result == 'InvalidPassword' || result == 'PasswordRequired') {
@@ -824,9 +810,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
     }
 
-    // Dynamic month calculations
-    final availableMonths = _getAvailableMonths(expenseProvider.expenses);
-    
     final _selectedMonthYear = expenseProvider.selectedMonthYear;
     final selectedMonthStr = DateFormat('yyyy-MM').format(_selectedMonthYear);
     final currentMonthStr = DateFormat('yyyy-MM').format(DateTime.now());
@@ -995,88 +978,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                         const Spacer(),
-                        PopupMenuButton<DateTime>(
-                          initialValue: _selectedMonthYear,
-                          tooltip: 'Select Month',
-                          onSelected: (DateTime selected) {
-                            expenseProvider.setSelectedMonthYear(selected);
-                          },
-                          offset: const Offset(0, 30),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          color: isDark ? const Color(0xFF1E222B) : Colors.white,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  DateFormat('MMMM yyyy').format(_selectedMonthYear!).toUpperCase(),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                const Icon(
-                                  Icons.arrow_drop_down,
-                                  size: 16,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.calendar_today_outlined,
+                                size: 12,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                DateFormat('MMMM yyyy').format(_selectedMonthYear!).toUpperCase(),
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
                                   color: Colors.white,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                          itemBuilder: (BuildContext context) {
-                            return availableMonths.map((DateTime month) {
-                              final isSelected = _selectedMonthYear!.year == month.year &&
-                                  _selectedMonthYear!.month == month.month;
-                              final isCurrent = DateTime.now().year == month.year &&
-                                  DateTime.now().month == month.month;
-                              final label = DateFormat('MMMM yyyy').format(month);
-                              return PopupMenuItem<DateTime>(
-                                value: month,
-                                child: Row(
-                                  children: [
-                                    if (isCurrent) ...[
-                                      Icon(
-                                        Icons.today_outlined,
-                                        size: 16,
-                                        color: isSelected
-                                            ? const Color(0xFF00D09C)
-                                            : (isDark ? Colors.grey[400] : Colors.grey[600]),
-                                      ),
-                                      const SizedBox(width: 8),
-                                    ] else ...[
-                                      Icon(
-                                        Icons.calendar_today_outlined,
-                                        size: 16,
-                                        color: isSelected
-                                            ? const Color(0xFF00D09C)
-                                            : (isDark ? Colors.grey[400] : Colors.grey[600]),
-                                      ),
-                                      const SizedBox(width: 8),
-                                    ],
-                                    Text(
-                                      label,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 13,
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                        color: isSelected
-                                            ? const Color(0xFF00D09C)
-                                            : (isDark ? Colors.white : Colors.black87),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList();
-                          },
                         ),
                       ],
                     ),
