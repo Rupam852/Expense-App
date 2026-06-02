@@ -412,7 +412,7 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
     const mimeType = req.file.mimetype;
 
     let rawContent = null;
-    const models = ['gemini-3.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro'];
+    const models = ['gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-flash-latest', 'gemini-pro-latest', 'gemini-3.5-flash'];
     let lastError = null;
     let usedModel = null;
 
@@ -644,7 +644,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
         logDiagnostic(`[ListModels] Exception listing models: ${listErr.message}`);
       }
 
-      const models = ['gemini-3.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro'];
+      const models = ['gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-flash-latest', 'gemini-pro-latest', 'gemini-3.5-flash'];
       let lastError = null;
       let usedModel = null;
 
