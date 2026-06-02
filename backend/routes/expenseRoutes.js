@@ -619,24 +619,35 @@ router.post('/import', upload.single('file'), async (req, res) => {
                 {
                   parts: [
                     {
-                      text: `Analyze this raw text extracted from a bank statement. Extract a list of transactions.
-                      
+                      text: `Analyze this raw text extracted from a bank statement (from any bank like SBI, HDFC, ICICI, Axis, PNB, etc.). Extract all money-out transactions (outflows/debits/transfers).
+
                       Raw PDF text content:
                       ---------------------
                       ${textContent}
                       ---------------------
 
-                      CRITICAL RULE:
-                      - ONLY extract debit/expense/payment/withdrawal transactions (where money is spent/withdrawn/Dr).
-                      - COMPLETELY IGNORE all credit/deposit/income/salary/refund transactions (where money is received/credited/Cr).
+                      CRITICAL OUTFLOW EXTRACTION RULES:
+                      1. ONLY extract transactions where money is leaving the account (money-out / debits / withdrawals / transfers).
+                      2. Extract all of the following debit/transfer transactions:
+                         - UPI Payments / UPI-DR / UPI-OUT / Merchant payments (e.g., GPay, PhonePe, Paytm, BharatPe transfers)
+                         - Transfers to vendors, merchants, or other individuals (e.g., "TRANSFER TO...", "TO TRANSFER...", "TRFR TO...", "SENT TO...")
+                         - IMPS / NEFT / RTGS debit transfers (e.g., "IMPS-OUT...", "IMPS/DR...", "NEFT DR...")
+                         - Card spends / POS purchases / Online shopping spends (e.g., "POS DEBIT...")
+                         - Cash withdrawals / ATM withdrawals
+                         - Bank fees, charges, interest debits, or SMS alert fees
+                      3. COMPLETELY IGNORE all credits, deposits, refunds, salary, or incoming money (e.g., "IMPS-IN...", "UPI-IN...", "BY TRANSFER...", "TRANSFER FROM...", "interest credited", or any entry under Credit/Deposit/CR columns).
+                      
+                      How to identify debits in tabular statement text:
+                      - Look for entries in columns named "Debit", "Withdrawal", "DR", "Amount (Dr)", or "Debits".
+                      - If the statement does not have distinct columns, identify debits via keywords like "UPI-DR", "IMPS-OUT", "TRFR TO", "Paid to", or negative numbers.
 
                       Tasks:
-                      1. Extract ALL debit transaction items present in the text.
+                      1. Extract ALL money-out/debit/transfer transaction items present in the text.
                       2. For each transaction, extract:
-                         - amount (numeric positive float)
+                         - amount (numeric positive float, always positive)
                          - currency (3-letter ISO code, e.g. INR)
-                         - category (Precisely: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
-                         - description (Clear merchant/receiver detail)
+                         - category (Precisely categorize into one of: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
+                         - description (Clear merchant, vendor, receiver name, or description of transaction)
                          - transaction_date (ISO 8601 string)
                       
                       Ensure your response is ONLY a JSON array of objects, without markdown wrapper blocks or text.
@@ -646,7 +657,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
                           "amount": 450.00,
                           "currency": "INR",
                           "category": "Shopping",
-                          "description": "Amazon Purchase",
+                          "description": "Amazon UPI Transfer",
                           "transaction_date": "2026-05-25T12:00:00.000Z"
                         }
                       ]`
