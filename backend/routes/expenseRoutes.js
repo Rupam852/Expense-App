@@ -638,81 +638,89 @@ router.post('/import', upload.single('file'), async (req, res) => {
           logDiagnostic(`Sending PDF text to Google Gemini Native REST API using model ${model} (${textContent.length} chars)...`);
 
           const apiVersion = model.startsWith('gemini-1.5') ? 'v1' : 'v1beta';
+
+          const systemRulesText = `You are a professional financial assistant. Analyze raw text extracted from a bank statement (from any bank like SBI, HDFC, ICICI, Axis, PNB, etc.). Extract all money-out transactions (outflows/debits/transfers).
+
+          CRITICAL OUTFLOW EXTRACTION RULES:
+          1. ONLY extract transactions where money is leaving the account (money-out / debits / withdrawals / transfers).
+          2. Extract all of the following debit/transfer transactions:
+             - UPI Payments / UPI-DR / UPI-OUT / Merchant payments (e.g., GPay, PhonePe, Paytm, BharatPe transfers)
+             - Transfers to vendors, merchants, or other individuals (e.g., "TRANSFER TO...", "TO TRANSFER...", "TRFR TO...", "SENT TO...")
+             - IMPS / NEFT / RTGS debit transfers (e.g., "IMPS-OUT...", "IMPS/DR...", "NEFT DR...")
+             - Card spends / POS purchases / Online shopping spends (e.g., "POS DEBIT...")
+             - Cash withdrawals / ATM withdrawals
+             - Bank fees, charges, interest debits, or SMS alert fees
+          3. COMPLETELY IGNORE all credits, deposits, refunds, salary, or incoming money (e.g., "IMPS-IN...", "UPI-IN...", "BY TRANSFER...", "TRANSFER FROM...", "interest credited", or any entry under Credit/Deposit/CR columns).
+          4. STRICT LAZYNESS PREVENTION: Never use placeholders, three dots ('...'), or 'etc.' in the JSON response. You MUST extract absolutely EVERY SINGLE money-out/debit/transfer transaction item present in the text, no matter how many there are. Do not stop until the entire text is fully parsed.
+          
+          How to identify debits in tabular statement text:
+          - Look for entries in columns named "Debit", "Withdrawal", "DR", "Amount (Dr)", or "Debits".
+          - If the statement does not have distinct columns, identify debits via keywords like "UPI-DR", "IMPS-OUT", "TRFR TO", "Paid to", or negative numbers.
+
+          Ensure your response is ONLY a JSON array of objects, without markdown wrapper blocks or text.
+          Structure:
+          [
+            {
+              "amount": 450.00,
+              "currency": "INR",
+              "category": "Shopping",
+              "description": "Amazon UPI Transfer",
+              "transaction_date": "2026-05-25T12:00:00.000Z"
+            }
+          ]`;
+
+          const bodyPayload = apiVersion === 'v1beta' ? {
+            systemInstruction: {
+              parts: [{ text: systemRulesText }]
+            },
+            contents: [
+              {
+                parts: [
+                  {
+                    text: `Raw PDF text content:
+                    ---------------------
+                    ${textContent}
+                    ---------------------`
+                  }
+                ]
+              }
+            ],
+            safetySettings: [
+              { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+              { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+              { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+              { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+            ],
+            generationConfig: {
+              maxOutputTokens: 4096
+            }
+          } : {
+            contents: [
+              {
+                parts: [
+                  {
+                    text: `${systemRulesText}\n\nRaw PDF text content:\n---------------------\n${textContent}\n---------------------\n`
+                  }
+                ]
+              }
+            ],
+            safetySettings: [
+              { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+              { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+              { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+              { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+            ],
+            generationConfig: {
+              maxOutputTokens: 4096
+            }
+          };
+
           const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userApiKey}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-              systemInstruction: {
-                parts: [
-                  {
-                    text: `You are a professional financial assistant. Analyze raw text extracted from a bank statement (from any bank like SBI, HDFC, ICICI, Axis, PNB, etc.). Extract all money-out transactions (outflows/debits/transfers).
-
-                    CRITICAL OUTFLOW EXTRACTION RULES:
-                    1. ONLY extract transactions where money is leaving the account (money-out / debits / withdrawals / transfers).
-                    2. Extract all of the following debit/transfer transactions:
-                       - UPI Payments / UPI-DR / UPI-OUT / Merchant payments (e.g., GPay, PhonePe, Paytm, BharatPe transfers)
-                       - Transfers to vendors, merchants, or other individuals (e.g., "TRANSFER TO...", "TO TRANSFER...", "TRFR TO...", "SENT TO...")
-                       - IMPS / NEFT / RTGS debit transfers (e.g., "IMPS-OUT...", "IMPS/DR...", "NEFT DR...")
-                       - Card spends / POS purchases / Online shopping spends (e.g., "POS DEBIT...")
-                       - Cash withdrawals / ATM withdrawals
-                       - Bank fees, charges, interest debits, or SMS alert fees
-                    3. COMPLETELY IGNORE all credits, deposits, refunds, salary, or incoming money (e.g., "IMPS-IN...", "UPI-IN...", "BY TRANSFER...", "TRANSFER FROM...", "interest credited", or any entry under Credit/Deposit/CR columns).
-                    4. STRICT LAZYNESS PREVENTION: Never use placeholders, three dots ('...'), or 'etc.' in the JSON response. You MUST extract absolutely EVERY SINGLE money-out/debit/transfer transaction item present in the text, no matter how many there are. Do not stop until the entire text is fully parsed.
-                    
-                    How to identify debits in tabular statement text:
-                    - Look for entries in columns named "Debit", "Withdrawal", "DR", "Amount (Dr)", or "Debits".
-                    - If the statement does not have distinct columns, identify debits via keywords like "UPI-DR", "IMPS-OUT", "TRFR TO", "Paid to", or negative numbers.
-
-                    Ensure your response is ONLY a JSON array of objects, without markdown wrapper blocks or text.
-                    Structure:
-                    [
-                      {
-                        "amount": 450.00,
-                        "currency": "INR",
-                        "category": "Shopping",
-                        "description": "Amazon UPI Transfer",
-                        "transaction_date": "2026-05-25T12:00:00.000Z"
-                      }
-                    ]`
-                  }
-                ]
-              },
-              contents: [
-                {
-                  parts: [
-                    {
-                      text: `Raw PDF text content:
-                      ---------------------
-                      ${textContent}
-                      ---------------------`
-                    }
-                  ]
-                }
-              ],
-              safetySettings: [
-                {
-                  category: "HARM_CATEGORY_HARASSMENT",
-                  threshold: "BLOCK_NONE"
-                },
-                {
-                  category: "HARM_CATEGORY_HATE_SPEECH",
-                  threshold: "BLOCK_NONE"
-                },
-                {
-                  category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                  threshold: "BLOCK_NONE"
-                },
-                {
-                  category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-                  threshold: "BLOCK_NONE"
-                }
-              ],
-              generationConfig: {
-                maxOutputTokens: 4096
-              }
-            })
+            body: JSON.stringify(bodyPayload)
           });
 
           if (response.ok) {
