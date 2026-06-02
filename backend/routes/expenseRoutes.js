@@ -396,7 +396,7 @@ async function callGeminiForChunk(chunkText, systemRulesText, userApiKey, models
       };
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 35000);
+      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout per model attempt
 
       const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userApiKey}`, {
         method: 'POST',
@@ -428,6 +428,11 @@ async function callGeminiForChunk(chunkText, systemRulesText, userApiKey, models
       } else {
         const errText = await response.text();
         logDiagnostic(`Gemini model ${model} chunk call failed with status ${response.status}: ${errText}`);
+        
+        // Short-circuit on fatal key/rate-limit/bad-request errors
+        if (response.status === 400 || response.status === 403 || response.status === 429) {
+          throw new Error(`Google Gemini API error (${response.status}): ${errText}`);
+        }
         lastError = new Error(errText);
       }
     } catch (err) {
@@ -976,10 +981,10 @@ router.post('/import', upload.single('file'), async (req, res) => {
 
         // Group rows into chunks if the spreadsheet is large. Prepend first 8 header lines to retain column schema context.
         const chunks = [];
-        if (lines.length > 80) {
+        if (lines.length > 150) {
           const headerLines = lines.slice(0, 8);
           const dataLines = lines.slice(8);
-          const chunkSize = 80;
+          const chunkSize = 150;
           
           for (let i = 0; i < dataLines.length; i += chunkSize) {
             const chunkData = dataLines.slice(i, i + chunkSize);
@@ -1024,16 +1029,22 @@ router.post('/import', upload.single('file'), async (req, res) => {
           ["2026-05-25T12:00:00.000Z", 450.00, "Amazon UPI Transfer", "Shopping", "INR"]
         ]`;
 
+        const chunkPromises = chunks.map((chunkText, index) => {
+          return callGeminiForChunk(chunkText, systemRulesText, userApiKey, models)
+            .then(chunkArray => {
+              logDiagnostic(`[Spreadsheet Import] Chunk ${index + 1}/${chunks.length} returned ${chunkArray.length} items.`);
+              return chunkArray;
+            })
+            .catch(chunkErr => {
+              logDiagnostic(`[Spreadsheet Import] Error processing chunk ${index + 1}/${chunks.length}: ${chunkErr.message}`);
+              return [];
+            });
+        });
+
+        const chunkResults = await Promise.all(chunkPromises);
         let mergedArray = [];
-        for (let i = 0; i < chunks.length; i++) {
-          try {
-            logDiagnostic(`[Spreadsheet Import] Processing chunk ${i + 1}/${chunks.length} (${chunks[i].split('\n').length} lines)...`);
-            const chunkArray = await callGeminiForChunk(chunks[i], systemRulesText, userApiKey, models);
-            mergedArray.push(...chunkArray);
-            logDiagnostic(`[Spreadsheet Import] Chunk ${i + 1}/${chunks.length} returned ${chunkArray.length} items.`);
-          } catch (chunkErr) {
-            logDiagnostic(`[Spreadsheet Import] Error processing chunk ${i + 1}/${chunks.length}: ${chunkErr.message}`);
-          }
+        for (const res of chunkResults) {
+          mergedArray.push(...res);
         }
 
         if (mergedArray.length === 0) {
@@ -1288,8 +1299,8 @@ router.post('/import', upload.single('file'), async (req, res) => {
         return res.status(400).json({ error: 'Gemini API Key required. Please set your Google Gemini API Key in Settings.' });
       }
 
-      // Group pages into chunks of 4 pages each to avoid large output token requirements and laziness
-      const pagesPerChunk = 4;
+      // Group pages into chunks of 9 pages each to avoid large output token requirements and laziness
+      const pagesPerChunk = 9;
       const chunks = [];
       for (let i = 0; i < pages.length; i += pagesPerChunk) {
         const chunkPages = pages.slice(i, i + pagesPerChunk);
@@ -1330,16 +1341,22 @@ router.post('/import', upload.single('file'), async (req, res) => {
         ["2026-05-25T12:00:00.000Z", 450.00, "Amazon UPI Transfer", "Shopping", "INR"]
       ]`;
 
+      const chunkPromises = chunks.map((chunkText, index) => {
+        return callGeminiForChunk(chunkText, systemRulesText, userApiKey, models)
+          .then(chunkArray => {
+            logDiagnostic(`[PDF Import] Chunk ${index + 1}/${chunks.length} returned ${chunkArray.length} items.`);
+            return chunkArray;
+          })
+          .catch(chunkErr => {
+            logDiagnostic(`[PDF Import] Error processing chunk ${index + 1}/${chunks.length}: ${chunkErr.message}`);
+            return []; // Return empty array on failure so other chunks still succeed
+          });
+      });
+
+      const chunkResults = await Promise.all(chunkPromises);
       let mergedArray = [];
-      for (let i = 0; i < chunks.length; i++) {
-        try {
-          logDiagnostic(`[PDF Import] Processing page chunk ${i + 1}/${chunks.length}...`);
-          const chunkArray = await callGeminiForChunk(chunks[i], systemRulesText, userApiKey, models);
-          mergedArray.push(...chunkArray);
-          logDiagnostic(`[PDF Import] Chunk ${i + 1}/${chunks.length} returned ${chunkArray.length} items.`);
-        } catch (chunkErr) {
-          logDiagnostic(`[PDF Import] Error processing chunk ${i + 1}/${chunks.length}: ${chunkErr.message}`);
-        }
+      for (const res of chunkResults) {
+        mergedArray.push(...res);
       }
 
       if (mergedArray.length === 0) {
