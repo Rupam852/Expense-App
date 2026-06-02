@@ -629,6 +629,21 @@ router.post('/import', upload.single('file'), async (req, res) => {
       console.log(`Parsing PDF text (${textContent.length} chars) using Google Gemini Native REST API...`);
 
       let rawContent = null;
+      
+      // Dynamic diagnostic check to list exactly which models this user's key has access to in their region
+      try {
+        const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${userApiKey}`);
+        if (listRes.ok) {
+          const listData = await listRes.json();
+          const modelNames = listData.models?.map(m => m.name) || [];
+          logDiagnostic(`[ListModels] Supported models for this key: ${JSON.stringify(modelNames)}`);
+        } else {
+          logDiagnostic(`[ListModels] Failed to list models: status=${listRes.status}`);
+        }
+      } catch (listErr) {
+        logDiagnostic(`[ListModels] Exception listing models: ${listErr.message}`);
+      }
+
       const models = ['gemini-3.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro'];
       let lastError = null;
       let usedModel = null;
