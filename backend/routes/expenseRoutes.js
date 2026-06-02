@@ -26,6 +26,79 @@ function cleanAmount(val) {
   return isNaN(num) ? 0.0 : Math.abs(num);
 }
 
+// Robust helper to parse different bank statement date formats (DD/MM/YYYY, DD-MMM-YYYY, Excel serial numbers)
+function parseRobustDate(rawVal) {
+  if (rawVal === null || rawVal === undefined) return new Date();
+  
+  if (rawVal instanceof Date && !isNaN(rawVal.getTime())) {
+    return rawVal;
+  }
+
+  if (typeof rawVal === 'number') {
+    if (rawVal > 30000 && rawVal < 60000) {
+      const utc_days  = Math.floor(rawVal - 25569);
+      const utc_value = utc_days * 86400;
+      const date_info = new Date(utc_value * 1000);
+      return date_info;
+    }
+    const d = new Date(rawVal);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  const str = String(rawVal).trim();
+  if (!str) return new Date();
+
+  // Try standard parsing
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) return d;
+
+  // DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
+  const dmyRegex = /^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/;
+  const match = str.match(dmyRegex);
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1;
+    const year = parseInt(match[3], 10);
+    const dateObj = new Date(year, month, day);
+    if (!isNaN(dateObj.getTime())) return dateObj;
+  }
+
+  // DD/MM/YY (two-digit year)
+  const dmyShortRegex = /^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2})$/;
+  const matchShort = str.match(dmyShortRegex);
+  if (matchShort) {
+    const day = parseInt(matchShort[1], 10);
+    const month = parseInt(matchShort[2], 10) - 1;
+    let year = parseInt(matchShort[3], 10);
+    year = year < 50 ? 2000 + year : 1900 + year;
+    const dateObj = new Date(year, month, day);
+    if (!isNaN(dateObj.getTime())) return dateObj;
+  }
+
+  // DD-MMM-YYYY or DD-MMM-YY (e.g. 25-Jan-2026, 05-Apr-26, 12-APR-26)
+  const monthsMap = {
+    jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+    jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+  };
+  const dMmmYRegex = /^(\d{1,2})[\/\-\.]([a-zA-Z]{3})[\/\-\.](\d{2,4})$/;
+  const matchMmm = str.match(dMmmYRegex);
+  if (matchMmm) {
+    const day = parseInt(matchMmm[1], 10);
+    const mStr = matchMmm[2].toLowerCase().substring(0, 3);
+    const month = monthsMap[mStr];
+    let year = parseInt(matchMmm[3], 10);
+    if (month !== undefined) {
+      if (String(year).length === 2) {
+        year = year < 50 ? 2000 + year : 1900 + year;
+      }
+      const dateObj = new Date(year, month, day);
+      if (!isNaN(dateObj.getTime())) return dateObj;
+    }
+  }
+
+  return new Date();
+}
+
 // Helper to detect if a JSON string returned by LLM is truncated/incomplete before parsing or repairing
 function isJsonTruncated(str) {
   if (!str) return true;
@@ -888,10 +961,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
         }
 
         parsedExpenses = parsedArray.map(item => {
-          let txDate = new Date(item.transaction_date || new Date());
-          if (isNaN(txDate.getTime())) {
-            txDate = new Date();
-          }
+          const txDate = parseRobustDate(item.transaction_date);
 
           return {
             id: crypto.randomUUID(),
@@ -937,13 +1007,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
           const description = findVal(['description', 'desc', 'particulars', 'remark', 'narration', 'vendor', 'name', 'details']) || `Row ${idx + 1} Import`;
           const rawDate = findVal(['date', 'time', 'tx_date', 'transaction date', 'txn date', 'value date']);
           
-          let transaction_date = new Date();
-          if (rawDate) {
-            const parsedD = new Date(rawDate);
-            if (!isNaN(parsedD.getTime())) {
-              transaction_date = parsedD;
-            }
-          }
+          const transaction_date = parseRobustDate(rawDate);
 
           return {
             id: crypto.randomUUID(),
@@ -1273,10 +1337,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
       }
 
       const mappedExpenses = parsedArray.map(item => {
-        let txDate = new Date(item.transaction_date || new Date());
-        if (isNaN(txDate.getTime())) {
-          txDate = new Date();
-        }
+        const txDate = parseRobustDate(item.transaction_date);
 
         return {
           id: crypto.randomUUID(),
