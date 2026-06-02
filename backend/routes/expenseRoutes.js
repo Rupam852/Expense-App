@@ -405,7 +405,7 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
     const mimeType = req.file.mimetype;
 
     let rawContent = null;
-    const models = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-2.0-flash', 'gemini-1.5-pro'];
+    const models = ['gemini-3.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro'];
     let lastError = null;
     let usedModel = null;
 
@@ -413,7 +413,7 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
       try {
         console.log(`Sending receipt image to Google Gemini Native REST API using model ${model} (${req.file.size} bytes)...`);
 
-        const apiVersion = 'v1beta';
+        const apiVersion = model.startsWith('gemini-1.5') ? 'v1' : 'v1beta';
         const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userGeminiKey}`, {
           method: 'POST',
           headers: {
@@ -454,7 +454,6 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
               }
             ],
             generationConfig: {
-              responseMimeType: 'application/json',
               maxOutputTokens: 1000
             }
           })
@@ -612,7 +611,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
       console.log(`Parsing PDF text (${textContent.length} chars) using Google Gemini Native REST API...`);
 
       let rawContent = null;
-      const models = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-2.0-flash', 'gemini-1.5-pro'];
+      const models = ['gemini-3.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro'];
       let lastError = null;
       let usedModel = null;
 
@@ -620,7 +619,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
         try {
           logDiagnostic(`Sending PDF text to Google Gemini Native REST API using model ${model} (${textContent.length} chars)...`);
 
-          const apiVersion = 'v1beta';
+          const apiVersion = model.startsWith('gemini-1.5') ? 'v1' : 'v1beta';
           const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userApiKey}`, {
             method: 'POST',
             headers: {
@@ -697,7 +696,6 @@ router.post('/import', upload.single('file'), async (req, res) => {
                 }
               ],
               generationConfig: {
-                responseMimeType: 'application/json',
                 maxOutputTokens: 4096
               }
             })
