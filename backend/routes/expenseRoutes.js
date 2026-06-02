@@ -691,12 +691,24 @@ router.post('/import', upload.single('file'), async (req, res) => {
         pdfData = await pdfParse(pdfBuffer);
       } catch (err) {
         console.error('[PDF Import] Parsing failed:', err);
-        const errMsg = err.message || '';
-        const errName = err.name || '';
-        const isEncrypted = errName === 'PasswordException' || 
-                            errMsg.toLowerCase().includes('password') || 
-                            errMsg.toLowerCase().includes('decrypt') || 
-                            errMsg.toLowerCase().includes('encrypted');
+        let errStr = '';
+        try {
+          errStr = JSON.stringify(err) || '';
+          errStr = errStr.toLowerCase();
+        } catch (_) {
+          errStr = String(err.message || err.description || err || '').toLowerCase();
+        }
+        const errNameStr = String(err.name || '').toLowerCase();
+        const isEncrypted = errNameStr.includes('password') || 
+                            errNameStr.includes('decrypt') ||
+                            errNameStr.includes('encrypt') ||
+                            errStr.includes('password') || 
+                            errStr.includes('decrypt') || 
+                            errStr.includes('encrypt') ||
+                            errStr.includes('secure');
+
+        console.log(`[PDF Import] isEncrypted check: isEncrypted=${isEncrypted}, errNameStr=${errNameStr}, errStr=${errStr}`);
+
         if (isEncrypted) {
           return res.status(401).json({
             success: false,

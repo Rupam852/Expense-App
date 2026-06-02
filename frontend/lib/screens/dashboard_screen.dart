@@ -1516,7 +1516,7 @@ class _PremiumProgressDialogState extends State<PremiumProgressDialog> with Sing
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
             borderRadius: BorderRadius.circular(20),
-            border: BorderSide(
+            border: Border.all(
               color: Theme.of(context).primaryColor.withOpacity(0.1),
             ),
             boxShadow: [
