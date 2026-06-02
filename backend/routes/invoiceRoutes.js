@@ -54,7 +54,7 @@ router.get('/generate', authenticateToken, async (req, res) => {
     // -- Header Section --
     doc.fillColor('#00D09C') // Beautiful Groww Green Accent Color
        .fontSize(22)
-       .text('EXPENSE TRACKER', { align: 'left' });
+       .text('GROW EXPENSE', { align: 'left' });
 
     doc.fillColor('#777777')
        .fontSize(10)
@@ -166,7 +166,7 @@ router.get('/generate', authenticateToken, async (req, res) => {
        .text(`Preferred UPI ID for Repayments: ${upiId}`, 50, footerY + 15)
        .fillColor('#718096')
        .fontSize(8)
-       .text('Generated instantly by Expense Tracker App. For any discrepancies, contact issuer above.', 50, footerY + 45, { align: 'center' });
+       .text('Generated instantly by Grow Expense App. For any discrepancies, contact issuer above.', 50, footerY + 45, { align: 'center' });
 
     // End and output file stream
     doc.end();

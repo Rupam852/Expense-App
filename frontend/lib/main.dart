@@ -25,18 +25,18 @@ void main() async {
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => ExpenseProvider()),
       ],
-      child: const ExpenseTrackerApp(),
+      child: const GrowExpenseApp(),
     ),
   );
 }
 
-class ExpenseTrackerApp extends StatelessWidget {
-  const ExpenseTrackerApp({super.key});
+class GrowExpenseApp extends StatelessWidget {
+  const GrowExpenseApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Expense Tracker',
+      title: 'Grow Expense',
       debugShowCheckedModeBanner: false,
       theme: GrowwTheme.lightTheme,
       darkTheme: GrowwTheme.darkTheme,

@@ -142,7 +142,7 @@ class DashboardScreen extends StatelessWidget {
       await file.writeAsString(csvString);
 
       // 4. Trigger share sheet using share_plus
-      await Share.shareXFiles([XFile(file.path)], text: 'My Expense Tracker Statement');
+      await Share.shareXFiles([XFile(file.path)], text: 'My Grow Expense Statement');
 
       if (mountedContext(context)) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -257,7 +257,7 @@ class DashboardScreen extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Google AI Studio Key',
+                      'Google AI Studio / Groq Key',
                       style: GoogleFonts.outfit(
                         fontWeight: FontWeight.bold,
                         fontSize: 20,
@@ -271,7 +271,7 @@ class DashboardScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Apna personal free Gemini API key enter karein. Isse transaction scan aur statement import directly aapke key se free mein chalenge.',
+                    'Apna personal free Google AI Studio (Gemini) ya Groq API key enter karein. Isse transaction scan aur statement import directly aapke key se free mein chalenge.',
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       height: 1.4,
@@ -283,9 +283,9 @@ class DashboardScreen extends StatelessWidget {
                     obscureText: isObscured,
                     style: GoogleFonts.inter(fontSize: 14),
                     decoration: InputDecoration(
-                      labelText: 'Gemini API Key',
+                      labelText: 'Google AI Studio / Groq API Key',
                       labelStyle: TextStyle(color: Theme.of(context).primaryColor),
-                      hintText: 'AIzaSy...',
+                      hintText: 'AIzaSy... (Gemini) or gsk_... (Groq)',
                       filled: true,
                       fillColor: Theme.of(context).primaryColor.withOpacity(0.03),
                       border: OutlineInputBorder(
@@ -302,9 +302,9 @@ class DashboardScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   SelectableText(
-                    'Key nahi hai? Free mein generate karein:\naistudio.google.com',
+                    'Key nahi hai? Free mein generate karein:\naistudio.google.com  |  console.groq.com',
                     style: GoogleFonts.inter(
-                      fontSize: 12,
+                      fontSize: 11,
                       color: Theme.of(context).primaryColor,
                       fontWeight: FontWeight.w600,
                       height: 1.4,
@@ -348,7 +348,7 @@ class DashboardScreen extends StatelessWidget {
                           content: Text(
                             keyVal.isEmpty
                                 ? 'Switched back to shared server key!'
-                                : 'Custom Gemini API Key saved successfully!',
+                                : 'API Key saved successfully!',
                           ),
                         ),
                       );
@@ -457,11 +457,13 @@ class DashboardScreen extends StatelessWidget {
                     // Custom Gemini API Key Setting Row
                     ListTile(
                       leading: Icon(Icons.vpn_key_outlined, color: Theme.of(context).primaryColor),
-                      title: const Text('Google AI Studio API Key'),
+                      title: const Text('Google AI Studio / Groq API Key'),
                       subtitle: Text(
                         userProvider.userGeminiApiKey != null && userProvider.userGeminiApiKey!.isNotEmpty
-                            ? 'Custom API Key active (Free Gemini processing)'
-                            : 'Using shared server (OpenRouter fallback)',
+                            ? (userProvider.userGeminiApiKey!.startsWith('gsk_')
+                                ? 'Custom Groq API Key active (Llama parsing)'
+                                : 'Custom Gemini API Key active (Gemini parsing)')
+                            : 'Using shared server keys',
                         style: GoogleFonts.inter(fontSize: 12),
                       ),
                       trailing: const Icon(Icons.chevron_right, size: 20),

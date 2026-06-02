@@ -385,7 +385,7 @@ class UserProvider with ChangeNotifier {
   void enterAsGuest() async {
     _userProfile = {
       'id': 'guest-user-uuid',
-      'email': 'guest@expensetracker.local',
+      'email': 'guest@growexpense.local',
       'name': 'Guest Member',
       'photo_url': null,
     };
