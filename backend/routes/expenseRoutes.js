@@ -351,15 +351,16 @@ function getSystemRulesText(userName) {
   5. COMPLETELY IGNORE AND EXCLUDE all self-transfers or transfers between the user's own accounts (inter-account transfers). These are transactions where the description or narration indicates moving money to another account belonging to the same user (e.g., transfers containing "SELF", "SELF TRANSFER", "OWN A/C", "OWN ACCOUNT", "TRANSFER TO OWN A/C", or direct bank-to-bank self-transfers like "SBI TO HDFC", "TO HDFC A/C", "TRANSFER TO ICICI", "TRFR TO SELF"). These do not represent external expenses and MUST NOT be extracted or included in the output JSON array.
   6. SELF-TRANSFER EXCLUSION FOR USER "${nameUpper}": You MUST completely ignore and exclude any transaction where the description/narration indicates a self-transfer to "${nameUpper}" or is a transfer under your name (e.g., containing "${nameUpper}" or "${firstName}"). For example, "TRANSFER TO ${nameUpper}" or "TRFR TO ${firstName}" is a self-transfer and MUST NOT be extracted.
   7. MERCHANT/VENDORS CLEAN DESCRIPTION: Clean up raw bank narration/description text to extract the clean, human-readable merchant, vendor, or individual name. Strip out transaction reference IDs, technical prefixes/suffixes (e.g., 'UPI-DR/', 'UPI/', 'IMPS/', '/GPAY', '/okbizaxis', '/UPIIntent', phonepe/gpay handles like '@ybl', '@okaxis', etc., reference numbers, phone numbers, or dates embedded in descriptions). The description returned in the JSON must represent the clean merchant/vendor name (e.g., convert "UPI-DR-MUKTER PRINT HUB-GPAY-122..." to "Mukter Print Hub", "UPI-DR-Indian Railways-..." to "Indian Railways", "UPI-DR-KEYA ADHIKARY-..." to "Keya Adhikary", etc.).
-  8. CATEGORY MAPPING & MCC PARSING: Categorize each transaction into precisely one of these values: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, UPI Transfers, Others.
+  8. CATEGORY MAPPING & MCC PARSING: Categorize each transaction into precisely one of these values: Travel, Meals, Entertainment, Car / Mileage, Office Supplies, Software / Subscriptions, Fees, Utilities, UPI Transfers, Others.
      - If the narration contains a Merchant Category Code (MCC) (e.g., MCC 5812, MCC 5411, MCC 4814), parse the MCC to accurately identify the category.
-     - Food: Restaurants, eating places, fast food (MCC 5812, 5814).
-     - Travel: Cabs, trains, airlines, petrol pumps/fuel (MCC 4111, 4112, 4121, 4511, 5541, 5542).
-     - Shopping: Supermarkets, grocery stores, clothing/apparel, department stores (MCC 5411, 5311, 5611-5699).
-     - Bills: Utility bills, electricity, water, telecom/recharges, insurance (MCC 4900, 4814, 4812, 6300).
-     - Entertainment: Movie theaters, amusement parks, recreation, bars (MCC 7832, 7996, 7999, 5813).
-     - Health: Doctors, dentists, hospitals, drug stores/pharmacies (MCC 8011, 8021, 8099, 5912).
-     - Investment: Security brokers/dealers, mutual funds, SIPs (MCC 6211, 6012, 6051).
+     - Travel: Flights, lodging, hotels, accommodation (MCC 4511, 4112).
+     - Meals: Restaurants, eating places, fast food, cafe (MCC 5812, 5814).
+     - Entertainment: Movie theaters, amusement parks, recreation, bars, drinking places (MCC 7832, 7996, 7999, 5813).
+     - Car / Mileage: Cabs, taxi, local transport passenger, fuel/petrol/diesel (MCC 4111, 4121, 5541, 5542).
+     - Office Supplies: Supermarkets, grocery stores, clothing/apparel, office equipment, paper, pens (MCC 5411, 5311, 5611-5699).
+     - Software / Subscriptions: Cloud servers, SaaS tools, software licenses, website hosting.
+     - Fees: Bank fees, SMS alerts, legal charges, penalty, interest charged.
+     - Utilities: Rent, electricity, water, telecom/wifi/mobile recharges, medical/hospital spends, insurance (MCC 4900, 4814, 4812, 6300).
      - UPI Transfers: Use this category for personal peer-to-peer UPI transfers to individuals' names (e.g. "UPI Transfer to Anil Kumar", "UPI Transfer to Keya Adhikary" - that are not business/merchant accounts).
      - Others: A generic fallback category to capture any miscellaneous expenses that do not fall into the primary defined categories.
 
@@ -375,7 +376,7 @@ function getSystemRulesText(userName) {
   
   Example:
   [
-    ["2026-05-25T12:00:00.000Z", 450.00, "Amazon UPI Transfer", "Shopping", "INR"],
+    ["2026-05-25T12:00:00.000Z", 450.00, "Zomato", "Meals", "INR"],
     ["2026-05-26T14:30:00.000Z", 1500.00, "UPI Transfer to Anil Kumar", "UPI Transfers", "INR"]
   ]`;
 }
@@ -389,101 +390,61 @@ function autoCategorizeDescription(description) {
   if (mccMatch) {
     const mcc = parseInt(mccMatch[1], 10);
     
-    // Food (5812: Restaurants, 5814: Fast Food)
+    // 1. Meals (5812: Restaurants, 5814: Fast Food)
     if (mcc === 5812 || mcc === 5814) {
-      return 'Food';
+      return 'Meals';
     }
-    // Travel (4111: Local Transport, 4112: Passenger Railways, 4121: Taxicabs, 4511: Airlines, 5541/5542: Fuel Stations)
-    if (mcc === 4111 || mcc === 4112 || mcc === 4121 || mcc === 4511 || mcc === 5541 || mcc === 5542) {
+    // 2. Travel (4511: Airlines, 4112: Passenger Railways)
+    if (mcc === 4511 || mcc === 4112) {
       return 'Travel';
     }
-    // Shopping (5411: Grocery Stores/Supermarkets, 5311: Department Stores, 5611-5699: Clothing/Apparel)
-    if (mcc === 5411 || mcc === 5311 || (mcc >= 5611 && mcc <= 5699) || mcc === 5941 || mcc === 5942 || mcc === 5944) {
-      return 'Shopping';
-    }
-    // Bills (4900: Utilities-Electric/Gas/Water, 4814: Telecom, 4812: Phones, 6300: Insurance)
-    if (mcc === 4900 || mcc === 4814 || mcc === 4812 || mcc === 6300) {
-      return 'Bills';
-    }
-    // Entertainment (7832: Motion Picture, 7996: Amusement Parks, 7999: Recreation, 5813: Drinking places/Bars)
+    // 3. Entertainment (7832: Motion Picture, 7996: Amusement Parks, 7999: Recreation, 5813: Drinking places/Bars)
     if (mcc === 7832 || mcc === 7996 || mcc === 7999 || mcc === 5813) {
       return 'Entertainment';
     }
-    // Health (8011: Doctors, 8021: Dentists, 8099: Medical, 5912: Drug Stores/Pharmacies)
-    if (mcc === 8011 || mcc === 8021 || mcc === 8099 || mcc === 5912) {
-      return 'Health';
+    // 4. Car / Mileage (4111: Local Transport Passenger, 4121: Taxicabs, 5541/5542: Fuel Stations)
+    if (mcc === 4111 || mcc === 4121 || mcc === 5541 || mcc === 5542) {
+      return 'Car / Mileage';
     }
-    // Investment (6211: Security Brokers/Dealers, 6012: Financial Institutions)
-    if (mcc === 6211 || mcc === 6012 || mcc === 6051) {
-      return 'Investment';
+    // 5. Office Supplies (5411: Grocery Stores, 5311: Department Stores, 5611-5699: Clothing)
+    if (mcc === 5411 || mcc === 5311 || (mcc >= 5611 && mcc <= 5699) || mcc === 5941 || mcc === 5942 || mcc === 5944) {
+      return 'Office Supplies';
+    }
+    // 6. Utilities (4900: Utilities-Electric/Gas/Water, 4814: Telecom, 4812: Phones, 6300: Insurance)
+    if (mcc === 4900 || mcc === 4814 || mcc === 4812 || mcc === 6300) {
+      return 'Utilities';
     }
   }
 
   // Check if it's a UPI transfer to an individual/person's name
-  if (desc.includes('upi transfer to')) {
-    return 'UPI Transfers';
-  }
-
-  // Check for general unclassified UPI transfers
-  if (desc.includes('upi transfer')) {
+  if (desc.includes('upi transfer to') || desc.includes('upi transfer')) {
     return 'UPI Transfers';
   }
   
-  // 1. Food & Dining
+  // 1. Meals
   if (
     desc.includes('zomato') || desc.includes('swiggy') || desc.includes('ubereats') ||
     desc.includes('restaurant') || desc.includes('cafe') || desc.includes('hotel') ||
     desc.includes('food') || desc.includes('dining') || desc.includes('canteen') ||
     desc.includes('bakery') || desc.includes('pizza') || desc.includes('burger') ||
     desc.includes('starbucks') || desc.includes('kfc') || desc.includes('mcdonald') ||
-    desc.includes('dhaba') || desc.includes('chai') || desc.includes('tea') || desc.includes('coffee')
+    desc.includes('dhaba') || desc.includes('chai') || desc.includes('tea') || desc.includes('coffee') ||
+    desc.includes('meals') || desc.includes('meal')
   ) {
-    return 'Food';
+    return 'Meals';
   }
   
-  // 2. Travel & Transport (including fuel)
+  // 2. Travel (flights, hotels/lodging)
   if (
-    desc.includes('uber') || desc.includes('ola') || desc.includes('rapido') ||
-    desc.includes('irctc') || desc.includes('railway') || desc.includes('metro') ||
-    desc.includes('travel') || desc.includes('flight') || desc.includes('airline') ||
-    desc.includes('bus') || desc.includes('cab') || desc.includes('taxi') ||
-    desc.includes('fuel') || desc.includes('petrol') || desc.includes('diesel') ||
-    desc.includes('shell') || desc.includes('hpcl') || desc.includes('bpcl') ||
-    desc.includes('iocl') || desc.includes('cng') || desc.includes('toll') || desc.includes('fastag')
+    desc.includes('flight') || desc.includes('airline') || desc.includes('airways') ||
+    desc.includes('hotel') || desc.includes('lodging') || desc.includes('accommodation') ||
+    desc.includes('booking.com') || desc.includes('airbnb') || desc.includes('makemytrip') ||
+    desc.includes('yatra') || desc.includes('travel') || desc.includes('goibibo')
   ) {
     return 'Travel';
   }
   
-  // 3. Shopping & Groceries
-  if (
-    desc.includes('amazon') || desc.includes('flipkart') || desc.includes('myntra') ||
-    desc.includes('meesho') || desc.includes('ajio') || desc.includes('nykaa') ||
-    desc.includes('groceries') || desc.includes('grocery') || desc.includes('supermarket') ||
-    desc.includes('mart') || desc.includes('jiomart') || desc.includes('blinkit') ||
-    desc.includes('instamart') || desc.includes('zepto') || desc.includes('bigbasket') ||
-    desc.includes('reliance') || desc.includes('dmart') || desc.includes('spencer') ||
-    desc.includes('shopping') || desc.includes('retail') || desc.includes('clothing') ||
-    desc.includes('apparel') || desc.includes('footwear') || desc.includes('decathlon')
-  ) {
-    return 'Shopping';
-  }
-  
-  // 4. Bills & Utilities (recharge, rent, wifi, insurance, etc.)
-  if (
-    desc.includes('bill') || desc.includes('utility') || desc.includes('electricity') ||
-    desc.includes('water') || desc.includes('gas') || desc.includes('recharge') ||
-    desc.includes('jio') || desc.includes('airtel') || desc.includes('vodafone') ||
-    desc.includes('idea') || desc.includes('bsnl') || desc.includes('broadband') ||
-    desc.includes('wifi') || desc.includes('telecom') || desc.includes('rent') ||
-    desc.includes('landlord') || desc.includes('insurance') || desc.includes('lic') ||
-    desc.includes('premium') || desc.includes('tax') || desc.includes('loan') ||
-    desc.includes('emi') || desc.includes('interest charged') || desc.includes('bank fees') ||
-    desc.includes('sms charges') || desc.includes('maintenance')
-  ) {
-    return 'Bills';
-  }
-  
-  // 5. Entertainment & Leisure
+  // 3. Entertainment
   if (
     desc.includes('netflix') || desc.includes('prime video') || desc.includes('disney') ||
     desc.includes('hotstar') || desc.includes('spotify') || desc.includes('youtube') ||
@@ -496,8 +457,66 @@ function autoCategorizeDescription(description) {
     return 'Entertainment';
   }
   
-  // 6. Health & Personal Care
+  // 4. Car / Mileage (local transport, cabs, fuel)
   if (
+    desc.includes('uber') || desc.includes('ola') || desc.includes('rapido') ||
+    desc.includes('irctc') || desc.includes('railway') || desc.includes('metro') ||
+    desc.includes('bus') || desc.includes('cab') || desc.includes('taxi') ||
+    desc.includes('fuel') || desc.includes('petrol') || desc.includes('diesel') ||
+    desc.includes('shell') || desc.includes('hpcl') || desc.includes('bpcl') ||
+    desc.includes('iocl') || desc.includes('cng') || desc.includes('toll') || desc.includes('fastag') ||
+    desc.includes('mileage') || desc.includes('transit')
+  ) {
+    return 'Car / Mileage';
+  }
+  
+  // 5. Office Supplies (formerly Shopping)
+  if (
+    desc.includes('amazon') || desc.includes('flipkart') || desc.includes('myntra') ||
+    desc.includes('meesho') || desc.includes('ajio') || desc.includes('nykaa') ||
+    desc.includes('groceries') || desc.includes('grocery') || desc.includes('supermarket') ||
+    desc.includes('mart') || desc.includes('jiomart') || desc.includes('blinkit') ||
+    desc.includes('instamart') || desc.includes('zepto') || desc.includes('bigbasket') ||
+    desc.includes('reliance') || desc.includes('dmart') || desc.includes('spencer') ||
+    desc.includes('shopping') || desc.includes('retail') || desc.includes('clothing') ||
+    desc.includes('apparel') || desc.includes('footwear') || desc.includes('decathlon') ||
+    desc.includes('stationery') || desc.includes('paper') || desc.includes('pen') ||
+    desc.includes('supplies') || desc.includes('office') || desc.includes('equipment')
+  ) {
+    return 'Office Supplies';
+  }
+
+  // 6. Software / Subscriptions
+  if (
+    desc.includes('slack') || desc.includes('zoom') || desc.includes('microsoft') ||
+    desc.includes('google cloud') || desc.includes('aws') || desc.includes('github') ||
+    desc.includes('saas') || desc.includes('software') || desc.includes('subscription') ||
+    desc.includes('hosting') || desc.includes('domain') || desc.includes('figma') ||
+    desc.includes('adobe')
+  ) {
+    return 'Software / Subscriptions';
+  }
+
+  // 7. Fees (Bank fees, charges, etc.)
+  if (
+    desc.includes('fees') || desc.includes('charge') || desc.includes('fee') ||
+    desc.includes('interest charged') || desc.includes('bank fees') ||
+    desc.includes('sms charges') || desc.includes('tax') || desc.includes('fine') ||
+    desc.includes('penalty') || desc.includes('commission')
+  ) {
+    return 'Fees';
+  }
+  
+  // 8. Utilities (including health spends/rent)
+  if (
+    desc.includes('bill') || desc.includes('utility') || desc.includes('electricity') ||
+    desc.includes('water') || desc.includes('gas') || desc.includes('recharge') ||
+    desc.includes('jio') || desc.includes('airtel') || desc.includes('vodafone') ||
+    desc.includes('idea') || desc.includes('bsnl') || desc.includes('broadband') ||
+    desc.includes('wifi') || desc.includes('telecom') || desc.includes('rent') ||
+    desc.includes('landlord') || desc.includes('maintenance') ||
+    desc.includes('insurance') || desc.includes('lic') || desc.includes('premium') ||
+    desc.includes('loan') || desc.includes('emi') ||
     desc.includes('hospital') || desc.includes('pharmacy') || desc.includes('medical') ||
     desc.includes('chemist') || desc.includes('apollo') || desc.includes('medplus') ||
     desc.includes('doctor') || desc.includes('clinic') || desc.includes('dentist') ||
@@ -505,22 +524,10 @@ function autoCategorizeDescription(description) {
     desc.includes('diagnostic') || desc.includes('lab') || desc.includes('gym') ||
     desc.includes('fitness') || desc.includes('salon') || desc.includes('spa')
   ) {
-    return 'Health';
+    return 'Utilities';
   }
   
-  // 7. Investment & Savings
-  if (
-    desc.includes('zerodha') || desc.includes('groww') || desc.includes('upstox') ||
-    desc.includes('mutual fund') || desc.includes('sip') || desc.includes('stocks') ||
-    desc.includes('investment') || desc.includes('indmoney') || desc.includes('coin') ||
-    desc.includes('wazirx') || desc.includes('etmoney') || desc.includes('fd') ||
-    desc.includes('rd') || desc.includes('ppf') || desc.includes('nps') ||
-    desc.includes('gold') || desc.includes('savings')
-  ) {
-    return 'Investment';
-  }
-  
-  // If description has any merchant keyword, default to 'Shopping'
+  // If description has any merchant keyword, default to 'Office Supplies'
   const isMerchant = desc.includes('store') || 
                      desc.includes('mart') || 
                      desc.includes('shop') || 
@@ -531,7 +538,7 @@ function autoCategorizeDescription(description) {
                      desc.includes('merchant') ||
                      desc.includes('pos');
   if (isMerchant) {
-    return 'Shopping';
+    return 'Office Supplies';
   }
   
   return 'Others';
