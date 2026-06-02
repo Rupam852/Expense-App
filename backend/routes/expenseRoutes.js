@@ -593,6 +593,33 @@ function cleanFallbackDescription(rawDesc) {
   return clean || desc;
 }
 
+// Shared helper to identify if a transaction is a self-transfer matching user name or general accounts
+function isSelfTransferTransaction(description, userName) {
+  const lowerDesc = String(description || '').toLowerCase();
+  
+  // Standard self-transfer keywords
+  const isSelf = lowerDesc.includes('self transfer') ||
+                 lowerDesc.includes('transfer to self') ||
+                 lowerDesc.includes('own account') ||
+                 lowerDesc.includes('own a/c') ||
+                 lowerDesc.includes('self-transfer') ||
+                 /(\bsbi\b|\bhdfc\b|\bicici\b|\baxis\b|\bpnb\b|\bown\b)\s+to\s+(\bsbi\b|\bhdfc\b|\bicici\b|\baxis\b|\bpnb\b|\bown\b)/i.test(lowerDesc);
+                 
+  // User name matching
+  let isNameSelf = false;
+  const nameLower = String(userName || '').toLowerCase().trim();
+  if (nameLower && nameLower !== 'user') {
+    const firstNameLower = nameLower.split(' ')[0];
+    if (lowerDesc.includes(nameLower)) {
+      isNameSelf = true;
+    } else if (firstNameLower && firstNameLower.length > 2 && lowerDesc.includes(firstNameLower)) {
+      isNameSelf = true;
+    }
+  }
+
+  return isSelf || isNameSelf;
+}
+
 // Deduplicate parsed transactions by creating a unique key
 function deduplicateTransactions(expenses) {
   const unique = [];
@@ -1322,7 +1349,7 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
             is_recurring: false,
             recurrence_period: 'none'
           };
-        }).filter(e => e.amount > 0);
+        }).filter(e => e.amount > 0 && !isSelfTransferTransaction(e.description, userName));
 
         const deduplicated = deduplicateTransactions(parsedExpenses);
 
@@ -1467,26 +1494,7 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
                              lowerDesc.includes('received');
           if (isIncoming) return false;
 
-          const isSelfTransfer = lowerDesc.includes('self transfer') ||
-                                 lowerDesc.includes('transfer to self') ||
-                                 lowerDesc.includes('own account') ||
-                                 lowerDesc.includes('own a/c') ||
-                                 lowerDesc.includes('self-transfer') ||
-                                 /(\bsbi\b|\bhdfc\b|\bicici\b|\baxis\b|\bpnb\b|\bown\b)\s+to\s+(\bsbi\b|\bhdfc\b|\bicici\b|\baxis\b|\bpnb\b|\bown\b)/i.test(lowerDesc);
-          
-          // User-specific self-transfer check (matches full name or first name)
-          let isNameSelfTransfer = false;
-          const nameLower = String(userName || '').toLowerCase().trim();
-          if (nameLower && nameLower !== 'user') {
-            const firstNameLower = nameLower.split(' ')[0];
-            if (lowerDesc.includes(nameLower)) {
-              isNameSelfTransfer = true;
-            } else if (firstNameLower && firstNameLower.length > 2 && lowerDesc.includes(firstNameLower)) {
-              isNameSelfTransfer = true;
-            }
-          }
-
-          return !(isSelfTransfer || isNameSelfTransfer);
+          return !isSelfTransferTransaction(e.description, userName);
         });
 
         return res.status(200).json({
@@ -1624,7 +1632,7 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
           is_recurring: false,
           recurrence_period: 'none'
         };
-      }).filter(e => e.amount > 0);
+      }).filter(e => e.amount > 0 && !isSelfTransferTransaction(e.description, userName));
 
       const deduplicated = deduplicateTransactions(mappedExpenses);
 
