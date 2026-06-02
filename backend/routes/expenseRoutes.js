@@ -2,6 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import xlsx from 'xlsx';
 import pdfParse from 'pdf-parse';
+import crypto from 'crypto';
 import { query } from '../db.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 
@@ -370,6 +371,11 @@ router.post('/import', upload.single('file'), async (req, res) => {
           }
         }
 
+        // Force to current month and year to ensure they are added to current month's expenses
+        const now = new Date();
+        transaction_date.setFullYear(now.getFullYear());
+        transaction_date.setMonth(now.getMonth());
+
         return {
           id: crypto.randomUUID(),
           amount: isNaN(amount) ? 0.00 : amount,
@@ -421,11 +427,11 @@ router.post('/import', upload.single('file'), async (req, res) => {
                   
                   Raw PDF text content:
                   ---------------------
-                  ${textContent.slice(0, 15000)}  // Limit size to protect token usage
+                  ${textContent.slice(0, 50000)}  // Limit size to protect token usage
                   ---------------------
 
                   Tasks:
-                  1. Extract all transaction items (specifically payments/expenses, ignoring credits/deposits where possible).
+                  1. Extract at most the 30 most recent transaction items (specifically payments/expenses, ignoring credits/deposits where possible).
                   2. For each transaction, extract:
                      - amount (numeric positive float)
                      - currency (3-letter ISO code, e.g. INR, USD)
@@ -450,7 +456,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
           ],
           generationConfig: {
             responseMimeType: 'application/json',
-            maxOutputTokens: 2500
+            maxOutputTokens: 8192
           }
         })
       });
@@ -475,16 +481,28 @@ router.post('/import', upload.single('file'), async (req, res) => {
 
       const parsedArray = JSON.parse(cleanJson);
 
-      const mappedExpenses = parsedArray.map(item => ({
-        id: crypto.randomUUID(),
-        amount: parseFloat(item.amount) || 0.0,
-        currency: item.currency || 'INR',
-        category: item.category || 'Others',
-        description: item.description || 'Imported Transaction',
-        transaction_date: item.transaction_date || new Date().toISOString(),
-        is_recurring: false,
-        recurrence_period: 'none'
-      })).filter(e => e.amount > 0);
+      const mappedExpenses = parsedArray.map(item => {
+        let txDate = new Date(item.transaction_date || new Date());
+        if (isNaN(txDate.getTime())) {
+          txDate = new Date();
+        }
+
+        // Force to current month and year to ensure they are added to current month's expenses
+        const now = new Date();
+        txDate.setFullYear(now.getFullYear());
+        txDate.setMonth(now.getMonth());
+
+        return {
+          id: crypto.randomUUID(),
+          amount: parseFloat(item.amount) || 0.0,
+          currency: item.currency || 'INR',
+          category: item.category || 'Others',
+          description: item.description || 'Imported Transaction',
+          transaction_date: txDate.toISOString(),
+          is_recurring: false,
+          recurrence_period: 'none'
+        };
+      }).filter(e => e.amount > 0);
 
       return res.status(200).json({
         message: `Parsed ${mappedExpenses.length} transactions from PDF statement.`,
