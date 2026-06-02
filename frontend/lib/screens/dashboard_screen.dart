@@ -135,24 +135,206 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       );
 
-      final success = await expenseProvider.importStatement(path);
+      final importResult = await expenseProvider.importStatement(path);
 
       if (mountedContext(context)) {
         ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              success 
-                ? '✅ Transactions imported successfully!' 
-                : '❌ ${expenseProvider.syncErrorMessage ?? 'Failed to parse file. Please try again.'}',
-              style: const TextStyle(fontSize: 13),
+        if (importResult == 'success') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                '✅ Transactions imported successfully!',
+                style: TextStyle(fontSize: 13),
+              ),
+              backgroundColor: Color(0xFF00D09C),
+              duration: Duration(seconds: 6),
             ),
-            backgroundColor: success ? const Color(0xFF00D09C) : Colors.red.shade700,
-            duration: const Duration(seconds: 6),
-          ),
-        );
+          );
+        } else if (importResult == 'PasswordRequired' || importResult == 'InvalidPassword') {
+          _promptForPasswordAndImport(
+            context,
+            path,
+            initialError: importResult == 'InvalidPassword' ? 'Galat password. Dobara try karein.' : null,
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '❌ ${expenseProvider.syncErrorMessage ?? 'Failed to parse file. Please try again.'}',
+                style: const TextStyle(fontSize: 13),
+              ),
+              backgroundColor: Colors.red.shade700,
+              duration: const Duration(seconds: 6),
+            ),
+          );
+        }
       }
     }
+  }
+
+  void _promptForPasswordAndImport(BuildContext context, String path, {String? initialError}) {
+    final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+    final passwordController = TextEditingController();
+    String? currentError = initialError;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                ),
+              ),
+              title: Row(
+                children: [
+                  const Icon(Icons.lock_outline, color: Colors.amber, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Password Protected PDF',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Aapka PDF statement password-protected hai. Import karne ke liye kripya sahi password enter karein:',
+                    style: GoogleFonts.inter(fontSize: 13, height: 1.4),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: passwordController,
+                    obscureText: true,
+                    autofocus: true,
+                    style: GoogleFonts.inter(fontSize: 14),
+                    decoration: InputDecoration(
+                      labelText: 'PDF Password',
+                      labelStyle: TextStyle(color: Theme.of(context).primaryColor),
+                      hintText: 'Enter password...',
+                      filled: true,
+                      fillColor: Theme.of(context).primaryColor.withOpacity(0.03),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      errorText: currentError,
+                    ),
+                  ),
+                ],
+              ),
+              actionsPadding: const EdgeInsets.all(16),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(
+                    'Cancel',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.grey),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final enteredPassword = passwordController.text.trim();
+                    if (enteredPassword.isEmpty) {
+                      setStateDialog(() {
+                        currentError = 'Password khali nahi ho sakta!';
+                      });
+                      return;
+                    }
+
+                    // Close the dialog to show progress
+                    Navigator.of(context).pop();
+
+                    // Show loader
+                    if (mountedContext(context)) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: const [
+                              SizedBox(
+                                width: 20, height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Text(
+                                  '⏳ Verifying password and importing PDF...',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                              ),
+                            ],
+                          ),
+                          duration: const Duration(minutes: 4),
+                          backgroundColor: const Color(0xFF1A1A2E),
+                        ),
+                      );
+                    }
+
+                    final result = await expenseProvider.importStatement(path, password: enteredPassword);
+
+                    if (mountedContext(context)) {
+                      ScaffoldMessenger.of(context).clearSnackBars();
+                      if (result == 'success') {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              '✅ Transactions imported successfully!',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                            backgroundColor: Color(0xFF00D09C),
+                            duration: Duration(seconds: 6),
+                          ),
+                        );
+                      } else if (result == 'InvalidPassword' || result == 'PasswordRequired') {
+                        // Re-prompt!
+                        _promptForPasswordAndImport(
+                          context,
+                          path,
+                          initialError: 'Galat password. Dobara try karein.',
+                        );
+                      } else {
+                        // Other error
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '❌ ${expenseProvider.syncErrorMessage ?? 'Failed to parse file. Please try again.'}',
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                            backgroundColor: Colors.red.shade700,
+                            duration: const Duration(seconds: 6),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00D09C),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text(
+                    'Import',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
 

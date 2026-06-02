@@ -669,7 +669,43 @@ router.post('/import', upload.single('file'), async (req, res) => {
 
     // CASE 2: PDF statement import (uses pdf-parse & Gemini parsing)
     if (filename.endsWith('.pdf')) {
-      const pdfData = await pdfParse(req.file.buffer);
+      const filePassword = req.headers['x-file-password'];
+      let pdfBuffer = req.file.buffer;
+
+      if (filePassword) {
+        try {
+          const { decryptPDF } = await import('@pdfsmaller/pdf-decrypt');
+          pdfBuffer = Buffer.from(await decryptPDF(new Uint8Array(pdfBuffer), filePassword));
+        } catch (decErr) {
+          console.error('[PDF Import] Decryption failed:', decErr);
+          return res.status(401).json({
+            success: false,
+            error: 'InvalidPassword',
+            message: 'Incorrect PDF password. Please try again.'
+          });
+        }
+      }
+
+      let pdfData;
+      try {
+        pdfData = await pdfParse(pdfBuffer);
+      } catch (err) {
+        console.error('[PDF Import] Parsing failed:', err);
+        const errMsg = err.message || '';
+        const errName = err.name || '';
+        const isEncrypted = errName === 'PasswordException' || 
+                            errMsg.toLowerCase().includes('password') || 
+                            errMsg.toLowerCase().includes('decrypt') || 
+                            errMsg.toLowerCase().includes('encrypted');
+        if (isEncrypted) {
+          return res.status(401).json({
+            success: false,
+            error: 'PasswordRequired',
+            message: 'This bank statement PDF is password-protected. Please enter the password to import.'
+          });
+        }
+        throw err;
+      }
       const rawText = pdfData.text || '';
 
       logDiagnostic(`[PDF Import] Parsed: filename=${req.file.originalname}, pages=${pdfData.numpages}, textLength=${rawText.length}`);
