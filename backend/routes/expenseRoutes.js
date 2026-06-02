@@ -684,8 +684,8 @@ router.post('/import', upload.single('file'), async (req, res) => {
         return res.status(400).json({ error: 'Gemini API Key required. Please set your Google Gemini API Key in Settings.' });
       }
 
-      // Slice to safe token/character limit for Gemini models
-      const sliceLimit = 30000;
+      // Increase slice limit to 150,000 characters to support massive multi-page statements without cutting off late-month transactions
+      const sliceLimit = 150000;
       
       const textContent = rawText
         .replace(/[ \t]+/g, ' ')
