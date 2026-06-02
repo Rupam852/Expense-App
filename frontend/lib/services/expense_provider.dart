@@ -97,6 +97,15 @@ class ExpenseProvider with ChangeNotifier {
     triggerQuietSync();
   }
 
+  Future<void> deleteMultipleExpenses(List<String> ids) async {
+    for (final id in ids) {
+      await _dbHelper.deleteExpense(id);
+      _expenses.removeWhere((e) => e.id == id);
+    }
+    notifyListeners();
+    triggerQuietSync();
+  }
+
   // ================= BUDGETS OPERATIONS =================
 
   Future<void> setBudget({
