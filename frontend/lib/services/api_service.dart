@@ -292,4 +292,27 @@ class ApiService {
       return null;
     }
   }
+
+  // 8. Delete Old Month/Year Expenses (Older than current month)
+  Future<Map<String, dynamic>> deleteOldExpenses() async {
+    try {
+      final token = await getToken();
+      final uri = Uri.parse('$baseUrl/expenses/old-data');
+      final response = await http.delete(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      final decoded = json.decode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': decoded['message']};
+      }
+      return {'success': false, 'error': decoded['error'] ?? 'Failed to delete old expenses.'};
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
 }

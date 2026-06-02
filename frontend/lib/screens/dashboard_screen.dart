@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:csv/csv.dart';
@@ -20,6 +21,162 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkMonthRolloverAndPrompt();
+    });
+  }
+
+  Future<void> _checkMonthRolloverAndPrompt() async {
+    final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+    
+    // Give a short delay to allow offline data to be loaded/ready
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    if (!mounted) return;
+    
+    final prefs = await SharedPreferences.getInstance();
+    final lastKnown = prefs.getString('last_known_month_year');
+    final now = DateTime.now();
+    final currentMonthStr = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    
+    if (lastKnown == null) {
+      // First boot: set it to current month and do nothing
+      await prefs.setString('last_known_month_year', currentMonthStr);
+      return;
+    }
+    
+    if (lastKnown != currentMonthStr) {
+      // Month rolled over! Let's check if we have old expenses
+      final oldTotal = expenseProvider.getOldExpensesTotal();
+      if (oldTotal > 0) {
+        if (!mounted) return;
+        
+        final formattedTotal = NumberFormat('#,##,###.##').format(oldTotal);
+        final parts = lastKnown.split('-');
+        String oldMonthLabel = lastKnown;
+        if (parts.length == 2) {
+          try {
+            final oldDate = DateTime(int.parse(parts[0]), int.parse(parts[1]));
+            oldMonthLabel = DateFormat('MMMM yyyy').format(oldDate);
+          } catch (_) {}
+        }
+        
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogCtx) {
+            return AlertDialog(
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                ),
+              ),
+              title: Row(
+                children: [
+                  const Icon(Icons.cleaning_services_outlined, color: Color(0xFF00D09C), size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Month Rollover Clear-up',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'A new month has started! Your total expenses for the previous month ($oldMonthLabel) were:',
+                    style: GoogleFonts.inter(fontSize: 13, height: 1.4),
+                  ),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: Text(
+                      '₹$formattedTotal',
+                      style: GoogleFonts.outfit(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Click OK to clean up all old transactions from this device and the cloud database.',
+                    style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+              actionsPadding: const EdgeInsets.all(16),
+              actions: [
+                ElevatedButton(
+                  onPressed: () async {
+                    // Close alert dialog
+                    Navigator.of(dialogCtx).pop();
+                    
+                    // Show progress dialog
+                    BuildContext? progressDialogContext;
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (progressCtx) {
+                        progressDialogContext = progressCtx;
+                        return const Center(
+                          child: CircularProgressIndicator(),
+                        );
+                      },
+                    );
+                    
+                    final success = await expenseProvider.deleteOldExpenses();
+                    
+                    if (progressDialogContext != null && Navigator.canPop(progressDialogContext!)) {
+                      Navigator.pop(progressDialogContext!);
+                    }
+                    
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(success 
+                              ? '✅ Old expenses cleared successfully!' 
+                              : '⚠️ Old expenses cleared locally. Cloud deletion pending.'),
+                          backgroundColor: success ? const Color(0xFF00D09C) : Colors.amber[800],
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'OK',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      } else {
+        // If there were no expenses in previous month, just update the stored month string
+        await prefs.setString('last_known_month_year', currentMonthStr);
+      }
+    }
+  }
 
 
   // Category Icon Mapper

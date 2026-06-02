@@ -536,6 +536,17 @@ class DatabaseHelper {
     });
   }
 
+  // Delete all local expenses older than the current month
+  Future<int> deleteOldExpenses(DateTime currentMonthStart) async {
+    final db = await instance.database;
+    final dateStr = currentMonthStart.toIso8601String();
+    return await db.delete(
+      'expenses',
+      where: 'transaction_date < ?',
+      whereArgs: [dateStr],
+    );
+  }
+
   // Clear entire local databases for user sign-out safety
   Future<void> clearAllData() async {
     final db = await instance.database;

@@ -1743,6 +1743,30 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
   }
 });
 
+// DELETE Old Expenses (older than current month/year)
+router.delete('/old-data', authenticateToken, async (req, res) => {
+  const userId = req.user.userId;
+  const now = new Date();
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+  try {
+    const result = await query(
+      `DELETE FROM expenses 
+       WHERE user_id = $1 AND transaction_date < $2`,
+      [userId, currentMonthStart]
+    );
+    logDiagnostic(`[Old Data Cleanup] User ${userId} cleared ${result.rowCount} old expenses from database (older than ${currentMonthStart}).`);
+    res.status(200).json({ 
+      success: true, 
+      message: `Deleted ${result.rowCount} old expenses from remote database.`, 
+      deletedCount: result.rowCount 
+    });
+  } catch (error) {
+    console.error('Delete old expenses error:', error);
+    res.status(500).json({ error: 'Server error deleting old expenses.' });
+  }
+});
+
 router.get('/debug-logs', (req, res) => {
   res.status(200).json({ logs: logBuffer });
 });

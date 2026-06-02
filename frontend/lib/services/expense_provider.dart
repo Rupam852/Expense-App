@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'database_helper.dart';
 import 'api_service.dart';
@@ -312,6 +313,56 @@ class ExpenseProvider with ChangeNotifier {
     _budgets.clear();
     _paymentDetails.clear();
     notifyListeners();
+  }
+
+  // Calculate total expense of all months older than the current month
+  double getOldExpensesTotal() {
+    final now = DateTime.now();
+    final currentMonthStart = DateTime(now.year, now.month);
+    
+    double total = 0.0;
+    for (final exp in _expenses) {
+      if (exp.transactionDate.isBefore(currentMonthStart)) {
+        total += exp.amount;
+      }
+    }
+    return total;
+  }
+
+  // Delete all local and remote expenses older than the current month
+  Future<bool> deleteOldExpenses() async {
+    final now = DateTime.now();
+    final currentMonthStart = DateTime(now.year, now.month);
+    
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      // 1. Delete from remote database via API
+      final result = await _apiService.deleteOldExpenses();
+      
+      // 2. Delete from local SQLite database
+      await _dbHelper.deleteOldExpenses(currentMonthStart);
+      
+      // 3. Clear from in-memory list
+      _expenses.removeWhere((e) => e.transactionDate.isBefore(currentMonthStart));
+      
+      // 4. Update the stored month/year key in shared preferences
+      final prefs = await SharedPreferences.getInstance();
+      final currentMonthStr = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+      await prefs.setString('last_known_month_year', currentMonthStr);
+      
+      _syncErrorMessage = null;
+      notifyListeners();
+      return result['success'] == true;
+    } catch (e) {
+      print('Error clearing old month data: $e');
+      _syncErrorMessage = 'Clear old month data failed: $e';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   // Helper UUID Generator for offline primary keys
