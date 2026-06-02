@@ -42,27 +42,121 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     if (_selectedExpenseIds.isEmpty) return;
 
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            CircularProgressIndicator(color: Colors.white),
-            SizedBox(width: 16),
-            Text('Generating professional invoice billing statement...'),
-          ],
-        ),
-        duration: Duration(seconds: 10),
-      ),
+
+    double progress = 0.0;
+    String statusText = 'Compiling selected transactions...';
+    bool apiFinished = false;
+    String? localPath;
+
+    // Start API request in parallel
+    expenseProvider.downloadInvoice(_selectedExpenseIds).then((path) {
+      localPath = path;
+      apiFinished = true;
+    });
+
+    // Show custom progress dialog
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            // Set up a delayed check to animate progress smoothly
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (!context.mounted) return;
+              if (progress < 0.9) {
+                setDialogState(() {
+                  progress += 0.08;
+                  if (progress > 0.4 && progress < 0.7) {
+                    statusText = 'Generating PDF layout...';
+                  } else if (progress >= 0.7) {
+                    statusText = 'Compiling total expenses...';
+                  }
+                });
+              } else if (apiFinished) {
+                setDialogState(() {
+                  progress = 1.0;
+                  statusText = 'Compilation complete!';
+                });
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop(); // Close progress dialog
+                  }
+                });
+              }
+            });
+
+            return AlertDialog(
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                ),
+              ),
+              content: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.picture_as_pdf_outlined,
+                        color: Theme.of(context).primaryColor,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Generating Statement',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      statusText,
+                      style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                        valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
+                        minHeight: 6,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${(progress * 100).toInt()}%',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
 
-    final localPath = await expenseProvider.downloadInvoice(_selectedExpenseIds);
-
+    // After progress dialog closes, show either success modal or error SnackBar
     if (!mounted) return;
-    ScaffoldMessenger.of(context).clearSnackBars();
 
     if (localPath != null) {
-      // Trigger a visual modal with options to view or share
       showDialog(
         context: context,
         builder: (context) {
@@ -70,14 +164,14 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: Text('Invoice Generated!', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
             content: Text(
-              'Your PDF invoice has been compiled containing ${_selectedExpenseIds.length} transactions.\n\nUPI payment details for reimbursement have been automatically embedded at the footer.',
+              'Your PDF invoice has been compiled containing ${_selectedExpenseIds.length} transactions.\n\nTotal expenses calculation has been automatically computed.',
               style: GoogleFonts.inter(fontSize: 13),
             ),
             actions: [
               TextButton.icon(
                 onPressed: () {
                   Navigator.of(context).pop();
-                  Share.shareXFiles([XFile(localPath)], text: 'Expense statement reimbursement claim');
+                  Share.shareXFiles([XFile(localPath!)], text: 'Expense statement reimbursement claim');
                 },
                 icon: const Icon(Icons.share_outlined),
                 label: const Text('Share PDF'),
@@ -85,7 +179,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
               ElevatedButton.icon(
                 onPressed: () async {
                   Navigator.of(context).pop();
-                  final result = await OpenFile.open(localPath);
+                  final result = await OpenFile.open(localPath!);
                   if (result.type != ResultType.done && context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Cannot open PDF: ${result.message}')),
@@ -106,9 +200,9 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Failed to generate PDF. Make sure you are online and have active UPI details set.'),
-          backgroundColor: Colors.amber[800],
+        const SnackBar(
+          content: Text('Failed to generate PDF. Make sure you are online and try again.'),
+          backgroundColor: Colors.amber,
         ),
       );
     }

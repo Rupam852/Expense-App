@@ -145,28 +145,22 @@ router.get('/generate', authenticateToken, async (req, res) => {
 
     doc.fillColor('#1a202c')
        .fontSize(12)
-       .text('Total Amount Due:', 300, currentY + 15, { align: 'right', width: 140 })
+       .text('Total Expenses:', 300, currentY + 15, { align: 'right', width: 140 })
        .fillColor('#00D09C') // Highlight final sum in Groww Green
        .text(`${totalSum.toFixed(2)} INR`, 450, currentY + 15, { align: 'right', width: 100 })
        .moveDown(2);
 
-    // -- Payment & Settlement Footer --
-    const footerY = doc.page.height - 130;
+    // -- Simple Clean Footer --
+    const footerY = doc.page.height - 80;
     doc.strokeColor('#e2e8f0')
        .lineWidth(1)
        .moveTo(50, footerY - 15)
        .lineTo(550, footerY - 15)
        .stroke();
 
-    doc.fillColor('#4a5568')
-       .fontSize(10)
-       .text('PAYMENT DETAILS', 50, footerY, { underline: true })
-       .fillColor('#1a202c')
-       .fontSize(9)
-       .text(`Preferred UPI ID for Repayments: ${upiId}`, 50, footerY + 15)
-       .fillColor('#718096')
+    doc.fillColor('#718096')
        .fontSize(8)
-       .text('Generated instantly by Grow Expense App. For any discrepancies, contact issuer above.', 50, footerY + 45, { align: 'center' });
+       .text('Generated instantly by Grow Expense App. For any discrepancies, contact issuer above.', 50, footerY, { align: 'center' });
 
     // End and output file stream
     doc.end();
