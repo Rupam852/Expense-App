@@ -636,6 +636,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
                          - Cash withdrawals / ATM withdrawals
                          - Bank fees, charges, interest debits, or SMS alert fees
                       3. COMPLETELY IGNORE all credits, deposits, refunds, salary, or incoming money (e.g., "IMPS-IN...", "UPI-IN...", "BY TRANSFER...", "TRANSFER FROM...", "interest credited", or any entry under Credit/Deposit/CR columns).
+                      4. STRICT LAZYNESS PREVENTION: Never use placeholders, three dots ('...'), or 'etc.' in the JSON response. If there are too many transactions, output as many as you can complete fully, but do not write '...' inside the JSON structure.
                       
                       How to identify debits in tabular statement text:
                       - Look for entries in columns named "Debit", "Withdrawal", "DR", "Amount (Dr)", or "Debits".
@@ -772,6 +773,12 @@ router.post('/import', upload.single('file'), async (req, res) => {
 
       // Step 4: Remove trailing commas in objects or arrays before closing braces
       cleanJson = cleanJson.replace(/,\s*([\]}])/g, '$1');
+
+      // Step 5: Sanitize lazy LLM placeholders (e.g., ..., "...", or , ...)
+      cleanJson = cleanJson.replace(/,\s*"\.\.\."\s*/g, '');
+      cleanJson = cleanJson.replace(/,\s*\.\.\.\s*/g, '');
+      cleanJson = cleanJson.replace(/"\.\.\."\s*/g, '""');
+      cleanJson = cleanJson.replace(/\.\.\.\s*/g, '');
 
       let parsedArray = [];
       try {
