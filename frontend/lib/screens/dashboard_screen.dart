@@ -110,35 +110,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final path = result.files.single.path!;
       final isPdf = path.toLowerCase().endsWith('.pdf');
       
-      // Step 1: Show warm-up message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const SizedBox(
-                width: 20, height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  isPdf
-                    ? '⏳ Waking up AI server... (PDF import may take 30-60 sec)'
-                    : '⏳ Processing spreadsheet import...',
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ),
-            ],
-          ),
-          duration: const Duration(minutes: 4), // Stay visible during entire process
-          backgroundColor: const Color(0xFF1A1A2E),
+      final importResult = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => PremiumProgressDialog(
+          title: isPdf ? 'Importing PDF Statement' : 'Importing Spreadsheet',
+          importTask: () => expenseProvider.importStatement(path),
         ),
       );
 
-      final importResult = await expenseProvider.importStatement(path);
-
       if (mountedContext(context)) {
-        ScaffoldMessenger.of(context).clearSnackBars();
         if (importResult == 'success') {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -156,7 +137,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             path,
             initialError: importResult == 'InvalidPassword' ? 'Galat password. Dobara try karein.' : null,
           );
-        } else {
+        } else if (importResult != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -256,35 +237,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     // Close the dialog to show progress
                     Navigator.of(context).pop();
 
-                    // Show loader
-                    if (mountedContext(context)) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Row(
-                            children: const [
-                              SizedBox(
-                                width: 20, height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Text(
-                                  '⏳ Verifying password and importing PDF...',
-                                  style: TextStyle(fontSize: 13),
-                                ),
-                              ),
-                            ],
-                          ),
-                          duration: const Duration(minutes: 4),
-                          backgroundColor: const Color(0xFF1A1A2E),
-                        ),
-                      );
-                    }
-
-                    final result = await expenseProvider.importStatement(path, password: enteredPassword);
+                    // Show progress loader
+                    final result = await showDialog<String>(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (context) => PremiumProgressDialog(
+                        title: 'Decrypting & Importing PDF',
+                        importTask: () => expenseProvider.importStatement(path, password: enteredPassword),
+                      ),
+                    );
 
                     if (mountedContext(context)) {
-                      ScaffoldMessenger.of(context).clearSnackBars();
                       if (result == 'success') {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -303,7 +266,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           path,
                           initialError: 'Galat password. Dobara try karein.',
                         );
-                      } else {
+                      } else if (result != null) {
                         // Other error
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -1441,6 +1404,197 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     );
                   },
                 ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class PremiumProgressDialog extends StatefulWidget {
+  final Future<String?> Function() importTask;
+  final String title;
+
+  const PremiumProgressDialog({
+    super.key,
+    required this.importTask,
+    required this.title,
+  });
+
+  @override
+  State<PremiumProgressDialog> createState() => _PremiumProgressDialogState();
+}
+
+class _PremiumProgressDialogState extends State<PremiumProgressDialog> with SingleTickerProviderStateMixin {
+  double _progress = 0.0;
+  String _statusText = 'Preparing file...';
+  bool _isCompleted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startSimulation();
+    _executeTask();
+  }
+
+  void _startSimulation() async {
+    // 0% -> 15% quickly
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
+    setState(() {
+      _progress = 0.15;
+      _statusText = 'Uploading statement securely...';
+    });
+
+    // 15% -> 45% over 3 seconds
+    for (int i = 0; i < 30; i++) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (!mounted || _isCompleted) return;
+      setState(() {
+        _progress += 0.01;
+      });
+    }
+
+    if (!mounted || _isCompleted) return;
+    setState(() {
+      _statusText = 'AI model analyzing transactions...';
+    });
+
+    // 45% -> 85% over 10 seconds
+    for (int i = 0; i < 80; i++) {
+      await Future.delayed(const Duration(milliseconds: 125));
+      if (!mounted || _isCompleted) return;
+      setState(() {
+        _progress += 0.005;
+      });
+    }
+
+    if (!mounted || _isCompleted) return;
+    setState(() {
+      _statusText = 'De-duplicating and syncing ledger...';
+    });
+
+    // 85% -> 95% very slowly
+    for (int i = 0; i < 20; i++) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      if (!mounted || _isCompleted) return;
+      setState(() {
+        _progress += 0.002;
+      });
+    }
+  }
+
+  void _executeTask() async {
+    final result = await widget.importTask();
+    if (!mounted) return;
+
+    setState(() {
+      _isCompleted = true;
+      _progress = 1.0;
+      _statusText = result == 'success' ? 'Import complete!' : 'Error parsing file.';
+    });
+
+    // Wait a brief moment for the user to see the 100% completion
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (mounted) {
+      Navigator.of(context).pop(result);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final primaryColor = const Color(0xFF00D09C);
+    
+    return PopScope(
+      canPop: false,
+      child: Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: BorderRadius.circular(20),
+            border: BorderSide(
+              color: Theme.of(context).primaryColor.withOpacity(0.1),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Beautiful glowing icon or logo
+              Container(
+                width: 65,
+                height: 65,
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Icon(
+                    _isCompleted && _progress == 1.0 && _statusText == 'Import complete!'
+                        ? Icons.check_circle_outline
+                        : Icons.cloud_upload_outlined,
+                    color: primaryColor,
+                    size: 32,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                widget.title,
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _statusText,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Smooth animated progress bar
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: LinearProgressIndicator(
+                  value: _progress,
+                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                  valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                  minHeight: 8,
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Percentage text
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Secure Import',
+                    style: GoogleFonts.inter(fontSize: 10, color: Colors.grey),
+                  ),
+                  Text(
+                    '${(_progress * 100).toInt()}%',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: primaryColor,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
