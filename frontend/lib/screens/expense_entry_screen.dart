@@ -37,6 +37,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   String? _receiptLocalPath;
 
   bool _isLocalLoading = false;
+  bool _isSaving = false;
 
   final List<String> _categories = [
     'Food', 'Travel', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Investment', 'Others'
@@ -349,6 +350,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   }
 
   void _save() async {
+    if (_isSaving) return; // Prevent double taps
     if (!_formKey.currentState!.validate()) return;
 
     final amount = double.tryParse(_amountController.text) ?? 0.0;
@@ -359,36 +361,51 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
       return;
     }
 
+    setState(() {
+      _isSaving = true;
+    });
+
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
 
-    if (widget.editExpense != null) {
-      final updated = widget.editExpense!.copyWith(
-        amount: amount,
-        category: _selectedCategory,
-        description: _descriptionController.text.trim(),
-        transactionDate: _selectedDate,
-        currency: _selectedCurrency,
-        isRecurring: _isRecurring,
-        recurrencePeriod: _isRecurring ? _recurrencePeriod : 'none',
-        receiptUrl: _receiptLocalPath,
-        updatedAt: DateTime.now(),
-      );
-      await expenseProvider.editExpense(updated);
-    } else {
-      await expenseProvider.addExpense(
-        amount: amount,
-        category: _selectedCategory,
-        description: _descriptionController.text.trim(),
-        date: _selectedDate,
-        currency: _selectedCurrency,
-        isRecurring: _isRecurring,
-        recurrencePeriod: _isRecurring ? _recurrencePeriod : 'none',
-        receiptUrl: _receiptLocalPath,
-      );
-    }
+    try {
+      if (widget.editExpense != null) {
+        final updated = widget.editExpense!.copyWith(
+          amount: amount,
+          category: _selectedCategory,
+          description: _descriptionController.text.trim(),
+          transactionDate: _selectedDate,
+          currency: _selectedCurrency,
+          isRecurring: _isRecurring,
+          recurrencePeriod: _isRecurring ? _recurrencePeriod : 'none',
+          receiptUrl: _receiptLocalPath,
+          updatedAt: DateTime.now(),
+        );
+        await expenseProvider.editExpense(updated);
+      } else {
+        await expenseProvider.addExpense(
+          amount: amount,
+          category: _selectedCategory,
+          description: _descriptionController.text.trim(),
+          date: _selectedDate,
+          currency: _selectedCurrency,
+          isRecurring: _isRecurring,
+          recurrencePeriod: _isRecurring ? _recurrencePeriod : 'none',
+          receiptUrl: _receiptLocalPath,
+        );
+      }
 
-    if (mounted) {
-      Navigator.of(context).pop();
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving transaction: $e')),
+        );
+      }
+      setState(() {
+        _isSaving = false;
+      });
     }
   }
 
@@ -671,7 +688,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
 
                     // Save Action Button
                     ElevatedButton(
-                      onPressed: _save,
+                      onPressed: _isSaving ? null : _save,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).primaryColor,
                         foregroundColor: Colors.white,
@@ -679,10 +696,19 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
                       ),
-                      child: Text(
-                        widget.editExpense != null ? 'Update Expense' : 'Save Expense',
-                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
+                      child: _isSaving
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              widget.editExpense != null ? 'Update Expense' : 'Save Expense',
+                              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
                     ),
                   ],
                 ),
