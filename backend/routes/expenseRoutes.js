@@ -33,6 +33,60 @@ function isJsonTruncated(str) {
   return !trimmed.endsWith(']') && !trimmed.endsWith('}');
 }
 
+// Helper to dynamically query, filter, and sort supported generative models for this specific API Key
+async function getDynamicModels(userApiKey) {
+  const defaultModels = ['gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-flash-latest', 'gemini-pro-latest', 'gemini-3.5-flash'];
+  try {
+    const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${userApiKey}`);
+    if (!listRes.ok) {
+      return defaultModels;
+    }
+    const listData = await listRes.json();
+    if (!listData.models || !Array.isArray(listData.models)) {
+      return defaultModels;
+    }
+    
+    // Filter models that support content generation and are gemini/gemma text models
+    const filtered = listData.models
+      .filter(m => {
+        const name = m.name.toLowerCase();
+        const supportsGen = m.supportedGenerationMethods?.includes('generateContent');
+        const isExcluded = name.includes('embedding') || name.includes('image') || name.includes('tts') || name.includes('robotics') || name.includes('veo') || name.includes('imagen') || name.includes('lyria') || name.includes('nano') || name.includes('aqa') || name.includes('computer-use') || name.includes('deep-research') || name.includes('antigravity');
+        return supportsGen && !isExcluded;
+      })
+      .map(m => m.name.replace(/^models\//, '')); // Strip "models/" prefix
+
+    if (filtered.length === 0) {
+      return defaultModels;
+    }
+
+    // Sort to prioritize the best models
+    const priorityOrder = [
+      'gemini-2.5-flash',
+      'gemini-2.5-pro',
+      'gemini-2.0-flash',
+      'gemini-2.0-flash-lite',
+      'gemini-flash-latest',
+      'gemini-pro-latest',
+      'gemini-3.5-flash'
+    ];
+
+    filtered.sort((a, b) => {
+      let idxA = priorityOrder.indexOf(a);
+      let idxB = priorityOrder.indexOf(b);
+      if (idxA === -1) idxA = 999;
+      if (idxB === -1) idxB = 999;
+      return idxA - idxB;
+    });
+
+    console.log('[DynamicModels] Sorted models chain:', filtered);
+    return filtered;
+  } catch (err) {
+    console.error('[DynamicModels] Exception:', err.message);
+    return defaultModels;
+  }
+}
+
 // Resilient utility to repair truncated JSON arrays/objects from LLMs
 function repairTruncatedJson(str) {
   str = str.trim();
@@ -412,7 +466,7 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
     const mimeType = req.file.mimetype;
 
     let rawContent = null;
-    const models = ['gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-flash-latest', 'gemini-pro-latest', 'gemini-3.5-flash'];
+    const models = await getDynamicModels(userGeminiKey);
     let lastError = null;
     let usedModel = null;
 
@@ -629,22 +683,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
       console.log(`Parsing PDF text (${textContent.length} chars) using Google Gemini Native REST API...`);
 
       let rawContent = null;
-      
-      // Dynamic diagnostic check to list exactly which models this user's key has access to in their region
-      try {
-        const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${userApiKey}`);
-        if (listRes.ok) {
-          const listData = await listRes.json();
-          const modelNames = listData.models?.map(m => m.name) || [];
-          logDiagnostic(`[ListModels] Supported models for this key: ${JSON.stringify(modelNames)}`);
-        } else {
-          logDiagnostic(`[ListModels] Failed to list models: status=${listRes.status}`);
-        }
-      } catch (listErr) {
-        logDiagnostic(`[ListModels] Exception listing models: ${listErr.message}`);
-      }
-
-      const models = ['gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-flash-latest', 'gemini-pro-latest', 'gemini-3.5-flash'];
+      const models = await getDynamicModels(userApiKey);
       let lastError = null;
       let usedModel = null;
 
