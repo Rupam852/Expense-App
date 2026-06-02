@@ -45,20 +45,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Category Icon Mapper
   IconData _getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
-      case 'food':
-        return Icons.restaurant;
       case 'travel':
-        return Icons.directions_transit;
-      case 'shopping':
-        return Icons.shopping_bag_outlined;
-      case 'bills':
-        return Icons.electric_bolt_outlined;
+        return Icons.flight;
+      case 'meals':
+        return Icons.restaurant;
       case 'entertainment':
         return Icons.local_play_outlined;
-      case 'health':
-        return Icons.healing_outlined;
-      case 'investment':
-        return Icons.trending_up;
+      case 'car / mileage':
+        return Icons.directions_car;
+      case 'office supplies':
+        return Icons.shopping_bag_outlined;
+      case 'software / subscriptions':
+        return Icons.computer;
+      case 'fees':
+        return Icons.account_balance;
+      case 'utilities':
+        return Icons.electric_bolt_outlined;
       case 'upi transfers':
         return Icons.swap_horiz;
       default:
@@ -69,19 +71,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Category Color Mapper
   Color _getCategoryColor(String category) {
     switch (category.toLowerCase()) {
-      case 'food':
-        return const Color(0xFFFF5A5F);
       case 'travel':
         return const Color(0xFF2F80ED);
-      case 'shopping':
-        return const Color(0xFFF2C94C);
-      case 'bills':
-        return const Color(0xFF9B51E0);
+      case 'meals':
+        return const Color(0xFFFF5A5F);
       case 'entertainment':
         return const Color(0xFF27AE60);
-      case 'health':
+      case 'car / mileage':
+        return const Color(0xFFF2994A);
+      case 'office supplies':
+        return const Color(0xFFF2C94C);
+      case 'software / subscriptions':
+        return const Color(0xFF9B51E0);
+      case 'fees':
         return const Color(0xFFEB5757);
-      case 'investment':
+      case 'utilities':
         return const Color(0xFF00D09C);
       case 'upi transfers':
         return const Color(0xFF56CCF2);

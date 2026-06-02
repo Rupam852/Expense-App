@@ -52,22 +52,23 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     }
   }
 
-  // Helper Category Color Mapper
   Color _getCategoryColor(String category) {
     switch (category.toLowerCase()) {
-      case 'food':
-        return const Color(0xFFFF5A5F);
       case 'travel':
         return const Color(0xFF2F80ED);
-      case 'shopping':
-        return const Color(0xFFF2C94C);
-      case 'bills':
-        return const Color(0xFF9B51E0);
+      case 'meals':
+        return const Color(0xFFFF5A5F);
       case 'entertainment':
         return const Color(0xFF27AE60);
-      case 'health':
+      case 'car / mileage':
+        return const Color(0xFFF2994A);
+      case 'office supplies':
+        return const Color(0xFFF2C94C);
+      case 'software / subscriptions':
+        return const Color(0xFF9B51E0);
+      case 'fees':
         return const Color(0xFFEB5757);
-      case 'investment':
+      case 'utilities':
         return const Color(0xFF00D09C);
       case 'upi transfers':
         return const Color(0xFF56CCF2);
