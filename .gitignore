@@ -48,3 +48,17 @@ expense_app.db
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Gradle Cache (should NEVER be committed — causes filename-too-long errors)
+.gradle_user_home/
+**/.gradle/
+**/gradle-cache/
+
+# Flutter pub cache (large, auto-downloaded)
+flutter-pub-cache/
+
+# AI Agent internal files
+brain/
+
+# PDF statements (personal data)
+*.pdf

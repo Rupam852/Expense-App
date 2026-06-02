@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
+import cron from 'node-cron';
 import { initDB } from './db.js';
 
 // Route Imports
@@ -87,16 +88,28 @@ const startServer = async () => {
   }
 };
 
-// 10-Minute Self-Pinging Cron Job to prevent Render instance sleeping
-const pingSelf = () => {
-  const selfUrl = 'https://expense-tracker-backend-5pc1.onrender.com/';
-  console.log(`[Cron Job] Pinging self at ${selfUrl} to stay warm...`);
-  fetch(selfUrl)
-    .then(res => console.log(`[Cron Job] Ping response: ${res.status}`))
-    .catch(err => console.error(`[Cron Job] Ping failed:`, err.message));
+// =====================================================
+// KEEP-ALIVE CRON JOB (Prevents Render free tier sleep)
+// =====================================================
+const SELF_URL = process.env.SELF_URL || 'https://expense-tracker-backend-5pc1.onrender.com/';
+
+const pingSelf = async () => {
+  try {
+    console.log(`[Keep-Alive] Pinging ${SELF_URL} at ${new Date().toISOString()}`);
+    const response = await fetch(SELF_URL, { signal: AbortSignal.timeout(10000) });
+    console.log(`[Keep-Alive] ✅ Server is warm! Status: ${response.status}`);
+  } catch (err) {
+    console.warn(`[Keep-Alive] ⚠️ Ping failed (server may be waking up): ${err.message}`);
+  }
 };
 
-// Ping every 10 minutes (600,000 milliseconds)
-setInterval(pingSelf, 10 * 60 * 1000);
+// Run every 14 minutes using node-cron (cron syntax: */14 * * * *)
+// Render free tier sleeps after 15 min of inactivity — 14 min keeps it perfectly warm
+cron.schedule('*/14 * * * *', pingSelf, {
+  scheduled: true,
+  timezone: 'Asia/Kolkata'
+});
+
+console.log('[Keep-Alive] ✅ Cron job scheduled: ping every 14 minutes to prevent Render sleep.');
 
 startServer();

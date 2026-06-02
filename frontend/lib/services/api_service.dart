@@ -180,7 +180,20 @@ class ApiService {
   }
 
   // 5. Batch Imports (PDF / Excel File Upload)
+  // Uses a dedicated HTTP client with 3-minute timeout for large PDFs + AI processing time
   Future<Map<String, dynamic>> importStatement(String filePath) async {
+    // Step 1: Warm-up ping — wakes Render server if sleeping (avoids cold-start timeout)
+    try {
+      print('[Import] Sending warm-up ping to wake server...');
+      await http.get(Uri.parse('$baseUrl/')).timeout(const Duration(seconds: 30));
+      print('[Import] Server is awake. Proceeding with file upload...');
+    } catch (e) {
+      print('[Import] Warm-up ping failed, proceeding anyway: $e');
+    }
+
+    // Small delay after warm-up to let server fully initialize
+    await Future.delayed(const Duration(seconds: 2));
+
     try {
       final token = await getToken();
       final uri = Uri.parse('$baseUrl/expenses/import');
@@ -190,7 +203,7 @@ class ApiService {
         request.headers['Authorization'] = 'Bearer $token';
       }
 
-      // Check for user-defined custom Gemini API key
+      // Pass user Gemini/Groq API key in header for AI processing
       try {
         final prefs = await SharedPreferences.getInstance();
         final userKey = prefs.getString('user_gemini_api_key');
@@ -205,8 +218,15 @@ class ApiService {
         await http.MultipartFile.fromPath('file', filePath),
       );
 
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
+      // 3-minute timeout: PDF upload + Gemini AI processing can take up to 60-90 seconds
+      final streamedResponse = await request.send().timeout(
+        const Duration(minutes: 3),
+        onTimeout: () => throw Exception(
+          'Request timed out after 3 minutes. Please try again with a smaller PDF or check your internet connection.'
+        ),
+      );
+      final response = await http.Response.fromStream(streamedResponse)
+          .timeout(const Duration(minutes: 3));
 
       final decoded = json.decode(response.body);
       if (response.statusCode == 200) {
@@ -214,7 +234,7 @@ class ApiService {
       }
       return {'success': false, 'error': decoded['error'] ?? 'Failed to parse file.'};
     } catch (e) {
-      return {'success': false, 'error': 'Import file connection error: $e'};
+      return {'success': false, 'error': 'Import failed: ${e.toString().replaceAll('Exception: ', '')}'}; 
     }
   }
 

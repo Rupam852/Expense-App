@@ -43,6 +43,9 @@ dependencies:
   share_plus: ^9.0.0
   open_file: ^3.5.4
 
+  # PDF Text Extraction (for local bank statement parsing)
+  pdf_text: ^0.5.0
+
   # Authentication
   firebase_core: ^2.27.0
   firebase_auth: ^4.17.8
