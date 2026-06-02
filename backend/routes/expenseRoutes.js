@@ -356,17 +356,17 @@ function getSystemRulesText(userName) {
   6. SELF-TRANSFER EXCLUSION FOR USER "${nameUpper}": You MUST completely ignore and exclude any transaction where the description/narration indicates a self-transfer to "${nameUpper}" or is a transfer under your name (e.g., containing "${nameUpper}" or "${firstName}"). For example, "TRANSFER TO ${nameUpper}" or "TRFR TO ${firstName}" is a self-transfer and MUST NOT be extracted.
   7. MERCHANT/VENDORS CLEAN DESCRIPTION: Clean up raw bank narration/description text to extract the clean, human-readable merchant, vendor, or individual name. Strip out transaction reference IDs, technical prefixes/suffixes (e.g., 'UPI-DR/', 'UPI/', 'IMPS/', '/GPAY', '/okbizaxis', '/UPIIntent', phonepe/gpay handles like '@ybl', '@okaxis', etc., reference numbers, phone numbers, or dates embedded in descriptions). The description returned in the JSON must represent the clean merchant/vendor name (e.g., convert "UPI-DR-MUKTER PRINT HUB-GPAY-122..." to "Mukter Print Hub", "UPI-DR-Indian Railways-..." to "Indian Railways", "UPI-DR-KEYA ADHIKARY-..." to "Keya Adhikary", etc.).
   8. CATEGORY MAPPING & MCC PARSING: Categorize each transaction into precisely one of these values: Travel, Meals, Entertainment, Car / Mileage, Office Supplies, Software / Subscriptions, Fees, Utilities, UPI Transfers, Others.
-     - If the narration contains a Merchant Category Code (MCC) (e.g., MCC 5812, MCC 5411, MCC 4814), parse the MCC to accurately identify the category.
-     - Travel: Flights, lodging, hotels, accommodation (MCC 4511, 4112).
-     - Meals: Restaurants, eating places, fast food, cafe (MCC 5812, 5814).
-     - Entertainment: Movie theaters, amusement parks, recreation, bars, drinking places (MCC 7832, 7996, 7999, 5813).
-     - Car / Mileage: Cabs, taxi, local transport passenger, fuel/petrol/diesel (MCC 4111, 4121, 5541, 5542).
-     - Office Supplies: Supermarkets, grocery stores, clothing/apparel, office equipment, paper, pens (MCC 5411, 5311, 5611-5699).
-     - Software / Subscriptions: Cloud servers, SaaS tools, software licenses, website hosting.
-     - Fees: Bank fees, SMS alerts, legal charges, penalty, interest charged.
-     - Utilities: Rent, electricity, water, telecom/wifi/mobile recharges, medical/hospital spends, insurance (MCC 4900, 4814, 4812, 6300).
-     - UPI Transfers: Use this category for personal peer-to-peer UPI transfers to individuals' names (e.g. "UPI Transfer to Anil Kumar", "UPI Transfer to Keya Adhikary" - that are not business/merchant accounts).
-     - Others: A generic fallback category to capture any miscellaneous expenses that do not fall into the primary defined categories.
+     - NEVER map merchant/commercial payments to "UPI Transfers" or "Others" just because they were paid via UPI. If the narration/payee name implies a business, shop, or commercial service, map it to its real functional category.
+     - Travel: Flights, lodging, hotels, accommodation, travel booking agents like MakeMyTrip, Yatra, Goibibo, RedBus, IRCTC, train/railway tickets, travel agents (MCC 4511, 4112).
+     - Meals: Restaurants, eating places, fast food, cafe, tea stalls (chai), tapri, bakeries, sweets, milk/dairy (Amul, Mother Dairy), bars/clubs, food delivery platforms like Zomato, Swiggy, UberEats, food delivery apps (MCC 5812, 5814).
+     - Entertainment: Movie theaters, amusement parks, recreation, bookmyshow, netflix, spotify, youtube premium, gaming platforms (Steam, PlayStation, Xbox, Nintendo), pub, bar, liquor stores, wine shop (MCC 7832, 7996, 7999, 5813).
+     - Car / Mileage: Cabs, taxi, local transport passenger (Uber, Ola, Rapido, Namma Yatri, InDrive), fuel/petrol/diesel/CNG at pumps (HPCL, BPCL, IOCL, Shell), toll charges, Fastag recharges (MCC 4111, 4121, 5541, 5542).
+     - Office Supplies: Supermarkets, grocery stores, grocery apps (Blinkit, Zepto, BigBasket, Instamart), clothing/apparel, department stores, retail shops, stationary, papers, pens, office equipment, Amazon, Flipkart, Myntra, Meesho, Ajio, Nykaa (MCC 5411, 5311, 5611-5699).
+     - Software / Subscriptions: Cloud servers, SaaS tools, software licenses, website hosting, GitHub, AWS, Zoom, Google Cloud, Microsoft, Figma, Adobe, digital subscriptions.
+     - Fees: Bank fees, SMS alerts, charges, legal fees, penalty, interest charged, tax, commission.
+     - Utilities: Rent, electricity, water, telecom/wifi/mobile recharges (Airtel, Jio, Vodafone, Vi, BSNL), broadband, medical/hospital spends, chemist, pharmacy (Apollo, Medplus, Pharmeasy), doctor fees, clinic, lab tests, gym, fitness, insurance premium, LIC (MCC 4900, 4814, 4812, 6300).
+     - UPI Transfers: ONLY use this category for personal peer-to-peer UPI transfers to individuals' names (e.g. "UPI Transfer to Anil Kumar", "UPI Transfer to Keya Adhikary" - that are NOT business/merchant accounts).
+     - Others: A generic fallback category. Use it ONLY if the description is completely vague and has absolutely no clues about the merchant or category. Minimize the use of 'Others' as much as possible.
   9. STRICT MONTH & YEAR LIMITATION: You MUST only extract transactions that occur in the current month and year: ${currentMonthName} ${currentYear}. Do NOT extract any transactions from any other month or year. If a transaction date is in another month or year, completely ignore and exclude it.
 
   How to identify debits in tabular statement text/data:
@@ -1386,6 +1386,13 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
 
         const deduplicated = deduplicateTransactions(parsedExpenses);
 
+        if (deduplicated.length === 0) {
+          return res.status(400).json({
+            error: 'NoMatchingTransactions',
+            message: 'No transactions matching the current month and year were found in the uploaded statement.'
+          });
+        }
+
         const skippedDetails = [];
         if (wrongDateSkipped > 0) skippedDetails.push(`${wrongDateSkipped} wrong month/year`);
         if (selfTransferSkipped > 0) skippedDetails.push(`${selfTransferSkipped} self-transfers`);
@@ -1559,6 +1566,15 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
           return true;
         });
 
+        const deduplicated = deduplicateTransactions(parsedExpenses);
+
+        if (deduplicated.length === 0) {
+          return res.status(400).json({
+            error: 'NoMatchingTransactions',
+            message: 'No transactions matching the current month and year were found in the uploaded statement.'
+          });
+        }
+
         const skippedDetails = [];
         if (wrongDateSkipped > 0) skippedDetails.push(`${wrongDateSkipped} wrong month/year`);
         if (selfTransferSkipped > 0) skippedDetails.push(`${selfTransferSkipped} self-transfers`);
@@ -1566,8 +1582,8 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
         const skippedStr = skippedDetails.length > 0 ? ` (skipped: ${skippedDetails.join(', ')})` : '';
 
         return res.status(200).json({
-          message: `Parsed ${parsedExpenses.length} transactions from Excel sheet${skippedStr} (Rule-based Fallback).`,
-          expenses: parsedExpenses
+          message: `Parsed ${deduplicated.length} transactions from Excel sheet${skippedStr} (Rule-based Fallback).`,
+          expenses: deduplicated
         });
       }
     }
@@ -1724,6 +1740,13 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
       });
 
       const deduplicated = deduplicateTransactions(mappedExpenses);
+
+      if (deduplicated.length === 0) {
+        return res.status(400).json({
+          error: 'NoMatchingTransactions',
+          message: 'No transactions matching the current month and year were found in the uploaded statement.'
+        });
+      }
 
       const skippedDetails = [];
       if (wrongDateSkipped > 0) skippedDetails.push(`${wrongDateSkipped} wrong month/year`);

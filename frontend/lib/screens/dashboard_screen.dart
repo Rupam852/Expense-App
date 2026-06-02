@@ -285,6 +285,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             path,
             initialError: importResult == 'InvalidPassword' ? 'Galat password. Dobara try karein.' : null,
           );
+        } else if (importResult == 'NoMatchingTransactions') {
+          _showNoMatchingTransactionsDialog(context);
         } else if (importResult != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -429,6 +431,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           path,
                           initialError: 'Galat password. Dobara try karein.',
                         );
+                      } else if (result == 'NoMatchingTransactions') {
+                        _showNoMatchingTransactionsDialog(context);
                       } else if (result != null) {
                         // Other error
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -463,6 +467,103 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  void _showNoMatchingTransactionsDialog(BuildContext context) {
+    final now = DateTime.now();
+    final months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    final currentMonthName = months[now.month - 1];
+    final currentYear = now.year;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: Colors.amber.withOpacity(0.2),
+              width: 1.5,
+            ),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.amber,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'No Current Month Data',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Aapke statement file mein current month ($currentMonthName $currentYear) ka koi transaction nahi mila.',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Grow App dynamic budget tracking ke liye sirf active month ke expense transactions ko hi accept karta hai. Kripya check karein ki aap sahi file upload kar rahe hain.',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+          actionsPadding: const EdgeInsets.all(16),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00D09C), // Groww green
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                'Got It',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   void _triggerCSVExport(BuildContext context) async {
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
