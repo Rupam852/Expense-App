@@ -618,7 +618,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
 
       for (const model of models) {
         try {
-          console.log(`Sending PDF text to Google Gemini Native REST API using model ${model} (${textContent.length} chars)...`);
+          logDiagnostic(`Sending PDF text to Google Gemini Native REST API using model ${model} (${textContent.length} chars)...`);
 
           const apiVersion = 'v1beta';
           const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userApiKey}`, {
@@ -712,11 +712,11 @@ router.post('/import', upload.single('file'), async (req, res) => {
             }
           } else {
             const errText = await response.text();
-            console.warn(`Gemini model ${model} failed with status ${response.status}: ${errText}`);
+            logDiagnostic(`Gemini model ${model} failed with status ${response.status}: ${errText}`);
             lastError = new Error(errText);
           }
         } catch (err) {
-          console.error(`Gemini model ${model} exception:`, err);
+          logDiagnostic(`Gemini model ${model} exception: ${err.message}`);
           lastError = err;
         }
       }
