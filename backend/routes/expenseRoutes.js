@@ -753,7 +753,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
     return res.status(400).json({ error: 'Unsupported file format. Please upload .xlsx, .xls, or .pdf' });
   } catch (error) {
     console.error('File batch import error:', error);
-    res.status(500).json({ error: 'Failed to process file import.' });
+    res.status(500).json({ error: `Failed to process file import: ${error.message}` });
   }
 });
 
