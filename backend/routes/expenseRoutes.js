@@ -511,57 +511,52 @@ router.post('/import', upload.single('file'), async (req, res) => {
     if (filename.endsWith('.pdf')) {
       const pdfData = await pdfParse(req.file.buffer);
       const rawText = pdfData.text || '';
-      
-      // Super compression helper: removes consecutive spaces/newlines to save up to 80% tokens
-      const textContent = rawText
-        .replace(/[ \t]+/g, ' ')
-        .replace(/\r/g, '')
-        .replace(/\n\s*\n+/g, '\n')
-        .trim()
-        .slice(0, 15000); // Max 15K characters (approx 3K tokens) for extremely fast and cheap processing
 
-      if (!textContent || textContent.trim().length === 0) {
+      if (!rawText || rawText.trim().length === 0) {
         return res.status(400).json({ error: 'Uploaded PDF file has no readable text.' });
       }
-
-      console.log(`Parsing PDF text (${textContent.length} chars) using Gemini...`);
 
       const userGeminiKey = req.headers['x-user-gemini-key'];
       if (!userGeminiKey) {
         return res.status(400).json({ error: 'Google AI Studio or Groq API Key is required. Please set your key in Settings.' });
       }
 
+      const isGroq = userGeminiKey.startsWith('gsk_');
+      
+      // Adaptive slicing: Groq has a tiny 6000 TPM limit, so we slice to 5000 chars to be 100% safe.
+      // Gemini has a huge 1,000,000 TPM free tier limit, so we slice to 30,000 chars to fetch maximum history!
+      const sliceLimit = isGroq ? 5000 : 30000;
+      
+      const textContent = rawText
+        .replace(/[ \t]+/g, ' ')
+        .replace(/\r/g, '')
+        .replace(/\n\s*\n+/g, '\n')
+        .trim()
+        .slice(0, sliceLimit);
+
+      console.log(`Parsing PDF text (${textContent.length} chars) using ${isGroq ? 'Groq' : 'Gemini'}...`);
+
       let rawContent = null;
 
-      if (userGeminiKey.startsWith('gsk_')) {
+      if (isGroq) {
         try {
-          const prompt = `Analyze this raw text extracted from a bank statement, digital payment receipt list, or invoice PDF. Extract a list of transactions.
+          // Extremely compact prompt for Groq to stay well below the 6000 TPM limit!
+          const prompt = `Extract transaction list from raw bank statement text.
           
-          Raw PDF text content:
-          ---------------------
+          Text:
           ${textContent}
-          ---------------------
 
-          Tasks:
-          1. Extract at most the 30 most recent transaction items (specifically payments/expenses, ignoring credits/deposits where possible).
-          2. For each transaction, extract:
-             - amount (numeric positive float)
-             - currency (3-letter ISO code, e.g. INR, USD)
-             - category (Precisely categorize into: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
-             - description (Clear merchant/detail from transaction text)
-             - transaction_date (ISO 8601 string, parse/estimate from date logs)
+          For each transaction, extract:
+          - amount (positive float)
+          - currency (3-letter code, e.g. INR)
+          - category (Precisely: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
+          - description (Merchant/detail)
+          - transaction_date (ISO 8601 string)
           
-          Ensure your response is ONLY a JSON array of objects, without markdown wrapper blocks or text.
+          Return ONLY a JSON array of objects.
           Structure:
-          [
-            {
-              "amount": 450.00,
-              "currency": "INR",
-              "category": "Shopping",
-              "description": "Amazon Purchase",
-              "transaction_date": "2026-05-25T12:00:00.000Z"
-            }
-          ]`;
+          [{"amount": 450.0,"currency": "INR","category": "Shopping","description": "Amazon","transaction_date": "2026-05-25T12:00:00.000Z"}]`;
+
           rawContent = await callGroq(userGeminiKey, prompt);
         } catch (err) {
           console.error('Groq statement import error:', err);
