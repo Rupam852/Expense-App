@@ -254,7 +254,7 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
       console.log('Using User Custom Google AI Studio Gemini API Key for receipt scanning!');
       apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
       apiAuthHeader = `Bearer ${userGeminiKey}`;
-      apiModel = 'gemini-2.5-flash';
+      apiModel = 'gemini-1.5-flash';
       extraHeaders = {};
     } else if (!apiKey) {
       return res.status(500).json({ error: 'Server AI key is not configured and no custom User key was provided.' });
@@ -432,7 +432,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
         console.log('Using User Custom Google AI Studio Gemini API Key for statement parsing!');
         apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
         apiAuthHeader = `Bearer ${userGeminiKey}`;
-        apiModel = 'gemini-2.5-flash';
+        apiModel = 'gemini-1.5-flash';
         extraHeaders = {};
       } else if (!apiKey) {
         return res.status(500).json({ error: 'Server AI key is not configured and no custom User key was provided.' });
