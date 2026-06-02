@@ -46,13 +46,14 @@ async function getDynamicModels(userApiKey) {
       return defaultModels;
     }
     
-    // Filter models that support content generation and are gemini/gemma text models
+    // Filter models that support content generation and are gemini models (exclude tiny open gemma models)
     const filtered = listData.models
       .filter(m => {
         const name = m.name.toLowerCase();
         const supportsGen = m.supportedGenerationMethods?.includes('generateContent');
+        const isGemini = name.includes('gemini');
         const isExcluded = name.includes('embedding') || name.includes('image') || name.includes('tts') || name.includes('robotics') || name.includes('veo') || name.includes('imagen') || name.includes('lyria') || name.includes('nano') || name.includes('aqa') || name.includes('computer-use') || name.includes('deep-research') || name.includes('antigravity');
-        return supportsGen && !isExcluded;
+        return supportsGen && isGemini && !isExcluded;
       })
       .map(m => m.name.replace(/^models\//, '')); // Strip "models/" prefix
 
@@ -71,18 +72,26 @@ async function getDynamicModels(userApiKey) {
       'gemini-3.5-flash'
     ];
 
+    function getPriorityIndex(modelName) {
+      const name = modelName.toLowerCase();
+      for (let i = 0; i < priorityOrder.length; i++) {
+        if (name.includes(priorityOrder[i])) {
+          return i;
+        }
+      }
+      return 999;
+    }
+
     filtered.sort((a, b) => {
-      let idxA = priorityOrder.indexOf(a);
-      let idxB = priorityOrder.indexOf(b);
-      if (idxA === -1) idxA = 999;
-      if (idxB === -1) idxB = 999;
+      const idxA = getPriorityIndex(a);
+      const idxB = getPriorityIndex(b);
       return idxA - idxB;
     });
 
-    console.log('[DynamicModels] Sorted models chain:', filtered);
+    logDiagnostic(`[DynamicModels] Sorted models chain: ${JSON.stringify(filtered)}`);
     return filtered;
   } catch (err) {
-    console.error('[DynamicModels] Exception:', err.message);
+    logDiagnostic(`[DynamicModels] Exception: ${err.message}`);
     return defaultModels;
   }
 }
@@ -475,6 +484,9 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
         console.log(`Sending receipt image to Google Gemini Native REST API using model ${model} (${req.file.size} bytes)...`);
 
         const apiVersion = 'v1beta';
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 35000); // 35 seconds timeout per model attempt
+
         const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userGeminiKey}`, {
           method: 'POST',
           headers: {
@@ -517,8 +529,10 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
             generationConfig: {
               maxOutputTokens: 1000
             }
-          })
+          }),
+          signal: controller.signal
         });
+        clearTimeout(timeoutId);
 
         if (response.ok) {
           const data = await response.json();
@@ -750,13 +764,18 @@ router.post('/import', upload.single('file'), async (req, res) => {
             }
           };
 
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 35000); // 35 seconds timeout per model attempt
+
           const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userApiKey}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify(bodyPayload)
+            body: JSON.stringify(bodyPayload),
+            signal: controller.signal
           });
+          clearTimeout(timeoutId);
 
           if (response.ok) {
             const data = await response.json();
