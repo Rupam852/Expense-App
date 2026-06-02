@@ -217,7 +217,7 @@ class ExpenseProvider with ChangeNotifier {
             mutableItem['id'] = cryptoUuid();
           }
           final exp = Expense.fromMap(mutableItem);
-          await _dbHelper.insertExpense(exp);
+          await _dbHelper.insertExpense(exp, preventDuplicates: true);
         }
         await loadLocalData(); // Reload cache
         triggerQuietSync();

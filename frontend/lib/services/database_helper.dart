@@ -156,22 +156,24 @@ class DatabaseHelper {
 
   // ================= EXPENSES CRUD =================
 
-  Future<int> insertExpense(Expense expense) async {
+  Future<int> insertExpense(Expense expense, {bool preventDuplicates = false}) async {
     final db = await instance.database;
     
     final encAmount = encryptVal(expense.amount.toString());
     final encDescription = encryptVal(expense.description);
     
-    // Deduplication check: check if same transaction already exists locally
-    final existing = await db.query(
-      'expenses',
-      where: 'amount = ? AND description = ? AND transaction_date = ? AND is_deleted = 0',
-      whereArgs: [encAmount, encDescription, expense.transactionDate.toIso8601String()],
-    );
-    
-    if (existing.isNotEmpty) {
-      print('Deduplication: Expense with amount ${expense.amount}, desc "${expense.description}" and date ${expense.transactionDate} already exists. Skipping insertion.');
-      return 0; // Return 0 to indicate skipped/no-op insertion
+    if (preventDuplicates) {
+      // Deduplication check: check if same transaction already exists locally
+      final existing = await db.query(
+        'expenses',
+        where: 'amount = ? AND description = ? AND transaction_date = ? AND is_deleted = 0',
+        whereArgs: [encAmount, encDescription, expense.transactionDate.toIso8601String()],
+      );
+      
+      if (existing.isNotEmpty) {
+        print('Deduplication: Expense with amount ${expense.amount}, desc "${expense.description}" and date ${expense.transactionDate} already exists. Skipping insertion.');
+        return -1; // Return -1 to indicate skipped/no-op insertion
+      }
     }
 
     final map = expense.toMap();
