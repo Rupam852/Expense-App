@@ -182,24 +182,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Category Icon Mapper
   IconData _getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
-      case 'travel':
-        return Icons.flight;
-      case 'meals':
-        return Icons.restaurant;
-      case 'entertainment':
-        return Icons.local_play_outlined;
-      case 'car / mileage':
-        return Icons.directions_car;
-      case 'office supplies':
+      case 'food & drinks':
+        return Icons.fastfood_outlined;
+      case 'shopping':
         return Icons.shopping_bag_outlined;
-      case 'software / subscriptions':
-        return Icons.computer;
-      case 'fees':
-        return Icons.account_balance;
-      case 'utilities':
-        return Icons.electric_bolt_outlined;
-      case 'upi transfers':
+      case 'recharges & bills':
+        return Icons.receipt_long_outlined;
+      case 'travel & fuel':
+        return Icons.local_gas_station_outlined;
+      case 'medical & health':
+        return Icons.medical_services_outlined;
+      case 'entertainment':
+        return Icons.movie_filter_outlined;
+      case 'money transfers':
         return Icons.swap_horiz;
+      case 'investments & fees':
+        return Icons.trending_up;
       default:
         return Icons.help_outline;
     }
@@ -208,24 +206,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Category Color Mapper
   Color _getCategoryColor(String category) {
     switch (category.toLowerCase()) {
-      case 'travel':
-        return const Color(0xFF2F80ED);
-      case 'meals':
+      case 'food & drinks':
         return const Color(0xFFFF5A5F);
+      case 'shopping':
+        return const Color(0xFFF2C94C);
+      case 'recharges & bills':
+        return const Color(0xFF00D09C);
+      case 'travel & fuel':
+        return const Color(0xFFF2994A);
+      case 'medical & health':
+        return const Color(0xFFEB5757);
       case 'entertainment':
         return const Color(0xFF27AE60);
-      case 'car / mileage':
-        return const Color(0xFFF2994A);
-      case 'office supplies':
-        return const Color(0xFFF2C94C);
-      case 'software / subscriptions':
-        return const Color(0xFF9B51E0);
-      case 'fees':
-        return const Color(0xFFEB5757);
-      case 'utilities':
-        return const Color(0xFF00D09C);
-      case 'upi transfers':
+      case 'money transfers':
         return const Color(0xFF56CCF2);
+      case 'investments & fees':
+        return const Color(0xFF9B51E0);
       default:
         return Colors.grey;
     }
