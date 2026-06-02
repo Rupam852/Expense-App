@@ -13,7 +13,7 @@ async function callGroq(userKey, prompt, base64Image = null, mimeType = null) {
   console.log('Intelligent detection: Using Groq Cloud API parser...');
   
   const isVision = !!base64Image;
-  const model = isVision ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.3-70b-versatile';
+  const model = isVision ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.1-8b-instant';
   
   const messages = [];
   if (isVision) {
