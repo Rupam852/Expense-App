@@ -542,7 +542,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
       if (isGroq) {
         try {
           // Extremely compact prompt for Groq to stay well below the 6000 TPM limit!
-          const prompt = `Extract at most the 15 most recent debit/expense/payment transactions (ignore all credits/deposits/salary/refunds) from this bank statement text.
+          const prompt = `Extract ALL debit/expense/payment/withdrawal transactions (ignore all credits/deposits/salary/refunds) from this bank statement text.
           
           Text:
           ${textContent}
@@ -591,11 +591,11 @@ router.post('/import', upload.single('file'), async (req, res) => {
                         ---------------------
 
                         CRITICAL RULE:
-                        - ONLY extract debit/expense/payment transactions (where money is spent/withdrawn/Dr).
+                        - ONLY extract debit/expense/payment/withdrawal transactions (where money is spent/withdrawn/Dr).
                         - COMPLETELY IGNORE all credit/deposit/income/salary/refund transactions (where money is received/credited/Cr).
 
                         Tasks:
-                        1. Extract at most the 15 most recent debit transaction items.
+                        1. Extract ALL debit transaction items present in the text.
                         2. For each transaction, extract:
                            - amount (numeric positive float)
                            - currency (3-letter ISO code, e.g. INR)
