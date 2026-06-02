@@ -90,6 +90,15 @@ class UserProvider with ChangeNotifier {
     if (result != null) {
       _userProfile = result;
       _isAuthenticated = true;
+
+      // Automatically sync Gemini key from remote DB to local preferences
+      final fetchedApiKey = _userProfile?['gemini_api_key'];
+      if (fetchedApiKey != null && fetchedApiKey.toString().trim().isNotEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_gemini_api_key', fetchedApiKey.toString().trim());
+        _userGeminiApiKey = fetchedApiKey.toString().trim();
+      }
+
       await _saveProfileLocally();
       notifyListeners();
     } else {
@@ -130,6 +139,14 @@ class UserProvider with ChangeNotifier {
       if (result['success'] == true) {
         _userProfile = result['user'];
         _isAuthenticated = true;
+
+        final fetchedApiKey = _userProfile?['gemini_api_key'];
+        if (fetchedApiKey != null && fetchedApiKey.toString().trim().isNotEmpty) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('user_gemini_api_key', fetchedApiKey.toString().trim());
+          _userGeminiApiKey = fetchedApiKey.toString().trim();
+        }
+
         _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
         await _saveProfileLocally();
         _isLoading = false;
@@ -174,6 +191,14 @@ class UserProvider with ChangeNotifier {
       if (result['success'] == true) {
         _userProfile = result['user'];
         _isAuthenticated = true;
+
+        final fetchedApiKey = _userProfile?['gemini_api_key'];
+        if (fetchedApiKey != null && fetchedApiKey.toString().trim().isNotEmpty) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('user_gemini_api_key', fetchedApiKey.toString().trim());
+          _userGeminiApiKey = fetchedApiKey.toString().trim();
+        }
+
         _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
         await _saveProfileLocally();
         _isLoading = false;
@@ -241,6 +266,14 @@ class UserProvider with ChangeNotifier {
       if (result['success'] == true) {
         _userProfile = result['user'];
         _isAuthenticated = true;
+
+        final fetchedApiKey = _userProfile?['gemini_api_key'];
+        if (fetchedApiKey != null && fetchedApiKey.toString().trim().isNotEmpty) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('user_gemini_api_key', fetchedApiKey.toString().trim());
+          _userGeminiApiKey = fetchedApiKey.toString().trim();
+        }
+
         _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
         await _saveProfileLocally();
         _isLoading = false;
@@ -293,7 +326,7 @@ class UserProvider with ChangeNotifier {
   }
 
   // 6. Profile modifications
-  Future<bool> updateProfile({required String name, String? photoUrl}) async {
+  Future<bool> updateProfile({required String name, String? photoUrl, String? geminiApiKey}) async {
     _isLoading = true;
     notifyListeners();
 
@@ -304,19 +337,15 @@ class UserProvider with ChangeNotifier {
       if (photoUrl != null) {
         updated['photo_url'] = photoUrl;
       }
+      if (geminiApiKey != null || geminiApiKey == '') {
+        updated['gemini_api_key'] = geminiApiKey;
+      }
       _userProfile = updated;
       await _saveProfileLocally();
       notifyListeners();
     }
 
     try {
-      // Synchronize changes quietly to remote servers
-      final response = await _apiService.register(
-        email: _userProfile?['email'] ?? '',
-        name: name,
-        photoUrl: photoUrl,
-      ); // Falls back to upsert updates
-
       final token = await _apiService.getToken();
       if (token == null) {
         _isLoading = false;
@@ -324,7 +353,7 @@ class UserProvider with ChangeNotifier {
         return true;
       }
 
-      final res = await httpPutProfile(name: name, photoUrl: photoUrl);
+      final res = await httpPutProfile(name: name, photoUrl: photoUrl, geminiApiKey: geminiApiKey);
       if (res != null) {
         _userProfile = res;
         await _saveProfileLocally();
@@ -365,11 +394,17 @@ class UserProvider with ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>?> httpPutProfile({required String name, String? photoUrl}) async {
+  Future<Map<String, dynamic>?> httpPutProfile({required String name, String? photoUrl, String? geminiApiKey}) async {
     try {
-      final token = await _apiService.getToken();
-      final response = await _apiService.register(email: _userProfile?['email'] ?? '', name: name, photoUrl: photoUrl);
-      return response['user'];
+      final response = await _apiService.updateProfileOnServer(
+        name: name,
+        photoUrl: photoUrl,
+        geminiApiKey: geminiApiKey,
+      );
+      if (response['success'] == true) {
+        return response['user'];
+      }
+      return null;
     } catch (_) {
       return null;
     }
@@ -399,14 +434,25 @@ class UserProvider with ChangeNotifier {
   Future<void> saveUserGeminiApiKey(String? key) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      if (key == null || key.trim().isEmpty) {
+      final cleanKey = (key == null || key.trim().isEmpty) ? '' : key.trim();
+      
+      if (cleanKey.isEmpty) {
         _userGeminiApiKey = null;
         await prefs.remove('user_gemini_api_key');
       } else {
-        _userGeminiApiKey = key.trim();
-        await prefs.setString('user_gemini_api_key', key.trim());
+        _userGeminiApiKey = cleanKey;
+        await prefs.setString('user_gemini_api_key', cleanKey);
       }
       notifyListeners();
+
+      // Synchronize key to database
+      if (_isAuthenticated && _userProfile != null) {
+        await updateProfile(
+          name: _userProfile!['name'] ?? 'User',
+          photoUrl: _userProfile!['photo_url'],
+          geminiApiKey: cleanKey,
+        );
+      }
     } catch (e) {
       print('Error saving custom Gemini API key: $e');
     }

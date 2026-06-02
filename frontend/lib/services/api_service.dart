@@ -315,4 +315,32 @@ class ApiService {
       return {'success': false, 'error': e.toString()};
     }
   }
+
+  // 9. Update Profile Route
+  Future<Map<String, dynamic>> updateProfileOnServer({
+    required String name,
+    String? photoUrl,
+    String? geminiApiKey,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.put(
+        Uri.parse('$baseUrl/auth/profile'),
+        headers: headers,
+        body: json.encode({
+          'name': name,
+          if (photoUrl != null) 'photo_url': photoUrl,
+          if (geminiApiKey != null) 'gemini_api_key': geminiApiKey,
+        }),
+      );
+
+      final decoded = json.decode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'user': decoded['user']};
+      }
+      return {'success': false, 'error': decoded['error'] ?? 'Profile update failed.'};
+    } catch (e) {
+      return {'success': false, 'error': 'Profile update connection error: $e'};
+    }
+  }
 }
