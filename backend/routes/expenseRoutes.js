@@ -26,6 +26,13 @@ function cleanAmount(val) {
   return isNaN(num) ? 0.0 : Math.abs(num);
 }
 
+// Helper to detect if a JSON string returned by LLM is truncated/incomplete before parsing or repairing
+function isJsonTruncated(str) {
+  if (!str) return true;
+  const trimmed = str.trim().replace(/```(json)?$/i, '').trim();
+  return !trimmed.endsWith(']') && !trimmed.endsWith('}');
+}
+
 // Resilient utility to repair truncated JSON arrays/objects from LLMs
 function repairTruncatedJson(str) {
   str = str.trim();
@@ -461,10 +468,21 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
 
         if (response.ok) {
           const data = await response.json();
-          rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-          if (rawContent) {
-            usedModel = model;
-            break;
+          const candidate = data.candidates?.[0];
+          const finishReason = candidate?.finishReason;
+          const text = candidate?.content?.parts?.[0]?.text?.trim();
+          
+          if (text) {
+            const truncated = isJsonTruncated(text);
+            console.log(`[Receipt Scan] Model ${model} returned output (length=${text.length}, finishReason=${finishReason || 'STOP'}, isTruncated=${truncated})`);
+            
+            if (!truncated || model === models[models.length - 1]) {
+              rawContent = text;
+              usedModel = model;
+              break;
+            } else {
+              console.log(`[Receipt Scan] Model ${model} output was truncated. Falling back to the next model...`);
+            }
           }
         } else {
           const errText = await response.text();
@@ -626,53 +644,49 @@ router.post('/import', upload.single('file'), async (req, res) => {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
+              systemInstruction: {
+                parts: [
+                  {
+                    text: `You are a professional financial assistant. Analyze raw text extracted from a bank statement (from any bank like SBI, HDFC, ICICI, Axis, PNB, etc.). Extract all money-out transactions (outflows/debits/transfers).
+
+                    CRITICAL OUTFLOW EXTRACTION RULES:
+                    1. ONLY extract transactions where money is leaving the account (money-out / debits / withdrawals / transfers).
+                    2. Extract all of the following debit/transfer transactions:
+                       - UPI Payments / UPI-DR / UPI-OUT / Merchant payments (e.g., GPay, PhonePe, Paytm, BharatPe transfers)
+                       - Transfers to vendors, merchants, or other individuals (e.g., "TRANSFER TO...", "TO TRANSFER...", "TRFR TO...", "SENT TO...")
+                       - IMPS / NEFT / RTGS debit transfers (e.g., "IMPS-OUT...", "IMPS/DR...", "NEFT DR...")
+                       - Card spends / POS purchases / Online shopping spends (e.g., "POS DEBIT...")
+                       - Cash withdrawals / ATM withdrawals
+                       - Bank fees, charges, interest debits, or SMS alert fees
+                    3. COMPLETELY IGNORE all credits, deposits, refunds, salary, or incoming money (e.g., "IMPS-IN...", "UPI-IN...", "BY TRANSFER...", "TRANSFER FROM...", "interest credited", or any entry under Credit/Deposit/CR columns).
+                    4. STRICT LAZYNESS PREVENTION: Never use placeholders, three dots ('...'), or 'etc.' in the JSON response. You MUST extract absolutely EVERY SINGLE money-out/debit/transfer transaction item present in the text, no matter how many there are. Do not stop until the entire text is fully parsed.
+                    
+                    How to identify debits in tabular statement text:
+                    - Look for entries in columns named "Debit", "Withdrawal", "DR", "Amount (Dr)", or "Debits".
+                    - If the statement does not have distinct columns, identify debits via keywords like "UPI-DR", "IMPS-OUT", "TRFR TO", "Paid to", or negative numbers.
+
+                    Ensure your response is ONLY a JSON array of objects, without markdown wrapper blocks or text.
+                    Structure:
+                    [
+                      {
+                        "amount": 450.00,
+                        "currency": "INR",
+                        "category": "Shopping",
+                        "description": "Amazon UPI Transfer",
+                        "transaction_date": "2026-05-25T12:00:00.000Z"
+                      }
+                    ]`
+                  }
+                ]
+              },
               contents: [
                 {
                   parts: [
                     {
-                      text: `Analyze this raw text extracted from a bank statement (from any bank like SBI, HDFC, ICICI, Axis, PNB, etc.). Extract all money-out transactions (outflows/debits/transfers).
-
-                      Raw PDF text content:
+                      text: `Raw PDF text content:
                       ---------------------
                       ${textContent}
-                      ---------------------
-
-                      CRITICAL OUTFLOW EXTRACTION RULES:
-                      1. ONLY extract transactions where money is leaving the account (money-out / debits / withdrawals / transfers).
-                      2. Extract all of the following debit/transfer transactions:
-                         - UPI Payments / UPI-DR / UPI-OUT / Merchant payments (e.g., GPay, PhonePe, Paytm, BharatPe transfers)
-                         - Transfers to vendors, merchants, or other individuals (e.g., "TRANSFER TO...", "TO TRANSFER...", "TRFR TO...", "SENT TO...")
-                         - IMPS / NEFT / RTGS debit transfers (e.g., "IMPS-OUT...", "IMPS/DR...", "NEFT DR...")
-                         - Card spends / POS purchases / Online shopping spends (e.g., "POS DEBIT...")
-                         - Cash withdrawals / ATM withdrawals
-                         - Bank fees, charges, interest debits, or SMS alert fees
-                      3. COMPLETELY IGNORE all credits, deposits, refunds, salary, or incoming money (e.g., "IMPS-IN...", "UPI-IN...", "BY TRANSFER...", "TRANSFER FROM...", "interest credited", or any entry under Credit/Deposit/CR columns).
-                      4. STRICT LAZYNESS PREVENTION: Never use placeholders, three dots ('...'), or 'etc.' in the JSON response. If there are too many transactions, output as many as you can complete fully, but do not write '...' inside the JSON structure.
-                      
-                      How to identify debits in tabular statement text:
-                      - Look for entries in columns named "Debit", "Withdrawal", "DR", "Amount (Dr)", or "Debits".
-                      - If the statement does not have distinct columns, identify debits via keywords like "UPI-DR", "IMPS-OUT", "TRFR TO", "Paid to", or negative numbers.
-
-                      Tasks:
-                      1. Extract ALL money-out/debit/transfer transaction items present in the text.
-                      2. For each transaction, extract:
-                         - amount (numeric positive float, always positive)
-                         - currency (3-letter ISO code, e.g. INR)
-                         - category (Precisely categorize into one of: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
-                         - description (Clear merchant, vendor, receiver name, or description of transaction)
-                         - transaction_date (ISO 8601 string)
-                      
-                      Ensure your response is ONLY a JSON array of objects, without markdown wrapper blocks or text.
-                      Structure:
-                      [
-                        {
-                          "amount": 450.00,
-                          "currency": "INR",
-                          "category": "Shopping",
-                          "description": "Amazon UPI Transfer",
-                          "transaction_date": "2026-05-25T12:00:00.000Z"
-                        }
-                      ]`
+                      ---------------------`
                     }
                   ]
                 }
@@ -703,10 +717,21 @@ router.post('/import', upload.single('file'), async (req, res) => {
 
           if (response.ok) {
             const data = await response.json();
-            rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-            if (rawContent) {
-              usedModel = model;
-              break;
+            const candidate = data.candidates?.[0];
+            const finishReason = candidate?.finishReason;
+            const text = candidate?.content?.parts?.[0]?.text?.trim();
+            
+            if (text) {
+              const truncated = isJsonTruncated(text);
+              logDiagnostic(`[PDF Import] Model ${model} returned output (length=${text.length}, finishReason=${finishReason || 'STOP'}, isTruncated=${truncated})`);
+              
+              if (!truncated || model === models[models.length - 1]) {
+                rawContent = text;
+                usedModel = model;
+                break;
+              } else {
+                logDiagnostic(`[PDF Import] Model ${model} output was truncated. Falling back to the next model...`);
+              }
             }
           } else {
             const errText = await response.text();
