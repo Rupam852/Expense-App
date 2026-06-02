@@ -726,7 +726,10 @@ Example: [{"amount":450.0,"currency":"INR","category":"Shopping","description":"
 
       let cleanJson = rawContent.trim();
       
-      // Bulletproof JSON extractor: extracts JSON even if there is surrounding conversational text
+      // Step 1: Remove markdown block wrappers if present
+      cleanJson = cleanJson.replace(/```json/gi, '').replace(/```/gi, '').trim();
+
+      // Step 2: Extract JSON subset using boundaries
       const firstCurly = cleanJson.indexOf('{');
       const firstBracket = cleanJson.indexOf('[');
       let startIndex = -1;
@@ -746,13 +749,46 @@ Example: [{"amount":450.0,"currency":"INR","category":"Shopping","description":"
         }
       }
 
+      // Step 3: Robust Parser - Escape literal newlines inside double-quoted string values (CRITICAL for UPI descriptions with newlines)
+      let insideQuotes = false;
+      let escaped = false;
+      let fixedStr = '';
+      for (let i = 0; i < cleanJson.length; i++) {
+        const char = cleanJson[i];
+        if (char === '"' && !escaped) {
+          insideQuotes = !insideQuotes;
+        }
+        
+        if (insideQuotes) {
+          if (char === '\n') {
+            fixedStr += ' '; // Convert literal newline to safe space
+          } else if (char === '\r') {
+            // Drop carriage return
+          } else {
+            fixedStr += char;
+          }
+        } else {
+          fixedStr += char;
+        }
+        
+        if (char === '\\' && !escaped) {
+          escaped = true;
+        } else {
+          escaped = false;
+        }
+      }
+      cleanJson = fixedStr;
+
+      // Step 4: Remove trailing commas in objects or arrays before closing braces
+      cleanJson = cleanJson.replace(/,\s*([\]}])/g, '$1');
+
       let parsedArray = [];
       try {
         const parsedJson = JSON.parse(cleanJson);
         if (Array.isArray(parsedJson)) {
           parsedArray = parsedJson;
         } else if (parsedJson && typeof parsedJson === 'object') {
-          // Look for transactions list inside root object
+          // Look for transaction lists inside root object keys
           const keys = Object.keys(parsedJson);
           for (const k of keys) {
             if (Array.isArray(parsedJson[k])) {
