@@ -16,6 +16,7 @@ class UserProvider with ChangeNotifier {
   bool _biometricsEnabled = false;
   String? _errorMessage;
   String? _userGeminiApiKey;
+  bool _showApiKeyPrompt = false;
 
   Map<String, dynamic>? get userProfile => _userProfile;
   bool get isAuthenticated => _isAuthenticated;
@@ -23,6 +24,12 @@ class UserProvider with ChangeNotifier {
   bool get biometricsEnabled => _biometricsEnabled;
   String? get errorMessage => _errorMessage;
   String? get userGeminiApiKey => _userGeminiApiKey;
+  bool get showApiKeyPrompt => _showApiKeyPrompt;
+
+  void dismissApiKeyPrompt() {
+    _showApiKeyPrompt = false;
+    notifyListeners();
+  }
 
   fb.FirebaseAuth? _firebaseAuth;
   GoogleSignIn? _googleSignIn;
@@ -123,6 +130,7 @@ class UserProvider with ChangeNotifier {
       if (result['success'] == true) {
         _userProfile = result['user'];
         _isAuthenticated = true;
+        _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
         await _saveProfileLocally();
         _isLoading = false;
         notifyListeners();
@@ -166,6 +174,7 @@ class UserProvider with ChangeNotifier {
       if (result['success'] == true) {
         _userProfile = result['user'];
         _isAuthenticated = true;
+        _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
         await _saveProfileLocally();
         _isLoading = false;
         notifyListeners();
@@ -232,6 +241,7 @@ class UserProvider with ChangeNotifier {
       if (result['success'] == true) {
         _userProfile = result['user'];
         _isAuthenticated = true;
+        _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
         await _saveProfileLocally();
         _isLoading = false;
         notifyListeners();
@@ -380,6 +390,7 @@ class UserProvider with ChangeNotifier {
       'photo_url': null,
     };
     _isAuthenticated = true;
+    _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
     await _saveProfileLocally();
     notifyListeners();
   }

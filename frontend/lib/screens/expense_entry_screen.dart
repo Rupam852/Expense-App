@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/expense_provider.dart';
+import '../services/user_provider.dart';
 import '../models/expense.dart';
 
 class ExpenseEntryScreen extends StatefulWidget {
@@ -78,6 +79,17 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
 
   // Trigger camera or gallery scanner
   void _triggerScanner(ImageSource source) async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    if (userProvider.userGeminiApiKey == null || userProvider.userGeminiApiKey!.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter your Google AI Studio API Key in Settings to scan receipts.'),
+          backgroundColor: Colors.amber,
+        ),
+      );
+      return;
+    }
+
     final picker = ImagePicker();
     final image = await picker.pickImage(
       source: source,

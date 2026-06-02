@@ -60,6 +60,18 @@ class DashboardScreen extends StatelessWidget {
 
   void _triggerFileImport(BuildContext context) async {
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+    if (userProvider.userGeminiApiKey == null || userProvider.userGeminiApiKey!.trim().isEmpty) {
+      _showGeminiKeyDialog(context, userProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter your Google AI Studio API Key to parse PDF statements.'),
+          backgroundColor: Colors.amber,
+        ),
+      );
+      return;
+    }
     
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -494,6 +506,14 @@ class DashboardScreen extends StatelessWidget {
     final userProvider = Provider.of<UserProvider>(context);
     final expenseProvider = Provider.of<ExpenseProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Auto-prompt custom Gemini API Key popup if missing right after login!
+    if (userProvider.showApiKeyPrompt) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showGeminiKeyDialog(context, userProvider);
+        userProvider.dismissApiKeyPrompt();
+      });
+    }
 
     // Filter expenses for current month to display sum
     final currentMonthStr = DateFormat('yyyy-MM').format(DateTime.now());
