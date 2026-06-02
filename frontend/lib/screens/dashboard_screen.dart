@@ -157,6 +157,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
     final passwordController = TextEditingController();
     String? currentError = initialError;
+    bool isObscured = true;
 
     showDialog(
       context: context,
@@ -178,7 +179,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Password Protected PDF',
+                      'Password Protected Statement',
                       style: GoogleFonts.outfit(
                         fontWeight: FontWeight.bold,
                         fontSize: 20,
@@ -192,23 +193,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Aapka PDF statement password-protected hai. Import karne ke liye kripya sahi password enter karein:',
+                    'Aapka statement password-protected hai. Import karne ke liye kripya sahi password enter karein:',
                     style: GoogleFonts.inter(fontSize: 13, height: 1.4),
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: passwordController,
-                    obscureText: true,
+                    obscureText: isObscured,
                     autofocus: true,
                     style: GoogleFonts.inter(fontSize: 14),
                     decoration: InputDecoration(
-                      labelText: 'PDF Password',
+                      labelText: 'Password',
                       labelStyle: TextStyle(color: Theme.of(context).primaryColor),
                       hintText: 'Enter password...',
                       filled: true,
                       fillColor: Theme.of(context).primaryColor.withOpacity(0.03),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          isObscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                          size: 20,
+                        ),
+                        onPressed: () {
+                          setStateDialog(() {
+                            isObscured = !isObscured;
+                          });
+                        },
                       ),
                       errorText: currentError,
                     ),
@@ -242,7 +254,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       context: context,
                       barrierDismissible: false,
                       builder: (context) => PremiumProgressDialog(
-                        title: 'Decrypting & Importing PDF',
+                        title: 'Decrypting & Importing Statement',
                         importTask: () => expenseProvider.importStatement(path, password: enteredPassword),
                       ),
                     );
