@@ -770,6 +770,16 @@ router.post('/import', upload.single('file'), async (req, res) => {
           csvText = xlsx.utils.sheet_to_csv(worksheet);
         }
 
+        // Clean out empty rows, dangling commas, and spaces to maximize Gemini context window efficiency
+        csvText = csvText
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => {
+            const cleanLine = line.replace(/[,""''\s\-]/g, '');
+            return cleanLine.length > 0;
+          })
+          .join('\n');
+
         const textContent = csvText
           .trim()
           .slice(0, 150000); // 150,000 chars slice limit to avoid model overload
