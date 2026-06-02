@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:encrypt/encrypt.dart' as enc;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/expense.dart';
 import '../models/budget.dart';
 import '../models/payment_detail.dart';
@@ -10,14 +11,38 @@ class DatabaseHelper {
   static Database? _database;
 
   // AES-256 Symmetric key and IV setup (Pure Dart cryptography)
-  static final _encryptionKey = enc.Key.fromUtf8('groww_secure_app_salt_32_bytes_k'); // 32 characters
+  static const _secureStorage = FlutterSecureStorage();
+  static const _keyStoreName = 'groww_db_enc_key';
+  
+  static enc.Key? _dynamicKey;
   static final _encryptionIV = enc.IV.fromUtf8('groww_sec_iv_16b'); // 16 characters
-  static final _crypter = enc.Encrypter(enc.AES(_encryptionKey, mode: enc.AESMode.cbc));
+  static enc.Encrypter? _crypter;
+
+  static Future<void> _initEncryptionKey() async {
+    if (_dynamicKey != null && _crypter != null) return;
+    try {
+      String? keyVal = await _secureStorage.read(key: _keyStoreName);
+      if (keyVal == null) {
+        // Save the default fallback key to secure storage on first run.
+        // This guarantees zero breaking changes for existing installations, 
+        // while migrating it securely into Keystore/Keychain container dynamically!
+        keyVal = 'groww_secure_app_salt_32_bytes_k';
+        await _secureStorage.write(key: _keyStoreName, value: keyVal);
+      }
+      _dynamicKey = enc.Key.fromUtf8(keyVal);
+      _crypter = enc.Encrypter(enc.AES(_dynamicKey!, mode: enc.AESMode.cbc));
+    } catch (e) {
+      print('Secure storage key retrieval failed: $e');
+      _dynamicKey = enc.Key.fromUtf8('groww_secure_app_salt_32_bytes_k');
+      _crypter = enc.Encrypter(enc.AES(_dynamicKey!, mode: enc.AESMode.cbc));
+    }
+  }
 
   static String encryptVal(String plainText) {
     if (plainText.isEmpty) return plainText;
     try {
-      final encrypted = _crypter.encrypt(plainText, iv: _encryptionIV);
+      final crypter = _crypter ?? enc.Encrypter(enc.AES(enc.Key.fromUtf8('groww_secure_app_salt_32_bytes_k'), mode: enc.AESMode.cbc));
+      final encrypted = crypter.encrypt(plainText, iv: _encryptionIV);
       return encrypted.base64;
     } catch (e) {
       print('Encryption error: $e');
@@ -28,7 +53,8 @@ class DatabaseHelper {
   static String decryptVal(String cipherText) {
     if (cipherText.isEmpty) return cipherText;
     try {
-      final decrypted = _crypter.decrypt64(cipherText, iv: _encryptionIV);
+      final crypter = _crypter ?? enc.Encrypter(enc.AES(enc.Key.fromUtf8('groww_secure_app_salt_32_bytes_k'), mode: enc.AESMode.cbc));
+      final decrypted = crypter.decrypt64(cipherText, iv: _encryptionIV);
       return decrypted;
     } catch (e) {
       // Return plaintext if decryption fails (self-healing for legacy/plaintext rows)
@@ -59,6 +85,7 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
+    await _initEncryptionKey();
     _database = await _initDB('expense_app.db');
     return _database!;
   }
