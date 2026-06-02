@@ -103,7 +103,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['xlsx', 'xls', 'pdf'],
+      allowedExtensions: ['xlsx', 'xls', 'pdf', 'csv'],
     );
 
     if (result != null && result.files.single.path != null) {
