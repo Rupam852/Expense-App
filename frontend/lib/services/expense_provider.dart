@@ -222,12 +222,12 @@ class ExpenseProvider with ChangeNotifier {
   }
 
   // File parsing (Excel/PDF) batch import trigger
-  Future<bool> importStatement(String filePath) async {
+  Future<String?> importStatement(String filePath, {String? password}) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      final result = await _apiService.importStatement(filePath);
+      final result = await _apiService.importStatement(filePath, password: password);
       if (result['success'] == true) {
         final List<dynamic> importedList = result['expenses'] ?? [];
         for (final item in importedList) {
@@ -240,13 +240,13 @@ class ExpenseProvider with ChangeNotifier {
         }
         await loadLocalData(); // Reload cache
         triggerQuietSync();
-        return true;
+        return 'success';
       }
-      _syncErrorMessage = result['error'];
-      return false;
+      _syncErrorMessage = result['message'] ?? result['error'];
+      return result['error'];
     } catch (e) {
       _syncErrorMessage = 'Importing error: $e';
-      return false;
+      return 'error';
     } finally {
       _isLoading = false;
       notifyListeners();

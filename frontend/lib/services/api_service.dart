@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
@@ -181,7 +180,7 @@ class ApiService {
 
   // 5. Batch Imports (PDF / Excel File Upload)
   // Uses a dedicated HTTP client with 3-minute timeout for large PDFs + AI processing time
-  Future<Map<String, dynamic>> importStatement(String filePath) async {
+  Future<Map<String, dynamic>> importStatement(String filePath, {String? password}) async {
     // Step 1: Warm-up ping — wakes Render server if sleeping (avoids cold-start timeout)
     try {
       print('[Import] Sending warm-up ping to wake server...');
@@ -201,6 +200,10 @@ class ApiService {
 
       if (token != null) {
         request.headers['Authorization'] = 'Bearer $token';
+      }
+
+      if (password != null && password.isNotEmpty) {
+        request.headers['x-file-password'] = password;
       }
 
       // Pass user Gemini/Groq API key in header for AI processing
@@ -232,7 +235,11 @@ class ApiService {
       if (response.statusCode == 200) {
         return {'success': true, 'expenses': decoded['expenses']};
       }
-      return {'success': false, 'error': decoded['error'] ?? 'Failed to parse file.'};
+      return {
+        'success': false,
+        'error': decoded['error'] ?? 'Failed to parse file.',
+        'message': decoded['message']
+      };
     } catch (e) {
       return {'success': false, 'error': 'Import failed: ${e.toString().replaceAll('Exception: ', '')}'}; 
     }
