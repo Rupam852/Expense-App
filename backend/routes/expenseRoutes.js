@@ -420,7 +420,7 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
       try {
         console.log(`Sending receipt image to Google Gemini Native REST API using model ${model} (${req.file.size} bytes)...`);
 
-        const apiVersion = model.startsWith('gemini-1.5') ? 'v1' : 'v1beta';
+        const apiVersion = 'v1beta';
         const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userGeminiKey}`, {
           method: 'POST',
           headers: {
@@ -637,7 +637,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
         try {
           logDiagnostic(`Sending PDF text to Google Gemini Native REST API using model ${model} (${textContent.length} chars)...`);
 
-          const apiVersion = model.startsWith('gemini-1.5') ? 'v1' : 'v1beta';
+          const apiVersion = 'v1beta';
 
           const systemRulesText = `You are a professional financial assistant. Analyze raw text extracted from a bank statement (from any bank like SBI, HDFC, ICICI, Axis, PNB, etc.). Extract all money-out transactions (outflows/debits/transfers).
 
@@ -669,7 +669,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
             }
           ]`;
 
-          const bodyPayload = apiVersion === 'v1beta' ? {
+          const bodyPayload = {
             systemInstruction: {
               parts: [{ text: systemRulesText }]
             },
@@ -681,25 +681,6 @@ router.post('/import', upload.single('file'), async (req, res) => {
                     ---------------------
                     ${textContent}
                     ---------------------`
-                  }
-                ]
-              }
-            ],
-            safetySettings: [
-              { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-              { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-              { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-              { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-            ],
-            generationConfig: {
-              maxOutputTokens: 4096
-            }
-          } : {
-            contents: [
-              {
-                parts: [
-                  {
-                    text: `${systemRulesText}\n\nRaw PDF text content:\n---------------------\n${textContent}\n---------------------\n`
                   }
                 ]
               }
