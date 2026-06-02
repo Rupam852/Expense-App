@@ -714,7 +714,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
         }
       } catch (jsonErr) {
         console.error('JSON parsing failed. Raw LLM content was:', rawContent);
-        throw new Error('Failed to parse financial transactions from PDF text.');
+        throw new Error(`Failed to parse financial transactions from PDF text. Raw LLM response: ${rawContent ? rawContent.substring(0, 200) : 'null'}`);
       }
 
       if (!Array.isArray(parsedArray) || parsedArray.length === 0) {
