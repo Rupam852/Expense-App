@@ -110,7 +110,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   
                   // App Title
                   Text(
-                    'GROWWFLOW',
+                    'GROW EXPENSE',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.outfit(
                       fontSize: 32,

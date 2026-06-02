@@ -1,11 +1,11 @@
 {
-    "name": "expense_app",
-    "short_name": "expense_app",
+    "name": "Grow Expense",
+    "short_name": "Grow Expense",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Secure Offline-First Grow Expense app.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -1,7 +1,7 @@
 {
   "name": "expense-tracker-backend",
   "version": "1.0.0",
-  "description": "Backend API for secure offline-first Expense Tracker app",
+  "description": "Backend API for secure offline-first Grow Expense app",
   "main": "server.js",
   "type": "module",
   "scripts": {

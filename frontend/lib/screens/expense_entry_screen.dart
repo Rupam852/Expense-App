@@ -101,7 +101,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Google AI Studio Key',
+                      'Google AI Studio / Groq Key',
                       style: GoogleFonts.outfit(
                         fontWeight: FontWeight.bold,
                         fontSize: 20,
@@ -115,7 +115,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Apna personal free Gemini API key enter karein. Isse transaction scan aur statement import directly aapke key se free mein chalenge.',
+                    'Apna personal free Google AI Studio (Gemini) ya Groq API key enter karein. Isse transaction scan aur statement import directly aapke key se free mein chalenge.',
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       height: 1.4,
@@ -127,9 +127,9 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                     obscureText: isObscured,
                     style: GoogleFonts.inter(fontSize: 14),
                     decoration: InputDecoration(
-                      labelText: 'Gemini API Key',
+                      labelText: 'Google AI Studio / Groq API Key',
                       labelStyle: TextStyle(color: Theme.of(context).primaryColor),
-                      hintText: 'AIzaSy...',
+                      hintText: 'AIzaSy... (Gemini) or gsk_... (Groq)',
                       filled: true,
                       fillColor: Theme.of(context).primaryColor.withOpacity(0.03),
                       border: OutlineInputBorder(
@@ -146,9 +146,9 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                   ),
                   const SizedBox(height: 12),
                   SelectableText(
-                    'Key nahi hai? Free mein generate karein:\naistudio.google.com',
+                    'Key nahi hai? Free mein generate karein:\naistudio.google.com  |  console.groq.com',
                     style: GoogleFonts.inter(
-                      fontSize: 12,
+                      fontSize: 11,
                       color: Theme.of(context).primaryColor,
                       fontWeight: FontWeight.w600,
                       height: 1.4,
@@ -192,7 +192,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                           content: Text(
                             keyVal.isEmpty
                                 ? 'Switched back to shared server key!'
-                                : 'Custom Gemini API Key saved successfully!',
+                                : 'API Key saved successfully!',
                           ),
                         ),
                       );

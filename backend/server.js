@@ -44,7 +44,7 @@ const authLimiter = rateLimit({
 app.get('/', (req, res) => {
   res.status(200).json({
     status: 'online',
-    message: 'Secure Offline-First Expense Tracker Backend running successfully.',
+    message: 'Secure Offline-First Grow Expense Backend running successfully.',
     time: new Date().toISOString()
   });
 });
