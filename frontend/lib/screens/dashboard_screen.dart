@@ -749,9 +749,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               const Icon(Icons.wallet, size: 14, color: Colors.white),
                               const SizedBox(width: 4),
                               Text(
-                                isSelectedMonthCurrent
-                                    ? '${expenseProvider.expenses.length} Total records'
-                                    : '${monthlyExpenses.length} Records this month',
+                                '${monthlyExpenses.length} Records',
                                 style: GoogleFonts.inter(
                                   fontSize: 11,
                                   color: Colors.white,
@@ -762,132 +760,95 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                         const Spacer(),
-                        Text(
-                          DateFormat('MMMM yyyy').format(_selectedMonthYear!).toUpperCase(),
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            color: Colors.white.withOpacity(0.9),
-                            fontWeight: FontWeight.bold,
+                        PopupMenuButton<DateTime>(
+                          initialValue: _selectedMonthYear,
+                          tooltip: 'Select Month',
+                          onSelected: (DateTime selected) {
+                            setState(() {
+                              _selectedMonthYear = selected;
+                            });
+                          },
+                          offset: const Offset(0, 30),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
+                          color: isDark ? const Color(0xFF1E222B) : Colors.white,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  DateFormat('MMMM yyyy').format(_selectedMonthYear!).toUpperCase(),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.arrow_drop_down,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                              ],
+                            ),
+                          ),
+                          itemBuilder: (BuildContext context) {
+                            return availableMonths.map((DateTime month) {
+                              final isSelected = _selectedMonthYear!.year == month.year &&
+                                  _selectedMonthYear!.month == month.month;
+                              final isCurrent = DateTime.now().year == month.year &&
+                                  DateTime.now().month == month.month;
+                              final label = DateFormat('MMMM yyyy').format(month);
+                              return PopupMenuItem<DateTime>(
+                                value: month,
+                                child: Row(
+                                  children: [
+                                    if (isCurrent) ...[
+                                      Icon(
+                                        Icons.today_outlined,
+                                        size: 16,
+                                        color: isSelected
+                                            ? const Color(0xFF00D09C)
+                                            : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                                      ),
+                                      const SizedBox(width: 8),
+                                    ] else ...[
+                                      Icon(
+                                        Icons.calendar_today_outlined,
+                                        size: 16,
+                                        color: isSelected
+                                            ? const Color(0xFF00D09C)
+                                            : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                                      ),
+                                      const SizedBox(width: 8),
+                                    ],
+                                    Text(
+                                      label,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                        color: isSelected
+                                            ? const Color(0xFF00D09C)
+                                            : (isDark ? Colors.white : Colors.black87),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList();
+                          },
                         ),
                       ],
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 20),
-
-              // Month history horizontal selector
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4.0, bottom: 10.0),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.history_toggle_off,
-                          size: 16,
-                          color: isDark ? Colors.grey[400] : Colors.grey[600],
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'MONTHLY STATEMENT HISTORY',
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.8,
-                            color: isDark ? Colors.grey[400] : Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(
-                    height: 46,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: availableMonths.length,
-                      itemBuilder: (context, index) {
-                        final month = availableMonths[index];
-                        final isSelected = _selectedMonthYear!.year == month.year &&
-                            _selectedMonthYear!.month == month.month;
-                        final isCurrent = DateTime.now().year == month.year &&
-                            DateTime.now().month == month.month;
-                        final label = DateFormat('MMM yyyy').format(month);
-
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          margin: const EdgeInsets.only(right: 8.0),
-                          child: InkWell(
-                            onTap: () {
-                              setState(() {
-                                _selectedMonthYear = month;
-                              });
-                            },
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                              decoration: BoxDecoration(
-                                gradient: isSelected
-                                    ? const LinearGradient(
-                                        colors: [Color(0xFF00D09C), Color(0xFF05B488)],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                      )
-                                    : null,
-                                color: isSelected
-                                    ? null
-                                    : (isDark ? const Color(0xFF181B22) : Colors.white),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? Colors.transparent
-                                      : (isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0)),
-                                  width: 1.5,
-                                ),
-                                boxShadow: isSelected
-                                    ? [
-                                        BoxShadow(
-                                          color: const Color(0xFF00D09C).withOpacity(0.2),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 4),
-                                        )
-                                      ]
-                                    : null,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (isCurrent) ...[
-                                    Icon(
-                                      Icons.today_outlined,
-                                      size: 14,
-                                      color: isSelected
-                                          ? Colors.white
-                                          : (isDark ? Colors.grey[400] : Colors.grey[600]),
-                                    ),
-                                    const SizedBox(width: 6),
-                                  ],
-                                  Text(
-                                    label,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                                      color: isSelected
-                                          ? Colors.white
-                                          : (isDark ? Colors.grey[300] : Colors.grey[700]),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
               ),
               const SizedBox(height: 24),
 
