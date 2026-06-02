@@ -311,6 +311,200 @@ function repairTruncatedJson(str) {
   return str;
 }
 
+// Custom page render function for pdf-parse to inject page breaks
+function pageRender(pageData) {
+  return pageData.getTextContent({
+    normalizeWhitespace: false,
+    disableCombineTextItems: false
+  }).then(function(textContent) {
+    let lastY, text = '';
+    for (let item of textContent.items) {
+      if (lastY == item.transform[5] || !lastY) {
+        text += item.str;
+      } else {
+        text += '\n' + item.str;
+      }
+      lastY = item.transform[5];
+    }
+    return text + '\n---PAGE_BREAK---';
+  });
+}
+
+// Deduplicate parsed transactions by creating a unique key
+function deduplicateTransactions(expenses) {
+  const unique = [];
+  const seen = new Set();
+  
+  for (const tx of expenses) {
+    const amtStr = Number(tx.amount || 0).toFixed(2);
+    let dateStr = 'unknown-date';
+    try {
+      if (tx.transaction_date) {
+        dateStr = new Date(tx.transaction_date).toISOString().split('T')[0];
+      }
+    } catch (_) {
+      dateStr = String(tx.transaction_date || '').substring(0, 10);
+    }
+    const descClean = String(tx.description || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    
+    const key = `${dateStr}_${amtStr}_${descClean}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(tx);
+    } else {
+      logDiagnostic(`[Import Deduplication] Discarded duplicate transaction: Date=${dateStr}, Amount=${amtStr}, Desc="${tx.description}"`);
+    }
+  }
+  
+  return unique;
+}
+
+// Call Google Gemini Native REST API for a specific text chunk
+async function callGeminiForChunk(chunkText, systemRulesText, userApiKey, models) {
+  let rawContent = null;
+  let lastError = null;
+  
+  for (const model of models) {
+    try {
+      const apiVersion = 'v1beta';
+      const bodyPayload = {
+        systemInstruction: {
+          parts: [{ text: systemRulesText }]
+        },
+        contents: [
+          {
+            parts: [
+              {
+                text: `Raw text content:
+                ---------------------
+                ${chunkText}
+                ---------------------`
+              }
+            ]
+          }
+        ],
+        safetySettings: [
+          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+        ],
+        generationConfig: {
+          maxOutputTokens: 8192,
+          responseMimeType: 'application/json'
+        }
+      };
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 35000);
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userApiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(bodyPayload),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = await response.json();
+        const candidate = data.candidates?.[0];
+        const finishReason = candidate?.finishReason;
+        const text = candidate?.content?.parts?.[0]?.text?.trim();
+        
+        if (text) {
+          const truncated = isJsonTruncated(text);
+          logDiagnostic(`[Chunk Import] Model ${model} returned output (length=${text.length}, finishReason=${finishReason || 'STOP'}, isTruncated=${truncated})`);
+          
+          if (!truncated || model === models[models.length - 1]) {
+            rawContent = text;
+            break;
+          } else {
+            logDiagnostic(`[Chunk Import] Model ${model} output was truncated. Falling back to the next model...`);
+          }
+        }
+      } else {
+        const errText = await response.text();
+        logDiagnostic(`Gemini model ${model} chunk call failed with status ${response.status}: ${errText}`);
+        lastError = new Error(errText);
+      }
+    } catch (err) {
+      logDiagnostic(`Gemini model ${model} chunk call exception: ${err.message}`);
+      lastError = err;
+    }
+  }
+
+  if (!rawContent) {
+    throw lastError || new Error('No response from Gemini API models.');
+  }
+
+  let cleanJson = rawContent.trim();
+  cleanJson = cleanJson.replace(/```json/gi, '').replace(/```/gi, '').trim();
+  cleanJson = repairTruncatedJson(cleanJson);
+
+  const firstCurly = cleanJson.indexOf('{');
+  const firstBracket = cleanJson.indexOf('[');
+  let startIndex = -1;
+  let isObject = false;
+
+  if (firstCurly !== -1 && (firstBracket === -1 || firstCurly < firstBracket)) {
+    startIndex = firstCurly;
+    isObject = true;
+  } else if (firstBracket !== -1) {
+    startIndex = firstBracket;
+  }
+
+  if (startIndex !== -1) {
+    const lastIndex = isObject ? cleanJson.lastIndexOf('}') : cleanJson.lastIndexOf(']');
+    if (lastIndex !== -1 && lastIndex > startIndex) {
+      cleanJson = cleanJson.substring(startIndex, lastIndex + 1);
+    }
+  }
+
+  let insideQuotes = false;
+  let escaped = false;
+  let fixedStr = '';
+  for (let i = 0; i < cleanJson.length; i++) {
+    const char = cleanJson[i];
+    if (char === '"' && !escaped) {
+      insideQuotes = !insideQuotes;
+    }
+    if (insideQuotes) {
+      if (char === '\n') fixedStr += ' ';
+      else if (char === '\r') {}
+      else fixedStr += char;
+    } else {
+      fixedStr += char;
+    }
+    if (char === '\\' && !escaped) escaped = true;
+    else escaped = false;
+  }
+  cleanJson = fixedStr;
+
+  cleanJson = cleanJson.replace(/,\s*([\]}])/g, '$1');
+  cleanJson = cleanJson.replace(/,\s*"\.\.\."\s*/g, '');
+  cleanJson = cleanJson.replace(/,\s*\.\.\.\s*/g, '');
+  cleanJson = cleanJson.replace(/"\.\.\."\s*/g, '""');
+  cleanJson = cleanJson.replace(/\.\.\.\s*/g, '');
+
+  const parsedJson = JSON.parse(cleanJson);
+  let parsedArray = [];
+  if (Array.isArray(parsedJson)) {
+    parsedArray = parsedJson;
+  } else if (parsedJson && typeof parsedJson === 'object') {
+    const keys = Object.keys(parsedJson);
+    for (const k of keys) {
+      if (Array.isArray(parsedJson[k])) {
+        parsedArray = parsedJson[k];
+        break;
+      }
+    }
+  }
+  return parsedArray;
+}
+
 // Multer memory storage for serverless-friendly file handling
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -758,7 +952,6 @@ router.post('/import', upload.single('file'), async (req, res) => {
 
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-
       const userApiKey = req.headers['x-user-gemini-key'];
       if (userApiKey && userApiKey.trim().length > 0) {
         logDiagnostic(`[Spreadsheet Import] Gemini API Key found. Parsing using Google Gemini AI...`);
@@ -770,27 +963,36 @@ router.post('/import', upload.single('file'), async (req, res) => {
           csvText = xlsx.utils.sheet_to_csv(worksheet);
         }
 
-        // Clean out empty rows, dangling commas, and spaces to maximize Gemini context window efficiency
-        csvText = csvText
+        // Clean out empty rows, dangling commas, and spaces
+        const lines = csvText
           .split('\n')
           .map(line => line.trim())
           .filter(line => {
             const cleanLine = line.replace(/[,""''\s\-]/g, '');
             return cleanLine.length > 0;
-          })
-          .join('\n');
+          });
 
-        const textContent = csvText
-          .trim()
-          .slice(0, 150000); // 150,000 chars slice limit to avoid model overload
+        logDiagnostic(`[Spreadsheet Import] Total cleaned spreadsheet lines: ${lines.length}`);
 
-        logDiagnostic(`[Spreadsheet Import] Excel/CSV converted to CSV text (length=${textContent.length}).`);
+        // Group rows into chunks if the spreadsheet is large. Prepend first 8 header lines to retain column schema context.
+        const chunks = [];
+        if (lines.length > 80) {
+          const headerLines = lines.slice(0, 8);
+          const dataLines = lines.slice(8);
+          const chunkSize = 80;
+          
+          for (let i = 0; i < dataLines.length; i += chunkSize) {
+            const chunkData = dataLines.slice(i, i + chunkSize);
+            chunks.push([...headerLines, ...chunkData].join('\n'));
+          }
+        } else {
+          chunks.push(lines.join('\n'));
+        }
 
-        let rawContent = null;
+        logDiagnostic(`[Spreadsheet Import] Grouped spreadsheet into ${chunks.length} chunks.`);
+
         const models = await getDynamicModels(userApiKey);
-        let lastError = null;
-        let usedModel = null;
-
+        
         const systemRulesText = `You are a professional financial assistant. Analyze raw spreadsheet CSV/text extracted from a bank statement (from any bank like SBI, HDFC, ICICI, Axis, PNB, etc.). Extract all money-out transactions (outflows/debits/transfers).
 
         CRITICAL OUTFLOW EXTRACTION RULES:
@@ -800,7 +1002,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
            - Transfers to vendors, merchants, or other individuals (e.g., "TRANSFER TO...", "TO TRANSFER...", "TRFR TO...", "SENT TO...")
            - IMPS / NEFT / RTGS debit transfers (e.g., "IMPS-OUT...", "IMPS/DR...", "NEFT DR...")
            - Card spends / POS purchases / Online shopping spends (e.g., "POS DEBIT...")
-           - Cash withdrawals / ATM withdrawals
+           - Cash spends / ATM withdrawals
            - Bank fees, charges, interest debits, or SMS alert fees
         3. COMPLETELY IGNORE all credits, deposits, refunds, salary, cashback, or incoming money (e.g., any transaction containing "CASHBACK", "REFUND", "INTEREST CREDITED", "CR", "DEPOSIT", "SALARY", "INWARD", "RECEIVED", or under the Credit/CR/Deposit columns). Do not extract cashback transfers, refunds, or interest credits even if they contain the word "TRANSFER" or "TRFR".
         4. STRICT LAZYNESS PREVENTION: Never use placeholders, three dots ('...'), or 'etc.' in the JSON response. You MUST extract absolutely EVERY SINGLE money-out/debit/transfer transaction item present in the spreadsheet text, no matter how many there are. Do not stop until the entire text is fully parsed.
@@ -822,160 +1024,23 @@ router.post('/import', upload.single('file'), async (req, res) => {
           ["2026-05-25T12:00:00.000Z", 450.00, "Amazon UPI Transfer", "Shopping", "INR"]
         ]`;
 
-        for (const model of models) {
+        let mergedArray = [];
+        for (let i = 0; i < chunks.length; i++) {
           try {
-            logDiagnostic(`Sending spreadsheet text to Google Gemini Native REST API using model ${model}...`);
-            const apiVersion = 'v1beta';
-
-            const bodyPayload = {
-              systemInstruction: {
-                parts: [{ text: systemRulesText }]
-              },
-              contents: [
-                {
-                  parts: [
-                    {
-                      text: `Raw spreadsheet/CSV text content:
-                      ---------------------
-                      ${textContent}
-                      ---------------------`
-                    }
-                  ]
-                }
-              ],
-              safetySettings: [
-                { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-                { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-                { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-                { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-              ],
-              generationConfig: {
-                maxOutputTokens: 8192,
-                responseMimeType: 'application/json'
-              }
-            };
-
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 35000);
-
-            const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userApiKey}`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(bodyPayload),
-              signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-
-            if (response.ok) {
-              const data = await response.json();
-              const candidate = data.candidates?.[0];
-              const finishReason = candidate?.finishReason;
-              const text = candidate?.content?.parts?.[0]?.text?.trim();
-              
-              if (text) {
-                const truncated = isJsonTruncated(text);
-                logDiagnostic(`[Spreadsheet Import] Model ${model} returned output (length=${text.length}, finishReason=${finishReason || 'STOP'}, isTruncated=${truncated})`);
-                
-                if (!truncated || model === models[models.length - 1]) {
-                  rawContent = text;
-                  usedModel = model;
-                  break;
-                } else {
-                  logDiagnostic(`[Spreadsheet Import] Model ${model} output was truncated. Falling back to the next model...`);
-                }
-              }
-            } else {
-              const errText = await response.text();
-              logDiagnostic(`Gemini model ${model} failed with status ${response.status}: ${errText}`);
-              lastError = new Error(errText);
-            }
-          } catch (err) {
-            logDiagnostic(`Gemini model ${model} exception: ${err.message}`);
-            lastError = err;
+            logDiagnostic(`[Spreadsheet Import] Processing chunk ${i + 1}/${chunks.length} (${chunks[i].split('\n').length} lines)...`);
+            const chunkArray = await callGeminiForChunk(chunks[i], systemRulesText, userApiKey, models);
+            mergedArray.push(...chunkArray);
+            logDiagnostic(`[Spreadsheet Import] Chunk ${i + 1}/${chunks.length} returned ${chunkArray.length} items.`);
+          } catch (chunkErr) {
+            logDiagnostic(`[Spreadsheet Import] Error processing chunk ${i + 1}/${chunks.length}: ${chunkErr.message}`);
           }
         }
 
-        if (!rawContent) {
-          return res.status(500).json({ error: `AI processing of spreadsheet statement failed: ${lastError ? lastError.message : 'No response from models'}` });
-        }
-
-        logDiagnostic(`[Spreadsheet Import] Raw LLM content (length=${rawContent.length}):\n${rawContent}`);
-
-        let cleanJson = rawContent.trim();
-        cleanJson = cleanJson.replace(/```json/gi, '').replace(/```/gi, '').trim();
-        cleanJson = repairTruncatedJson(cleanJson);
-
-        const firstCurly = cleanJson.indexOf('{');
-        const firstBracket = cleanJson.indexOf('[');
-        let startIndex = -1;
-        let isObject = false;
-
-        if (firstCurly !== -1 && (firstBracket === -1 || firstCurly < firstBracket)) {
-          startIndex = firstCurly;
-          isObject = true;
-        } else if (firstBracket !== -1) {
-          startIndex = firstBracket;
-        }
-
-        if (startIndex !== -1) {
-          const lastIndex = isObject ? cleanJson.lastIndexOf('}') : cleanJson.lastIndexOf(']');
-          if (lastIndex !== -1 && lastIndex > startIndex) {
-            cleanJson = cleanJson.substring(startIndex, lastIndex + 1);
-          }
-        }
-
-        let insideQuotes = false;
-        let escaped = false;
-        let fixedStr = '';
-        for (let i = 0; i < cleanJson.length; i++) {
-          const char = cleanJson[i];
-          if (char === '"' && !escaped) {
-            insideQuotes = !insideQuotes;
-          }
-          if (insideQuotes) {
-            if (char === '\n') fixedStr += ' ';
-            else if (char === '\r') {}
-            else fixedStr += char;
-          } else {
-            fixedStr += char;
-          }
-          if (char === '\\' && !escaped) escaped = true;
-          else escaped = false;
-        }
-        cleanJson = fixedStr;
-
-        cleanJson = cleanJson.replace(/,\s*([\]}])/g, '$1');
-        cleanJson = cleanJson.replace(/,\s*"\.\.\."\s*/g, '');
-        cleanJson = cleanJson.replace(/,\s*\.\.\.\s*/g, '');
-        cleanJson = cleanJson.replace(/"\.\.\."\s*/g, '""');
-        cleanJson = cleanJson.replace(/\.\.\.\s*/g, '');
-
-        let parsedArray = [];
-        try {
-          const parsedJson = JSON.parse(cleanJson);
-          if (Array.isArray(parsedJson)) {
-            parsedArray = parsedJson;
-          } else if (parsedJson && typeof parsedJson === 'object') {
-            const keys = Object.keys(parsedJson);
-            for (const k of keys) {
-              if (Array.isArray(parsedJson[k])) {
-                parsedArray = parsedJson[k];
-                break;
-              }
-            }
-          }
-        } catch (jsonErr) {
-          console.error('JSON parsing failed. Raw LLM content was:', rawContent);
-          throw new Error(`JSON Error: ${jsonErr.message}. Content: ${cleanJson ? cleanJson.substring(0, 500) : 'null'}`);
-        }
-
-        if (!Array.isArray(parsedArray) || parsedArray.length === 0) {
+        if (mergedArray.length === 0) {
           return res.status(422).json({ error: 'No valid transactions could be extracted from this spreadsheet.' });
         }
 
-        parsedExpenses = parsedArray.map(item => {
+        parsedExpenses = mergedArray.map(item => {
           let txDate, amount, currency, category, description;
           if (Array.isArray(item)) {
             txDate = parseRobustDate(item[0]);
@@ -1003,11 +1068,12 @@ router.post('/import', upload.single('file'), async (req, res) => {
           };
         }).filter(e => e.amount > 0);
 
-        return res.status(200).json({
-          message: `Parsed ${parsedExpenses.length} transactions from spreadsheet statement using Gemini AI.`,
-          expenses: parsedExpenses
-        });
+        const deduplicated = deduplicateTransactions(parsedExpenses);
 
+        return res.status(200).json({
+          message: `Parsed ${deduplicated.length} transactions from spreadsheet statement using Gemini AI (removed ${parsedExpenses.length - deduplicated.length} duplicates).`,
+          expenses: deduplicated
+        });
       } else {
         logDiagnostic(`[Spreadsheet Import] Gemini API Key not found. Falling back to rule-based parser.`);
         const rowsRaw = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
@@ -1178,7 +1244,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
 
       let pdfData;
       try {
-        pdfData = await pdfParse(pdfBuffer);
+        pdfData = await pdfParse(pdfBuffer, { pagerender: pageRender });
       } catch (err) {
         logDiagnostic(`[PDF Import] Parsing failed: ${err.message || err.description || err || ''}`);
         let errStr = '';
@@ -1210,239 +1276,77 @@ router.post('/import', upload.single('file'), async (req, res) => {
       }
       const rawText = pdfData.text || '';
 
-      logDiagnostic(`[PDF Import] Parsed: filename=${req.file.originalname}, pages=${pdfData.numpages}, textLength=${rawText.length}`);
-      logDiagnostic(`[PDF Import] Sample raw text:\n${rawText.substring(0, 1200)}`);
-
       if (!rawText || rawText.trim().length === 0) {
         return res.status(400).json({ error: 'Uploaded PDF file has no readable text.' });
       }
+
+      const pages = rawText.split('---PAGE_BREAK---').map(p => p.trim()).filter(Boolean);
+      logDiagnostic(`[PDF Import] Parsed: filename=${req.file.originalname}, pages=${pdfData.numpages}, actualSplitPages=${pages.length}, textLength=${rawText.length}`);
 
       const userApiKey = req.headers['x-user-gemini-key'];
       if (!userApiKey) {
         return res.status(400).json({ error: 'Gemini API Key required. Please set your Google Gemini API Key in Settings.' });
       }
 
-      // Increase slice limit to 150,000 characters to support massive multi-page statements without cutting off late-month transactions
-      const sliceLimit = 150000;
-      
-      const textContent = rawText
-        .replace(/[ \t]+/g, ' ')
-        .replace(/\r/g, '')
-        .replace(/\n\s*\n+/g, '\n')
-        .trim()
-        .slice(0, sliceLimit);
+      // Group pages into chunks of 4 pages each to avoid large output token requirements and laziness
+      const pagesPerChunk = 4;
+      const chunks = [];
+      for (let i = 0; i < pages.length; i += pagesPerChunk) {
+        const chunkPages = pages.slice(i, i + pagesPerChunk);
+        chunks.push(chunkPages.join('\n\n--- NEXT PAGE ---\n\n'));
+      }
 
-      console.log(`Parsing PDF text (${textContent.length} chars) using Google Gemini Native REST API...`);
+      logDiagnostic(`[PDF Import] Grouped ${pages.length} pages into ${chunks.length} chunks.`);
 
-      let rawContent = null;
       const models = await getDynamicModels(userApiKey);
-      let lastError = null;
-      let usedModel = null;
-
-      for (const model of models) {
-        try {
-          logDiagnostic(`Sending PDF text to Google Gemini Native REST API using model ${model} (${textContent.length} chars)...`);
-
-          const apiVersion = 'v1beta';
-
-          const systemRulesText = `You are a professional financial assistant. Analyze raw text extracted from a bank statement (from any bank like SBI, HDFC, ICICI, Axis, PNB, etc.). Extract all money-out transactions (outflows/debits/transfers).
-
-          CRITICAL OUTFLOW EXTRACTION RULES:
-          1. ONLY extract transactions where money is leaving the account (money-out / debits / withdrawals / transfers).
-          2. Extract all of the following debit/transfer transactions:
-             - UPI Payments / UPI-DR / UPI-OUT / Merchant payments (e.g., GPay, PhonePe, Paytm, BharatPe transfers)
-             - Transfers to vendors, merchants, or other individuals (e.g., "TRANSFER TO...", "TO TRANSFER...", "TRFR TO...", "SENT TO...")
-             - IMPS / NEFT / RTGS debit transfers (e.g., "IMPS-OUT...", "IMPS/DR...", "NEFT DR...")
-             - Card spends / POS purchases / Online shopping spends (e.g., "POS DEBIT...")
-             - Cash withdrawals / ATM withdrawals
-             - Bank fees, charges, interest debits, or SMS alert fees
-          3. COMPLETELY IGNORE all credits, deposits, refunds, salary, cashback, or incoming money (e.g., any transaction containing "CASHBACK", "REFUND", "INTEREST CREDITED", "CR", "DEPOSIT", "SALARY", "INWARD", "RECEIVED", or under the Credit/CR/Deposit columns). Do not extract cashback transfers, refunds, or interest credits even if they contain the word "TRANSFER" or "TRFR".
-          4. STRICT LAZYNESS PREVENTION: Never use placeholders, three dots ('...'), or 'etc.' in the JSON response. You MUST extract absolutely EVERY SINGLE money-out/debit/transfer transaction item present in the text, no matter how many there are. Do not stop until the entire text is fully parsed.
-          5. COMPLETELY IGNORE AND EXCLUDE all self-transfers or transfers between the user's own accounts (inter-account transfers). These are transactions where the description or narration indicates moving money to another account belonging to the same user (e.g., transfers containing "SELF", "SELF TRANSFER", "OWN A/C", "OWN ACCOUNT", "TRANSFER TO OWN A/C", or direct bank-to-bank self-transfers like "SBI TO HDFC", "TO HDFC A/C", "TRANSFER TO ICICI", "TRFR TO SELF"). These do not represent external expenses and MUST NOT be extracted or included in the output JSON array.
-          
-          How to identify debits in tabular statement text:
-          - Look for entries in columns named "Debit", "Withdrawal", "DR", "Amount (Dr)", or "Debits".
-          - If the statement does not have distinct columns, identify debits via keywords like "UPI-DR", "IMPS-OUT", "TRFR TO", "Paid to", or negative numbers.
-
-          Ensure your response is ONLY a JSON array of arrays (tuple format) to save output token space, without markdown wrapper blocks or text.
-          Structure:
-          [
-            ["YYYY-MM-DD", amount, "description", "category", "currency"]
-          ]
-          
-          Example:
-          [
-            ["2026-05-25T12:00:00.000Z", 450.00, "Amazon UPI Transfer", "Shopping", "INR"]
-          ]`;
-
-          const bodyPayload = {
-            systemInstruction: {
-              parts: [{ text: systemRulesText }]
-            },
-            contents: [
-              {
-                parts: [
-                  {
-                    text: `Raw PDF text content:
-                    ---------------------
-                    ${textContent}
-                    ---------------------`
-                  }
-                ]
-              }
-            ],
-            safetySettings: [
-              { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-              { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-              { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-              { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-            ],
-            generationConfig: {
-              maxOutputTokens: 8192,
-              responseMimeType: 'application/json'
-            }
-          };
-
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 35000); // 35 seconds timeout per model attempt
-
-          const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userApiKey}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(bodyPayload),
-            signal: controller.signal
-          });
-          clearTimeout(timeoutId);
-
-          if (response.ok) {
-            const data = await response.json();
-            const candidate = data.candidates?.[0];
-            const finishReason = candidate?.finishReason;
-            const text = candidate?.content?.parts?.[0]?.text?.trim();
-            
-            if (text) {
-              const truncated = isJsonTruncated(text);
-              logDiagnostic(`[PDF Import] Model ${model} returned output (length=${text.length}, finishReason=${finishReason || 'STOP'}, isTruncated=${truncated})`);
-              
-              if (!truncated || model === models[models.length - 1]) {
-                rawContent = text;
-                usedModel = model;
-                break;
-              } else {
-                logDiagnostic(`[PDF Import] Model ${model} output was truncated. Falling back to the next model...`);
-              }
-            }
-          } else {
-            const errText = await response.text();
-            logDiagnostic(`Gemini model ${model} failed with status ${response.status}: ${errText}`);
-            lastError = new Error(errText);
-          }
-        } catch (err) {
-          logDiagnostic(`Gemini model ${model} exception: ${err.message}`);
-          lastError = err;
-        }
-      }
-
-      if (!rawContent) {
-        return res.status(500).json({ error: `AI processing of statement PDF failed: ${lastError ? lastError.message : 'No response from models'}` });
-      }
-
-      logDiagnostic(`[PDF Import] Raw LLM content (length=${rawContent.length}):\n${rawContent}`);
-
-      let cleanJson = rawContent.trim();
       
-      // Step 1: Remove markdown block wrappers if present
-      cleanJson = cleanJson.replace(/```json/gi, '').replace(/```/gi, '').trim();
+      const systemRulesText = `You are a professional financial assistant. Analyze raw text extracted from a bank statement (from any bank like SBI, HDFC, ICICI, Axis, PNB, etc.). Extract all money-out transactions (outflows/debits/transfers).
 
-      // Step 2: Repair truncated JSON if it ends abruptly
-      cleanJson = repairTruncatedJson(cleanJson);
+      CRITICAL OUTFLOW EXTRACTION RULES:
+      1. ONLY extract transactions where money is leaving the account (money-out / debits / withdrawals / transfers).
+      2. Extract all of the following debit/transfer transactions:
+         - UPI Payments / UPI-DR / UPI-OUT / Merchant payments (e.g., GPay, PhonePe, Paytm, BharatPe transfers)
+         - Transfers to vendors, merchants, or other individuals (e.g., "TRANSFER TO...", "TO TRANSFER...", "TRFR TO...", "SENT TO...")
+         - IMPS / NEFT / RTGS debit transfers (e.g., "IMPS-OUT...", "IMPS/DR...", "NEFT DR...")
+         - Card spends / POS purchases / Online shopping spends (e.g., "POS DEBIT...")
+         - Cash withdrawals / ATM withdrawals
+         - Bank fees, charges, interest debits, or SMS alert fees
+      3. COMPLETELY IGNORE all credits, deposits, refunds, salary, cashback, or incoming money (e.g., any transaction containing "CASHBACK", "REFUND", "INTEREST CREDITED", "CR", "DEPOSIT", "SALARY", "INWARD", "RECEIVED", or under the Credit/CR/Deposit columns). Do not extract cashback transfers, refunds, or interest credits even if they contain the word "TRANSFER" or "TRFR".
+      4. STRICT LAZYNESS PREVENTION: Never use placeholders, three dots ('...'), or 'etc.' in the JSON response. You MUST extract absolutely EVERY SINGLE money-out/debit/transfer transaction item present in the text, no matter how many there are. Do not stop until the entire text is fully parsed.
+      5. COMPLETELY IGNORE AND EXCLUDE all self-transfers or transfers between the user's own accounts (inter-account transfers). These are transactions where the description or narration indicates moving money to another account belonging to the same user (e.g., transfers containing "SELF", "SELF TRANSFER", "OWN A/C", "OWN ACCOUNT", "TRANSFER TO OWN A/C", or direct bank-to-bank self-transfers like "SBI TO HDFC", "TO HDFC A/C", "TRANSFER TO ICICI", "TRFR TO SELF"). These do not represent external expenses and MUST NOT be extracted or included in the output JSON array.
+      
+      How to identify debits in tabular statement text:
+      - Look for entries in columns named "Debit", "Withdrawal", "DR", "Amount (Dr)", or "Debits".
+      - If the statement does not have distinct columns, identify debits via keywords like "UPI-DR", "IMPS-OUT", "TRFR TO", "Paid to", or negative numbers.
 
-      // Step 2: Extract JSON subset using boundaries
-      const firstCurly = cleanJson.indexOf('{');
-      const firstBracket = cleanJson.indexOf('[');
-      let startIndex = -1;
-      let isObject = false;
+      Ensure your response is ONLY a JSON array of arrays (tuple format) to save output token space, without markdown wrapper blocks or text.
+      Structure:
+      [
+        ["YYYY-MM-DD", amount, "description", "category", "currency"]
+      ]
+      
+      Example:
+      [
+        ["2026-05-25T12:00:00.000Z", 450.00, "Amazon UPI Transfer", "Shopping", "INR"]
+      ]`;
 
-      if (firstCurly !== -1 && (firstBracket === -1 || firstCurly < firstBracket)) {
-        startIndex = firstCurly;
-        isObject = true;
-      } else if (firstBracket !== -1) {
-        startIndex = firstBracket;
-      }
-
-      if (startIndex !== -1) {
-        const lastIndex = isObject ? cleanJson.lastIndexOf('}') : cleanJson.lastIndexOf(']');
-        if (lastIndex !== -1 && lastIndex > startIndex) {
-          cleanJson = cleanJson.substring(startIndex, lastIndex + 1);
+      let mergedArray = [];
+      for (let i = 0; i < chunks.length; i++) {
+        try {
+          logDiagnostic(`[PDF Import] Processing page chunk ${i + 1}/${chunks.length}...`);
+          const chunkArray = await callGeminiForChunk(chunks[i], systemRulesText, userApiKey, models);
+          mergedArray.push(...chunkArray);
+          logDiagnostic(`[PDF Import] Chunk ${i + 1}/${chunks.length} returned ${chunkArray.length} items.`);
+        } catch (chunkErr) {
+          logDiagnostic(`[PDF Import] Error processing chunk ${i + 1}/${chunks.length}: ${chunkErr.message}`);
         }
       }
 
-      // Step 3: Robust Parser - Escape literal newlines inside double-quoted string values (CRITICAL for UPI descriptions with newlines)
-      let insideQuotes = false;
-      let escaped = false;
-      let fixedStr = '';
-      for (let i = 0; i < cleanJson.length; i++) {
-        const char = cleanJson[i];
-        if (char === '"' && !escaped) {
-          insideQuotes = !insideQuotes;
-        }
-        
-        if (insideQuotes) {
-          if (char === '\n') {
-            fixedStr += ' '; // Convert literal newline to safe space
-          } else if (char === '\r') {
-            // Drop carriage return
-          } else {
-            fixedStr += char;
-          }
-        } else {
-          fixedStr += char;
-        }
-        
-        if (char === '\\' && !escaped) {
-          escaped = true;
-        } else {
-          escaped = false;
-        }
-      }
-      cleanJson = fixedStr;
-
-      // Step 4: Remove trailing commas in objects or arrays before closing braces
-      cleanJson = cleanJson.replace(/,\s*([\]}])/g, '$1');
-
-      // Step 5: Sanitize lazy LLM placeholders (e.g., ..., "...", or , ...)
-      cleanJson = cleanJson.replace(/,\s*"\.\.\."\s*/g, '');
-      cleanJson = cleanJson.replace(/,\s*\.\.\.\s*/g, '');
-      cleanJson = cleanJson.replace(/"\.\.\."\s*/g, '""');
-      cleanJson = cleanJson.replace(/\.\.\.\s*/g, '');
-
-      let parsedArray = [];
-      try {
-        const parsedJson = JSON.parse(cleanJson);
-        if (Array.isArray(parsedJson)) {
-          parsedArray = parsedJson;
-        } else if (parsedJson && typeof parsedJson === 'object') {
-          // Look for transaction lists inside root object keys
-          const keys = Object.keys(parsedJson);
-          for (const k of keys) {
-            if (Array.isArray(parsedJson[k])) {
-              parsedArray = parsedJson[k];
-              break;
-            }
-          }
-        }
-      } catch (jsonErr) {
-        console.error('JSON parsing failed. Raw LLM content was:', rawContent);
-        throw new Error(`JSON Error: ${jsonErr.message}. Content: ${cleanJson ? cleanJson.substring(0, 500) : 'null'}`);
+      if (mergedArray.length === 0) {
+        return res.status(422).json({ error: 'No valid transactions could be extracted from this PDF.' });
       }
 
-      if (!Array.isArray(parsedArray) || parsedArray.length === 0) {
-        return res.status(422).json({ error: 'No valid transactions could be extracted from this statement.' });
-      }
-
-      const mappedExpenses = parsedArray.map(item => {
+      const mappedExpenses = mergedArray.map(item => {
         let txDate, amount, currency, category, description;
         if (Array.isArray(item)) {
           txDate = parseRobustDate(item[0]);
@@ -1470,9 +1374,11 @@ router.post('/import', upload.single('file'), async (req, res) => {
         };
       }).filter(e => e.amount > 0);
 
+      const deduplicated = deduplicateTransactions(mappedExpenses);
+
       return res.status(200).json({
-        message: `Parsed ${mappedExpenses.length} transactions from PDF statement.`,
-        expenses: mappedExpenses
+        message: `Parsed ${deduplicated.length} transactions from PDF statement (removed ${mappedExpenses.length - deduplicated.length} duplicates).`,
+        expenses: deduplicated
       });
     }
 
