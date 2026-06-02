@@ -811,16 +811,15 @@ router.post('/import', upload.single('file'), async (req, res) => {
         - Look for entries in columns representing outflows (e.g., "Debit", "Withdrawal", "DR", "Amount (Dr)", "Debits", or negative numbers in a single "Amount" column).
         - If the statement does not have distinct columns, identify debits via negative numbers or keywords like "UPI-DR", "IMPS-OUT", "TRFR TO", "Paid to".
 
-        Ensure your response is ONLY a JSON array of objects, without markdown wrapper blocks or text.
+        Ensure your response is ONLY a JSON array of arrays (tuple format) to save output token space, without markdown wrapper blocks or text.
         Structure:
         [
-          {
-            "amount": 450.00,
-            "currency": "INR",
-            "category": "Shopping",
-            "description": "Amazon UPI Transfer",
-            "transaction_date": "2026-05-25T12:00:00.000Z"
-          }
+          ["YYYY-MM-DD", amount, "description", "category", "currency"]
+        ]
+        
+        Example:
+        [
+          ["2026-05-25T12:00:00.000Z", 450.00, "Amazon UPI Transfer", "Shopping", "INR"]
         ]`;
 
         for (const model of models) {
@@ -851,7 +850,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
                 { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
               ],
               generationConfig: {
-                maxOutputTokens: 4096,
+                maxOutputTokens: 8192,
                 responseMimeType: 'application/json'
               }
             };
@@ -977,14 +976,27 @@ router.post('/import', upload.single('file'), async (req, res) => {
         }
 
         parsedExpenses = parsedArray.map(item => {
-          const txDate = parseRobustDate(item.transaction_date);
+          let txDate, amount, currency, category, description;
+          if (Array.isArray(item)) {
+            txDate = parseRobustDate(item[0]);
+            amount = cleanAmount(item[1]);
+            description = item[2] || 'Imported Spreadsheet Transaction';
+            category = item[3] || 'Others';
+            currency = item[4] || 'INR';
+          } else {
+            txDate = parseRobustDate(item.transaction_date);
+            amount = cleanAmount(item.amount);
+            description = item.description || 'Imported Spreadsheet Transaction';
+            category = item.category || 'Others';
+            currency = item.currency || 'INR';
+          }
 
           return {
             id: crypto.randomUUID(),
-            amount: cleanAmount(item.amount),
-            currency: item.currency || 'INR',
-            category: item.category || 'Others',
-            description: item.description || 'Imported Spreadsheet Transaction',
+            amount: amount,
+            currency: currency,
+            category: category,
+            description: description,
             transaction_date: txDate.toISOString(),
             is_recurring: false,
             recurrence_period: 'none'
@@ -1252,16 +1264,15 @@ router.post('/import', upload.single('file'), async (req, res) => {
           - Look for entries in columns named "Debit", "Withdrawal", "DR", "Amount (Dr)", or "Debits".
           - If the statement does not have distinct columns, identify debits via keywords like "UPI-DR", "IMPS-OUT", "TRFR TO", "Paid to", or negative numbers.
 
-          Ensure your response is ONLY a JSON array of objects, without markdown wrapper blocks or text.
+          Ensure your response is ONLY a JSON array of arrays (tuple format) to save output token space, without markdown wrapper blocks or text.
           Structure:
           [
-            {
-              "amount": 450.00,
-              "currency": "INR",
-              "category": "Shopping",
-              "description": "Amazon UPI Transfer",
-              "transaction_date": "2026-05-25T12:00:00.000Z"
-            }
+            ["YYYY-MM-DD", amount, "description", "category", "currency"]
+          ]
+          
+          Example:
+          [
+            ["2026-05-25T12:00:00.000Z", 450.00, "Amazon UPI Transfer", "Shopping", "INR"]
           ]`;
 
           const bodyPayload = {
@@ -1287,7 +1298,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
               { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
             ],
             generationConfig: {
-              maxOutputTokens: 4096,
+              maxOutputTokens: 8192,
               responseMimeType: 'application/json'
             }
           };
@@ -1432,14 +1443,27 @@ router.post('/import', upload.single('file'), async (req, res) => {
       }
 
       const mappedExpenses = parsedArray.map(item => {
-        const txDate = parseRobustDate(item.transaction_date);
+        let txDate, amount, currency, category, description;
+        if (Array.isArray(item)) {
+          txDate = parseRobustDate(item[0]);
+          amount = cleanAmount(item[1]);
+          description = item[2] || 'Imported Transaction';
+          category = item[3] || 'Others';
+          currency = item[4] || 'INR';
+        } else {
+          txDate = parseRobustDate(item.transaction_date);
+          amount = cleanAmount(item.amount);
+          description = item.description || 'Imported Transaction';
+          category = item.category || 'Others';
+          currency = item.currency || 'INR';
+        }
 
         return {
           id: crypto.randomUUID(),
-          amount: cleanAmount(item.amount),
-          currency: item.currency || 'INR',
-          category: item.category || 'Others',
-          description: item.description || 'Imported Transaction',
+          amount: amount,
+          currency: currency,
+          category: category,
+          description: description,
           transaction_date: txDate.toISOString(),
           is_recurring: false,
           recurrence_period: 'none'
