@@ -988,48 +988,126 @@ router.post('/import', upload.single('file'), async (req, res) => {
 
       } else {
         logDiagnostic(`[Spreadsheet Import] Gemini API Key not found. Falling back to rule-based parser.`);
-        
-        const rows = xlsx.utils.sheet_to_json(worksheet);
+        const rowsRaw = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
 
-        // Attempt to map typical headers to standard schema using fallback rules
-        parsedExpenses = rows.map((row, idx) => {
-          // Search for dynamic header values case-insensitively
-          const findVal = (keys) => {
-            const matchedKey = Object.keys(row).find(k => 
-              keys.some(key => k.toLowerCase().includes(key))
-            );
-            return matchedKey ? row[matchedKey] : null;
-          };
+        let headerRowIdx = -1;
+        let colIndices = { date: -1, desc: -1, debit: -1, credit: -1 };
 
-          const debitVal = findVal(['debit', 'withdrawal', 'amount', 'spent', 'dr', 'outflow', 'price', 'val', 'cost', 'total']);
-          const creditVal = findVal(['credit', 'deposit', 'cr', 'incoming', 'received', 'cre']);
-          
-          let amount = cleanAmount(debitVal);
-          if (creditVal !== null && creditVal !== undefined && cleanAmount(creditVal) > 0) {
-            amount = 0.00; // Completely ignore credit entries
+        const dateKeys = ['date', 'time', 'tx_date', 'transaction date', 'txn date', 'value date'];
+        const descKeys = ['description', 'desc', 'particulars', 'remark', 'narration', 'vendor', 'name', 'details'];
+        const debitKeys = ['debit', 'withdrawal', 'amount', 'spent', 'dr', 'outflow', 'price', 'val', 'cost', 'total'];
+        const creditKeys = ['credit', 'deposit', 'cr', 'incoming', 'received', 'cre'];
+
+        for (let r = 0; r < Math.min(rowsRaw.length, 50); r++) {
+          const row = rowsRaw[r];
+          if (!Array.isArray(row)) continue;
+
+          let matches = 0;
+          let tempIndices = { date: -1, desc: -1, debit: -1, credit: -1 };
+
+          for (let c = 0; c < row.length; c++) {
+            const cellVal = String(row[c] || '').toLowerCase().trim();
+            if (!cellVal) continue;
+
+            if (tempIndices.date === -1 && dateKeys.some(k => cellVal.includes(k))) {
+              tempIndices.date = c;
+              matches++;
+            } else if (tempIndices.desc === -1 && descKeys.some(k => cellVal.includes(k))) {
+              tempIndices.desc = c;
+              matches++;
+            } else if (tempIndices.debit === -1 && debitKeys.some(k => cellVal.includes(k))) {
+              tempIndices.debit = c;
+              matches++;
+            } else if (tempIndices.credit === -1 && creditKeys.some(k => cellVal.includes(k))) {
+              tempIndices.credit = c;
+              matches++;
+            }
           }
 
-          const category = findVal(['category', 'cat', 'type']) || 'Others';
-          const description = findVal(['description', 'desc', 'particulars', 'remark', 'narration', 'vendor', 'name', 'details']) || `Row ${idx + 1} Import`;
-          const rawDate = findVal(['date', 'time', 'tx_date', 'transaction date', 'txn date', 'value date']);
-          
-          const transaction_date = parseRobustDate(rawDate);
+          if (tempIndices.date !== -1 && (tempIndices.debit !== -1 || tempIndices.desc !== -1)) {
+            headerRowIdx = r;
+            colIndices = tempIndices;
+            break;
+          }
+        }
 
-          return {
-            id: crypto.randomUUID(),
-            amount: isNaN(amount) ? 0.00 : amount,
-            currency: findVal(['currency', 'curr']) || 'INR',
-            category: category,
-            description: description,
-            transaction_date: transaction_date.toISOString(),
-            is_recurring: false,
-            recurrence_period: 'none'
-          };
-        }).filter(e => {
+        let parsedRawExpenses = [];
+
+        if (headerRowIdx !== -1) {
+          logDiagnostic(`[Spreadsheet Import] Found header row at index ${headerRowIdx} with indices: ${JSON.stringify(colIndices)}`);
+          
+          for (let r = headerRowIdx + 1; r < rowsRaw.length; r++) {
+            const row = rowsRaw[r];
+            if (!Array.isArray(row) || row.length === 0) continue;
+
+            const rawDate = colIndices.date !== -1 ? row[colIndices.date] : null;
+            const descriptionVal = colIndices.desc !== -1 ? String(row[colIndices.desc] || '').trim() : '';
+            const debitVal = colIndices.debit !== -1 ? row[colIndices.debit] : null;
+            const creditVal = colIndices.credit !== -1 ? row[colIndices.credit] : null;
+
+            if (!rawDate && !debitVal) continue;
+
+            let amount = cleanAmount(debitVal);
+            if (creditVal !== null && creditVal !== undefined && cleanAmount(creditVal) > 0) {
+              amount = 0.00;
+            }
+
+            const transaction_date = parseRobustDate(rawDate);
+            const description = descriptionVal || `Row ${r} Import`;
+
+            parsedRawExpenses.push({
+              id: crypto.randomUUID(),
+              amount: isNaN(amount) ? 0.00 : amount,
+              currency: 'INR',
+              category: 'Others',
+              description: description,
+              transaction_date: transaction_date.toISOString(),
+              is_recurring: false,
+              recurrence_period: 'none'
+            });
+          }
+        } else {
+          logDiagnostic(`[Spreadsheet Import] Header row not detected in 2D array. Falling back to standard sheet_to_json.`);
+          const rows = xlsx.utils.sheet_to_json(worksheet);
+
+          parsedRawExpenses = rows.map((row, idx) => {
+            const findVal = (keys) => {
+              const matchedKey = Object.keys(row).find(k => 
+                keys.some(key => k.toLowerCase().includes(key))
+              );
+              return matchedKey ? row[matchedKey] : null;
+            };
+
+            const debitVal = findVal(['debit', 'withdrawal', 'amount', 'spent', 'dr', 'outflow', 'price', 'val', 'cost', 'total']);
+            const creditVal = findVal(['credit', 'deposit', 'cr', 'incoming', 'received', 'cre']);
+            
+            let amount = cleanAmount(debitVal);
+            if (creditVal !== null && creditVal !== undefined && cleanAmount(creditVal) > 0) {
+              amount = 0.00;
+            }
+
+            const category = findVal(['category', 'cat', 'type']) || 'Others';
+            const description = findVal(['description', 'desc', 'particulars', 'remark', 'narration', 'vendor', 'name', 'details']) || `Row ${idx + 1} Import`;
+            const rawDate = findVal(['date', 'time', 'tx_date', 'transaction date', 'txn date', 'value date']);
+            const transaction_date = parseRobustDate(rawDate);
+
+            return {
+              id: crypto.randomUUID(),
+              amount: isNaN(amount) ? 0.00 : amount,
+              currency: findVal(['currency', 'curr']) || 'INR',
+              category: category,
+              description: description,
+              transaction_date: transaction_date.toISOString(),
+              is_recurring: false,
+              recurrence_period: 'none'
+            };
+          });
+        }
+
+        parsedExpenses = parsedRawExpenses.filter(e => {
           if (e.amount <= 0) return false;
           const lowerDesc = (e.description || '').toLowerCase();
           
-          // Completely ignore incoming/credit transaction keywords (cashback, refunds, etc.)
           const isIncoming = lowerDesc.includes('cashback') ||
                              lowerDesc.includes('refund') ||
                              lowerDesc.includes('salary') ||
