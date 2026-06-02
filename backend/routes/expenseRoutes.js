@@ -330,7 +330,7 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
         return res.status(500).json({ error: `Groq OCR scan failed: ${err.message}` });
       }
     } else {
-      const models = ['gemini-3.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash'];
+      const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-pro'];
       let lastError = null;
       let usedModel = null;
 
@@ -338,7 +338,8 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
         try {
           console.log(`Sending receipt image to Google Gemini Native REST API using model ${model} (${req.file.size} bytes)...`);
 
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${userGeminiKey}`, {
+          const apiVersion = model.startsWith('gemini-1.5') ? 'v1' : 'v1beta';
+          const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userGeminiKey}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
@@ -563,7 +564,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
           return res.status(500).json({ error: `Groq Import failed: ${err.message}` });
         }
       } else {
-        const models = ['gemini-3.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash'];
+        const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-pro'];
         let lastError = null;
         let usedModel = null;
 
@@ -571,7 +572,8 @@ router.post('/import', upload.single('file'), async (req, res) => {
           try {
             console.log(`Sending PDF text to Google Gemini Native REST API using model ${model} (${textContent.length} chars)...`);
 
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${userGeminiKey}`, {
+            const apiVersion = model.startsWith('gemini-1.5') ? 'v1' : 'v1beta';
+            const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userGeminiKey}`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
