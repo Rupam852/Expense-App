@@ -97,7 +97,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   if (limit <= 0) return;
 
                   final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
-                  final currentMonthStr = DateFormat('yyyy-MM').format(DateTime.now());
+                  final currentMonthStr = DateFormat('yyyy-MM').format(expenseProvider.selectedMonthYear);
 
                   await expenseProvider.setBudget(
                     category: _selectedCategory,
@@ -145,7 +145,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
   @override
   Widget build(BuildContext context) {
     final expenseProvider = Provider.of<ExpenseProvider>(context);
-    final currentMonthStr = DateFormat('yyyy-MM').format(DateTime.now());
+    final currentMonthStr = DateFormat('yyyy-MM').format(expenseProvider.selectedMonthYear);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Load active budgets

@@ -22,12 +22,22 @@ class ExpenseProvider with ChangeNotifier {
   bool _isSyncing = false;
   String? _syncErrorMessage;
 
+  DateTime _selectedMonthYear = DateTime(DateTime.now().year, DateTime.now().month);
+
   List<Expense> get expenses => _expenses;
   List<Budget> get budgets => _budgets;
   List<PaymentDetail> get paymentDetails => _paymentDetails;
   bool get isLoading => _isLoading;
   bool get isSyncing => _isSyncing;
   String? get syncErrorMessage => _syncErrorMessage;
+  DateTime get selectedMonthYear => _selectedMonthYear;
+
+  void setSelectedMonthYear(DateTime value) {
+    if (_selectedMonthYear.year != value.year || _selectedMonthYear.month != value.month) {
+      _selectedMonthYear = DateTime(value.year, value.month);
+      notifyListeners();
+    }
+  }
 
   // 1. Initial Load of SQLite Caches
   Future<void> loadLocalData() async {

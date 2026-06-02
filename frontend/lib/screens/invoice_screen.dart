@@ -119,8 +119,11 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     final expenseProvider = Provider.of<ExpenseProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Filter out deleted items
-    final activeExpenses = expenseProvider.expenses;
+    // Filter out deleted items and only show selected month's expenses
+    final selectedMonthStr = DateFormat('yyyy-MM').format(expenseProvider.selectedMonthYear);
+    final activeExpenses = expenseProvider.expenses.where((e) =>
+      !e.isDeleted && DateFormat('yyyy-MM').format(e.transactionDate) == selectedMonthStr
+    ).toList();
 
     final double selectedTotal = activeExpenses
         .where((e) => _selectedExpenseIds.contains(e.id))

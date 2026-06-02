@@ -20,14 +20,6 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  DateTime? _selectedMonthYear;
-
-  @override
-  void initState() {
-    super.initState();
-    final now = DateTime.now();
-    _selectedMonthYear = DateTime(now.year, now.month);
-  }
 
   List<DateTime> _getAvailableMonths(List<Expense> expenses) {
     final List<DateTime> months = [];
@@ -670,13 +662,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Dynamic month calculations
     final availableMonths = _getAvailableMonths(expenseProvider.expenses);
     
-    // Safety check: if _selectedMonthYear is not initialized, set it to the current month
-    if (_selectedMonthYear == null) {
-      final now = DateTime.now();
-      _selectedMonthYear = DateTime(now.year, now.month);
-    }
-
-    final selectedMonthStr = DateFormat('yyyy-MM').format(_selectedMonthYear!);
+    final _selectedMonthYear = expenseProvider.selectedMonthYear;
+    final selectedMonthStr = DateFormat('yyyy-MM').format(_selectedMonthYear);
     final currentMonthStr = DateFormat('yyyy-MM').format(DateTime.now());
     final isSelectedMonthCurrent = selectedMonthStr == currentMonthStr;
 
@@ -847,9 +834,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           initialValue: _selectedMonthYear,
                           tooltip: 'Select Month',
                           onSelected: (DateTime selected) {
-                            setState(() {
-                              _selectedMonthYear = selected;
-                            });
+                            expenseProvider.setSelectedMonthYear(selected);
                           },
                           offset: const Offset(0, 30),
                           shape: RoundedRectangleBorder(

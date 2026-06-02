@@ -80,7 +80,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // --- COMPUTING LOCAL FALLBACK STATS (For Offline Support) ---
-    final currentMonthStr = DateFormat('yyyy-MM').format(DateTime.now());
+    final currentMonthStr = DateFormat('yyyy-MM').format(expenseProvider.selectedMonthYear);
     final activeExpenses = expenseProvider.expenses.where((e) =>
       !e.isDeleted && DateFormat('yyyy-MM').format(e.transactionDate) == currentMonthStr
     ).toList();
