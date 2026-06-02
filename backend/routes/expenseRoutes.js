@@ -493,7 +493,15 @@ router.post('/import', upload.single('file'), async (req, res) => {
     // CASE 2: PDF statement import (uses pdf-parse & Gemini parsing)
     if (filename.endsWith('.pdf')) {
       const pdfData = await pdfParse(req.file.buffer);
-      const textContent = pdfData.text;
+      const rawText = pdfData.text || '';
+      
+      // Super compression helper: removes consecutive spaces/newlines to save up to 80% tokens
+      const textContent = rawText
+        .replace(/[ \t]+/g, ' ')
+        .replace(/\r/g, '')
+        .replace(/\n\s*\n+/g, '\n')
+        .trim()
+        .slice(0, 15000); // Max 15K characters (approx 3K tokens) for extremely fast and cheap processing
 
       if (!textContent || textContent.trim().length === 0) {
         return res.status(400).json({ error: 'Uploaded PDF file has no readable text.' });
@@ -514,7 +522,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
           
           Raw PDF text content:
           ---------------------
-          ${textContent.slice(0, 50000)}  // Limit size to protect token usage
+          ${textContent}
           ---------------------
 
           Tasks:
@@ -565,7 +573,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
                         
                         Raw PDF text content:
                         ---------------------
-                        ${textContent.slice(0, 50000)}  // Limit size to protect token usage
+                        ${textContent}
                         ---------------------
 
                         Tasks:
