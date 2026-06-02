@@ -8,6 +8,15 @@ import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+const logBuffer = [];
+function logDiagnostic(msg) {
+  console.log(msg);
+  logBuffer.push(`[${new Date().toISOString()}] ${msg}`);
+  if (logBuffer.length > 200) {
+    logBuffer.shift();
+  }
+}
+
 // Resilient helper to extract floating numbers from formatted currency text (e.g., "₹1,863.34" -> 1863.34)
 function cleanAmount(val) {
   if (val === null || val === undefined) return 0.0;
@@ -578,8 +587,8 @@ router.post('/import', upload.single('file'), async (req, res) => {
       const pdfData = await pdfParse(req.file.buffer);
       const rawText = pdfData.text || '';
 
-      console.log(`[PDF Import] Parsed: filename=${req.file.originalname}, pages=${pdfData.numpages}, textLength=${rawText.length}`);
-      console.log(`[PDF Import] Sample raw text:\n${rawText.substring(0, 1200)}`);
+      logDiagnostic(`[PDF Import] Parsed: filename=${req.file.originalname}, pages=${pdfData.numpages}, textLength=${rawText.length}`);
+      logDiagnostic(`[PDF Import] Sample raw text:\n${rawText.substring(0, 1200)}`);
 
       if (!rawText || rawText.trim().length === 0) {
         return res.status(400).json({ error: 'Uploaded PDF file has no readable text.' });
@@ -716,7 +725,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
         return res.status(500).json({ error: `AI processing of statement PDF failed: ${lastError ? lastError.message : 'No response from models'}` });
       }
 
-      console.log(`[PDF Import] Raw LLM content (length=${rawContent.length}):\n${rawContent}`);
+      logDiagnostic(`[PDF Import] Raw LLM content (length=${rawContent.length}):\n${rawContent}`);
 
       let cleanJson = rawContent.trim();
       
@@ -843,6 +852,10 @@ router.post('/import', upload.single('file'), async (req, res) => {
     console.error('File batch import error:', error);
     res.status(500).json({ error: `Failed to process file import: ${error.message}` });
   }
+});
+
+router.get('/debug-logs', (req, res) => {
+  res.status(200).json({ logs: logBuffer });
 });
 
 export default router;
