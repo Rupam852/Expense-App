@@ -11,10 +11,10 @@ const router = express.Router();
 // Resilient helper to extract floating numbers from formatted currency text (e.g., "₹1,863.34" -> 1863.34)
 function cleanAmount(val) {
   if (val === null || val === undefined) return 0.0;
-  if (typeof val === 'number') return val;
+  if (typeof val === 'number') return Math.abs(val);
   const cleanStr = String(val).replace(/[₹$€£\s,]/g, '').trim();
   const num = parseFloat(cleanStr);
-  return isNaN(num) ? 0.0 : num;
+  return isNaN(num) ? 0.0 : Math.abs(num);
 }
 
 // Resilient utility to repair truncated JSON arrays/objects from LLMs
