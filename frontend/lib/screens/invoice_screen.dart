@@ -46,6 +46,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     double progress = 0.0;
     String statusText = 'Compiling selected transactions...';
     bool apiFinished = false;
+    bool popped = false;
     String? localPath;
 
     // Start API request in parallel
@@ -73,14 +74,15 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                     statusText = 'Compiling total expenses...';
                   }
                 });
-              } else if (apiFinished) {
+              } else if (apiFinished && !popped) {
+                popped = true;
                 setDialogState(() {
                   progress = 1.0;
                   statusText = 'Compilation complete!';
                 });
                 Future.delayed(const Duration(milliseconds: 500), () {
-                  if (Navigator.of(context).canPop()) {
-                    Navigator.of(context).pop(); // Close progress dialog
+                  if (context.mounted && Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop(); // Close progress dialog exactly once
                   }
                 });
               }
