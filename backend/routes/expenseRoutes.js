@@ -463,7 +463,77 @@ function autoCategorizeDescription(description) {
     return 'Investment';
   }
   
+  // If description has any merchant keyword, default to 'Shopping'
+  const isMerchant = desc.includes('store') || 
+                     desc.includes('mart') || 
+                     desc.includes('shop') || 
+                     desc.includes('enterprise') || 
+                     desc.includes('retail') || 
+                     desc.includes('pvt') || 
+                     desc.includes('ltd') ||
+                     desc.includes('merchant') ||
+                     desc.includes('pos');
+  if (isMerchant) {
+    return 'Shopping';
+  }
+  
   return 'Others';
+}
+
+// Clean raw bank narration for fallback parser
+function cleanFallbackDescription(rawDesc) {
+  let desc = String(rawDesc || '').trim();
+  if (!desc) return '';
+
+  const isUpi = /upi/i.test(desc);
+  const isImps = /imps/i.test(desc);
+  const isNeft = /neft/i.test(desc);
+
+  // Strip technical details from UPI
+  let clean = desc
+    .replace(/^upi[-/]dr[-/]/i, '')
+    .replace(/^upi[-/]out[-/]/i, '')
+    .replace(/^upi[-/]/i, '')
+    .replace(/[-/]gpay.*$/i, '')
+    .replace(/[-/]phonepe.*$/i, '')
+    .replace(/[-/]paytm.*$/i, '')
+    .replace(/@\w+.*$/, '') // Strip handles
+    .replace(/\d{10,}/g, '') // Strip long digits
+    .replace(/[\d-]{6,}/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Capitalize words
+  clean = clean.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+
+  if (isUpi) {
+    if (clean) {
+      // If it looks like a merchant account (contains store/mart/enterprises etc.)
+      const cleanLower = clean.toLowerCase();
+      const isMerchantName = cleanLower.includes('store') || 
+                             cleanLower.includes('mart') || 
+                             cleanLower.includes('shop') || 
+                             cleanLower.includes('enterprise') || 
+                             cleanLower.includes('retail') || 
+                             cleanLower.includes('pvt') || 
+                             cleanLower.includes('ltd') ||
+                             cleanLower.includes('merchant') ||
+                             cleanLower.includes('pos') ||
+                             rawDesc.toLowerCase().includes('okbiz');
+      
+      if (isMerchantName) {
+        return clean; // Just return clean merchant name
+      } else {
+        return `UPI Transfer to ${clean}`; // Personal name -> "UPI Transfer to Name"
+      }
+    }
+    return 'UPI Transfer';
+  }
+
+  if (isImps) return clean ? `IMPS Transfer to ${clean}` : 'IMPS Transfer';
+  if (isNeft) return clean ? `NEFT Transfer to ${clean}` : 'NEFT Transfer';
+
+  return clean || desc;
 }
 
 // Deduplicate parsed transactions by creating a unique key
@@ -1270,7 +1340,7 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
             }
 
             const transaction_date = parseRobustDate(rawDate);
-            const description = descriptionVal || `Row ${r} Import`;
+            const description = cleanFallbackDescription(descriptionVal || `Row ${r} Import`);
 
             parsedRawExpenses.push({
               id: crypto.randomUUID(),
@@ -1303,7 +1373,8 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
               amount = 0.00;
             }
 
-            const description = findVal(['description', 'desc', 'particulars', 'remark', 'narration', 'vendor', 'name', 'details']) || `Row ${idx + 1} Import`;
+            const rawDescription = findVal(['description', 'desc', 'particulars', 'remark', 'narration', 'vendor', 'name', 'details']) || `Row ${idx + 1} Import`;
+            const description = cleanFallbackDescription(rawDescription);
             let category = findVal(['category', 'cat', 'type']) || 'Others';
             if (category === 'Others' || !category) {
               category = autoCategorizeDescription(description);
