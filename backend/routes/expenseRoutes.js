@@ -249,66 +249,81 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
     const base64Image = req.file.buffer.toString('base64');
     const mimeType = req.file.mimetype;
 
-    console.log(`Sending receipt image to Google Gemini Native REST API (${req.file.size} bytes)...`);
+    const models = ['gemini-3.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash'];
+    let lastError = null;
+    let rawContent = null;
+    let usedModel = null;
 
-    // Call Native Google Gemini API with base64 image data
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${userGeminiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
+    for (const model of models) {
+      try {
+        console.log(`Sending receipt image to Google Gemini Native REST API using model ${model} (${req.file.size} bytes)...`);
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${userGeminiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            contents: [
               {
-                text: `Analyze this image (which could be a store receipt, utility bill, restaurant invoice, or a screenshot of a UPI transaction like GPay, PhonePe, Paytm). 
-                Extract the following financial details accurately:
-                1. amount (numeric float value)
-                2. currency (3-letter ISO code, e.g. INR, USD, EUR. Default to INR if it seems Indian, like UPI screenshots)
-                3. category (Categorize into precisely one of these values: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
-                4. description (Brief summary of what was purchased or description of the transaction)
-                5. transaction_date (ISO 8601 string, e.g., '2026-06-01T20:00:00Z'. Extract transaction timestamp, or estimate/use current date if not visible)
-                6. vendor (Name of the shop, store, merchant, or individual who received the money. For UPI, extract the receiver's name)
-                
-                Ensure the response is ONLY a single, clean JSON object without markdown formatting blocks or extra text.
-                JSON structure:
-                {
-                  "amount": 150.00,
-                  "currency": "INR",
-                  "category": "Food",
-                  "description": "Lunch at restaurant",
-                  "transaction_date": "2026-06-01T13:45:00.000Z",
-                  "vendor": "Burger King"
-                }`
-              },
-              {
-                inlineData: {
-                  mimeType: mimeType,
-                  data: base64Image
-                }
+                parts: [
+                  {
+                    text: `Analyze this image (which could be a store receipt, utility bill, restaurant invoice, or a screenshot of a UPI transaction like GPay, PhonePe, Paytm). 
+                    Extract the following financial details accurately:
+                    1. amount (numeric float value)
+                    2. currency (3-letter ISO code, e.g. INR, USD, EUR. Default to INR if it seems Indian, like UPI screenshots)
+                    3. category (Categorize into precisely one of these values: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
+                    4. description (Brief summary of what was purchased or description of the transaction)
+                    5. transaction_date (ISO 8601 string, e.g., '2026-06-01T20:00:00Z'. Extract transaction timestamp, or estimate/use current date if not visible)
+                    6. vendor (Name of the shop, store, merchant, or individual who received the money. For UPI, extract the receiver's name)
+                    
+                    Ensure the response is ONLY a single, clean JSON object without markdown formatting blocks or extra text.
+                    JSON structure:
+                    {
+                      "amount": 150.00,
+                      "currency": "INR",
+                      "category": "Food",
+                      "description": "Lunch at restaurant",
+                      "transaction_date": "2026-06-01T13:45:00.000Z",
+                      "vendor": "Burger King"
+                    }`
+                  },
+                  {
+                    inlineData: {
+                      mimeType: mimeType,
+                      data: base64Image
+                    }
+                  }
+                ]
               }
-            ]
-          }
-        ],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          maxOutputTokens: 1000
-        }
-      })
-    });
+            ],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              maxOutputTokens: 1000
+            }
+          })
+        });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error('Google Gemini Native API error response:', errText);
-      return res.status(500).json({ error: `OCR Service failed: ${errText}` });
+        if (response.ok) {
+          const data = await response.json();
+          rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          if (rawContent) {
+            usedModel = model;
+            break;
+          }
+        } else {
+          const errText = await response.text();
+          console.warn(`Gemini model ${model} failed with status ${response.status}: ${errText}`);
+          lastError = new Error(errText);
+        }
+      } catch (err) {
+        console.error(`Gemini model ${model} exception:`, err);
+        lastError = err;
+      }
     }
 
-    const data = await response.json();
-    const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-
     if (!rawContent) {
-      return res.status(500).json({ error: 'No data returned from OCR Service.' });
+      return res.status(500).json({ error: `OCR Service failed: ${lastError ? lastError.message : 'No response from models'}` });
     }
 
     // Clean JSON wrapper markdown blocks like ```json ... ``` if returned by the LLM
@@ -410,68 +425,83 @@ router.post('/import', upload.single('file'), async (req, res) => {
         return res.status(400).json({ error: 'Google AI Studio API Key is required. Please set your key in the app Settings.' });
       }
 
-      console.log(`Sending PDF text to Google Gemini Native REST API (${textContent.length} chars)...`);
+      const models = ['gemini-3.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash'];
+      let lastError = null;
+      let rawContent = null;
+      let usedModel = null;
 
-      // Call Native Google Gemini API to parse PDF text into an array of structured expenses!
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${userGeminiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
+      for (const model of models) {
+        try {
+          console.log(`Sending PDF text to Google Gemini Native REST API using model ${model} (${textContent.length} chars)...`);
+
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${userGeminiKey}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              contents: [
                 {
-                  text: `Analyze this raw text extracted from a bank statement, digital payment receipt list, or invoice PDF. Extract a list of transactions.
-                  
-                  Raw PDF text content:
-                  ---------------------
-                  ${textContent.slice(0, 50000)}  // Limit size to protect token usage
-                  ---------------------
-
-                  Tasks:
-                  1. Extract at most the 30 most recent transaction items (specifically payments/expenses, ignoring credits/deposits where possible).
-                  2. For each transaction, extract:
-                     - amount (numeric positive float)
-                     - currency (3-letter ISO code, e.g. INR, USD)
-                     - category (Precisely categorize into: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
-                     - description (Clear merchant/detail from transaction text)
-                     - transaction_date (ISO 8601 string, parse/estimate from date logs)
-                  
-                  Ensure your response is ONLY a JSON array of objects, without markdown wrapper blocks or text.
-                  Structure:
-                  [
+                  parts: [
                     {
-                      "amount": 450.00,
-                      "currency": "INR",
-                      "category": "Shopping",
-                      "description": "Amazon Purchase",
-                      "transaction_date": "2026-05-25T12:00:00.000Z"
-                    }
-                  ]`
-                }
-              ]
-            }
-          ],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            maxOutputTokens: 8192
-          }
-        })
-      });
+                      text: `Analyze this raw text extracted from a bank statement, digital payment receipt list, or invoice PDF. Extract a list of transactions.
+                      
+                      Raw PDF text content:
+                      ---------------------
+                      ${textContent.slice(0, 50000)}  // Limit size to protect token usage
+                      ---------------------
 
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error('Google Gemini Native API error response:', errText);
-        return res.status(500).json({ error: `AI processing of statement PDF failed: ${errText}` });
+                      Tasks:
+                      1. Extract at most the 30 most recent transaction items (specifically payments/expenses, ignoring credits/deposits where possible).
+                      2. For each transaction, extract:
+                         - amount (numeric positive float)
+                         - currency (3-letter ISO code, e.g. INR, USD)
+                         - category (Precisely categorize into: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
+                         - description (Clear merchant/detail from transaction text)
+                         - transaction_date (ISO 8601 string, parse/estimate from date logs)
+                      
+                      Ensure your response is ONLY a JSON array of objects, without markdown wrapper blocks or text.
+                      Structure:
+                      [
+                        {
+                          "amount": 450.00,
+                          "currency": "INR",
+                          "category": "Shopping",
+                          "description": "Amazon Purchase",
+                          "transaction_date": "2026-05-25T12:00:00.000Z"
+                        }
+                      ]`
+                    }
+                  ]
+                }
+              ],
+              generationConfig: {
+                responseMimeType: 'application/json',
+                maxOutputTokens: 8192
+              }
+            })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+            if (rawContent) {
+              usedModel = model;
+              break;
+            }
+          } else {
+            const errText = await response.text();
+            console.warn(`Gemini model ${model} failed with status ${response.status}: ${errText}`);
+            lastError = new Error(errText);
+          }
+        } catch (err) {
+          console.error(`Gemini model ${model} exception:`, err);
+          lastError = err;
+        }
       }
 
-      const data = await response.json();
-      const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-
       if (!rawContent) {
-        return res.status(500).json({ error: 'No data extracted from PDF statement.' });
+        return res.status(500).json({ error: `AI processing of statement PDF failed: ${lastError ? lastError.message : 'No response from models'}` });
       }
 
       let cleanJson = rawContent.trim();
