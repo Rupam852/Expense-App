@@ -49,6 +49,14 @@ app.get('/', (req, res) => {
   });
 });
 
+// Fallback health checks to support custom external cron ping URLs (e.g. cron-job.org)
+app.get('/api/auth/health', (req, res) => {
+  res.status(200).json({ status: 'online', time: new Date().toISOString() });
+});
+app.get('/auth/health', (req, res) => {
+  res.status(200).json({ status: 'online', time: new Date().toISOString() });
+});
+
 // Register API Routes with Rate Limiters applied
 app.use('/auth', authLimiter, authRoutes);
 app.use('/expenses', apiLimiter, expenseRoutes);
