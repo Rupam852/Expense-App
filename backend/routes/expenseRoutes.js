@@ -17,89 +17,141 @@ function cleanAmount(val) {
   return isNaN(num) ? 0.0 : num;
 }
 
-// Helper for Groq API integration (Llama-based lifetime free parsing)
-async function callGroq(userKey, prompt, base64Image = null, mimeType = null) {
-  console.log('Intelligent detection: Using Groq Cloud API parser...');
+// Resilient utility to repair truncated JSON arrays/objects from LLMs
+function repairTruncatedJson(str) {
+  str = str.trim();
+  if (!str) return str;
+
+  // If already valid JSON, return directly
+  try {
+    JSON.parse(str);
+    return str;
+  } catch (e) {
+    // Attempting to repair
+  }
+
+  console.log('Detecting truncated or malformed JSON from LLM. Attempting to repair...');
+
+  let insideQuotes = false;
+  let escaped = false;
+  const bracketStack = [];
   
-  const isVision = !!base64Image;
-  const model = isVision ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.1-8b-instant';
+  const firstBracket = str.indexOf('[');
+  const firstCurly = str.indexOf('{');
+  let startIdx = 0;
   
-  const messages = [];
-  if (isVision) {
-    messages.push({
-      role: 'user',
-      content: [
-        { type: 'text', text: prompt },
-        {
-          type: 'image_url',
-          image_url: {
-            url: `data:${mimeType};base64,${base64Image}`
-          }
+  if (firstBracket !== -1 && (firstCurly === -1 || firstBracket < firstCurly)) {
+    startIdx = firstBracket;
+  } else if (firstCurly !== -1) {
+    startIdx = firstCurly;
+  }
+
+  const workingStr = str.substring(startIdx);
+  let repaired = '';
+  let lastValidStateStr = '';
+  
+  for (let i = 0; i < workingStr.length; i++) {
+    const char = workingStr[i];
+    
+    if (escaped) {
+      repaired += char;
+      escaped = false;
+      continue;
+    }
+    
+    if (char === '\\') {
+      repaired += char;
+      escaped = true;
+      continue;
+    }
+    
+    if (char === '"') {
+      insideQuotes = !insideQuotes;
+      repaired += char;
+      continue;
+    }
+    
+    if (insideQuotes) {
+      if (char === '\n') {
+        repaired += ' ';
+      } else if (char === '\r') {
+        // Skip
+      } else {
+        repaired += char;
+      }
+      continue;
+    }
+    
+    if (char === '[') {
+      bracketStack.push('[');
+      repaired += char;
+    } else if (char === '{') {
+      bracketStack.push('{');
+      repaired += char;
+    } else if (char === ']') {
+      if (bracketStack[bracketStack.length - 1] === '[') {
+        bracketStack.pop();
+        repaired += char;
+        if (bracketStack.length === 0) {
+          lastValidStateStr = repaired;
         }
-      ]
-    });
-  } else {
-    messages.push({
-      role: 'user',
-      content: prompt
-    });
+      }
+    } else if (char === '}') {
+      if (bracketStack[bracketStack.length - 1] === '{') {
+        bracketStack.pop();
+        repaired += char;
+        if (bracketStack.length === 0 || (bracketStack.length === 1 && bracketStack[0] === '[')) {
+          lastValidStateStr = repaired;
+        }
+      }
+    } else {
+      repaired += char;
+    }
   }
 
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${userKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: model,
-      messages: messages,
-      response_format: { type: 'json_object' },
-      temperature: 0.1
-    })
-  });
-
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Groq API failed: ${errText}`);
+  if (bracketStack.length === 0) {
+    try {
+      JSON.parse(repaired);
+      return repaired;
+    } catch (e) {}
   }
 
-  const data = await response.json();
-  const rawContent = data.choices?.[0]?.message?.content?.trim();
-  return rawContent;
-}
-
-// Helper for OpenRouter API (unified API for 100+ models — Claude, GPT-4, Gemini, Llama, etc.)
-async function callOpenRouter(userKey, prompt) {
-  console.log('Intelligent detection: Using OpenRouter API parser...');
-
-  // Use Gemini 2.0 Flash via OpenRouter (free, fast, excellent for bank statements)
-  const model = 'google/gemini-2.0-flash-exp:free';
-
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${userKey}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://expense-tracker-backend-5pc1.onrender.com',
-      'X-Title': 'Grow Expense App'
-    },
-    body: JSON.stringify({
-      model: model,
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-      temperature: 0.1
-    })
-  });
-
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`OpenRouter API failed: ${errText}`);
+  if (lastValidStateStr) {
+    let finalStr = lastValidStateStr.replace(/,\s*$/, '');
+    if (workingStr.startsWith('[') && !finalStr.endsWith(']')) {
+      finalStr += ']';
+    }
+    try {
+      JSON.parse(finalStr);
+      console.log('Successfully repaired JSON to last valid complete object/array!');
+      return finalStr;
+    } catch (e) {}
   }
 
-  const data = await response.json();
-  const rawContent = data.choices?.[0]?.message?.content?.trim();
-  return rawContent;
+  let fallbackStr = repaired;
+  if (insideQuotes) {
+    fallbackStr += '"';
+  }
+  
+  fallbackStr = fallbackStr.replace(/,\s*$/, '');
+  fallbackStr = fallbackStr.replace(/:\s*[^,}\]]*$/, '');
+  fallbackStr = fallbackStr.replace(/,\s*$/, '');
+
+  while (bracketStack.length > 0) {
+    const lastOpen = bracketStack.pop();
+    if (lastOpen === '[') fallbackStr += ']';
+    if (lastOpen === '{') fallbackStr += '}';
+  }
+
+  try {
+    JSON.parse(fallbackStr);
+    console.log('Successfully repaired JSON via stack closing fallback!');
+    return fallbackStr;
+  } catch (e) {
+    console.warn('Failed to parse repaired JSON:', e.message);
+  }
+
+  return str;
 }
 
 // Multer memory storage for serverless-friendly file handling
@@ -334,9 +386,9 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
   }
 
   try {
-    const userGeminiKey = req.headers['x-user-gemini-key'];
+        const userGeminiKey = req.headers['x-user-gemini-key'];
     if (!userGeminiKey) {
-      return res.status(400).json({ error: 'Google AI Studio or Groq API Key is required. Please set your key in Settings.' });
+      return res.status(400).json({ error: 'Google AI Studio API Key is required. Please set your key in Settings.' });
     }
 
     // Convert file buffer to base64
@@ -344,110 +396,81 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
     const mimeType = req.file.mimetype;
 
     let rawContent = null;
+    const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+    let lastError = null;
+    let usedModel = null;
 
-    if (userGeminiKey.startsWith('gsk_')) {
+    for (const model of models) {
       try {
-        const prompt = `Analyze this image (which could be a store receipt, utility bill, restaurant invoice, or a screenshot of a UPI transaction like GPay, PhonePe, Paytm). 
-        Extract the following financial details accurately:
-        1. amount (numeric float value)
-        2. currency (3-letter ISO code, e.g. INR, USD, EUR. Default to INR if it seems Indian, like UPI screenshots)
-        3. category (Categorize into precisely one of these values: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
-        4. description (Brief summary of what was purchased or description of the transaction)
-        5. transaction_date (ISO 8601 string, e.g., '2026-06-01T20:00:00Z'. Extract transaction timestamp, or estimate/use current date if not visible)
-        6. vendor (Name of the shop, store, merchant, or individual who received the money. For UPI, extract the receiver's name)
-        
-        Ensure the response is ONLY a single, clean JSON object without markdown formatting blocks or extra text.
-        JSON structure:
-        {
-          "amount": 150.00,
-          "currency": "INR",
-          "category": "Food",
-          "description": "Lunch at restaurant",
-          "transaction_date": "2026-06-01T13:45:00.000Z",
-          "vendor": "Burger King"
-        }`;
-        rawContent = await callGroq(userGeminiKey, prompt, base64Image, mimeType);
-      } catch (err) {
-        console.error('Groq scan-receipt error:', err);
-        return res.status(500).json({ error: `Groq OCR scan failed: ${err.message}` });
-      }
-    } else {
-      const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-pro'];
-      let lastError = null;
-      let usedModel = null;
+        console.log(`Sending receipt image to Google Gemini Native REST API using model ${model} (${req.file.size} bytes)...`);
 
-      for (const model of models) {
-        try {
-          console.log(`Sending receipt image to Google Gemini Native REST API using model ${model} (${req.file.size} bytes)...`);
-
-          const apiVersion = model.startsWith('gemini-1.5') ? 'v1' : 'v1beta';
-          const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userGeminiKey}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              contents: [
-                {
-                  parts: [
+        const apiVersion = model.startsWith('gemini-1.5') ? 'v1' : 'v1beta';
+        const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userGeminiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    text: `Analyze this image (which could be a store receipt, utility bill, restaurant invoice, or a screenshot of a UPI transaction like GPay, PhonePe, Paytm). 
+                    Extract the following financial details accurately:
+                    1. amount (numeric float value)
+                    2. currency (3-letter ISO code, e.g. INR, USD, EUR. Default to INR if it seems Indian, like UPI screenshots)
+                    3. category (Categorize into precisely one of these values: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
+                    4. description (Brief summary of what was purchased or description of the transaction)
+                    5. transaction_date (ISO 8601 string, e.g., '2026-06-01T20:00:00Z'. Extract transaction timestamp, or estimate/use current date if not visible)
+                    6. vendor (Name of the shop, store, merchant, or individual who received the money. For UPI, extract the receiver's name)
+                    
+                    Ensure the response is ONLY a single, clean JSON object without markdown formatting blocks or extra text.
+                    JSON structure:
                     {
-                      text: `Analyze this image (which could be a store receipt, utility bill, restaurant invoice, or a screenshot of a UPI transaction like GPay, PhonePe, Paytm). 
-                      Extract the following financial details accurately:
-                      1. amount (numeric float value)
-                      2. currency (3-letter ISO code, e.g. INR, USD, EUR. Default to INR if it seems Indian, like UPI screenshots)
-                      3. category (Categorize into precisely one of these values: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
-                      4. description (Brief summary of what was purchased or description of the transaction)
-                      5. transaction_date (ISO 8601 string, e.g., '2026-06-01T20:00:00Z'. Extract transaction timestamp, or estimate/use current date if not visible)
-                      6. vendor (Name of the shop, store, merchant, or individual who received the money. For UPI, extract the receiver's name)
-                      
-                      Ensure the response is ONLY a single, clean JSON object without markdown formatting blocks or extra text.
-                      JSON structure:
-                      {
-                        "amount": 150.00,
-                        "currency": "INR",
-                        "category": "Food",
-                        "description": "Lunch at restaurant",
-                        "transaction_date": "2026-06-01T13:45:00.000Z",
-                        "vendor": "Burger King"
-                      }`
-                    },
-                    {
-                      inlineData: {
-                        mimeType: mimeType,
-                        data: base64Image
-                      }
+                      "amount": 150.00,
+                      "currency": "INR",
+                      "category": "Food",
+                      "description": "Lunch at restaurant",
+                      "transaction_date": "2026-06-01T13:45:00.000Z",
+                      "vendor": "Burger King"
+                    }`
+                  },
+                  {
+                    inlineData: {
+                      mimeType: mimeType,
+                      data: base64Image
                     }
-                  ]
-                }
-              ],
-              generationConfig: {
-                responseMimeType: 'application/json',
-                maxOutputTokens: 1000
+                  }
+                ]
               }
-            })
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-            if (rawContent) {
-              usedModel = model;
-              break;
+            ],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              maxOutputTokens: 1000
             }
-          } else {
-            const errText = await response.text();
-            console.warn(`Gemini model ${model} failed with status ${response.status}: ${errText}`);
-            lastError = new Error(errText);
-          }
-        } catch (err) {
-          console.error(`Gemini model ${model} exception:`, err);
-          lastError = err;
-        }
-      }
+          })
+        });
 
-      if (!rawContent) {
-        return res.status(500).json({ error: `OCR Service failed: ${lastError ? lastError.message : 'No response from models'}` });
+        if (response.ok) {
+          const data = await response.json();
+          rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          if (rawContent) {
+            usedModel = model;
+            break;
+          }
+        } else {
+          const errText = await response.text();
+          console.warn(`Gemini model ${model} failed with status ${response.status}: ${errText}`);
+          lastError = new Error(errText);
+        }
+      } catch (err) {
+        console.error(`Gemini model ${model} exception:`, err);
+        lastError = err;
       }
+    }
+
+    if (!rawContent) {
+      return res.status(500).json({ error: `OCR Service failed: ${lastError ? lastError.message : 'No response from models'}` });
     }
 
     // Clean JSON wrapper markdown blocks like ```json ... ``` if returned by the LLM
@@ -561,17 +584,11 @@ router.post('/import', upload.single('file'), async (req, res) => {
 
       const userApiKey = req.headers['x-user-gemini-key'];
       if (!userApiKey) {
-        return res.status(400).json({ error: 'API Key required. Please set your Gemini, Groq, or OpenRouter API Key in Settings.' });
+        return res.status(400).json({ error: 'Gemini API Key required. Please set your Google Gemini API Key in Settings.' });
       }
 
-      // Smart API provider detection by key prefix
-      const isGroq = userApiKey.startsWith('gsk_');
-      const isOpenRouter = userApiKey.startsWith('sk-or-');
-      const provider = isGroq ? 'Groq' : isOpenRouter ? 'OpenRouter' : 'Gemini';
-
-      // Adaptive text slicing based on provider token limits
-      // Groq: ~6000 TPM (very limited) | OpenRouter/Gemini: large context windows
-      const sliceLimit = isGroq ? 5000 : 30000;
+      // Slice to safe token/character limit for Gemini models
+      const sliceLimit = 30000;
       
       const textContent = rawText
         .replace(/[ \t]+/g, ' ')
@@ -580,154 +597,117 @@ router.post('/import', upload.single('file'), async (req, res) => {
         .trim()
         .slice(0, sliceLimit);
 
-      console.log(`Parsing PDF text (${textContent.length} chars) using ${provider}...`);
-
-      // Standard prompt for all providers
-      const importPrompt = `Analyze this raw text extracted from a bank statement. Extract ONLY debit/expense/withdrawal transactions.
-
-Bank Statement Text:
----------------------
-${textContent}
----------------------
-
-RULES:
-- ONLY extract debit/withdrawal/payment transactions (money going OUT)
-- IGNORE all credit/deposit/salary/refund transactions (money coming IN)
-- Extract ALL debit transactions present
-
-For each debit transaction return:
-- amount: positive number
-- currency: "INR"
-- category: one of [Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others]
-- description: merchant/payee name
-- transaction_date: ISO 8601 date string
-
-Return ONLY a valid JSON array. No markdown, no explanation.
-Example: [{"amount":450.0,"currency":"INR","category":"Shopping","description":"Amazon Pay","transaction_date":"2026-05-15T00:00:00.000Z"}]`;
+      console.log(`Parsing PDF text (${textContent.length} chars) using Google Gemini Native REST API...`);
 
       let rawContent = null;
+      const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+      let lastError = null;
+      let usedModel = null;
 
-      if (isGroq) {
+      for (const model of models) {
         try {
-          rawContent = await callGroq(userApiKey, importPrompt);
-        } catch (err) {
-          console.error('Groq statement import error:', err);
-          return res.status(500).json({ error: `Groq Import failed: ${err.message}` });
-        }
-      } else if (isOpenRouter) {
-        try {
-          rawContent = await callOpenRouter(userApiKey, importPrompt);
-        } catch (err) {
-          console.error('OpenRouter statement import error:', err);
-          return res.status(500).json({ error: `OpenRouter Import failed: ${err.message}` });
-        }
-      } else {
-        const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-pro'];
-        let lastError = null;
-        let usedModel = null;
+          console.log(`Sending PDF text to Google Gemini Native REST API using model ${model} (${textContent.length} chars)...`);
 
-        for (const model of models) {
-          try {
-            console.log(`Sending PDF text to Google Gemini Native REST API using model ${model} (${textContent.length} chars)...`);
+          const apiVersion = model.startsWith('gemini-1.5') ? 'v1' : 'v1beta';
+          const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userApiKey}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    {
+                      text: `Analyze this raw text extracted from a bank statement. Extract a list of transactions.
+                      
+                      Raw PDF text content:
+                      ---------------------
+                      ${textContent}
+                      ---------------------
 
-            const apiVersion = model.startsWith('gemini-1.5') ? 'v1' : 'v1beta';
-            const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userApiKey}`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                contents: [
-                  {
-                    parts: [
-                      {
-                        text: `Analyze this raw text extracted from a bank statement. Extract a list of transactions.
-                        
-                        Raw PDF text content:
-                        ---------------------
-                        ${textContent}
-                        ---------------------
+                      CRITICAL RULE:
+                      - ONLY extract debit/expense/payment/withdrawal transactions (where money is spent/withdrawn/Dr).
+                      - COMPLETELY IGNORE all credit/deposit/income/salary/refund transactions (where money is received/credited/Cr).
 
-                        CRITICAL RULE:
-                        - ONLY extract debit/expense/payment/withdrawal transactions (where money is spent/withdrawn/Dr).
-                        - COMPLETELY IGNORE all credit/deposit/income/salary/refund transactions (where money is received/credited/Cr).
-
-                        Tasks:
-                        1. Extract ALL debit transaction items present in the text.
-                        2. For each transaction, extract:
-                           - amount (numeric positive float)
-                           - currency (3-letter ISO code, e.g. INR)
-                           - category (Precisely: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
-                           - description (Clear merchant/receiver detail)
-                           - transaction_date (ISO 8601 string)
-                        
-                        Ensure your response is ONLY a JSON array of objects, without markdown wrapper blocks or text.
-                        Structure:
-                        [
-                          {
-                            "amount": 450.00,
-                            "currency": "INR",
-                            "category": "Shopping",
-                            "description": "Amazon Purchase",
-                            "transaction_date": "2026-05-25T12:00:00.000Z"
-                          }
-                        ]`
-                      }
-                    ]
-                  }
-                ],
-                safetySettings: [
-                  {
-                    category: "HARM_CATEGORY_HARASSMENT",
-                    threshold: "BLOCK_NONE"
-                  },
-                  {
-                    category: "HARM_CATEGORY_HATE_SPEECH",
-                    threshold: "BLOCK_NONE"
-                  },
-                  {
-                    category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                    threshold: "BLOCK_NONE"
-                  },
-                  {
-                    category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-                    threshold: "BLOCK_NONE"
-                  }
-                ],
-                generationConfig: {
-                  responseMimeType: 'application/json',
-                  maxOutputTokens: 4096
+                      Tasks:
+                      1. Extract ALL debit transaction items present in the text.
+                      2. For each transaction, extract:
+                         - amount (numeric positive float)
+                         - currency (3-letter ISO code, e.g. INR)
+                         - category (Precisely: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
+                         - description (Clear merchant/receiver detail)
+                         - transaction_date (ISO 8601 string)
+                      
+                      Ensure your response is ONLY a JSON array of objects, without markdown wrapper blocks or text.
+                      Structure:
+                      [
+                        {
+                          "amount": 450.00,
+                          "currency": "INR",
+                          "category": "Shopping",
+                          "description": "Amazon Purchase",
+                          "transaction_date": "2026-05-25T12:00:00.000Z"
+                        }
+                      ]`
+                    }
+                  ]
                 }
-              })
-            });
-
-            if (response.ok) {
-              const data = await response.json();
-              rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-              if (rawContent) {
-                usedModel = model;
-                break;
+              ],
+              safetySettings: [
+                {
+                  category: "HARM_CATEGORY_HARASSMENT",
+                  threshold: "BLOCK_NONE"
+                },
+                {
+                  category: "HARM_CATEGORY_HATE_SPEECH",
+                  threshold: "BLOCK_NONE"
+                },
+                {
+                  category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                  threshold: "BLOCK_NONE"
+                },
+                {
+                  category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                  threshold: "BLOCK_NONE"
+                }
+              ],
+              generationConfig: {
+                responseMimeType: 'application/json',
+                maxOutputTokens: 4096
               }
-            } else {
-              const errText = await response.text();
-              console.warn(`Gemini model ${model} failed with status ${response.status}: ${errText}`);
-              lastError = new Error(errText);
-            }
-          } catch (err) {
-            console.error(`Gemini model ${model} exception:`, err);
-            lastError = err;
-          }
-        }
+            })
+          });
 
-        if (!rawContent) {
-          return res.status(500).json({ error: `AI processing of statement PDF failed: ${lastError ? lastError.message : 'No response from models'}` });
+          if (response.ok) {
+            const data = await response.json();
+            rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+            if (rawContent) {
+              usedModel = model;
+              break;
+            }
+          } else {
+            const errText = await response.text();
+            console.warn(`Gemini model ${model} failed with status ${response.status}: ${errText}`);
+            lastError = new Error(errText);
+          }
+        } catch (err) {
+          console.error(`Gemini model ${model} exception:`, err);
+          lastError = err;
         }
+      }
+
+      if (!rawContent) {
+        return res.status(500).json({ error: `AI processing of statement PDF failed: ${lastError ? lastError.message : 'No response from models'}` });
       }
 
       let cleanJson = rawContent.trim();
       
       // Step 1: Remove markdown block wrappers if present
       cleanJson = cleanJson.replace(/```json/gi, '').replace(/```/gi, '').trim();
+
+      // Step 2: Repair truncated JSON if it ends abruptly
+      cleanJson = repairTruncatedJson(cleanJson);
 
       // Step 2: Extract JSON subset using boundaries
       const firstCurly = cleanJson.indexOf('{');
