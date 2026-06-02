@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/expense_provider.dart';
 import '../services/user_provider.dart';
+import '../models/expense.dart';
 import 'expense_entry_screen.dart';
 import 'package:file_picker/file_picker.dart';
 
