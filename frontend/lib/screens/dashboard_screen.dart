@@ -292,7 +292,7 @@ class DashboardScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Apna AI API key enter karein. PDF import aur receipt scan ke liye use hoga. Teen options hain:',
+                    'Apna Google AI Studio (Gemini) API key enter karein. PDF import aur receipt scan ke liye use hoga:',
                     style: GoogleFonts.inter(fontSize: 13, height: 1.4),
                   ),
                   const SizedBox(height: 10),
@@ -305,14 +305,8 @@ class DashboardScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('🟢 OpenRouter  (sk-or-v1-...)  ← Recommended', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
-                        Text('   openrouter.ai — 100+ free models, best for statements', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
-                        const SizedBox(height: 6),
                         Text('🔵 Google Gemini  (AIzaSy...)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
                         Text('   aistudio.google.com — free, fast', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
-                        const SizedBox(height: 6),
-                        Text('🟡 Groq  (gsk_...)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
-                        Text('   console.groq.com — free but limited tokens', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
                       ],
                     ),
                   ),
@@ -322,9 +316,9 @@ class DashboardScreen extends StatelessWidget {
                     obscureText: isObscured,
                     style: GoogleFonts.inter(fontSize: 14),
                     decoration: InputDecoration(
-                      labelText: 'API Key',
+                      labelText: 'Gemini API Key',
                       labelStyle: TextStyle(color: Theme.of(context).primaryColor),
-                      hintText: 'sk-or-v1-... / AIzaSy... / gsk_...',
+                      hintText: 'AIzaSy...',
                       filled: true,
                       fillColor: Theme.of(context).primaryColor.withOpacity(0.03),
                       border: OutlineInputBorder(
@@ -341,7 +335,7 @@ class DashboardScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   SelectableText(
-                    'Free key generate karein:\nopenrouter.ai  |  aistudio.google.com  |  console.groq.com',
+                    'Free key generate karein:\naistudio.google.com',
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       color: Theme.of(context).primaryColor,
@@ -496,12 +490,10 @@ class DashboardScreen extends StatelessWidget {
                     // Custom Gemini API Key Setting Row
                     ListTile(
                       leading: Icon(Icons.vpn_key_outlined, color: Theme.of(context).primaryColor),
-                      title: const Text('Google AI Studio / Groq API Key'),
+                      title: const Text('Google AI Studio API Key'),
                       subtitle: Text(
                         userProvider.userGeminiApiKey != null && userProvider.userGeminiApiKey!.isNotEmpty
-                            ? (userProvider.userGeminiApiKey!.startsWith('gsk_')
-                                ? 'Custom Groq API Key active (Llama parsing)'
-                                : 'Custom Gemini API Key active (Gemini parsing)')
+                            ? 'Custom Gemini API Key active'
                             : 'Using shared server keys',
                         style: GoogleFonts.inter(fontSize: 12),
                       ),
