@@ -631,7 +631,7 @@ Example: [{"amount":450.0,"currency":"INR","category":"Shopping","description":"
             console.log(`Sending PDF text to Google Gemini Native REST API using model ${model} (${textContent.length} chars)...`);
 
             const apiVersion = model.startsWith('gemini-1.5') ? 'v1' : 'v1beta';
-            const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userGeminiKey}`, {
+            const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userApiKey}`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
