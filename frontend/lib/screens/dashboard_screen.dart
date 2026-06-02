@@ -11,8 +11,43 @@ import '../services/user_provider.dart';
 import 'expense_entry_screen.dart';
 import 'package:file_picker/file_picker.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  DateTime? _selectedMonthYear;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _selectedMonthYear = DateTime(now.year, now.month);
+  }
+
+  List<DateTime> _getAvailableMonths(List<Expense> expenses) {
+    final List<DateTime> months = [];
+    final now = DateTime.now();
+    final currentMonthStart = DateTime(now.year, now.month);
+    
+    // Always include the current month in history selection
+    months.add(currentMonthStart);
+    
+    for (final exp in expenses) {
+      final date = exp.transactionDate;
+      final monthStart = DateTime(date.year, date.month);
+      if (!months.any((m) => m.year == monthStart.year && m.month == monthStart.month)) {
+        months.add(monthStart);
+      }
+    }
+    
+    // Sort in descending order
+    months.sort((a, b) => b.compareTo(a));
+    return months;
+  }
 
   // Category Icon Mapper
   IconData _getCategoryIcon(String category) {
@@ -548,10 +583,21 @@ class DashboardScreen extends StatelessWidget {
       });
     }
 
-    // Filter expenses for current month to display sum
+    // Dynamic month calculations
+    final availableMonths = _getAvailableMonths(expenseProvider.expenses);
+    
+    // Safety check: if _selectedMonthYear is not initialized, set it to the current month
+    if (_selectedMonthYear == null) {
+      final now = DateTime.now();
+      _selectedMonthYear = DateTime(now.year, now.month);
+    }
+
+    final selectedMonthStr = DateFormat('yyyy-MM').format(_selectedMonthYear!);
     final currentMonthStr = DateFormat('yyyy-MM').format(DateTime.now());
+    final isSelectedMonthCurrent = selectedMonthStr == currentMonthStr;
+
     final monthlyExpenses = expenseProvider.expenses.where((e) =>
-      DateFormat('yyyy-MM').format(e.transactionDate) == currentMonthStr
+      DateFormat('yyyy-MM').format(e.transactionDate) == selectedMonthStr
     ).toList();
 
     final totalSpentThisMonth = monthlyExpenses.fold<double>(
@@ -654,7 +700,9 @@ class DashboardScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'TOTAL SPENT THIS MONTH',
+                      isSelectedMonthCurrent
+                          ? 'TOTAL SPENT THIS MONTH'
+                          : 'TOTAL SPENT IN ${DateFormat('MMMM yyyy').format(_selectedMonthYear!).toUpperCase()}',
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -700,7 +748,9 @@ class DashboardScreen extends StatelessWidget {
                               const Icon(Icons.wallet, size: 14, color: Colors.white),
                               const SizedBox(width: 4),
                               Text(
-                                '${expenseProvider.expenses.length} Total records',
+                                isSelectedMonthCurrent
+                                    ? '${expenseProvider.expenses.length} Total records'
+                                    : '${monthlyExpenses.length} Records this month',
                                 style: GoogleFonts.inter(
                                   fontSize: 11,
                                   color: Colors.white,
@@ -712,7 +762,7 @@ class DashboardScreen extends StatelessWidget {
                         ),
                         const Spacer(),
                         Text(
-                          DateFormat('MMMM yyyy').format(DateTime.now()).toUpperCase(),
+                          DateFormat('MMMM yyyy').format(_selectedMonthYear!).toUpperCase(),
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             color: Colors.white.withOpacity(0.9),
@@ -724,9 +774,123 @@ class DashboardScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 20),
+
+              // Month history horizontal selector
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4.0, bottom: 10.0),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.history_toggle_off,
+                          size: 16,
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'MONTHLY STATEMENT HISTORY',
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.8,
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(
+                    height: 46,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: availableMonths.length,
+                      itemBuilder: (context, index) {
+                        final month = availableMonths[index];
+                        final isSelected = _selectedMonthYear!.year == month.year &&
+                            _selectedMonthYear!.month == month.month;
+                        final isCurrent = DateTime.now().year == month.year &&
+                            DateTime.now().month == month.month;
+                        final label = DateFormat('MMM yyyy').format(month);
+
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          margin: const EdgeInsets.only(right: 8.0),
+                          child: InkWell(
+                            onTap: () {
+                              setState(() {
+                                _selectedMonthYear = month;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              decoration: BoxDecoration(
+                                gradient: isSelected
+                                    ? const LinearGradient(
+                                        colors: [Color(0xFF00D09C), Color(0xFF05B488)],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      )
+                                    : null,
+                                color: isSelected
+                                    ? null
+                                    : (isDark ? const Color(0xFF181B22) : Colors.white),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? Colors.transparent
+                                      : (isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0)),
+                                  width: 1.5,
+                                ),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: const Color(0xFF00D09C).withOpacity(0.2),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 4),
+                                        )
+                                      ]
+                                    : null,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (isCurrent) ...[
+                                    Icon(
+                                      Icons.today_outlined,
+                                      size: 14,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                                    ),
+                                    const SizedBox(width: 6),
+                                  ],
+                                  Text(
+                                    label,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : (isDark ? Colors.grey[300] : Colors.grey[700]),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 24),
 
-                          // 2. Rapid Actions Hub (Imports, OCR Scans, and CSV Statement Export)
+              // 2. Rapid Actions Hub (Imports, OCR Scans, and CSV Statement Export)
               Row(
                 children: [
                   Expanded(
@@ -854,7 +1018,9 @@ class DashboardScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'RECENT TRANSACTIONS',
+                    isSelectedMonthCurrent 
+                        ? 'RECENT TRANSACTIONS' 
+                        : '${DateFormat('MMMM yyyy').format(_selectedMonthYear!).toUpperCase()} TRANSACTIONS',
                     style: GoogleFonts.outfit(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
@@ -862,7 +1028,7 @@ class DashboardScreen extends StatelessWidget {
                       color: isDark ? Colors.grey[400] : Colors.grey[700],
                     ),
                   ),
-                  if (expenseProvider.expenses.isNotEmpty)
+                  if (monthlyExpenses.isNotEmpty)
                     Text(
                       'Swipe left to delete',
                       style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
@@ -879,7 +1045,7 @@ class DashboardScreen extends StatelessWidget {
                     child: CircularProgressIndicator(),
                   ),
                 )
-              else if (expenseProvider.expenses.isEmpty)
+              else if (monthlyExpenses.isEmpty)
                 Container(
                   padding: const EdgeInsets.all(40.0),
                   decoration: BoxDecoration(
@@ -891,13 +1057,17 @@ class DashboardScreen extends StatelessWidget {
                       Icon(Icons.receipt_long, size: 48, color: Colors.grey[400]),
                       const SizedBox(height: 16),
                       Text(
-                        'No transactions recorded yet.',
+                        expenseProvider.expenses.isEmpty
+                            ? 'No transactions recorded yet.'
+                            : 'No transactions for this month.',
                         style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Tap the + button to add manual expense, scan a receipt with camera, or upload statement.',
+                        expenseProvider.expenses.isEmpty
+                            ? 'Tap the + button to add manual expense, scan a receipt with camera, or upload statement.'
+                            : 'Try selecting another month or import data for this statement month.',
                         style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
                         textAlign: TextAlign.center,
                       ),
@@ -908,10 +1078,10 @@ class DashboardScreen extends StatelessWidget {
                 ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: expenseProvider.expenses.length > 10 ? 10 : expenseProvider.expenses.length,
+                  itemCount: monthlyExpenses.length,
                   separatorBuilder: (context, index) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
-                    final exp = expenseProvider.expenses[index];
+                    final exp = monthlyExpenses[index];
                     final catColor = _getCategoryColor(exp.category);
 
                     return Dismissible(
