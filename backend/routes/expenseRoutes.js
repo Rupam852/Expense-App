@@ -690,7 +690,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
       try {
         pdfData = await pdfParse(pdfBuffer);
       } catch (err) {
-        console.error('[PDF Import] Parsing failed:', err);
+        logDiagnostic(`[PDF Import] Parsing failed: ${err.message || err.description || err || ''}`);
         let errStr = '';
         try {
           errStr = JSON.stringify(err) || '';
@@ -707,7 +707,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
                             errStr.includes('encrypt') ||
                             errStr.includes('secure');
 
-        console.log(`[PDF Import] isEncrypted check: isEncrypted=${isEncrypted}, errNameStr=${errNameStr}, errStr=${errStr}`);
+        logDiagnostic(`[PDF Import] isEncrypted check: isEncrypted=${isEncrypted}, errNameStr=${errNameStr}, errStr=${errStr}`);
 
         if (isEncrypted) {
           return res.status(401).json({
@@ -977,8 +977,8 @@ router.post('/import', upload.single('file'), async (req, res) => {
 
     return res.status(400).json({ error: 'Unsupported file format. Please upload .xlsx, .xls, or .pdf' });
   } catch (error) {
-    console.error('File batch import error:', error);
-    res.status(500).json({ error: `Failed to process file import: ${error.message}` });
+    logDiagnostic(`File batch import error: ${error.message || error}`);
+    res.status(500).json({ error: `Failed to process file import: ${error.message || error}` });
   }
 });
 
