@@ -8,6 +8,15 @@ import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+// Resilient helper to extract floating numbers from formatted currency text (e.g., "₹1,863.34" -> 1863.34)
+function cleanAmount(val) {
+  if (val === null || val === undefined) return 0.0;
+  if (typeof val === 'number') return val;
+  const cleanStr = String(val).replace(/[₹$€£\s,]/g, '').trim();
+  const num = parseFloat(cleanStr);
+  return isNaN(num) ? 0.0 : num;
+}
+
 // Helper for Groq API integration (Llama-based lifetime free parsing)
 async function callGroq(userKey, prompt, base64Image = null, mimeType = null) {
   console.log('Intelligent detection: Using Groq Cloud API parser...');
@@ -667,11 +676,50 @@ router.post('/import', upload.single('file'), async (req, res) => {
       }
 
       let cleanJson = rawContent.trim();
-      if (cleanJson.startsWith('```')) {
-        cleanJson = cleanJson.replace(/^```json\s*/, '').replace(/```$/, '').trim();
+      
+      // Bulletproof JSON extractor: extracts JSON even if there is surrounding conversational text
+      const firstCurly = cleanJson.indexOf('{');
+      const firstBracket = cleanJson.indexOf('[');
+      let startIndex = -1;
+      let isObject = false;
+
+      if (firstCurly !== -1 && (firstBracket === -1 || firstCurly < firstBracket)) {
+        startIndex = firstCurly;
+        isObject = true;
+      } else if (firstBracket !== -1) {
+        startIndex = firstBracket;
       }
 
-      const parsedArray = JSON.parse(cleanJson);
+      if (startIndex !== -1) {
+        const lastIndex = isObject ? cleanJson.lastIndexOf('}') : cleanJson.lastIndexOf(']');
+        if (lastIndex !== -1 && lastIndex > startIndex) {
+          cleanJson = cleanJson.substring(startIndex, lastIndex + 1);
+        }
+      }
+
+      let parsedArray = [];
+      try {
+        const parsedJson = JSON.parse(cleanJson);
+        if (Array.isArray(parsedJson)) {
+          parsedArray = parsedJson;
+        } else if (parsedJson && typeof parsedJson === 'object') {
+          // Look for transactions list inside root object
+          const keys = Object.keys(parsedJson);
+          for (const k of keys) {
+            if (Array.isArray(parsedJson[k])) {
+              parsedArray = parsedJson[k];
+              break;
+            }
+          }
+        }
+      } catch (jsonErr) {
+        console.error('JSON parsing failed. Raw LLM content was:', rawContent);
+        throw new Error('Failed to parse financial transactions from PDF text.');
+      }
+
+      if (!Array.isArray(parsedArray) || parsedArray.length === 0) {
+        return res.status(422).json({ error: 'No valid transactions could be extracted from this statement.' });
+      }
 
       const mappedExpenses = parsedArray.map(item => {
         let txDate = new Date(item.transaction_date || new Date());
@@ -686,7 +734,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
 
         return {
           id: crypto.randomUUID(),
-          amount: parseFloat(item.amount) || 0.0,
+          amount: cleanAmount(item.amount),
           currency: item.currency || 'INR',
           category: item.category || 'Others',
           description: item.description || 'Imported Transaction',
