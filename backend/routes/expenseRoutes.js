@@ -108,7 +108,13 @@ function isJsonTruncated(str) {
 
 // Helper to dynamically query, filter, and sort supported generative models for this specific API Key
 async function getDynamicModels(userApiKey) {
-  const defaultModels = ['gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-flash-latest', 'gemini-pro-latest', 'gemini-3.5-flash'];
+  const defaultModels = [
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+    'gemini-1.5-pro',
+    'gemini-2.0-flash-lite',
+    'gemini-pro-latest'
+  ];
   try {
     const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${userApiKey}`);
     if (!listRes.ok) {
@@ -136,13 +142,12 @@ async function getDynamicModels(userApiKey) {
 
     // Sort to prioritize the best models
     const priorityOrder = [
-      'gemini-2.5-flash',
-      'gemini-2.5-pro',
       'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-1.5-pro',
       'gemini-2.0-flash-lite',
       'gemini-flash-latest',
-      'gemini-pro-latest',
-      'gemini-3.5-flash'
+      'gemini-pro-latest'
     ];
 
     function getPriorityIndex(modelName) {
