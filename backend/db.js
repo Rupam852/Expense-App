@@ -68,6 +68,7 @@ export const initDB = async () => {
     `);
     // Run schema migrations for users and budgets
     await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) UNIQUE;`);
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS gemini_api_key TEXT;`);
     await query(`ALTER TABLE budgets ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;`);
 
     // 4. Payment Details Table
