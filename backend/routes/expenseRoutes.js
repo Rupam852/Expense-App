@@ -616,7 +616,68 @@ router.post('/import', upload.single('file'), async (req, res) => {
 
     // CASE 1: Excel spreadsheets / CSV files (.xlsx, .xls, .csv)
     if (filename.endsWith('.xlsx') || filename.endsWith('.xls') || filename.endsWith('.csv')) {
-      const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+      const filePassword = req.headers['x-file-password'];
+      let excelBuffer = req.file.buffer;
+
+      // Check for password protection in XLSX/XLS files (not CSV)
+      if (filename.endsWith('.xlsx') || filename.endsWith('.xls')) {
+        try {
+          const officeCrypto = await import('officecrypto-tool');
+          const isEncrypted = officeCrypto.default.isEncrypted(excelBuffer);
+          
+          if (isEncrypted) {
+            logDiagnostic('[Spreadsheet Import] Excel file is password-protected!');
+            if (!filePassword) {
+              return res.status(401).json({
+                success: false,
+                error: 'PasswordRequired',
+                message: 'This Excel statement is password-protected. Please enter the password to import.'
+              });
+            }
+
+            try {
+              excelBuffer = Buffer.from(await officeCrypto.default.decrypt(excelBuffer, { password: filePassword }));
+              logDiagnostic('[Spreadsheet Import] Excel decryption successful!');
+            } catch (decErr) {
+              logDiagnostic(`[Spreadsheet Import] Excel decryption failed: ${decErr.message}`);
+              return res.status(401).json({
+                success: false,
+                error: 'InvalidPassword',
+                message: 'Incorrect Excel password. Please try again.'
+              });
+            }
+          }
+        } catch (err) {
+          logDiagnostic(`[Spreadsheet Import] officecrypto-tool processing failed: ${err.message || err}`);
+        }
+      }
+
+      let workbook;
+      try {
+        workbook = xlsx.read(excelBuffer, { type: 'buffer' });
+      } catch (err) {
+        logDiagnostic(`[Spreadsheet Import] Parsing failed: ${err.message || err.description || err || ''}`);
+        let errStr = '';
+        try {
+          errStr = JSON.stringify(err) || '';
+          errStr = errStr.toLowerCase();
+        } catch (_) {
+          errStr = String(err.message || err.description || err || '').toLowerCase();
+        }
+        const isEncrypted = errStr.includes('password') || 
+                            errStr.includes('decrypt') || 
+                            errStr.includes('encrypt') ||
+                            errStr.includes('secure');
+        if (isEncrypted) {
+          return res.status(401).json({
+            success: false,
+            error: 'PasswordRequired',
+            message: 'This spreadsheet is password-protected. Please enter the password to import.'
+          });
+        }
+        throw err;
+      }
+
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const rows = xlsx.utils.sheet_to_json(worksheet);
