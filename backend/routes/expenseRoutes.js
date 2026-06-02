@@ -542,7 +542,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
       if (isGroq) {
         try {
           // Extremely compact prompt for Groq to stay well below the 6000 TPM limit!
-          const prompt = `Extract ONLY debit/expense/payment transactions (ignore all credits/deposits/salary/refunds) from this bank statement text.
+          const prompt = `Extract at most the 15 most recent debit/expense/payment transactions (ignore all credits/deposits/salary/refunds) from this bank statement text.
           
           Text:
           ${textContent}
@@ -595,7 +595,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
                         - COMPLETELY IGNORE all credit/deposit/income/salary/refund transactions (where money is received/credited/Cr).
 
                         Tasks:
-                        1. Extract at most the 30 most recent debit transaction items.
+                        1. Extract at most the 15 most recent debit transaction items.
                         2. For each transaction, extract:
                            - amount (numeric positive float)
                            - currency (3-letter ISO code, e.g. INR)
@@ -618,9 +618,27 @@ router.post('/import', upload.single('file'), async (req, res) => {
                     ]
                   }
                 ],
+                safetySettings: [
+                  {
+                    category: "HARM_CATEGORY_HARASSMENT",
+                    threshold: "BLOCK_NONE"
+                  },
+                  {
+                    category: "HARM_CATEGORY_HATE_SPEECH",
+                    threshold: "BLOCK_NONE"
+                  },
+                  {
+                    category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                    threshold: "BLOCK_NONE"
+                  },
+                  {
+                    category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                    threshold: "BLOCK_NONE"
+                  }
+                ],
                 generationConfig: {
                   responseMimeType: 'application/json',
-                  maxOutputTokens: 8192
+                  maxOutputTokens: 4096
                 }
               })
             });
