@@ -692,10 +692,10 @@ router.post('/import', upload.single('file'), async (req, res) => {
           return matchedKey ? row[matchedKey] : null;
         };
 
-        const amount = parseFloat(findVal(['amount', 'price', 'val', 'cost', 'total']));
+        const amount = cleanAmount(findVal(['debit', 'withdrawal', 'amount', 'spent', 'dr', 'outflow', 'price', 'val', 'cost', 'total']));
         const category = findVal(['category', 'cat', 'type']) || 'Others';
-        const description = findVal(['description', 'desc', 'particulars', 'remark', 'vendor', 'name']) || `Row ${idx + 1} Import`;
-        const rawDate = findVal(['date', 'time', 'tx_date']);
+        const description = findVal(['description', 'desc', 'particulars', 'remark', 'narration', 'vendor', 'name', 'details']) || `Row ${idx + 1} Import`;
+        const rawDate = findVal(['date', 'time', 'tx_date', 'transaction date', 'txn date', 'value date']);
         
         let transaction_date = new Date();
         if (rawDate) {
