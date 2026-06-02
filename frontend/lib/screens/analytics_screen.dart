@@ -54,24 +54,22 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
   Color _getCategoryColor(String category) {
     switch (category.toLowerCase()) {
-      case 'travel':
-        return const Color(0xFF2F80ED);
-      case 'meals':
+      case 'food & drinks':
         return const Color(0xFFFF5A5F);
+      case 'shopping':
+        return const Color(0xFFF2C94C);
+      case 'recharges & bills':
+        return const Color(0xFF00D09C);
+      case 'travel & fuel':
+        return const Color(0xFFF2994A);
+      case 'medical & health':
+        return const Color(0xFFEB5757);
       case 'entertainment':
         return const Color(0xFF27AE60);
-      case 'car / mileage':
-        return const Color(0xFFF2994A);
-      case 'office supplies':
-        return const Color(0xFFF2C94C);
-      case 'software / subscriptions':
-        return const Color(0xFF9B51E0);
-      case 'fees':
-        return const Color(0xFFEB5757);
-      case 'utilities':
-        return const Color(0xFF00D09C);
-      case 'upi transfers':
+      case 'money transfers':
         return const Color(0xFF56CCF2);
+      case 'investments & fees':
+        return const Color(0xFF9B51E0);
       default:
         return Colors.grey;
     }

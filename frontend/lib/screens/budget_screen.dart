@@ -15,7 +15,7 @@ class BudgetScreen extends StatefulWidget {
 class _BudgetScreenState extends State<BudgetScreen> {
   final _limitController = TextEditingController();
   String _selectedCategory = 'Total Budget';
-  final _categories = ['Total Budget', 'Travel', 'Meals', 'Entertainment', 'Car / Mileage', 'Office Supplies', 'Software / Subscriptions', 'Fees', 'Utilities', 'UPI Transfers', 'Others'];
+  final _categories = ['Total Budget', 'Food & Drinks', 'Shopping', 'Recharges & Bills', 'Travel & Fuel', 'Medical & Health', 'Entertainment', 'Money Transfers', 'Investments & Fees', 'Others'];
 
   @override
   void dispose() {

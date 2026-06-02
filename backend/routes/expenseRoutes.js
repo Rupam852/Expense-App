@@ -355,17 +355,16 @@ function getSystemRulesText(userName) {
   5. COMPLETELY IGNORE AND EXCLUDE all self-transfers or transfers between the user's own accounts (inter-account transfers). These are transactions where the description or narration indicates moving money to another account belonging to the same user (e.g., transfers containing "SELF", "SELF TRANSFER", "OWN A/C", "OWN ACCOUNT", "TRANSFER TO OWN A/C", or direct bank-to-bank self-transfers like "SBI TO HDFC", "TO HDFC A/C", "TRANSFER TO ICICI", "TRFR TO SELF"). These do not represent external expenses and MUST NOT be extracted or included in the output JSON array.
   6. SELF-TRANSFER EXCLUSION FOR USER "${nameUpper}": You MUST completely ignore and exclude any transaction where the description/narration indicates a self-transfer to "${nameUpper}" or is a transfer under your name (e.g., containing "${nameUpper}" or "${firstName}"). For example, "TRANSFER TO ${nameUpper}" or "TRFR TO ${firstName}" is a self-transfer and MUST NOT be extracted.
   7. MERCHANT/VENDORS CLEAN DESCRIPTION: Clean up raw bank narration/description text to extract the clean, human-readable merchant, vendor, or individual name. Strip out transaction reference IDs, technical prefixes/suffixes (e.g., 'UPI-DR/', 'UPI/', 'IMPS/', '/GPAY', '/okbizaxis', '/UPIIntent', phonepe/gpay handles like '@ybl', '@okaxis', etc., reference numbers, phone numbers, or dates embedded in descriptions). The description returned in the JSON must represent the clean merchant/vendor name (e.g., convert "UPI-DR-MUKTER PRINT HUB-GPAY-122..." to "Mukter Print Hub", "UPI-DR-Indian Railways-..." to "Indian Railways", "UPI-DR-KEYA ADHIKARY-..." to "Keya Adhikary", etc.).
-  8. CATEGORY MAPPING & MCC PARSING: Categorize each transaction into precisely one of these values: Travel, Meals, Entertainment, Car / Mileage, Office Supplies, Software / Subscriptions, Fees, Utilities, UPI Transfers, Others.
-     - NEVER map merchant/commercial payments to "UPI Transfers" or "Others" just because they were paid via UPI. If the narration/payee name implies a business, shop, or commercial service, map it to its real functional category.
-     - Travel: Flights, lodging, hotels, accommodation, travel booking agents like MakeMyTrip, Yatra, Goibibo, RedBus, IRCTC, train/railway tickets, travel agents (MCC 4511, 4112).
-     - Meals: Restaurants, eating places, fast food, cafe, tea stalls (chai), tapri, bakeries, sweets, milk/dairy (Amul, Mother Dairy), bars/clubs, food delivery platforms like Zomato, Swiggy, UberEats, food delivery apps (MCC 5812, 5814).
+  8. CATEGORY MAPPING & MCC PARSING: Categorize each transaction into precisely one of these values: Food & Drinks, Shopping, Recharges & Bills, Travel & Fuel, Medical & Health, Entertainment, Money Transfers, Investments & Fees, Others.
+     - NEVER map merchant/commercial payments to "Money Transfers" or "Others" just because they were paid via UPI. If the narration/payee name implies a business, shop, or commercial service, map it to its real functional category.
+     - Food & Drinks: Restaurants, eating places, fast food, cafe, tea stalls (chai), tapri, bakeries, sweets, milk/dairy (Amul, Mother Dairy), bars/clubs, food delivery platforms like Zomato, Swiggy, UberEats, food delivery apps (MCC 5812, 5814).
+     - Shopping: Online shopping portals like Amazon, Flipkart, Myntra, Meesho, Ajio, Nykaa, supermarkets, grocery stores, grocery delivery apps (Blinkit, Zepto, BigBasket, Instamart), clothing/apparel, department stores, retail shops, stationary, papers, pens, office equipment, retail shopping spends (MCC 5411, 5311, 5611-5699).
+     - Recharges & Bills: Rent payments (e.g., to landlord/house owner), electricity boards (Bijli), water supply bills, cellular recharges or phone bills (Jio, Airtel, Vodafone, Vi, BSNL), broadband internet, WiFi, gas cylinders, pipeline gas.
+     - Travel & Fuel: Cabs, taxi, local transport passenger (Uber, Ola, Rapido, Namma Yatri, InDrive), fuel/petrol/diesel/CNG at petrol pumps (HPCL, BPCL, IOCL, Shell), toll charges, Fastag recharges, flights, lodging, hotels, accommodation, travel booking agents like MakeMyTrip, Yatra, Goibibo, RedBus, IRCTC, train/railway tickets, travel agents (MCC 4511, 4112, 4111, 4121, 5541, 5542).
+     - Medical & Health: Medicines, doctor consult fees, hospitals, clinics, chemist, pharmacy (Apollo, Medplus, Pharmeasy), diagnostic labs, gym, fitness memberships, health insurance (MCC 4900, 4814, 4812, 6300).
      - Entertainment: Movie theaters, amusement parks, recreation, bookmyshow, netflix, spotify, youtube premium, gaming platforms (Steam, PlayStation, Xbox, Nintendo), pub, bar, liquor stores, wine shop (MCC 7832, 7996, 7999, 5813).
-     - Car / Mileage: Cabs, taxi, local transport passenger (Uber, Ola, Rapido, Namma Yatri, InDrive), fuel/petrol/diesel/CNG at pumps (HPCL, BPCL, IOCL, Shell), toll charges, Fastag recharges (MCC 4111, 4121, 5541, 5542).
-     - Office Supplies: Supermarkets, grocery stores, grocery apps (Blinkit, Zepto, BigBasket, Instamart), clothing/apparel, department stores, retail shops, stationary, papers, pens, office equipment, Amazon, Flipkart, Myntra, Meesho, Ajio, Nykaa (MCC 5411, 5311, 5611-5699).
-     - Software / Subscriptions: Cloud servers, SaaS tools, software licenses, website hosting, GitHub, AWS, Zoom, Google Cloud, Microsoft, Figma, Adobe, digital subscriptions.
-     - Fees: Bank fees, SMS alerts, charges, legal fees, penalty, interest charged, tax, commission.
-     - Utilities: Rent, electricity, water, telecom/wifi/mobile recharges (Airtel, Jio, Vodafone, Vi, BSNL), broadband, medical/hospital spends, chemist, pharmacy (Apollo, Medplus, Pharmeasy), doctor fees, clinic, lab tests, gym, fitness, insurance premium, LIC (MCC 4900, 4814, 4812, 6300).
-     - UPI Transfers: ONLY use this category for personal peer-to-peer UPI transfers to individuals' names (e.g. "UPI Transfer to Anil Kumar", "UPI Transfer to Keya Adhikary" - that are NOT business/merchant accounts).
+     - Money Transfers: Peer-to-peer UPI transfers to family, friends, or individuals' names, watchman, maid, cash withdrawals (ATM) or general transfers to names that are not businesses.
+     - Investments & Fees: Stock market investments, SIPs, mutual funds, school/college fees, bank fees, SMS alerts, charges, legal fees, penalty, interest charged, tax, EMIs, loan payments.
      - Others: A generic fallback category. Use it ONLY if the description is completely vague and has absolutely no clues about the merchant or category. Minimize the use of 'Others' as much as possible.
   9. STRICT MONTH & YEAR LIMITATION: You MUST only extract transactions that occur in the current month and year: ${currentMonthName} ${currentYear}. Do NOT extract any transactions from any other month or year. If a transaction date is in another month or year, completely ignore and exclude it.
 
@@ -395,38 +394,34 @@ function autoCategorizeDescription(description) {
   if (mccMatch) {
     const mcc = parseInt(mccMatch[1], 10);
     
-    // 1. Meals (5812: Restaurants, 5814: Fast Food)
+    // 1. Food & Drinks (5812: Restaurants, 5814: Fast Food)
     if (mcc === 5812 || mcc === 5814) {
-      return 'Meals';
+      return 'Food & Drinks';
     }
-    // 2. Travel (4511: Airlines, 4112: Passenger Railways)
-    if (mcc === 4511 || mcc === 4112) {
-      return 'Travel';
+    // 2. Travel & Fuel (4511: Airlines, 4112: Passenger Railways, 4111: Local Transport, 4121: Taxicabs, 5541/5542: Fuel Stations)
+    if (mcc === 4511 || mcc === 4112 || mcc === 4111 || mcc === 4121 || mcc === 5541 || mcc === 5542) {
+      return 'Travel & Fuel';
     }
     // 3. Entertainment (7832: Motion Picture, 7996: Amusement Parks, 7999: Recreation, 5813: Drinking places/Bars)
     if (mcc === 7832 || mcc === 7996 || mcc === 7999 || mcc === 5813) {
       return 'Entertainment';
     }
-    // 4. Car / Mileage (4111: Local Transport Passenger, 4121: Taxicabs, 5541/5542: Fuel Stations)
-    if (mcc === 4111 || mcc === 4121 || mcc === 5541 || mcc === 5542) {
-      return 'Car / Mileage';
-    }
-    // 5. Office Supplies (5411: Grocery Stores, 5311: Department Stores, 5611-5699: Clothing)
+    // 4. Shopping (5411: Grocery Stores, 5311: Department Stores, 5611-5699: Clothing)
     if (mcc === 5411 || mcc === 5311 || (mcc >= 5611 && mcc <= 5699) || mcc === 5941 || mcc === 5942 || mcc === 5944) {
-      return 'Office Supplies';
+      return 'Shopping';
     }
-    // 6. Utilities (4900: Utilities-Electric/Gas/Water, 4814: Telecom, 4812: Phones, 6300: Insurance)
+    // 5. Recharges & Bills (4900: Utilities-Electric/Gas/Water, 4814: Telecom, 4812: Phones, 6300: Insurance)
     if (mcc === 4900 || mcc === 4814 || mcc === 4812 || mcc === 6300) {
-      return 'Utilities';
+      return 'Recharges & Bills';
     }
   }
 
   // Check if it's a UPI transfer to an individual/person's name
   if (desc.includes('upi transfer to') || desc.includes('upi transfer')) {
-    return 'UPI Transfers';
+    return 'Money Transfers';
   }
   
-  // 1. Meals
+  // 1. Food & Drinks
   if (
     desc.includes('zomato') || desc.includes('swiggy') || desc.includes('ubereats') ||
     desc.includes('restaurant') || desc.includes('cafe') || desc.includes('hotel') ||
@@ -436,17 +431,24 @@ function autoCategorizeDescription(description) {
     desc.includes('dhaba') || desc.includes('chai') || desc.includes('tea') || desc.includes('coffee') ||
     desc.includes('meals') || desc.includes('meal')
   ) {
-    return 'Meals';
+    return 'Food & Drinks';
   }
   
-  // 2. Travel (flights, hotels/lodging)
+  // 2. Travel & Fuel
   if (
     desc.includes('flight') || desc.includes('airline') || desc.includes('airways') ||
     desc.includes('hotel') || desc.includes('lodging') || desc.includes('accommodation') ||
     desc.includes('booking.com') || desc.includes('airbnb') || desc.includes('makemytrip') ||
-    desc.includes('yatra') || desc.includes('travel') || desc.includes('goibibo')
+    desc.includes('yatra') || desc.includes('travel') || desc.includes('goibibo') ||
+    desc.includes('uber') || desc.includes('ola') || desc.includes('rapido') ||
+    desc.includes('irctc') || desc.includes('railway') || desc.includes('metro') ||
+    desc.includes('bus') || desc.includes('cab') || desc.includes('taxi') ||
+    desc.includes('fuel') || desc.includes('petrol') || desc.includes('diesel') ||
+    desc.includes('shell') || desc.includes('hpcl') || desc.includes('bpcl') ||
+    desc.includes('iocl') || desc.includes('cng') || desc.includes('toll') || desc.includes('fastag') ||
+    desc.includes('mileage') || desc.includes('transit')
   ) {
-    return 'Travel';
+    return 'Travel & Fuel';
   }
   
   // 3. Entertainment
@@ -462,20 +464,7 @@ function autoCategorizeDescription(description) {
     return 'Entertainment';
   }
   
-  // 4. Car / Mileage (local transport, cabs, fuel)
-  if (
-    desc.includes('uber') || desc.includes('ola') || desc.includes('rapido') ||
-    desc.includes('irctc') || desc.includes('railway') || desc.includes('metro') ||
-    desc.includes('bus') || desc.includes('cab') || desc.includes('taxi') ||
-    desc.includes('fuel') || desc.includes('petrol') || desc.includes('diesel') ||
-    desc.includes('shell') || desc.includes('hpcl') || desc.includes('bpcl') ||
-    desc.includes('iocl') || desc.includes('cng') || desc.includes('toll') || desc.includes('fastag') ||
-    desc.includes('mileage') || desc.includes('transit')
-  ) {
-    return 'Car / Mileage';
-  }
-  
-  // 5. Office Supplies (formerly Shopping)
+  // 4. Shopping
   if (
     desc.includes('amazon') || desc.includes('flipkart') || desc.includes('myntra') ||
     desc.includes('meesho') || desc.includes('ajio') || desc.includes('nykaa') ||
@@ -488,31 +477,27 @@ function autoCategorizeDescription(description) {
     desc.includes('stationery') || desc.includes('paper') || desc.includes('pen') ||
     desc.includes('supplies') || desc.includes('office') || desc.includes('equipment')
   ) {
-    return 'Office Supplies';
+    return 'Shopping';
   }
 
-  // 6. Software / Subscriptions
+  // 5. Investments & Fees
   if (
     desc.includes('slack') || desc.includes('zoom') || desc.includes('microsoft') ||
     desc.includes('google cloud') || desc.includes('aws') || desc.includes('github') ||
     desc.includes('saas') || desc.includes('software') || desc.includes('subscription') ||
     desc.includes('hosting') || desc.includes('domain') || desc.includes('figma') ||
-    desc.includes('adobe')
-  ) {
-    return 'Software / Subscriptions';
-  }
-
-  // 7. Fees (Bank fees, charges, etc.)
-  if (
+    desc.includes('adobe') ||
     desc.includes('fees') || desc.includes('charge') || desc.includes('fee') ||
     desc.includes('interest charged') || desc.includes('bank fees') ||
     desc.includes('sms charges') || desc.includes('tax') || desc.includes('fine') ||
-    desc.includes('penalty') || desc.includes('commission')
+    desc.includes('penalty') || desc.includes('commission') ||
+    desc.includes('sip') || desc.includes('mutual fund') || desc.includes('investment') ||
+    desc.includes('stocks') || desc.includes('groww') || desc.includes('zerodha')
   ) {
-    return 'Fees';
+    return 'Investments & Fees';
   }
   
-  // 8. Utilities (including health spends/rent)
+  // 6. Recharges & Bills
   if (
     desc.includes('bill') || desc.includes('utility') || desc.includes('electricity') ||
     desc.includes('water') || desc.includes('gas') || desc.includes('recharge') ||
@@ -521,7 +506,13 @@ function autoCategorizeDescription(description) {
     desc.includes('wifi') || desc.includes('telecom') || desc.includes('rent') ||
     desc.includes('landlord') || desc.includes('maintenance') ||
     desc.includes('insurance') || desc.includes('lic') || desc.includes('premium') ||
-    desc.includes('loan') || desc.includes('emi') ||
+    desc.includes('loan') || desc.includes('emi')
+  ) {
+    return 'Recharges & Bills';
+  }
+
+  // 7. Medical & Health
+  if (
     desc.includes('hospital') || desc.includes('pharmacy') || desc.includes('medical') ||
     desc.includes('chemist') || desc.includes('apollo') || desc.includes('medplus') ||
     desc.includes('doctor') || desc.includes('clinic') || desc.includes('dentist') ||
@@ -529,10 +520,10 @@ function autoCategorizeDescription(description) {
     desc.includes('diagnostic') || desc.includes('lab') || desc.includes('gym') ||
     desc.includes('fitness') || desc.includes('salon') || desc.includes('spa')
   ) {
-    return 'Utilities';
+    return 'Medical & Health';
   }
   
-  // If description has any merchant keyword, default to 'Office Supplies'
+  // If description has any merchant keyword, default to 'Shopping'
   const isMerchant = desc.includes('store') || 
                      desc.includes('mart') || 
                      desc.includes('shop') || 
@@ -543,7 +534,7 @@ function autoCategorizeDescription(description) {
                      desc.includes('merchant') ||
                      desc.includes('pos');
   if (isMerchant) {
-    return 'Office Supplies';
+    return 'Shopping';
   }
   
   return 'Others';
@@ -1080,7 +1071,7 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
                     Extract the following financial details accurately:
                     1. amount (numeric float value)
                     2. currency (3-letter ISO code, e.g. INR, USD, EUR. Default to INR if it seems Indian, like UPI screenshots)
-                    3. category (Categorize into precisely one of these values: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
+                    3. category (Categorize into precisely one of these values: Food & Drinks, Shopping, Recharges & Bills, Travel & Fuel, Medical & Health, Entertainment, Money Transfers, Investments & Fees, Others)
                     4. description (Brief summary of what was purchased or description of the transaction)
                     5. transaction_date (ISO 8601 string, e.g., '2026-06-01T20:00:00Z'. Extract transaction timestamp, or estimate/use current date if not visible)
                     6. vendor (Name of the shop, store, merchant, or individual who received the money. For UPI, extract the receiver's name)
@@ -1090,7 +1081,7 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
                     {
                       "amount": 150.00,
                       "currency": "INR",
-                      "category": "Food",
+                      "category": "Food & Drinks",
                       "description": "Lunch at restaurant",
                       "transaction_date": "2026-06-01T13:45:00.000Z",
                       "vendor": "Burger King"
