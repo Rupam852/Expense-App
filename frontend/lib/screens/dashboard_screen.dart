@@ -80,15 +80,31 @@ class DashboardScreen extends StatelessWidget {
 
     if (result != null && result.files.single.path != null) {
       final path = result.files.single.path!;
+      final isPdf = path.toLowerCase().endsWith('.pdf');
       
+      // Step 1: Show warm-up message
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Row(
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(width: 16),
-            Text('Processing batch statement import...'),
-          ],
-        )),
+        SnackBar(
+          content: Row(
+            children: [
+              const SizedBox(
+                width: 20, height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  isPdf
+                    ? '⏳ Waking up AI server... (PDF import may take 30-60 sec)'
+                    : '⏳ Processing spreadsheet import...',
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+          duration: const Duration(minutes: 4), // Stay visible during entire process
+          backgroundColor: const Color(0xFF1A1A2E),
+        ),
       );
 
       final success = await expenseProvider.importStatement(path);
@@ -97,15 +113,20 @@ class DashboardScreen extends StatelessWidget {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(success 
-              ? 'Successfully imported transactions!' 
-              : expenseProvider.syncErrorMessage ?? 'Failed to parse file.'),
-            backgroundColor: success ? const Color(0xFF00D09C) : Colors.red,
+            content: Text(
+              success 
+                ? '✅ Transactions imported successfully!' 
+                : '❌ ${expenseProvider.syncErrorMessage ?? 'Failed to parse file. Please try again.'}',
+              style: const TextStyle(fontSize: 13),
+            ),
+            backgroundColor: success ? const Color(0xFF00D09C) : Colors.red.shade700,
+            duration: const Duration(seconds: 6),
           ),
         );
       }
     }
   }
+
 
   void _triggerCSVExport(BuildContext context) async {
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
