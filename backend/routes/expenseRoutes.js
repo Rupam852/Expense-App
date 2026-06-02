@@ -409,8 +409,25 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
 
     // Clean JSON wrapper markdown blocks like ```json ... ``` if returned by the LLM
     let cleanJson = rawContent.trim();
-    if (cleanJson.startsWith('```')) {
-      cleanJson = cleanJson.replace(/^```json\s*/, '').replace(/```$/, '').trim();
+    
+    // Bulletproof JSON extractor: extracts JSON even if there is surrounding text
+    const firstCurly = cleanJson.indexOf('{');
+    const firstBracket = cleanJson.indexOf('[');
+    let startIndex = -1;
+    let isObject = false;
+
+    if (firstCurly !== -1 && (firstBracket === -1 || firstCurly < firstBracket)) {
+      startIndex = firstCurly;
+      isObject = true;
+    } else if (firstBracket !== -1) {
+      startIndex = firstBracket;
+    }
+
+    if (startIndex !== -1) {
+      const lastIndex = isObject ? cleanJson.lastIndexOf('}') : cleanJson.lastIndexOf(']');
+      if (lastIndex !== -1 && lastIndex > startIndex) {
+        cleanJson = cleanJson.substring(startIndex, lastIndex + 1);
+      }
     }
 
     console.log('Extracted OCR Result:', cleanJson);
