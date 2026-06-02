@@ -841,7 +841,8 @@ router.post('/import', upload.single('file'), async (req, res) => {
                 { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
               ],
               generationConfig: {
-                maxOutputTokens: 4096
+                maxOutputTokens: 4096,
+                responseMimeType: 'application/json'
               }
             };
 
@@ -1198,7 +1199,8 @@ router.post('/import', upload.single('file'), async (req, res) => {
               { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
             ],
             generationConfig: {
-              maxOutputTokens: 4096
+              maxOutputTokens: 4096,
+              responseMimeType: 'application/json'
             }
           };
 
