@@ -716,6 +716,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
            - Bank fees, charges, interest debits, or SMS alert fees
         3. COMPLETELY IGNORE all credits, deposits, refunds, salary, or incoming money (e.g., "IMPS-IN...", "UPI-IN...", "BY TRANSFER...", "TRANSFER FROM...", "interest credited", or any entry under Credit/Deposit/CR columns).
         4. STRICT LAZYNESS PREVENTION: Never use placeholders, three dots ('...'), or 'etc.' in the JSON response. You MUST extract absolutely EVERY SINGLE money-out/debit/transfer transaction item present in the spreadsheet text, no matter how many there are. Do not stop until the entire text is fully parsed.
+        5. COMPLETELY IGNORE AND EXCLUDE all self-transfers or transfers between the user's own accounts (inter-account transfers). These are transactions where the description or narration indicates moving money to another account belonging to the same user (e.g., transfers containing "SELF", "SELF TRANSFER", "OWN A/C", "OWN ACCOUNT", "TRANSFER TO OWN A/C", or direct bank-to-bank self-transfers like "SBI TO HDFC", "TO HDFC A/C", "TRANSFER TO ICICI", "TRFR TO SELF"). These do not represent external expenses and MUST NOT be extracted or included in the output JSON array.
         
         How to identify debits in tabular spreadsheet data:
         - Spreadsheets may contain header metadata rows at the top (like Account number, Bank name, Address, Balance). Ignore those metadata rows and find where the transaction table rows start.
@@ -947,7 +948,17 @@ router.post('/import', upload.single('file'), async (req, res) => {
             is_recurring: false,
             recurrence_period: 'none'
           };
-        }).filter(e => e.amount > 0); // Exclude blank or negative entries
+        }).filter(e => {
+          if (e.amount <= 0) return false;
+          const lowerDesc = (e.description || '').toLowerCase();
+          const isSelfTransfer = lowerDesc.includes('self transfer') ||
+                                 lowerDesc.includes('transfer to self') ||
+                                 lowerDesc.includes('own account') ||
+                                 lowerDesc.includes('own a/c') ||
+                                 lowerDesc.includes('self-transfer') ||
+                                 /(\bsbi\b|\bhdfc\b|\bicici\b|\baxis\b|\bpnb\b|\bown\b)\s+to\s+(\bsbi\b|\bhdfc\b|\bicici\b|\baxis\b|\bpnb\b|\bown\b)/i.test(lowerDesc);
+          return !isSelfTransfer;
+        });
 
         return res.status(200).json({
           message: `Parsed ${parsedExpenses.length} transactions from Excel sheet (Rule-based Fallback).`,
@@ -1057,6 +1068,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
              - Bank fees, charges, interest debits, or SMS alert fees
           3. COMPLETELY IGNORE all credits, deposits, refunds, salary, or incoming money (e.g., "IMPS-IN...", "UPI-IN...", "BY TRANSFER...", "TRANSFER FROM...", "interest credited", or any entry under Credit/Deposit/CR columns).
           4. STRICT LAZYNESS PREVENTION: Never use placeholders, three dots ('...'), or 'etc.' in the JSON response. You MUST extract absolutely EVERY SINGLE money-out/debit/transfer transaction item present in the text, no matter how many there are. Do not stop until the entire text is fully parsed.
+          5. COMPLETELY IGNORE AND EXCLUDE all self-transfers or transfers between the user's own accounts (inter-account transfers). These are transactions where the description or narration indicates moving money to another account belonging to the same user (e.g., transfers containing "SELF", "SELF TRANSFER", "OWN A/C", "OWN ACCOUNT", "TRANSFER TO OWN A/C", or direct bank-to-bank self-transfers like "SBI TO HDFC", "TO HDFC A/C", "TRANSFER TO ICICI", "TRFR TO SELF"). These do not represent external expenses and MUST NOT be extracted or included in the output JSON array.
           
           How to identify debits in tabular statement text:
           - Look for entries in columns named "Debit", "Withdrawal", "DR", "Amount (Dr)", or "Debits".
