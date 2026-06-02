@@ -892,11 +892,6 @@ router.post('/import', upload.single('file'), async (req, res) => {
             txDate = new Date();
           }
 
-          // Force to current month and year to ensure they are added to current month's expenses
-          const now = new Date();
-          txDate.setFullYear(now.getFullYear());
-          txDate.setMonth(now.getMonth());
-
           return {
             id: crypto.randomUUID(),
             amount: cleanAmount(item.amount),
@@ -941,11 +936,6 @@ router.post('/import', upload.single('file'), async (req, res) => {
               transaction_date = parsedD;
             }
           }
-
-          // Force to current month and year to ensure they are added to current month's expenses
-          const now = new Date();
-          transaction_date.setFullYear(now.getFullYear());
-          transaction_date.setMonth(now.getMonth());
 
           return {
             id: crypto.randomUUID(),
