@@ -578,6 +578,9 @@ router.post('/import', upload.single('file'), async (req, res) => {
       const pdfData = await pdfParse(req.file.buffer);
       const rawText = pdfData.text || '';
 
+      console.log(`[PDF Import] Parsed: filename=${req.file.originalname}, pages=${pdfData.numpages}, textLength=${rawText.length}`);
+      console.log(`[PDF Import] Sample raw text:\n${rawText.substring(0, 1200)}`);
+
       if (!rawText || rawText.trim().length === 0) {
         return res.status(400).json({ error: 'Uploaded PDF file has no readable text.' });
       }
@@ -712,6 +715,8 @@ router.post('/import', upload.single('file'), async (req, res) => {
       if (!rawContent) {
         return res.status(500).json({ error: `AI processing of statement PDF failed: ${lastError ? lastError.message : 'No response from models'}` });
       }
+
+      console.log(`[PDF Import] Raw LLM content (length=${rawContent.length}):\n${rawContent}`);
 
       let cleanJson = rawContent.trim();
       
