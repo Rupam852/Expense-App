@@ -614,8 +614,8 @@ router.post('/import', upload.single('file'), async (req, res) => {
   try {
     let parsedExpenses = [];
 
-    // CASE 1: Excel spreadsheets (.xlsx, .xls)
-    if (filename.endsWith('.xlsx') || filename.endsWith('.xls')) {
+    // CASE 1: Excel spreadsheets / CSV files (.xlsx, .xls, .csv)
+    if (filename.endsWith('.xlsx') || filename.endsWith('.xls') || filename.endsWith('.csv')) {
       const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
