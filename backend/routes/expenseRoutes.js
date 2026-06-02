@@ -240,25 +240,14 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
 
   try {
     const userGeminiKey = req.headers['x-user-gemini-key'];
-    const apiKey = process.env.OPENROUTER_API_KEY;
-
-    let apiEndpoint = 'https://openrouter.ai/api/v1/chat/completions';
-    let apiAuthHeader = `Bearer ${apiKey}`;
-    let apiModel = 'google/gemini-2.5-flash';
-    let extraHeaders = {
-      'HTTP-Referer': 'https://github.com/Rupam852/Expense-App',
-      'X-Title': 'Expense Tracker App'
-    };
-
-    if (userGeminiKey) {
-      console.log('Using User Custom Google AI Studio Gemini API Key for receipt scanning!');
-      apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-      apiAuthHeader = `Bearer ${userGeminiKey}`;
-      apiModel = 'gemini-1.5-flash';
-      extraHeaders = {};
-    } else if (!apiKey) {
-      return res.status(500).json({ error: 'Server AI key is not configured and no custom User key was provided.' });
+    if (!userGeminiKey) {
+      return res.status(400).json({ error: 'Google AI Studio API Key is required. Please set your key in the app Settings.' });
     }
+
+    const apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+    const apiAuthHeader = `Bearer ${userGeminiKey}`;
+    const apiModel = 'gemini-1.5-flash';
+    const extraHeaders = {};
 
     // Convert file buffer to base64
     const base64Image = req.file.buffer.toString('base64');
@@ -418,25 +407,14 @@ router.post('/import', upload.single('file'), async (req, res) => {
       console.log(`Parsing PDF text (${textContent.length} chars) using Gemini...`);
 
       const userGeminiKey = req.headers['x-user-gemini-key'];
-      const apiKey = process.env.OPENROUTER_API_KEY;
-
-      let apiEndpoint = 'https://openrouter.ai/api/v1/chat/completions';
-      let apiAuthHeader = `Bearer ${apiKey}`;
-      let apiModel = 'google/gemini-2.5-flash';
-      let extraHeaders = {
-        'HTTP-Referer': 'https://github.com/Rupam852/Expense-App',
-        'X-Title': 'Expense Tracker App'
-      };
-
-      if (userGeminiKey) {
-        console.log('Using User Custom Google AI Studio Gemini API Key for statement parsing!');
-        apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-        apiAuthHeader = `Bearer ${userGeminiKey}`;
-        apiModel = 'gemini-1.5-flash';
-        extraHeaders = {};
-      } else if (!apiKey) {
-        return res.status(500).json({ error: 'Server AI key is not configured and no custom User key was provided.' });
+      if (!userGeminiKey) {
+        return res.status(400).json({ error: 'Google AI Studio API Key is required. Please set your key in the app Settings.' });
       }
+
+      const apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+      const apiAuthHeader = `Bearer ${userGeminiKey}`;
+      const apiModel = 'gemini-1.5-flash';
+      const extraHeaders = {};
 
       // We send the PDF text content directly to the LLM to parse it into an array of structured expenses!
       const response = await fetch(apiEndpoint, {
