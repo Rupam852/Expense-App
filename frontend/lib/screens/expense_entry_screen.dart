@@ -40,7 +40,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   bool _isSaving = false;
 
   final List<String> _categories = [
-    'Food', 'Travel', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Investment', 'Others'
+    'Food', 'Travel', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Investment', 'UPI Transfers', 'Others'
   ];
 
   final List<String> _currencies = ['INR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD'];

@@ -69,6 +69,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         return const Color(0xFFEB5757);
       case 'investment':
         return const Color(0xFF00D09C);
+      case 'upi transfers':
+        return const Color(0xFF56CCF2);
       default:
         return Colors.grey;
     }
