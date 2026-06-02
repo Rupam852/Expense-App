@@ -278,7 +278,7 @@ class DashboardScreen extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Google AI Studio / Groq Key',
+                      'AI API Key Settings',
                       style: GoogleFonts.outfit(
                         fontWeight: FontWeight.bold,
                         fontSize: 20,
@@ -292,10 +292,28 @@ class DashboardScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Apna personal free Google AI Studio (Gemini) ya Groq API key enter karein. Isse transaction scan aur statement import directly aapke key se free mein chalenge.',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      height: 1.4,
+                    'Apna AI API key enter karein. PDF import aur receipt scan ke liye use hoga. Teen options hain:',
+                    style: GoogleFonts.inter(fontSize: 13, height: 1.4),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor.withOpacity(0.07),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('🟢 OpenRouter  (sk-or-v1-...)  ← Recommended', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
+                        Text('   openrouter.ai — 100+ free models, best for statements', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
+                        const SizedBox(height: 6),
+                        Text('🔵 Google Gemini  (AIzaSy...)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
+                        Text('   aistudio.google.com — free, fast', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
+                        const SizedBox(height: 6),
+                        Text('🟡 Groq  (gsk_...)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
+                        Text('   console.groq.com — free but limited tokens', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -304,9 +322,9 @@ class DashboardScreen extends StatelessWidget {
                     obscureText: isObscured,
                     style: GoogleFonts.inter(fontSize: 14),
                     decoration: InputDecoration(
-                      labelText: 'Google AI Studio / Groq API Key',
+                      labelText: 'API Key',
                       labelStyle: TextStyle(color: Theme.of(context).primaryColor),
-                      hintText: 'AIzaSy... (Gemini) or gsk_... (Groq)',
+                      hintText: 'sk-or-v1-... / AIzaSy... / gsk_...',
                       filled: true,
                       fillColor: Theme.of(context).primaryColor.withOpacity(0.03),
                       border: OutlineInputBorder(
@@ -323,12 +341,12 @@ class DashboardScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   SelectableText(
-                    'Key nahi hai? Free mein generate karein:\naistudio.google.com  |  console.groq.com',
+                    'Free key generate karein:\nopenrouter.ai  |  aistudio.google.com  |  console.groq.com',
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       color: Theme.of(context).primaryColor,
                       fontWeight: FontWeight.w600,
-                      height: 1.4,
+                      height: 1.5,
                     ),
                   ),
                 ],

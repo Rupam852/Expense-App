@@ -69,6 +69,39 @@ async function callGroq(userKey, prompt, base64Image = null, mimeType = null) {
   return rawContent;
 }
 
+// Helper for OpenRouter API (unified API for 100+ models — Claude, GPT-4, Gemini, Llama, etc.)
+async function callOpenRouter(userKey, prompt) {
+  console.log('Intelligent detection: Using OpenRouter API parser...');
+
+  // Use Gemini 2.0 Flash via OpenRouter (free, fast, excellent for bank statements)
+  const model = 'google/gemini-2.0-flash-exp:free';
+
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${userKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://expense-tracker-backend-5pc1.onrender.com',
+      'X-Title': 'Grow Expense App'
+    },
+    body: JSON.stringify({
+      model: model,
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' },
+      temperature: 0.1
+    })
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`OpenRouter API failed: ${errText}`);
+  }
+
+  const data = await response.json();
+  const rawContent = data.choices?.[0]?.message?.content?.trim();
+  return rawContent;
+}
+
 // Multer memory storage for serverless-friendly file handling
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -526,15 +559,18 @@ router.post('/import', upload.single('file'), async (req, res) => {
         return res.status(400).json({ error: 'Uploaded PDF file has no readable text.' });
       }
 
-      const userGeminiKey = req.headers['x-user-gemini-key'];
-      if (!userGeminiKey) {
-        return res.status(400).json({ error: 'Google AI Studio or Groq API Key is required. Please set your key in Settings.' });
+      const userApiKey = req.headers['x-user-gemini-key'];
+      if (!userApiKey) {
+        return res.status(400).json({ error: 'API Key required. Please set your Gemini, Groq, or OpenRouter API Key in Settings.' });
       }
 
-      const isGroq = userGeminiKey.startsWith('gsk_');
-      
-      // Adaptive slicing: Groq has a tiny 6000 TPM limit, so we slice to 5000 chars to be 100% safe.
-      // Gemini has a huge 1,000,000 TPM free tier limit, so we slice to 30,000 chars to fetch maximum history!
+      // Smart API provider detection by key prefix
+      const isGroq = userApiKey.startsWith('gsk_');
+      const isOpenRouter = userApiKey.startsWith('sk-or-');
+      const provider = isGroq ? 'Groq' : isOpenRouter ? 'OpenRouter' : 'Gemini';
+
+      // Adaptive text slicing based on provider token limits
+      // Groq: ~6000 TPM (very limited) | OpenRouter/Gemini: large context windows
       const sliceLimit = isGroq ? 5000 : 30000;
       
       const textContent = rawText
@@ -544,33 +580,46 @@ router.post('/import', upload.single('file'), async (req, res) => {
         .trim()
         .slice(0, sliceLimit);
 
-      console.log(`Parsing PDF text (${textContent.length} chars) using ${isGroq ? 'Groq' : 'Gemini'}...`);
+      console.log(`Parsing PDF text (${textContent.length} chars) using ${provider}...`);
+
+      // Standard prompt for all providers
+      const importPrompt = `Analyze this raw text extracted from a bank statement. Extract ONLY debit/expense/withdrawal transactions.
+
+Bank Statement Text:
+---------------------
+${textContent}
+---------------------
+
+RULES:
+- ONLY extract debit/withdrawal/payment transactions (money going OUT)
+- IGNORE all credit/deposit/salary/refund transactions (money coming IN)
+- Extract ALL debit transactions present
+
+For each debit transaction return:
+- amount: positive number
+- currency: "INR"
+- category: one of [Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others]
+- description: merchant/payee name
+- transaction_date: ISO 8601 date string
+
+Return ONLY a valid JSON array. No markdown, no explanation.
+Example: [{"amount":450.0,"currency":"INR","category":"Shopping","description":"Amazon Pay","transaction_date":"2026-05-15T00:00:00.000Z"}]`;
 
       let rawContent = null;
 
       if (isGroq) {
         try {
-          // Extremely compact prompt for Groq to stay well below the 6000 TPM limit!
-          const prompt = `Extract ALL debit/expense/payment/withdrawal transactions (ignore all credits/deposits/salary/refunds) from this bank statement text.
-          
-          Text:
-          ${textContent}
-
-          For each debit transaction, extract:
-          - amount (positive float)
-          - currency (3-letter code, e.g. INR)
-          - category (Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
-          - description (Merchant/payment details)
-          - transaction_date (ISO 8601 string)
-          
-          Return ONLY a JSON array of objects.
-          Structure:
-          [{"amount": 450.0,"currency": "INR","category": "Shopping","description": "Amazon","transaction_date": "2026-05-25T12:00:00.000Z"}]`;
-
-          rawContent = await callGroq(userGeminiKey, prompt);
+          rawContent = await callGroq(userApiKey, importPrompt);
         } catch (err) {
           console.error('Groq statement import error:', err);
           return res.status(500).json({ error: `Groq Import failed: ${err.message}` });
+        }
+      } else if (isOpenRouter) {
+        try {
+          rawContent = await callOpenRouter(userApiKey, importPrompt);
+        } catch (err) {
+          console.error('OpenRouter statement import error:', err);
+          return res.status(500).json({ error: `OpenRouter Import failed: ${err.message}` });
         }
       } else {
         const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-pro'];
