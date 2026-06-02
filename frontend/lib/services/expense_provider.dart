@@ -30,7 +30,14 @@ class ExpenseProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isSyncing => _isSyncing;
   String? get syncErrorMessage => _syncErrorMessage;
-  DateTime get selectedMonthYear => _selectedMonthYear;
+  DateTime get selectedMonthYear {
+    final now = DateTime.now();
+    if (_selectedMonthYear.year != now.year || _selectedMonthYear.month != now.month) {
+      _selectedMonthYear = DateTime(now.year, now.month);
+      Future.microtask(() => notifyListeners());
+    }
+    return _selectedMonthYear;
+  }
 
   void setSelectedMonthYear(DateTime value) {
     if (_selectedMonthYear.year != value.year || _selectedMonthYear.month != value.month) {

@@ -334,6 +334,10 @@ function pageRender(pageData) {
 function getSystemRulesText(userName) {
   const nameUpper = String(userName || '').toUpperCase().trim();
   const firstName = nameUpper.split(' ')[0];
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const currentMonthName = months[now.getMonth()];
   
   return `You are a professional financial assistant. Analyze raw text/data extracted from a bank statement (from any bank like SBI, HDFC, ICICI, Axis, PNB, etc.). Extract all money-out transactions (outflows/debits/transfers).
 
@@ -363,6 +367,7 @@ function getSystemRulesText(userName) {
      - Utilities: Rent, electricity, water, telecom/wifi/mobile recharges, medical/hospital spends, insurance (MCC 4900, 4814, 4812, 6300).
      - UPI Transfers: Use this category for personal peer-to-peer UPI transfers to individuals' names (e.g. "UPI Transfer to Anil Kumar", "UPI Transfer to Keya Adhikary" - that are not business/merchant accounts).
      - Others: A generic fallback category to capture any miscellaneous expenses that do not fall into the primary defined categories.
+  9. STRICT MONTH & YEAR LIMITATION: You MUST only extract transactions that occur in the current month and year: ${currentMonthName} ${currentYear}. Do NOT extract any transactions from any other month or year. If a transaction date is in another month or year, completely ignore and exclude it.
 
   How to identify debits in tabular statement text/data:
   - Look for entries in columns named "Debit", "Withdrawal", "DR", "Amount (Dr)", or "Debits".
@@ -374,10 +379,10 @@ function getSystemRulesText(userName) {
     ["YYYY-MM-DD", amount, "description", "category", "currency"]
   ]
   
-  Example:
+  Example (assuming current month/year is ${currentMonthName} ${currentYear}):
   [
-    ["2026-05-25T12:00:00.000Z", 450.00, "Zomato", "Meals", "INR"],
-    ["2026-05-26T14:30:00.000Z", 1500.00, "UPI Transfer to Anil Kumar", "UPI Transfers", "INR"]
+    ["${currentYear}-${String(now.getMonth() + 1).padStart(2, '0')}-25T12:00:00.000Z", 450.00, "Zomato", "Meals", "INR"],
+    ["${currentYear}-${String(now.getMonth() + 1).padStart(2, '0')}-26T14:30:00.000Z", 1500.00, "UPI Transfer to Anil Kumar", "UPI Transfers", "INR"]
   ]`;
 }
 
@@ -1330,6 +1335,14 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
           return res.status(422).json({ error: 'No valid transactions could be extracted from this spreadsheet.' });
         }
 
+        const importNow = new Date();
+        const currentYear = importNow.getFullYear();
+        const currentMonth = importNow.getMonth();
+
+        let totalExtracted = 0;
+        let selfTransferSkipped = 0;
+        let wrongDateSkipped = 0;
+
         parsedExpenses = mergedArray.map(item => {
           let txDate, amount, currency, category, description;
           if (Array.isArray(item)) {
@@ -1356,12 +1369,30 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
             is_recurring: false,
             recurrence_period: 'none'
           };
-        }).filter(e => e.amount > 0 && !isSelfTransferTransaction(e.description, userName));
+        }).filter(e => {
+          if (e.amount <= 0) return false;
+          totalExtracted++;
+          if (isSelfTransferTransaction(e.description, userName)) {
+            selfTransferSkipped++;
+            return false;
+          }
+          const tDate = new Date(e.transaction_date);
+          if (tDate.getFullYear() !== currentYear || tDate.getMonth() !== currentMonth) {
+            wrongDateSkipped++;
+            return false;
+          }
+          return true;
+        });
 
         const deduplicated = deduplicateTransactions(parsedExpenses);
 
+        const skippedDetails = [];
+        if (wrongDateSkipped > 0) skippedDetails.push(`${wrongDateSkipped} wrong month/year`);
+        if (selfTransferSkipped > 0) skippedDetails.push(`${selfTransferSkipped} self-transfers`);
+        const skippedStr = skippedDetails.length > 0 ? ` (skipped: ${skippedDetails.join(', ')})` : '';
+
         return res.status(200).json({
-          message: `Parsed ${deduplicated.length} transactions from spreadsheet statement using Gemini AI (removed ${parsedExpenses.length - deduplicated.length} duplicates).`,
+          message: `Parsed ${deduplicated.length} transactions for current month/year${skippedStr}.`,
           expenses: deduplicated
         });
       } else {
@@ -1486,10 +1517,20 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
           });
         }
 
+        const importNow = new Date();
+        const currentYear = importNow.getFullYear();
+        const currentMonth = importNow.getMonth();
+
+        let totalExtracted = 0;
+        let selfTransferSkipped = 0;
+        let wrongDateSkipped = 0;
+        let incomingSkipped = 0;
+
         parsedExpenses = parsedRawExpenses.filter(e => {
           if (e.amount <= 0) return false;
-          const lowerDesc = (e.description || '').toLowerCase();
+          totalExtracted++;
           
+          const lowerDesc = (e.description || '').toLowerCase();
           const isIncoming = lowerDesc.includes('cashback') ||
                              lowerDesc.includes('refund') ||
                              lowerDesc.includes('salary') ||
@@ -1499,13 +1540,33 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
                              lowerDesc.includes('cash back') ||
                              lowerDesc.includes('incoming') ||
                              lowerDesc.includes('received');
-          if (isIncoming) return false;
+          if (isIncoming) {
+            incomingSkipped++;
+            return false;
+          }
 
-          return !isSelfTransferTransaction(e.description, userName);
+          if (isSelfTransferTransaction(e.description, userName)) {
+            selfTransferSkipped++;
+            return false;
+          }
+
+          const tDate = new Date(e.transaction_date);
+          if (tDate.getFullYear() !== currentYear || tDate.getMonth() !== currentMonth) {
+            wrongDateSkipped++;
+            return false;
+          }
+
+          return true;
         });
 
+        const skippedDetails = [];
+        if (wrongDateSkipped > 0) skippedDetails.push(`${wrongDateSkipped} wrong month/year`);
+        if (selfTransferSkipped > 0) skippedDetails.push(`${selfTransferSkipped} self-transfers`);
+        if (incomingSkipped > 0) skippedDetails.push(`${incomingSkipped} incoming/credits`);
+        const skippedStr = skippedDetails.length > 0 ? ` (skipped: ${skippedDetails.join(', ')})` : '';
+
         return res.status(200).json({
-          message: `Parsed ${parsedExpenses.length} transactions from Excel sheet (Rule-based Fallback).`,
+          message: `Parsed ${parsedExpenses.length} transactions from Excel sheet${skippedStr} (Rule-based Fallback).`,
           expenses: parsedExpenses
         });
       }
@@ -1613,6 +1674,14 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
         return res.status(422).json({ error: 'No valid transactions could be extracted from this PDF.' });
       }
 
+      const importNow = new Date();
+      const currentYear = importNow.getFullYear();
+      const currentMonth = importNow.getMonth();
+
+      let totalExtracted = 0;
+      let selfTransferSkipped = 0;
+      let wrongDateSkipped = 0;
+
       const mappedExpenses = mergedArray.map(item => {
         let txDate, amount, currency, category, description;
         if (Array.isArray(item)) {
@@ -1639,12 +1708,30 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
           is_recurring: false,
           recurrence_period: 'none'
         };
-      }).filter(e => e.amount > 0 && !isSelfTransferTransaction(e.description, userName));
+      }).filter(e => {
+        if (e.amount <= 0) return false;
+        totalExtracted++;
+        if (isSelfTransferTransaction(e.description, userName)) {
+          selfTransferSkipped++;
+          return false;
+        }
+        const tDate = new Date(e.transaction_date);
+        if (tDate.getFullYear() !== currentYear || tDate.getMonth() !== currentMonth) {
+          wrongDateSkipped++;
+          return false;
+        }
+        return true;
+      });
 
       const deduplicated = deduplicateTransactions(mappedExpenses);
 
+      const skippedDetails = [];
+      if (wrongDateSkipped > 0) skippedDetails.push(`${wrongDateSkipped} wrong month/year`);
+      if (selfTransferSkipped > 0) skippedDetails.push(`${selfTransferSkipped} self-transfers`);
+      const skippedStr = skippedDetails.length > 0 ? ` (skipped: ${skippedDetails.join(', ')})` : '';
+
       return res.status(200).json({
-        message: `Parsed ${deduplicated.length} transactions from PDF statement (removed ${mappedExpenses.length - deduplicated.length} duplicates).`,
+        message: `Parsed ${deduplicated.length} transactions from PDF statement${skippedStr}.`,
         expenses: deduplicated
       });
     }

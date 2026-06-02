@@ -233,7 +233,7 @@ class ApiService {
 
       final decoded = json.decode(response.body);
       if (response.statusCode == 200) {
-        return {'success': true, 'expenses': decoded['expenses']};
+        return {'success': true, 'expenses': decoded['expenses'], 'message': decoded['message']};
       }
       return {
         'success': false,
