@@ -714,7 +714,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
            - Card spends / POS purchases / Online shopping spends (e.g., "POS DEBIT...")
            - Cash withdrawals / ATM withdrawals
            - Bank fees, charges, interest debits, or SMS alert fees
-        3. COMPLETELY IGNORE all credits, deposits, refunds, salary, or incoming money (e.g., "IMPS-IN...", "UPI-IN...", "BY TRANSFER...", "TRANSFER FROM...", "interest credited", or any entry under Credit/Deposit/CR columns).
+        3. COMPLETELY IGNORE all credits, deposits, refunds, salary, cashback, or incoming money (e.g., any transaction containing "CASHBACK", "REFUND", "INTEREST CREDITED", "CR", "DEPOSIT", "SALARY", "INWARD", "RECEIVED", or under the Credit/CR/Deposit columns). Do not extract cashback transfers, refunds, or interest credits even if they contain the word "TRANSFER" or "TRFR".
         4. STRICT LAZYNESS PREVENTION: Never use placeholders, three dots ('...'), or 'etc.' in the JSON response. You MUST extract absolutely EVERY SINGLE money-out/debit/transfer transaction item present in the spreadsheet text, no matter how many there are. Do not stop until the entire text is fully parsed.
         5. COMPLETELY IGNORE AND EXCLUDE all self-transfers or transfers between the user's own accounts (inter-account transfers). These are transactions where the description or narration indicates moving money to another account belonging to the same user (e.g., transfers containing "SELF", "SELF TRANSFER", "OWN A/C", "OWN ACCOUNT", "TRANSFER TO OWN A/C", or direct bank-to-bank self-transfers like "SBI TO HDFC", "TO HDFC A/C", "TRANSFER TO ICICI", "TRFR TO SELF"). These do not represent external expenses and MUST NOT be extracted or included in the output JSON array.
         
@@ -925,7 +925,14 @@ router.post('/import', upload.single('file'), async (req, res) => {
             return matchedKey ? row[matchedKey] : null;
           };
 
-          const amount = cleanAmount(findVal(['debit', 'withdrawal', 'amount', 'spent', 'dr', 'outflow', 'price', 'val', 'cost', 'total']));
+          const debitVal = findVal(['debit', 'withdrawal', 'amount', 'spent', 'dr', 'outflow', 'price', 'val', 'cost', 'total']);
+          const creditVal = findVal(['credit', 'deposit', 'cr', 'incoming', 'received', 'cre']);
+          
+          let amount = cleanAmount(debitVal);
+          if (creditVal !== null && creditVal !== undefined && cleanAmount(creditVal) > 0) {
+            amount = 0.00; // Completely ignore credit entries
+          }
+
           const category = findVal(['category', 'cat', 'type']) || 'Others';
           const description = findVal(['description', 'desc', 'particulars', 'remark', 'narration', 'vendor', 'name', 'details']) || `Row ${idx + 1} Import`;
           const rawDate = findVal(['date', 'time', 'tx_date', 'transaction date', 'txn date', 'value date']);
@@ -951,6 +958,19 @@ router.post('/import', upload.single('file'), async (req, res) => {
         }).filter(e => {
           if (e.amount <= 0) return false;
           const lowerDesc = (e.description || '').toLowerCase();
+          
+          // Completely ignore incoming/credit transaction keywords (cashback, refunds, etc.)
+          const isIncoming = lowerDesc.includes('cashback') ||
+                             lowerDesc.includes('refund') ||
+                             lowerDesc.includes('salary') ||
+                             lowerDesc.includes('interest received') ||
+                             lowerDesc.includes('credited') ||
+                             lowerDesc.includes('deposit') ||
+                             lowerDesc.includes('cash back') ||
+                             lowerDesc.includes('incoming') ||
+                             lowerDesc.includes('received');
+          if (isIncoming) return false;
+
           const isSelfTransfer = lowerDesc.includes('self transfer') ||
                                  lowerDesc.includes('transfer to self') ||
                                  lowerDesc.includes('own account') ||
@@ -1066,7 +1086,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
              - Card spends / POS purchases / Online shopping spends (e.g., "POS DEBIT...")
              - Cash withdrawals / ATM withdrawals
              - Bank fees, charges, interest debits, or SMS alert fees
-          3. COMPLETELY IGNORE all credits, deposits, refunds, salary, or incoming money (e.g., "IMPS-IN...", "UPI-IN...", "BY TRANSFER...", "TRANSFER FROM...", "interest credited", or any entry under Credit/Deposit/CR columns).
+          3. COMPLETELY IGNORE all credits, deposits, refunds, salary, cashback, or incoming money (e.g., any transaction containing "CASHBACK", "REFUND", "INTEREST CREDITED", "CR", "DEPOSIT", "SALARY", "INWARD", "RECEIVED", or under the Credit/CR/Deposit columns). Do not extract cashback transfers, refunds, or interest credits even if they contain the word "TRANSFER" or "TRFR".
           4. STRICT LAZYNESS PREVENTION: Never use placeholders, three dots ('...'), or 'etc.' in the JSON response. You MUST extract absolutely EVERY SINGLE money-out/debit/transfer transaction item present in the text, no matter how many there are. Do not stop until the entire text is fully parsed.
           5. COMPLETELY IGNORE AND EXCLUDE all self-transfers or transfers between the user's own accounts (inter-account transfers). These are transactions where the description or narration indicates moving money to another account belonging to the same user (e.g., transfers containing "SELF", "SELF TRANSFER", "OWN A/C", "OWN ACCOUNT", "TRANSFER TO OWN A/C", or direct bank-to-bank self-transfers like "SBI TO HDFC", "TO HDFC A/C", "TRANSFER TO ICICI", "TRFR TO SELF"). These do not represent external expenses and MUST NOT be extracted or included in the output JSON array.
           
