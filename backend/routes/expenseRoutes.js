@@ -368,6 +368,104 @@ function getSystemRulesText(userName) {
   ]`;
 }
 
+// Smart helper to auto-categorize transactions based on merchant/description keywords
+function autoCategorizeDescription(description) {
+  const desc = String(description || '').toLowerCase();
+  
+  // 1. Food & Dining
+  if (
+    desc.includes('zomato') || desc.includes('swiggy') || desc.includes('ubereats') ||
+    desc.includes('restaurant') || desc.includes('cafe') || desc.includes('hotel') ||
+    desc.includes('food') || desc.includes('dining') || desc.includes('canteen') ||
+    desc.includes('bakery') || desc.includes('pizza') || desc.includes('burger') ||
+    desc.includes('starbucks') || desc.includes('kfc') || desc.includes('mcdonald') ||
+    desc.includes('dhaba') || desc.includes('chai') || desc.includes('tea') || desc.includes('coffee')
+  ) {
+    return 'Food';
+  }
+  
+  // 2. Travel & Transport (including fuel)
+  if (
+    desc.includes('uber') || desc.includes('ola') || desc.includes('rapido') ||
+    desc.includes('irctc') || desc.includes('railway') || desc.includes('metro') ||
+    desc.includes('travel') || desc.includes('flight') || desc.includes('airline') ||
+    desc.includes('bus') || desc.includes('cab') || desc.includes('taxi') ||
+    desc.includes('fuel') || desc.includes('petrol') || desc.includes('diesel') ||
+    desc.includes('shell') || desc.includes('hpcl') || desc.includes('bpcl') ||
+    desc.includes('iocl') || desc.includes('cng') || desc.includes('toll') || desc.includes('fastag')
+  ) {
+    return 'Travel';
+  }
+  
+  // 3. Shopping & Groceries
+  if (
+    desc.includes('amazon') || desc.includes('flipkart') || desc.includes('myntra') ||
+    desc.includes('meesho') || desc.includes('ajio') || desc.includes('nykaa') ||
+    desc.includes('groceries') || desc.includes('grocery') || desc.includes('supermarket') ||
+    desc.includes('mart') || desc.includes('jiomart') || desc.includes('blinkit') ||
+    desc.includes('instamart') || desc.includes('zepto') || desc.includes('bigbasket') ||
+    desc.includes('reliance') || desc.includes('dmart') || desc.includes('spencer') ||
+    desc.includes('shopping') || desc.includes('retail') || desc.includes('clothing') ||
+    desc.includes('apparel') || desc.includes('footwear') || desc.includes('decathlon')
+  ) {
+    return 'Shopping';
+  }
+  
+  // 4. Bills & Utilities (recharge, rent, wifi, insurance, etc.)
+  if (
+    desc.includes('bill') || desc.includes('utility') || desc.includes('electricity') ||
+    desc.includes('water') || desc.includes('gas') || desc.includes('recharge') ||
+    desc.includes('jio') || desc.includes('airtel') || desc.includes('vodafone') ||
+    desc.includes('idea') || desc.includes('bsnl') || desc.includes('broadband') ||
+    desc.includes('wifi') || desc.includes('telecom') || desc.includes('rent') ||
+    desc.includes('landlord') || desc.includes('insurance') || desc.includes('lic') ||
+    desc.includes('premium') || desc.includes('tax') || desc.includes('loan') ||
+    desc.includes('emi') || desc.includes('interest charged') || desc.includes('bank fees') ||
+    desc.includes('sms charges') || desc.includes('maintenance')
+  ) {
+    return 'Bills';
+  }
+  
+  // 5. Entertainment & Leisure
+  if (
+    desc.includes('netflix') || desc.includes('prime video') || desc.includes('disney') ||
+    desc.includes('hotstar') || desc.includes('spotify') || desc.includes('youtube') ||
+    desc.includes('bookmyshow') || desc.includes('cinema') || desc.includes('movie') ||
+    desc.includes('theatre') || desc.includes('entertainment') || desc.includes('game') ||
+    desc.includes('steam') || desc.includes('playstation') || desc.includes('xbox') ||
+    desc.includes('nintendo') || desc.includes('pub') || desc.includes('bar') ||
+    desc.includes('club') || desc.includes('liquor') || desc.includes('wine')
+  ) {
+    return 'Entertainment';
+  }
+  
+  // 6. Health & Personal Care
+  if (
+    desc.includes('hospital') || desc.includes('pharmacy') || desc.includes('medical') ||
+    desc.includes('chemist') || desc.includes('apollo') || desc.includes('medplus') ||
+    desc.includes('doctor') || desc.includes('clinic') || desc.includes('dentist') ||
+    desc.includes('health') || desc.includes('medicine') || desc.includes('pharmeasy') ||
+    desc.includes('diagnostic') || desc.includes('lab') || desc.includes('gym') ||
+    desc.includes('fitness') || desc.includes('salon') || desc.includes('spa')
+  ) {
+    return 'Health';
+  }
+  
+  // 7. Investment & Savings
+  if (
+    desc.includes('zerodha') || desc.includes('groww') || desc.includes('upstox') ||
+    desc.includes('mutual fund') || desc.includes('sip') || desc.includes('stocks') ||
+    desc.includes('investment') || desc.includes('indmoney') || desc.includes('coin') ||
+    desc.includes('wazirx') || desc.includes('etmoney') || desc.includes('fd') ||
+    desc.includes('rd') || desc.includes('ppf') || desc.includes('nps') ||
+    desc.includes('gold') || desc.includes('savings')
+  ) {
+    return 'Investment';
+  }
+  
+  return 'Others';
+}
+
 // Deduplicate parsed transactions by creating a unique key
 function deduplicateTransactions(expenses) {
   const unique = [];
@@ -1178,7 +1276,7 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
               id: crypto.randomUUID(),
               amount: isNaN(amount) ? 0.00 : amount,
               currency: 'INR',
-              category: 'Others',
+              category: autoCategorizeDescription(description),
               description: description,
               transaction_date: transaction_date.toISOString(),
               is_recurring: false,
@@ -1205,8 +1303,11 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
               amount = 0.00;
             }
 
-            const category = findVal(['category', 'cat', 'type']) || 'Others';
             const description = findVal(['description', 'desc', 'particulars', 'remark', 'narration', 'vendor', 'name', 'details']) || `Row ${idx + 1} Import`;
+            let category = findVal(['category', 'cat', 'type']) || 'Others';
+            if (category === 'Others' || !category) {
+              category = autoCategorizeDescription(description);
+            }
             const rawDate = findVal(['date', 'time', 'tx_date', 'transaction date', 'txn date', 'value date']);
             const transaction_date = parseRobustDate(rawDate);
 
