@@ -60,6 +60,7 @@ flutter_launcher_icons:
   image_path: "assets/logo.png"
   adaptive_icon_background: "#000B09"
   adaptive_icon_foreground: "assets/logo.png"
+  adaptive_icon_monochrome: "assets/logo.png"
 
 flutter:
   uses-material-design: true

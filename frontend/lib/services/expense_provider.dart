@@ -212,7 +212,11 @@ class ExpenseProvider with ChangeNotifier {
       if (result['success'] == true) {
         final List<dynamic> importedList = result['expenses'] ?? [];
         for (final item in importedList) {
-          final exp = Expense.fromMap(item);
+          final Map<String, dynamic> mutableItem = Map<String, dynamic>.from(item);
+          if (mutableItem['id'] == null) {
+            mutableItem['id'] = cryptoUuid();
+          }
+          final exp = Expense.fromMap(mutableItem);
           await _dbHelper.insertExpense(exp);
         }
         await loadLocalData(); // Reload cache
