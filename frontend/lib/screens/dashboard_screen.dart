@@ -568,6 +568,87 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       },
     );
+  void _confirmDeleteMonth(BuildContext context, ExpenseProvider provider, List<Expense> expensesToDelete, DateTime month) {
+    final monthLabel = DateFormat('MMMM yyyy').format(month);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: Colors.redAccent.withOpacity(0.2),
+            ),
+          ),
+          title: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Delete Month History?',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Kya aap sach me $monthLabel ki poori statement history delete karna chahte hain? Esme total ${expensesToDelete.length} transactions permanently delete ho jayenge.',
+            style: GoogleFonts.inter(fontSize: 13, height: 1.4),
+          ),
+          actionsPadding: const EdgeInsets.all(16),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                
+                // Show deleting feedback SnackBar
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('⏳ Deleting all ${expensesToDelete.length} records for $monthLabel...'),
+                    backgroundColor: const Color(0xFF1A1A2E),
+                  ),
+                );
+
+                // Run fast bulk delete
+                final ids = expensesToDelete.map((e) => e.id).toList();
+                await provider.deleteMultipleExpenses(ids);
+
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('✅ $monthLabel history cleared successfully!'),
+                      backgroundColor: const Color(0xFF00D09C),
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text(
+                'Delete All',
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -979,21 +1060,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    isSelectedMonthCurrent 
-                        ? 'RECENT TRANSACTIONS' 
-                        : '${DateFormat('MMMM yyyy').format(_selectedMonthYear!).toUpperCase()} TRANSACTIONS',
-                    style: GoogleFonts.outfit(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.8,
-                      color: isDark ? Colors.grey[400] : Colors.grey[700],
+                  Expanded(
+                    child: Text(
+                      isSelectedMonthCurrent 
+                          ? 'RECENT TRANSACTIONS' 
+                          : '${DateFormat('MMMM yyyy').format(_selectedMonthYear!).toUpperCase()} TRANSACTIONS',
+                      style: GoogleFonts.outfit(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8,
+                        color: isDark ? Colors.grey[400] : Colors.grey[700],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const SizedBox(width: 8),
                   if (monthlyExpenses.isNotEmpty)
-                    Text(
-                      'Swipe left to delete',
-                      style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Swipe left to delete',
+                          style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () => _confirmDeleteMonth(context, expenseProvider, monthlyExpenses, _selectedMonthYear!),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.delete_sweep_rounded,
+                              color: Colors.redAccent,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                 ],
               ),
