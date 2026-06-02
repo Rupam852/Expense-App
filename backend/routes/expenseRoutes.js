@@ -244,34 +244,23 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
       return res.status(400).json({ error: 'Google AI Studio API Key is required. Please set your key in the app Settings.' });
     }
 
-    const apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-    const apiAuthHeader = `Bearer ${userGeminiKey}`;
-    const apiModel = 'gemini-1.5-flash';
-    const extraHeaders = {};
-
     // Convert file buffer to base64
     const base64Image = req.file.buffer.toString('base64');
     const mimeType = req.file.mimetype;
 
-    console.log(`Sending receipt image to AI Endpoint (${apiEndpoint}) using model ${apiModel} (${req.file.size} bytes)...`);
+    console.log(`Sending receipt image to Google Gemini Native REST API (${req.file.size} bytes)...`);
 
-    // Call AI Endpoint with base64 image data
-    const response = await fetch(apiEndpoint, {
+    // Call Native Google Gemini API with base64 image data
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${userGeminiKey}`, {
       method: 'POST',
       headers: {
-        'Authorization': apiAuthHeader,
-        'Content-Type': 'application/json',
-        ...extraHeaders
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: apiModel,
-        max_tokens: 1000,
-        messages: [
+        contents: [
           {
-            role: 'user',
-            content: [
+            parts: [
               {
-                type: 'text',
                 text: `Analyze this image (which could be a store receipt, utility bill, restaurant invoice, or a screenshot of a UPI transaction like GPay, PhonePe, Paytm). 
                 Extract the following financial details accurately:
                 1. amount (numeric float value)
@@ -293,32 +282,36 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
                 }`
               },
               {
-                type: 'image_url',
-                image_url: {
-                  url: `data:${mimeType};base64,${base64Image}`
+                inlineData: {
+                  mimeType: mimeType,
+                  data: base64Image
                 }
               }
             ]
           }
-        ]
+        ],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          maxOutputTokens: 1000
+        }
       })
     });
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error('OpenRouter API error response:', errText);
-      return res.status(500).json({ error: `OCR Service failed: ${response.statusText}` });
+      console.error('Google Gemini Native API error response:', errText);
+      return res.status(500).json({ error: `OCR Service failed: ${errText}` });
     }
 
     const data = await response.json();
-    const messageContent = data.choices?.[0]?.message?.content;
+    const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
 
-    if (!messageContent) {
+    if (!rawContent) {
       return res.status(500).json({ error: 'No data returned from OCR Service.' });
     }
 
     // Clean JSON wrapper markdown blocks like ```json ... ``` if returned by the LLM
-    let cleanJson = messageContent.trim();
+    let cleanJson = rawContent.trim();
     if (cleanJson.startsWith('```')) {
       cleanJson = cleanJson.replace(/^```json\s*/, '').replace(/```$/, '').trim();
     }
@@ -331,8 +324,8 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
       data: parsedData
     });
   } catch (error) {
-    console.error('Receipt Scan OCR Error:', error);
-    res.status(500).json({ error: 'Server error processing receipt scanner OCR.' });
+    console.error('OCR scanning error:', error);
+    res.status(500).json({ error: 'OCR receipt parsing failed.' });
   }
 });
 
@@ -411,75 +404,76 @@ router.post('/import', upload.single('file'), async (req, res) => {
         return res.status(400).json({ error: 'Google AI Studio API Key is required. Please set your key in the app Settings.' });
       }
 
-      const apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-      const apiAuthHeader = `Bearer ${userGeminiKey}`;
-      const apiModel = 'gemini-1.5-flash';
-      const extraHeaders = {};
+      console.log(`Sending PDF text to Google Gemini Native REST API (${textContent.length} chars)...`);
 
-      // We send the PDF text content directly to the LLM to parse it into an array of structured expenses!
-      const response = await fetch(apiEndpoint, {
+      // Call Native Google Gemini API to parse PDF text into an array of structured expenses!
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${userGeminiKey}`, {
         method: 'POST',
         headers: {
-          'Authorization': apiAuthHeader,
-          'Content-Type': 'application/json',
-          ...extraHeaders
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: apiModel,
-          max_tokens: 2500,
-          messages: [
+          contents: [
             {
-              role: 'user',
-              content: `Analyze this raw text extracted from a bank statement, digital payment receipt list, or invoice PDF. Extract a list of transactions.
-              
-              Raw PDF text content:
-              ---------------------
-              ${textContent.slice(0, 15000)}  // Limit size to protect token usage
-              ---------------------
-
-              Tasks:
-              1. Extract all transaction items (specifically payments/expenses, ignoring credits/deposits where possible).
-              2. For each transaction, extract:
-                 - amount (numeric positive float)
-                 - currency (3-letter ISO code, e.g. INR, USD)
-                 - category (Precisely categorize into: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
-                 - description (Clear merchant/detail from transaction text)
-                 - transaction_date (ISO 8601 string, parse/estimate from date logs)
-              
-              Ensure your response is ONLY a JSON array of objects, without markdown wrapper blocks or text.
-              Structure:
-              [
+              parts: [
                 {
-                  "amount": 450.00,
-                  "currency": "INR",
-                  "category": "Shopping",
-                  "description": "Amazon Purchase",
-                  "transaction_date": "2026-05-25T12:00:00.000Z"
+                  text: `Analyze this raw text extracted from a bank statement, digital payment receipt list, or invoice PDF. Extract a list of transactions.
+                  
+                  Raw PDF text content:
+                  ---------------------
+                  ${textContent.slice(0, 15000)}  // Limit size to protect token usage
+                  ---------------------
+
+                  Tasks:
+                  1. Extract all transaction items (specifically payments/expenses, ignoring credits/deposits where possible).
+                  2. For each transaction, extract:
+                     - amount (numeric positive float)
+                     - currency (3-letter ISO code, e.g. INR, USD)
+                     - category (Precisely categorize into: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
+                     - description (Clear merchant/detail from transaction text)
+                     - transaction_date (ISO 8601 string, parse/estimate from date logs)
+                  
+                  Ensure your response is ONLY a JSON array of objects, without markdown wrapper blocks or text.
+                  Structure:
+                  [
+                    {
+                      "amount": 450.00,
+                      "currency": "INR",
+                      "category": "Shopping",
+                      "description": "Amazon Purchase",
+                      "transaction_date": "2026-05-25T12:00:00.000Z"
+                    }
+                  ]`
                 }
-              ]`
+              ]
             }
-          ]
+          ],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            maxOutputTokens: 2500
+          }
         })
       });
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error('OpenRouter Statement API error response:', errText);
+        console.error('Google Gemini Native API error response:', errText);
         return res.status(500).json({ error: `AI processing of statement PDF failed: ${errText}` });
       }
 
       const data = await response.json();
-      let rawContent = data.choices?.[0]?.message?.content?.trim();
+      const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
 
       if (!rawContent) {
         return res.status(500).json({ error: 'No data extracted from PDF statement.' });
       }
 
-      if (rawContent.startsWith('```')) {
-        rawContent = rawContent.replace(/^```json\s*/, '').replace(/```$/, '').trim();
+      let cleanJson = rawContent.trim();
+      if (cleanJson.startsWith('```')) {
+        cleanJson = cleanJson.replace(/^```json\s*/, '').replace(/```$/, '').trim();
       }
 
-      const parsedArray = JSON.parse(rawContent);
+      const parsedArray = JSON.parse(cleanJson);
 
       const mappedExpenses = parsedArray.map(item => ({
         id: crypto.randomUUID(),
