@@ -330,6 +330,44 @@ function pageRender(pageData) {
   });
 }
 
+// Generate dynamic system rules prompt injecting user name and merchant extraction rules
+function getSystemRulesText(userName) {
+  const nameUpper = String(userName || '').toUpperCase().trim();
+  const firstName = nameUpper.split(' ')[0];
+  
+  return `You are a professional financial assistant. Analyze raw text/data extracted from a bank statement (from any bank like SBI, HDFC, ICICI, Axis, PNB, etc.). Extract all money-out transactions (outflows/debits/transfers).
+
+  CRITICAL OUTFLOW EXTRACTION RULES:
+  1. ONLY extract transactions where money is leaving the account (money-out / debits / withdrawals / transfers).
+  2. Extract all of the following debit/transfer transactions:
+     - UPI Payments / UPI-DR / UPI-OUT / Merchant payments (e.g., GPay, PhonePe, Paytm, BharatPe transfers)
+     - Transfers to vendors, merchants, or other individuals (e.g., "TRANSFER TO...", "TO TRANSFER...", "TRFR TO...", "SENT TO...")
+     - IMPS / NEFT / RTGS debit transfers (e.g., "IMPS-OUT...", "IMPS/DR...", "NEFT DR...")
+     - Card spends / POS purchases / Online shopping spends (e.g., "POS DEBIT...")
+     - Cash withdrawals / ATM withdrawals
+     - Bank fees, charges, interest debits, or SMS alert fees
+  3. COMPLETELY IGNORE all credits, deposits, refunds, salary, cashback, or incoming money (e.g., any transaction containing "CASHBACK", "REFUND", "INTEREST CREDITED", "CR", "DEPOSIT", "SALARY", "INWARD", "RECEIVED", or under the Credit/CR/Deposit columns). Do not extract cashback transfers, refunds, or interest credits even if they contain the word "TRANSFER" or "TRFR".
+  4. STRICT LAZYNESS PREVENTION: Never use placeholders, three dots ('...'), or 'etc.' in the JSON response. You MUST extract absolutely EVERY SINGLE money-out/debit/transfer transaction item present in the text, no matter how many there are. Do not stop until the entire text is fully parsed.
+  5. COMPLETELY IGNORE AND EXCLUDE all self-transfers or transfers between the user's own accounts (inter-account transfers). These are transactions where the description or narration indicates moving money to another account belonging to the same user (e.g., transfers containing "SELF", "SELF TRANSFER", "OWN A/C", "OWN ACCOUNT", "TRANSFER TO OWN A/C", or direct bank-to-bank self-transfers like "SBI TO HDFC", "TO HDFC A/C", "TRANSFER TO ICICI", "TRFR TO SELF"). These do not represent external expenses and MUST NOT be extracted or included in the output JSON array.
+  6. SELF-TRANSFER EXCLUSION FOR USER "${nameUpper}": You MUST completely ignore and exclude any transaction where the description/narration indicates a self-transfer to "${nameUpper}" or is a transfer under your name (e.g., containing "${nameUpper}" or "${firstName}"). For example, "TRANSFER TO ${nameUpper}" or "TRFR TO ${firstName}" is a self-transfer and MUST NOT be extracted.
+  7. MERCHANT/VENDORS CLEAN DESCRIPTION: Clean up raw bank narration/description text to extract the clean, human-readable merchant, vendor, or individual name. Strip out transaction reference IDs, technical prefixes/suffixes (e.g., 'UPI-DR/', 'UPI/', 'IMPS/', '/GPAY', '/okbizaxis', '/UPIIntent', phonepe/gpay handles like '@ybl', '@okaxis', etc., reference numbers, phone numbers, or dates embedded in descriptions). The description returned in the JSON must represent the clear merchant/vendor name (e.g., convert "UPI-DR-MUKTER PRINT HUB-GPAY-122..." to "Mukter Print Hub", "UPI-DR-Indian Railways-..." to "Indian Railways", "UPI-DR-KEYA ADHIKARY-..." to "Keya Adhikary", etc.).
+
+  How to identify debits in tabular statement text/data:
+  - Look for entries in columns named "Debit", "Withdrawal", "DR", "Amount (Dr)", or "Debits".
+  - If the statement does not have distinct columns, identify debits via keywords like "UPI-DR", "IMPS-OUT", "TRFR TO", "Paid to", or negative numbers.
+
+  Ensure your response is ONLY a JSON array of arrays (tuple format) to save output token space, without markdown wrapper blocks or text.
+  Structure:
+  [
+    ["YYYY-MM-DD", amount, "description", "category", "currency"]
+  ]
+  
+  Example:
+  [
+    ["2026-05-25T12:00:00.000Z", 450.00, "Amazon UPI Transfer", "Shopping", "INR"]
+  ]`;
+}
+
 // Deduplicate parsed transactions by creating a unique key
 function deduplicateTransactions(expenses) {
   const unique = [];
@@ -881,7 +919,7 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
 });
 
 // 5. Batch Import transactions via PDF/Excel upload
-router.post('/import', upload.single('file'), async (req, res) => {
+router.post('/import', authenticateToken, upload.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'Excel or PDF file is required.' });
   }
@@ -889,6 +927,16 @@ router.post('/import', upload.single('file'), async (req, res) => {
   const filename = req.file.originalname.toLowerCase();
 
   try {
+    let userName = 'User';
+    try {
+      const userRes = await query('SELECT name FROM users WHERE id = $1', [req.user.userId]);
+      if (userRes.rows.length > 0) {
+        userName = userRes.rows[0].name || 'User';
+      }
+    } catch (err) {
+      logDiagnostic(`Error fetching username for filter context: ${err.message}`);
+    }
+
     let parsedExpenses = [];
 
     // CASE 1: Excel spreadsheets / CSV files (.xlsx, .xls, .csv)
@@ -996,38 +1044,10 @@ router.post('/import', upload.single('file'), async (req, res) => {
 
         logDiagnostic(`[Spreadsheet Import] Grouped spreadsheet into ${chunks.length} chunks.`);
 
+        // userName is already fetched at the start of /import route
+
         const models = await getDynamicModels(userApiKey);
-        
-        const systemRulesText = `You are a professional financial assistant. Analyze raw spreadsheet CSV/text extracted from a bank statement (from any bank like SBI, HDFC, ICICI, Axis, PNB, etc.). Extract all money-out transactions (outflows/debits/transfers).
-
-        CRITICAL OUTFLOW EXTRACTION RULES:
-        1. ONLY extract transactions where money is leaving the account (money-out / debits / withdrawals / transfers).
-        2. Extract all of the following debit/transfer transactions:
-           - UPI Payments / UPI-DR / UPI-OUT / Merchant payments (e.g., GPay, PhonePe, Paytm, BharatPe transfers)
-           - Transfers to vendors, merchants, or other individuals (e.g., "TRANSFER TO...", "TO TRANSFER...", "TRFR TO...", "SENT TO...")
-           - IMPS / NEFT / RTGS debit transfers (e.g., "IMPS-OUT...", "IMPS/DR...", "NEFT DR...")
-           - Card spends / POS purchases / Online shopping spends (e.g., "POS DEBIT...")
-           - Cash spends / ATM withdrawals
-           - Bank fees, charges, interest debits, or SMS alert fees
-        3. COMPLETELY IGNORE all credits, deposits, refunds, salary, cashback, or incoming money (e.g., any transaction containing "CASHBACK", "REFUND", "INTEREST CREDITED", "CR", "DEPOSIT", "SALARY", "INWARD", "RECEIVED", or under the Credit/CR/Deposit columns). Do not extract cashback transfers, refunds, or interest credits even if they contain the word "TRANSFER" or "TRFR".
-        4. STRICT LAZYNESS PREVENTION: Never use placeholders, three dots ('...'), or 'etc.' in the JSON response. You MUST extract absolutely EVERY SINGLE money-out/debit/transfer transaction item present in the spreadsheet text, no matter how many there are. Do not stop until the entire text is fully parsed.
-        5. COMPLETELY IGNORE AND EXCLUDE all self-transfers or transfers between the user's own accounts (inter-account transfers). These are transactions where the description or narration indicates moving money to another account belonging to the same user (e.g., transfers containing "SELF", "SELF TRANSFER", "OWN A/C", "OWN ACCOUNT", "TRANSFER TO OWN A/C", or direct bank-to-bank self-transfers like "SBI TO HDFC", "TO HDFC A/C", "TRANSFER TO ICICI", "TRFR TO SELF"). These do not represent external expenses and MUST NOT be extracted or included in the output JSON array.
-        
-        How to identify debits in tabular spreadsheet data:
-        - Spreadsheets may contain header metadata rows at the top (like Account number, Bank name, Address, Balance). Ignore those metadata rows and find where the transaction table rows start.
-        - Look for entries in columns representing outflows (e.g., "Debit", "Withdrawal", "DR", "Amount (Dr)", "Debits", or negative numbers in a single "Amount" column).
-        - If the statement does not have distinct columns, identify debits via negative numbers or keywords like "UPI-DR", "IMPS-OUT", "TRFR TO", "Paid to".
-
-        Ensure your response is ONLY a JSON array of arrays (tuple format) to save output token space, without markdown wrapper blocks or text.
-        Structure:
-        [
-          ["YYYY-MM-DD", amount, "description", "category", "currency"]
-        ]
-        
-        Example:
-        [
-          ["2026-05-25T12:00:00.000Z", 450.00, "Amazon UPI Transfer", "Shopping", "INR"]
-        ]`;
+        const systemRulesText = getSystemRulesText(userName);
 
         const chunkPromises = chunks.map((chunkText, index) => {
           return callGeminiForChunk(chunkText, systemRulesText, userApiKey, models)
@@ -1224,7 +1244,20 @@ router.post('/import', upload.single('file'), async (req, res) => {
                                  lowerDesc.includes('own a/c') ||
                                  lowerDesc.includes('self-transfer') ||
                                  /(\bsbi\b|\bhdfc\b|\bicici\b|\baxis\b|\bpnb\b|\bown\b)\s+to\s+(\bsbi\b|\bhdfc\b|\bicici\b|\baxis\b|\bpnb\b|\bown\b)/i.test(lowerDesc);
-          return !isSelfTransfer;
+          
+          // User-specific self-transfer check (matches full name or first name)
+          let isNameSelfTransfer = false;
+          const nameLower = String(userName || '').toLowerCase().trim();
+          if (nameLower && nameLower !== 'user') {
+            const firstNameLower = nameLower.split(' ')[0];
+            if (lowerDesc.includes(nameLower)) {
+              isNameSelfTransfer = true;
+            } else if (firstNameLower && firstNameLower.length > 2 && lowerDesc.includes(firstNameLower)) {
+              isNameSelfTransfer = true;
+            }
+          }
+
+          return !(isSelfTransfer || isNameSelfTransfer);
         });
 
         return res.status(200).json({
@@ -1309,37 +1342,10 @@ router.post('/import', upload.single('file'), async (req, res) => {
 
       logDiagnostic(`[PDF Import] Grouped ${pages.length} pages into ${chunks.length} chunks.`);
 
+      // userName is already fetched at the start of /import route
+
       const models = await getDynamicModels(userApiKey);
-      
-      const systemRulesText = `You are a professional financial assistant. Analyze raw text extracted from a bank statement (from any bank like SBI, HDFC, ICICI, Axis, PNB, etc.). Extract all money-out transactions (outflows/debits/transfers).
-
-      CRITICAL OUTFLOW EXTRACTION RULES:
-      1. ONLY extract transactions where money is leaving the account (money-out / debits / withdrawals / transfers).
-      2. Extract all of the following debit/transfer transactions:
-         - UPI Payments / UPI-DR / UPI-OUT / Merchant payments (e.g., GPay, PhonePe, Paytm, BharatPe transfers)
-         - Transfers to vendors, merchants, or other individuals (e.g., "TRANSFER TO...", "TO TRANSFER...", "TRFR TO...", "SENT TO...")
-         - IMPS / NEFT / RTGS debit transfers (e.g., "IMPS-OUT...", "IMPS/DR...", "NEFT DR...")
-         - Card spends / POS purchases / Online shopping spends (e.g., "POS DEBIT...")
-         - Cash withdrawals / ATM withdrawals
-         - Bank fees, charges, interest debits, or SMS alert fees
-      3. COMPLETELY IGNORE all credits, deposits, refunds, salary, cashback, or incoming money (e.g., any transaction containing "CASHBACK", "REFUND", "INTEREST CREDITED", "CR", "DEPOSIT", "SALARY", "INWARD", "RECEIVED", or under the Credit/CR/Deposit columns). Do not extract cashback transfers, refunds, or interest credits even if they contain the word "TRANSFER" or "TRFR".
-      4. STRICT LAZYNESS PREVENTION: Never use placeholders, three dots ('...'), or 'etc.' in the JSON response. You MUST extract absolutely EVERY SINGLE money-out/debit/transfer transaction item present in the text, no matter how many there are. Do not stop until the entire text is fully parsed.
-      5. COMPLETELY IGNORE AND EXCLUDE all self-transfers or transfers between the user's own accounts (inter-account transfers). These are transactions where the description or narration indicates moving money to another account belonging to the same user (e.g., transfers containing "SELF", "SELF TRANSFER", "OWN A/C", "OWN ACCOUNT", "TRANSFER TO OWN A/C", or direct bank-to-bank self-transfers like "SBI TO HDFC", "TO HDFC A/C", "TRANSFER TO ICICI", "TRFR TO SELF"). These do not represent external expenses and MUST NOT be extracted or included in the output JSON array.
-      
-      How to identify debits in tabular statement text:
-      - Look for entries in columns named "Debit", "Withdrawal", "DR", "Amount (Dr)", or "Debits".
-      - If the statement does not have distinct columns, identify debits via keywords like "UPI-DR", "IMPS-OUT", "TRFR TO", "Paid to", or negative numbers.
-
-      Ensure your response is ONLY a JSON array of arrays (tuple format) to save output token space, without markdown wrapper blocks or text.
-      Structure:
-      [
-        ["YYYY-MM-DD", amount, "description", "category", "currency"]
-      ]
-      
-      Example:
-      [
-        ["2026-05-25T12:00:00.000Z", 450.00, "Amazon UPI Transfer", "Shopping", "INR"]
-      ]`;
+      const systemRulesText = getSystemRulesText(userName);
 
       const chunkPromises = chunks.map((chunkText, index) => {
         return callGeminiForChunk(chunkText, systemRulesText, userApiKey, models)
