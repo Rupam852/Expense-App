@@ -680,52 +680,290 @@ router.post('/import', upload.single('file'), async (req, res) => {
 
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      const rows = xlsx.utils.sheet_to_json(worksheet);
 
-      // Attempt to map typical headers to standard schema
-      parsedExpenses = rows.map((row, idx) => {
-        // Search for dynamic header values case-insensitively
-        const findVal = (keys) => {
-          const matchedKey = Object.keys(row).find(k => 
-            keys.some(key => k.toLowerCase().includes(key))
-          );
-          return matchedKey ? row[matchedKey] : null;
-        };
-
-        const amount = cleanAmount(findVal(['debit', 'withdrawal', 'amount', 'spent', 'dr', 'outflow', 'price', 'val', 'cost', 'total']));
-        const category = findVal(['category', 'cat', 'type']) || 'Others';
-        const description = findVal(['description', 'desc', 'particulars', 'remark', 'narration', 'vendor', 'name', 'details']) || `Row ${idx + 1} Import`;
-        const rawDate = findVal(['date', 'time', 'tx_date', 'transaction date', 'txn date', 'value date']);
+      const userApiKey = req.headers['x-user-gemini-key'];
+      if (userApiKey && userApiKey.trim().length > 0) {
+        logDiagnostic(`[Spreadsheet Import] Gemini API Key found. Parsing using Google Gemini AI...`);
         
-        let transaction_date = new Date();
-        if (rawDate) {
-          const parsedD = new Date(rawDate);
-          if (!isNaN(parsedD.getTime())) {
-            transaction_date = parsedD;
+        let csvText = '';
+        if (filename.endsWith('.csv')) {
+          csvText = excelBuffer.toString('utf8');
+        } else {
+          csvText = xlsx.utils.sheet_to_csv(worksheet);
+        }
+
+        const textContent = csvText
+          .trim()
+          .slice(0, 150000); // 150,000 chars slice limit to avoid model overload
+
+        logDiagnostic(`[Spreadsheet Import] Excel/CSV converted to CSV text (length=${textContent.length}).`);
+
+        let rawContent = null;
+        const models = await getDynamicModels(userApiKey);
+        let lastError = null;
+        let usedModel = null;
+
+        const systemRulesText = `You are a professional financial assistant. Analyze raw spreadsheet CSV/text extracted from a bank statement (from any bank like SBI, HDFC, ICICI, Axis, PNB, etc.). Extract all money-out transactions (outflows/debits/transfers).
+
+        CRITICAL OUTFLOW EXTRACTION RULES:
+        1. ONLY extract transactions where money is leaving the account (money-out / debits / withdrawals / transfers).
+        2. Extract all of the following debit/transfer transactions:
+           - UPI Payments / UPI-DR / UPI-OUT / Merchant payments (e.g., GPay, PhonePe, Paytm, BharatPe transfers)
+           - Transfers to vendors, merchants, or other individuals (e.g., "TRANSFER TO...", "TO TRANSFER...", "TRFR TO...", "SENT TO...")
+           - IMPS / NEFT / RTGS debit transfers (e.g., "IMPS-OUT...", "IMPS/DR...", "NEFT DR...")
+           - Card spends / POS purchases / Online shopping spends (e.g., "POS DEBIT...")
+           - Cash withdrawals / ATM withdrawals
+           - Bank fees, charges, interest debits, or SMS alert fees
+        3. COMPLETELY IGNORE all credits, deposits, refunds, salary, or incoming money (e.g., "IMPS-IN...", "UPI-IN...", "BY TRANSFER...", "TRANSFER FROM...", "interest credited", or any entry under Credit/Deposit/CR columns).
+        4. STRICT LAZYNESS PREVENTION: Never use placeholders, three dots ('...'), or 'etc.' in the JSON response. You MUST extract absolutely EVERY SINGLE money-out/debit/transfer transaction item present in the spreadsheet text, no matter how many there are. Do not stop until the entire text is fully parsed.
+        
+        How to identify debits in tabular spreadsheet data:
+        - Spreadsheets may contain header metadata rows at the top (like Account number, Bank name, Address, Balance). Ignore those metadata rows and find where the transaction table rows start.
+        - Look for entries in columns representing outflows (e.g., "Debit", "Withdrawal", "DR", "Amount (Dr)", "Debits", or negative numbers in a single "Amount" column).
+        - If the statement does not have distinct columns, identify debits via negative numbers or keywords like "UPI-DR", "IMPS-OUT", "TRFR TO", "Paid to".
+
+        Ensure your response is ONLY a JSON array of objects, without markdown wrapper blocks or text.
+        Structure:
+        [
+          {
+            "amount": 450.00,
+            "currency": "INR",
+            "category": "Shopping",
+            "description": "Amazon UPI Transfer",
+            "transaction_date": "2026-05-25T12:00:00.000Z"
+          }
+        ]`;
+
+        for (const model of models) {
+          try {
+            logDiagnostic(`Sending spreadsheet text to Google Gemini Native REST API using model ${model}...`);
+            const apiVersion = 'v1beta';
+
+            const bodyPayload = {
+              systemInstruction: {
+                parts: [{ text: systemRulesText }]
+              },
+              contents: [
+                {
+                  parts: [
+                    {
+                      text: `Raw spreadsheet/CSV text content:
+                      ---------------------
+                      ${textContent}
+                      ---------------------`
+                    }
+                  ]
+                }
+              ],
+              safetySettings: [
+                { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+                { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+                { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+                { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+              ],
+              generationConfig: {
+                maxOutputTokens: 4096
+              }
+            };
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 35000);
+
+            const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userApiKey}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(bodyPayload),
+              signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+              const data = await response.json();
+              const candidate = data.candidates?.[0];
+              const finishReason = candidate?.finishReason;
+              const text = candidate?.content?.parts?.[0]?.text?.trim();
+              
+              if (text) {
+                const truncated = isJsonTruncated(text);
+                logDiagnostic(`[Spreadsheet Import] Model ${model} returned output (length=${text.length}, finishReason=${finishReason || 'STOP'}, isTruncated=${truncated})`);
+                
+                if (!truncated || model === models[models.length - 1]) {
+                  rawContent = text;
+                  usedModel = model;
+                  break;
+                } else {
+                  logDiagnostic(`[Spreadsheet Import] Model ${model} output was truncated. Falling back to the next model...`);
+                }
+              }
+            } else {
+              const errText = await response.text();
+              logDiagnostic(`Gemini model ${model} failed with status ${response.status}: ${errText}`);
+              lastError = new Error(errText);
+            }
+          } catch (err) {
+            logDiagnostic(`Gemini model ${model} exception: ${err.message}`);
+            lastError = err;
           }
         }
 
-        // Force to current month and year to ensure they are added to current month's expenses
-        const now = new Date();
-        transaction_date.setFullYear(now.getFullYear());
-        transaction_date.setMonth(now.getMonth());
+        if (!rawContent) {
+          return res.status(500).json({ error: `AI processing of spreadsheet statement failed: ${lastError ? lastError.message : 'No response from models'}` });
+        }
 
-        return {
-          id: crypto.randomUUID(),
-          amount: isNaN(amount) ? 0.00 : amount,
-          currency: findVal(['currency', 'curr']) || 'INR',
-          category: category,
-          description: description,
-          transaction_date: transaction_date.toISOString(),
-          is_recurring: false,
-          recurrence_period: 'none'
-        };
-      }).filter(e => e.amount > 0); // Exclude blank or negative entries
+        logDiagnostic(`[Spreadsheet Import] Raw LLM content (length=${rawContent.length}):\n${rawContent}`);
 
-      return res.status(200).json({
-        message: `Parsed ${parsedExpenses.length} transactions from Excel sheet.`,
-        expenses: parsedExpenses
-      });
+        let cleanJson = rawContent.trim();
+        cleanJson = cleanJson.replace(/```json/gi, '').replace(/```/gi, '').trim();
+        cleanJson = repairTruncatedJson(cleanJson);
+
+        const firstCurly = cleanJson.indexOf('{');
+        const firstBracket = cleanJson.indexOf('[');
+        let startIndex = -1;
+        let isObject = false;
+
+        if (firstCurly !== -1 && (firstBracket === -1 || firstCurly < firstBracket)) {
+          startIndex = firstCurly;
+          isObject = true;
+        } else if (firstBracket !== -1) {
+          startIndex = firstBracket;
+        }
+
+        if (startIndex !== -1) {
+          const lastIndex = isObject ? cleanJson.lastIndexOf('}') : cleanJson.lastIndexOf(']');
+          if (lastIndex !== -1 && lastIndex > startIndex) {
+            cleanJson = cleanJson.substring(startIndex, lastIndex + 1);
+          }
+        }
+
+        let insideQuotes = false;
+        let escaped = false;
+        let fixedStr = '';
+        for (let i = 0; i < cleanJson.length; i++) {
+          const char = cleanJson[i];
+          if (char === '"' && !escaped) {
+            insideQuotes = !insideQuotes;
+          }
+          if (insideQuotes) {
+            if (char === '\n') fixedStr += ' ';
+            else if (char === '\r') {}
+            else fixedStr += char;
+          } else {
+            fixedStr += char;
+          }
+          if (char === '\\' && !escaped) escaped = true;
+          else escaped = false;
+        }
+        cleanJson = fixedStr;
+
+        cleanJson = cleanJson.replace(/,\s*([\]}])/g, '$1');
+        cleanJson = cleanJson.replace(/,\s*"\.\.\."\s*/g, '');
+        cleanJson = cleanJson.replace(/,\s*\.\.\.\s*/g, '');
+        cleanJson = cleanJson.replace(/"\.\.\."\s*/g, '""');
+        cleanJson = cleanJson.replace(/\.\.\.\s*/g, '');
+
+        let parsedArray = [];
+        try {
+          const parsedJson = JSON.parse(cleanJson);
+          if (Array.isArray(parsedJson)) {
+            parsedArray = parsedJson;
+          } else if (parsedJson && typeof parsedJson === 'object') {
+            const keys = Object.keys(parsedJson);
+            for (const k of keys) {
+              if (Array.isArray(parsedJson[k])) {
+                parsedArray = parsedJson[k];
+                break;
+              }
+            }
+          }
+        } catch (jsonErr) {
+          console.error('JSON parsing failed. Raw LLM content was:', rawContent);
+          throw new Error(`JSON Error: ${jsonErr.message}. Content: ${cleanJson ? cleanJson.substring(0, 500) : 'null'}`);
+        }
+
+        if (!Array.isArray(parsedArray) || parsedArray.length === 0) {
+          return res.status(422).json({ error: 'No valid transactions could be extracted from this spreadsheet.' });
+        }
+
+        parsedExpenses = parsedArray.map(item => {
+          let txDate = new Date(item.transaction_date || new Date());
+          if (isNaN(txDate.getTime())) {
+            txDate = new Date();
+          }
+
+          // Force to current month and year to ensure they are added to current month's expenses
+          const now = new Date();
+          txDate.setFullYear(now.getFullYear());
+          txDate.setMonth(now.getMonth());
+
+          return {
+            id: crypto.randomUUID(),
+            amount: cleanAmount(item.amount),
+            currency: item.currency || 'INR',
+            category: item.category || 'Others',
+            description: item.description || 'Imported Spreadsheet Transaction',
+            transaction_date: txDate.toISOString(),
+            is_recurring: false,
+            recurrence_period: 'none'
+          };
+        }).filter(e => e.amount > 0);
+
+        return res.status(200).json({
+          message: `Parsed ${parsedExpenses.length} transactions from spreadsheet statement using Gemini AI.`,
+          expenses: parsedExpenses
+        });
+
+      } else {
+        logDiagnostic(`[Spreadsheet Import] Gemini API Key not found. Falling back to rule-based parser.`);
+        
+        const rows = xlsx.utils.sheet_to_json(worksheet);
+
+        // Attempt to map typical headers to standard schema using fallback rules
+        parsedExpenses = rows.map((row, idx) => {
+          // Search for dynamic header values case-insensitively
+          const findVal = (keys) => {
+            const matchedKey = Object.keys(row).find(k => 
+              keys.some(key => k.toLowerCase().includes(key))
+            );
+            return matchedKey ? row[matchedKey] : null;
+          };
+
+          const amount = cleanAmount(findVal(['debit', 'withdrawal', 'amount', 'spent', 'dr', 'outflow', 'price', 'val', 'cost', 'total']));
+          const category = findVal(['category', 'cat', 'type']) || 'Others';
+          const description = findVal(['description', 'desc', 'particulars', 'remark', 'narration', 'vendor', 'name', 'details']) || `Row ${idx + 1} Import`;
+          const rawDate = findVal(['date', 'time', 'tx_date', 'transaction date', 'txn date', 'value date']);
+          
+          let transaction_date = new Date();
+          if (rawDate) {
+            const parsedD = new Date(rawDate);
+            if (!isNaN(parsedD.getTime())) {
+              transaction_date = parsedD;
+            }
+          }
+
+          // Force to current month and year to ensure they are added to current month's expenses
+          const now = new Date();
+          transaction_date.setFullYear(now.getFullYear());
+          transaction_date.setMonth(now.getMonth());
+
+          return {
+            id: crypto.randomUUID(),
+            amount: isNaN(amount) ? 0.00 : amount,
+            currency: findVal(['currency', 'curr']) || 'INR',
+            category: category,
+            description: description,
+            transaction_date: transaction_date.toISOString(),
+            is_recurring: false,
+            recurrence_period: 'none'
+          };
+        }).filter(e => e.amount > 0); // Exclude blank or negative entries
+
+        return res.status(200).json({
+          message: `Parsed ${parsedExpenses.length} transactions from Excel sheet (Rule-based Fallback).`,
+          expenses: parsedExpenses
+        });
+      }
     }
 
     // CASE 2: PDF statement import (uses pdf-parse & Gemini parsing)
