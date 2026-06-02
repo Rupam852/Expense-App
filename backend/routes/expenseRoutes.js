@@ -542,16 +542,16 @@ router.post('/import', upload.single('file'), async (req, res) => {
       if (isGroq) {
         try {
           // Extremely compact prompt for Groq to stay well below the 6000 TPM limit!
-          const prompt = `Extract transaction list from raw bank statement text.
+          const prompt = `Extract ONLY debit/expense/payment transactions (ignore all credits/deposits/salary/refunds) from this bank statement text.
           
           Text:
           ${textContent}
 
-          For each transaction, extract:
+          For each debit transaction, extract:
           - amount (positive float)
           - currency (3-letter code, e.g. INR)
-          - category (Precisely: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
-          - description (Merchant/detail)
+          - category (Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
+          - description (Merchant/payment details)
           - transaction_date (ISO 8601 string)
           
           Return ONLY a JSON array of objects.
@@ -583,21 +583,25 @@ router.post('/import', upload.single('file'), async (req, res) => {
                   {
                     parts: [
                       {
-                        text: `Analyze this raw text extracted from a bank statement, digital payment receipt list, or invoice PDF. Extract a list of transactions.
+                        text: `Analyze this raw text extracted from a bank statement. Extract a list of transactions.
                         
                         Raw PDF text content:
                         ---------------------
                         ${textContent}
                         ---------------------
 
+                        CRITICAL RULE:
+                        - ONLY extract debit/expense/payment transactions (where money is spent/withdrawn/Dr).
+                        - COMPLETELY IGNORE all credit/deposit/income/salary/refund transactions (where money is received/credited/Cr).
+
                         Tasks:
-                        1. Extract at most the 30 most recent transaction items (specifically payments/expenses, ignoring credits/deposits where possible).
+                        1. Extract at most the 30 most recent debit transaction items.
                         2. For each transaction, extract:
                            - amount (numeric positive float)
-                           - currency (3-letter ISO code, e.g. INR, USD)
-                           - category (Precisely categorize into: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
-                           - description (Clear merchant/detail from transaction text)
-                           - transaction_date (ISO 8601 string, parse/estimate from date logs)
+                           - currency (3-letter ISO code, e.g. INR)
+                           - category (Precisely: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, Others)
+                           - description (Clear merchant/receiver detail)
+                           - transaction_date (ISO 8601 string)
                         
                         Ensure your response is ONLY a JSON array of objects, without markdown wrapper blocks or text.
                         Structure:
