@@ -568,6 +568,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       },
     );
+  }
+
   void _confirmDeleteMonth(BuildContext context, ExpenseProvider provider, List<Expense> expensesToDelete, DateTime month) {
     final monthLabel = DateFormat('MMMM yyyy').format(month);
     showDialog(
