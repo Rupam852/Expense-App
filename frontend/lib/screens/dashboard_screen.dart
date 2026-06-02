@@ -59,6 +59,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return Icons.healing_outlined;
       case 'investment':
         return Icons.trending_up;
+      case 'upi transfers':
+        return Icons.swap_horiz;
       default:
         return Icons.help_outline;
     }
@@ -81,6 +83,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return const Color(0xFFEB5757);
       case 'investment':
         return const Color(0xFF00D09C);
+      case 'upi transfers':
+        return const Color(0xFF56CCF2);
       default:
         return Colors.grey;
     }

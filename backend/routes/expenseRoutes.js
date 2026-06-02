@@ -350,7 +350,18 @@ function getSystemRulesText(userName) {
   4. STRICT LAZYNESS PREVENTION: Never use placeholders, three dots ('...'), or 'etc.' in the JSON response. You MUST extract absolutely EVERY SINGLE money-out/debit/transfer transaction item present in the text, no matter how many there are. Do not stop until the entire text is fully parsed.
   5. COMPLETELY IGNORE AND EXCLUDE all self-transfers or transfers between the user's own accounts (inter-account transfers). These are transactions where the description or narration indicates moving money to another account belonging to the same user (e.g., transfers containing "SELF", "SELF TRANSFER", "OWN A/C", "OWN ACCOUNT", "TRANSFER TO OWN A/C", or direct bank-to-bank self-transfers like "SBI TO HDFC", "TO HDFC A/C", "TRANSFER TO ICICI", "TRFR TO SELF"). These do not represent external expenses and MUST NOT be extracted or included in the output JSON array.
   6. SELF-TRANSFER EXCLUSION FOR USER "${nameUpper}": You MUST completely ignore and exclude any transaction where the description/narration indicates a self-transfer to "${nameUpper}" or is a transfer under your name (e.g., containing "${nameUpper}" or "${firstName}"). For example, "TRANSFER TO ${nameUpper}" or "TRFR TO ${firstName}" is a self-transfer and MUST NOT be extracted.
-  7. MERCHANT/VENDORS CLEAN DESCRIPTION: Clean up raw bank narration/description text to extract the clean, human-readable merchant, vendor, or individual name. Strip out transaction reference IDs, technical prefixes/suffixes (e.g., 'UPI-DR/', 'UPI/', 'IMPS/', '/GPAY', '/okbizaxis', '/UPIIntent', phonepe/gpay handles like '@ybl', '@okaxis', etc., reference numbers, phone numbers, or dates embedded in descriptions). The description returned in the JSON must represent the clear merchant/vendor name (e.g., convert "UPI-DR-MUKTER PRINT HUB-GPAY-122..." to "Mukter Print Hub", "UPI-DR-Indian Railways-..." to "Indian Railways", "UPI-DR-KEYA ADHIKARY-..." to "Keya Adhikary", etc.).
+  7. MERCHANT/VENDORS CLEAN DESCRIPTION: Clean up raw bank narration/description text to extract the clean, human-readable merchant, vendor, or individual name. Strip out transaction reference IDs, technical prefixes/suffixes (e.g., 'UPI-DR/', 'UPI/', 'IMPS/', '/GPAY', '/okbizaxis', '/UPIIntent', phonepe/gpay handles like '@ybl', '@okaxis', etc., reference numbers, phone numbers, or dates embedded in descriptions). The description returned in the JSON must represent the clean merchant/vendor name (e.g., convert "UPI-DR-MUKTER PRINT HUB-GPAY-122..." to "Mukter Print Hub", "UPI-DR-Indian Railways-..." to "Indian Railways", "UPI-DR-KEYA ADHIKARY-..." to "Keya Adhikary", etc.).
+  8. CATEGORY MAPPING & MCC PARSING: Categorize each transaction into precisely one of these values: Food, Travel, Shopping, Bills, Entertainment, Health, Investment, UPI Transfers, Others.
+     - If the narration contains a Merchant Category Code (MCC) (e.g., MCC 5812, MCC 5411, MCC 4814), parse the MCC to accurately identify the category.
+     - Food: Restaurants, eating places, fast food (MCC 5812, 5814).
+     - Travel: Cabs, trains, airlines, petrol pumps/fuel (MCC 4111, 4112, 4121, 4511, 5541, 5542).
+     - Shopping: Supermarkets, grocery stores, clothing/apparel, department stores (MCC 5411, 5311, 5611-5699).
+     - Bills: Utility bills, electricity, water, telecom/recharges, insurance (MCC 4900, 4814, 4812, 6300).
+     - Entertainment: Movie theaters, amusement parks, recreation, bars (MCC 7832, 7996, 7999, 5813).
+     - Health: Doctors, dentists, hospitals, drug stores/pharmacies (MCC 8011, 8021, 8099, 5912).
+     - Investment: Security brokers/dealers, mutual funds, SIPs (MCC 6211, 6012, 6051).
+     - UPI Transfers: Use this category for personal peer-to-peer UPI transfers to individuals' names (e.g. "UPI Transfer to Anil Kumar", "UPI Transfer to Keya Adhikary" - that are not business/merchant accounts).
+     - Others: A generic fallback category to capture any miscellaneous expenses that do not fall into the primary defined categories.
 
   How to identify debits in tabular statement text/data:
   - Look for entries in columns named "Debit", "Withdrawal", "DR", "Amount (Dr)", or "Debits".
@@ -364,13 +375,59 @@ function getSystemRulesText(userName) {
   
   Example:
   [
-    ["2026-05-25T12:00:00.000Z", 450.00, "Amazon UPI Transfer", "Shopping", "INR"]
+    ["2026-05-25T12:00:00.000Z", 450.00, "Amazon UPI Transfer", "Shopping", "INR"],
+    ["2026-05-26T14:30:00.000Z", 1500.00, "UPI Transfer to Anil Kumar", "UPI Transfers", "INR"]
   ]`;
 }
 
 // Smart helper to auto-categorize transactions based on merchant/description keywords
 function autoCategorizeDescription(description) {
   const desc = String(description || '').toLowerCase();
+
+  // Parse Merchant Category Code (MCC) if present in narration (e.g. MCC 5812, MCC:4814, MCC-5411)
+  const mccMatch = desc.match(/mcc[:\-\s]?(\d{4})/i);
+  if (mccMatch) {
+    const mcc = parseInt(mccMatch[1], 10);
+    
+    // Food (5812: Restaurants, 5814: Fast Food)
+    if (mcc === 5812 || mcc === 5814) {
+      return 'Food';
+    }
+    // Travel (4111: Local Transport, 4112: Passenger Railways, 4121: Taxicabs, 4511: Airlines, 5541/5542: Fuel Stations)
+    if (mcc === 4111 || mcc === 4112 || mcc === 4121 || mcc === 4511 || mcc === 5541 || mcc === 5542) {
+      return 'Travel';
+    }
+    // Shopping (5411: Grocery Stores/Supermarkets, 5311: Department Stores, 5611-5699: Clothing/Apparel)
+    if (mcc === 5411 || mcc === 5311 || (mcc >= 5611 && mcc <= 5699) || mcc === 5941 || mcc === 5942 || mcc === 5944) {
+      return 'Shopping';
+    }
+    // Bills (4900: Utilities-Electric/Gas/Water, 4814: Telecom, 4812: Phones, 6300: Insurance)
+    if (mcc === 4900 || mcc === 4814 || mcc === 4812 || mcc === 6300) {
+      return 'Bills';
+    }
+    // Entertainment (7832: Motion Picture, 7996: Amusement Parks, 7999: Recreation, 5813: Drinking places/Bars)
+    if (mcc === 7832 || mcc === 7996 || mcc === 7999 || mcc === 5813) {
+      return 'Entertainment';
+    }
+    // Health (8011: Doctors, 8021: Dentists, 8099: Medical, 5912: Drug Stores/Pharmacies)
+    if (mcc === 8011 || mcc === 8021 || mcc === 8099 || mcc === 5912) {
+      return 'Health';
+    }
+    // Investment (6211: Security Brokers/Dealers, 6012: Financial Institutions)
+    if (mcc === 6211 || mcc === 6012 || mcc === 6051) {
+      return 'Investment';
+    }
+  }
+
+  // Check if it's a UPI transfer to an individual/person's name
+  if (desc.includes('upi transfer to')) {
+    return 'UPI Transfers';
+  }
+
+  // Check for general unclassified UPI transfers
+  if (desc.includes('upi transfer')) {
+    return 'UPI Transfers';
+  }
   
   // 1. Food & Dining
   if (
