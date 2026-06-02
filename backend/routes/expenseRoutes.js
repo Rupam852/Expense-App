@@ -903,16 +903,15 @@ router.post('/import', upload.single('file'), async (req, res) => {
         return res.status(422).json({ error: 'No valid transactions could be extracted from this statement.' });
       }
 
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+
       const mappedExpenses = parsedArray.map(item => {
         let txDate = new Date(item.transaction_date || new Date());
         if (isNaN(txDate.getTime())) {
           txDate = new Date();
         }
-
-        // Force to current month and year to ensure they are added to current month's expenses
-        const now = new Date();
-        txDate.setFullYear(now.getFullYear());
-        txDate.setMonth(now.getMonth());
 
         return {
           id: crypto.randomUUID(),
@@ -924,7 +923,10 @@ router.post('/import', upload.single('file'), async (req, res) => {
           is_recurring: false,
           recurrence_period: 'none'
         };
-      }).filter(e => e.amount > 0);
+      }).filter(e => {
+        const d = new Date(e.transaction_date);
+        return e.amount > 0 && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      });
 
       return res.status(200).json({
         message: `Parsed ${mappedExpenses.length} transactions from PDF statement.`,
