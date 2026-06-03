@@ -37,7 +37,7 @@ class BiometricService {
       final bool didAuthenticate = await _auth.authenticate(
         localizedReason: 'Please authenticate to view your Expense ledger',
         options: const AuthenticationOptions(
-          biometricOnly: true,
+          biometricOnly: false,
           stickyAuth: true,
           useErrorDialogs: true,
         ),

@@ -2005,8 +2005,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     // Toggle Biometrics
                     SwitchListTile(
                       activeColor: Theme.of(context).primaryColor,
-                      title: const Text('Biometric Authentication Lock'),
-                      subtitle: const Text('Lock expense ledger with fingerprint / Face ID'),
+                      title: const Text('Biometric / Device Lock'),
+                      subtitle: const Text('Lock expense ledger with fingerprint / password'),
                       value: userProvider.biometricsEnabled,
                       onChanged: (val) async {
                         final success = await userProvider.toggleBiometrics(val);
