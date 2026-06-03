@@ -1338,3 +1338,70 @@ a {
   border-top: 1px solid rgba(255, 255, 255, 0.03);
   padding-top: 16px;
 }
+
+/* -----------------------------------------
+   14. High-Fidelity UI Styling Upgrades
+   ----------------------------------------- */
+
+/* Trust Badges in Hero */
+.hero-trust-badges {
+  display: flex;
+  gap: 20px;
+  margin-top: 36px;
+  flex-wrap: wrap;
+}
+
+.trust-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.trust-check {
+  width: 16px;
+  height: 16px;
+  color: var(--primary-green);
+}
+
+/* Glass reflection sheen on phone screen */
+.phone-reflection {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 50%);
+  pointer-events: none;
+  z-index: 9;
+}
+
+/* Feature Grid Icon wrappers */
+.feature-icon-wrapper {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(0, 208, 156, 0.1) 0%, rgba(5, 242, 168, 0.03) 100%);
+  border: 1px solid rgba(0, 208, 156, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 20px rgba(0, 208, 156, 0.1);
+  transition: var(--transition-bounce);
+  color: var(--primary-green);
+}
+
+.feature-card:hover .feature-icon-wrapper {
+  transform: scale(1.1) rotate(5deg);
+  background: var(--gradient-primary);
+  color: #000;
+  box-shadow: 0 10px 25px rgba(0, 208, 156, 0.3);
+}
+
+.feature-svg-icon {
+  width: 24px;
+  height: 24px;
+}
