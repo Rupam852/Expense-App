@@ -229,7 +229,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _triggerFileImport(BuildContext context) async {
-    final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
     final userProvider = Provider.of<UserProvider>(context, listen: false);
 
     if (userProvider.userGeminiApiKey == null || userProvider.userGeminiApiKey!.trim().isEmpty) {
@@ -242,7 +241,139 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
       return;
     }
-    
+
+    _showImportInstructionDialog(context);
+  }
+
+  void _showImportInstructionDialog(BuildContext context) {
+    showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        final primaryColor = const Color(0xFF00D09C);
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Theme.of(context).primaryColor.withOpacity(0.1),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 36, left: 24, right: 24, bottom: 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: primaryColor.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Icon(
+                            Icons.info_outline_rounded,
+                            color: primaryColor,
+                            size: 28,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Import Statement Guide',
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Please try to import your UPI payment application statement to give accurate details.\n\nUPI payment apps like GPay, PhonePe, and other UPI apps are supported.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8),
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop(true);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            'Import File',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: ClipOval(
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        splashColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                        onTap: () {
+                          Navigator.of(dialogContext).pop(false);
+                        },
+                        child: SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: Icon(
+                            Icons.close_rounded,
+                            color: Theme.of(context).iconTheme.color?.withOpacity(0.6) ?? Colors.grey.shade600,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ).then((shouldImport) {
+      if (shouldImport == true) {
+        _proceedWithFilePicker(context);
+      }
+    });
+  }
+
+  void _proceedWithFilePicker(BuildContext context) async {
+    final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['xlsx', 'xls', 'pdf', 'csv'],
@@ -252,6 +383,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final path = result.files.single.path!;
       final isPdf = path.toLowerCase().endsWith('.pdf');
       
+      if (!context.mounted) return;
+
       final importResult = await showDialog<String>(
         context: context,
         barrierDismissible: false,
@@ -284,7 +417,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
         } else if (importResult == 'NoMatchingTransactions') {
           _showNoMatchingTransactionsDialog(context);
-        } else if (importResult != null) {
+        } else if (importResult != null && importResult != 'cancelled') {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -1631,6 +1764,7 @@ class _PremiumProgressDialogState extends State<PremiumProgressDialog> with Sing
   double _progress = 0.0;
   String _statusText = 'Preparing file...';
   bool _isCompleted = false;
+  bool _isCancelled = false;
 
   @override
   void initState() {
@@ -1642,7 +1776,7 @@ class _PremiumProgressDialogState extends State<PremiumProgressDialog> with Sing
   void _startSimulation() async {
     // 0% -> 15% quickly
     await Future.delayed(const Duration(milliseconds: 300));
-    if (!mounted) return;
+    if (!mounted || _isCancelled) return;
     setState(() {
       _progress = 0.15;
       _statusText = 'Uploading statement securely...';
@@ -1651,13 +1785,13 @@ class _PremiumProgressDialogState extends State<PremiumProgressDialog> with Sing
     // 15% -> 45% over 3 seconds
     for (int i = 0; i < 30; i++) {
       await Future.delayed(const Duration(milliseconds: 100));
-      if (!mounted || _isCompleted) return;
+      if (!mounted || _isCompleted || _isCancelled) return;
       setState(() {
         _progress += 0.01;
       });
     }
 
-    if (!mounted || _isCompleted) return;
+    if (!mounted || _isCompleted || _isCancelled) return;
     setState(() {
       _statusText = 'AI model analyzing transactions...';
     });
@@ -1665,13 +1799,13 @@ class _PremiumProgressDialogState extends State<PremiumProgressDialog> with Sing
     // 45% -> 85% over 10 seconds
     for (int i = 0; i < 80; i++) {
       await Future.delayed(const Duration(milliseconds: 125));
-      if (!mounted || _isCompleted) return;
+      if (!mounted || _isCompleted || _isCancelled) return;
       setState(() {
         _progress += 0.005;
       });
     }
 
-    if (!mounted || _isCompleted) return;
+    if (!mounted || _isCompleted || _isCancelled) return;
     setState(() {
       _statusText = 'De-duplicating and syncing ledger...';
     });
@@ -1679,7 +1813,7 @@ class _PremiumProgressDialogState extends State<PremiumProgressDialog> with Sing
     // 85% -> 95% very slowly
     for (int i = 0; i < 20; i++) {
       await Future.delayed(const Duration(milliseconds: 200));
-      if (!mounted || _isCompleted) return;
+      if (!mounted || _isCompleted || _isCancelled) return;
       setState(() {
         _progress += 0.002;
       });
@@ -1688,7 +1822,7 @@ class _PremiumProgressDialogState extends State<PremiumProgressDialog> with Sing
 
   void _executeTask() async {
     final result = await widget.importTask();
-    if (!mounted) return;
+    if (!mounted || _isCancelled) return;
 
     setState(() {
       _isCompleted = true;
@@ -1698,7 +1832,7 @@ class _PremiumProgressDialogState extends State<PremiumProgressDialog> with Sing
 
     // Wait a brief moment for the user to see the 100% completion
     await Future.delayed(const Duration(milliseconds: 600));
-    if (mounted) {
+    if (mounted && !_isCancelled) {
       Navigator.of(context).pop(result);
     }
   }
@@ -1713,7 +1847,6 @@ class _PremiumProgressDialogState extends State<PremiumProgressDialog> with Sing
         backgroundColor: Colors.transparent,
         elevation: 0,
         child: Container(
-          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
             borderRadius: BorderRadius.circular(20),
@@ -1728,73 +1861,107 @@ class _PremiumProgressDialogState extends State<PremiumProgressDialog> with Sing
               ),
             ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: Stack(
             children: [
-              // Beautiful glowing icon or logo
-              Container(
-                width: 65,
-                height: 65,
-                decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Icon(
-                    _isCompleted && _progress == 1.0 && _statusText == 'Import complete!'
-                        ? Icons.check_circle_outline
-                        : Icons.cloud_upload_outlined,
-                    color: primaryColor,
-                    size: 32,
-                  ),
+              // Main content Column with top padding to keep space for the close button
+              Padding(
+                padding: const EdgeInsets.only(top: 36, left: 24, right: 24, bottom: 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Beautiful glowing icon or logo
+                    Container(
+                      width: 65,
+                      height: 65,
+                      decoration: BoxDecoration(
+                        color: primaryColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Icon(
+                          _isCompleted && _progress == 1.0 && _statusText == 'Import complete!'
+                              ? Icons.check_circle_outline
+                              : Icons.cloud_upload_outlined,
+                          color: primaryColor,
+                          size: 32,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      widget.title,
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _statusText,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    // Smooth animated progress bar
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: LinearProgressIndicator(
+                        value: _progress,
+                        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                        valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                        minHeight: 8,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Percentage text
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Secure Import',
+                          style: GoogleFonts.inter(fontSize: 10, color: Colors.grey),
+                        ),
+                        Text(
+                          '${(_progress * 100).toInt()}%',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: primaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 20),
-              Text(
-                widget.title,
-                style: GoogleFonts.outfit(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _statusText,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: Colors.grey.shade500,
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Smooth animated progress bar
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: LinearProgressIndicator(
-                  value: _progress,
-                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                  valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-                  minHeight: 8,
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Percentage text
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Secure Import',
-                    style: GoogleFonts.inter(fontSize: 10, color: Colors.grey),
-                  ),
-                  Text(
-                    '${(_progress * 100).toInt()}%',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: primaryColor,
+              // Close button in the top-right corner
+              Positioned(
+                top: 8,
+                right: 8,
+                child: ClipOval(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      splashColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                      onTap: () {
+                        _isCancelled = true;
+                        Navigator.of(context).pop('cancelled');
+                      },
+                      child: SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: Icon(
+                          Icons.close_rounded,
+                          color: Theme.of(context).iconTheme.color?.withOpacity(0.6) ?? Colors.grey.shade600,
+                          size: 20,
+                        ),
+                      ),
                     ),
                   ),
-                ],
+                ),
               ),
             ],
           ),
