@@ -147,47 +147,58 @@
     </div>
     
     <div class="bento-grid">
-      <!-- Card 1: AI Parser (Spans 2 columns) -->
+      <!-- Card 1: AI PDF Import (Spans 2 columns) -->
       <div class="bento-card bento-wide">
         <div class="feature-icon-wrapper">
           <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
         </div>
         <div class="bento-content">
           <h3>Batch Statement Imports (PDF & Excel)</h3>
-          <p>Import statement spreadsheets or PDFs (including password-protected files) directly from Google Pay, PhonePe, and major netbanking portals. The application parses merchants, amounts, and dates instantly via the Google secure AI engine.</p>
+          <p>Directly upload large bank statement PDF or Excel logs (including password-protected statement files) from Google Pay, PhonePe, or netbanking. The app automatically processes and maps transaction rows using a secure AI engine, sorting categories and merchants in seconds.</p>
         </div>
       </div>
 
-      <!-- Card 2: Smart OCR Scanner (Spans 1 column) -->
+      <!-- Card 2: Receipt OCR (Spans 1 column) -->
       <div class="bento-card">
         <div class="feature-icon-wrapper">
           <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
         </div>
         <div class="bento-content">
-          <h3>Smart OCR Bill Scanning</h3>
-          <p>Photograph physical receipts. The OCR scanning calls the secure AI engine to extract total sums, dates, and catalog lists, adding them directly to your budget logs.</p>
+          <h3>Smart OCR Receipt Scanner</h3>
+          <p>Take photos of bills and receipts. The scanner calls an advanced AI engine to extract items, dates, and payment methods automatically.</p>
         </div>
       </div>
 
-      <!-- Card 3: Local SQLite Sandbox (Spans 1 column) -->
+      <!-- Card 3: Secure Local Database (Spans 1 column) -->
       <div class="bento-card">
         <div class="feature-icon-wrapper">
           <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
         </div>
         <div class="bento-content">
           <h3>Secure Local Database</h3>
-          <p>Your budgets and transaction records remain entirely offline on your phone inside an encrypted encrypted sandbox database.</p>
+          <p>Your budgets and transaction records remain entirely offline on your phone inside a secure, encrypted sandbox database.</p>
         </div>
       </div>
 
-      <!-- Card 4: Postgres Neon Sync (Spans 2 columns) -->
-      <div class="bento-card bento-wide">
+      <!-- Card 4: Month Rollover (Spans 1 column) -->
+      <div class="bento-card">
+        <div class="feature-icon-wrapper">
+          <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+        </div>
+        <div class="bento-content">
+          <h3>Month Rollover Clean-up</h3>
+          <p>When a new month starts, the app compiles the previous month's total ledger. It lets you compile a detailed expense PDF statement directly to your Downloads folder before clearing the local database to start fresh.</p>
+        </div>
+      </div>
+
+      <!-- Card 5: Encrypted Cloud Sync (Spans 1 column) -->
+      <div class="bento-card">
         <div class="feature-icon-wrapper">
           <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.2 15c.9-1.2 1.4-2.7 1.4-4.2a7.5 7.5 0 0 0-14.8-1.5A5.5 5.5 0 0 0 2.5 15"></path><path d="M12 13v8M9 16l3-3 3 3"></path></svg>
         </div>
         <div class="bento-content">
-          <h3>Encrypted Cloud Sync</h3>
-          <p>Sync sqlite records across devices securely. Data is backed up to a PostgreSQL database hosted on Neon Cloud, transferring securely via encrypted JWT tokens over a Node.js backend. Sync status is completely togglable inside settings.</p>
+          <h3>Local Database with Encrypted Cloud Sync</h3>
+          <p>Everything runs with zero network latency off a local offline database. If you wish to synchronize data across devices, you can securely sync your ledger entries directly to a secure backup cloud server synced via encrypted authorization tokens.</p>
         </div>
       </div>
     </div>
@@ -258,6 +269,15 @@
         </div>
         <div class="faq-answer">
           <p>Yes. You can optionally enable private Firebase Sync inside the app. This links dynamically to your own Firebase profile to backup data. You can toggle this on or off at any time.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">
+          <h3>What is the Month Rollover clean-up and does it delete my data?</h3>
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-answer">
+          <p>At the end of each month, the app prompts you with a Rollover window. It summarizes your total monthly expenses and allows you to compile all transactions into a structured PDF statement directly inside your device's Downloads directory. Once compiled, you can clean up the local database to keep the app fast and clutter-free for the new month.</p>
         </div>
       </div>
     </div>
