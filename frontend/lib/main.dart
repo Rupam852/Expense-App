@@ -7,6 +7,7 @@ import 'services/user_provider.dart';
 import 'services/expense_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_navigation.dart';
+import 'widgets/app_logo.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -126,11 +127,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(
-                      Icons.lock_outline_rounded,
-                      size: 72,
-                      color: Theme.of(context).primaryColor,
-                    ),
+                    const AppLogo(size: 72),
                     const SizedBox(height: 24),
                     
                     Text(

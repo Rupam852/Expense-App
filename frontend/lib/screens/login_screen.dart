@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/user_provider.dart';
 import '../services/expense_provider.dart';
+import '../widgets/app_logo.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -319,40 +320,4 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// Premium, Minimalist, Theme-Adaptive AppLogo Widget
-class AppLogo extends StatelessWidget {
-  final double size;
-  const AppLogo({super.key, this.size = 64});
 
-  @override
-  Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).primaryColor;
-    
-    return Center(
-      child: Container(
-        height: size,
-        width: size,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [primaryColor, primaryColor.withOpacity(0.75)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(size * 0.28),
-          boxShadow: [
-            BoxShadow(
-              color: primaryColor.withOpacity(0.25),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Icon(
-          Icons.show_chart_rounded, // Groww-style upward trend stock chart
-          color: Colors.white,
-          size: size * 0.55,
-        ),
-      ),
-    );
-  }
-}

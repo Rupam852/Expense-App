@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../services/expense_provider.dart';
 import '../models/budget.dart';
+import '../widgets/app_logo.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});

@@ -6,6 +6,7 @@ import 'package:open_file/open_file.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/expense_provider.dart';
 import '../models/expense.dart';
+import '../widgets/app_logo.dart';
 
 class InvoiceScreen extends StatefulWidget {
   const InvoiceScreen({super.key});

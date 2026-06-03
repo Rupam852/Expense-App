@@ -12,6 +12,7 @@ import '../services/user_provider.dart';
 import '../models/expense.dart';
 import 'expense_entry_screen.dart';
 import 'package:file_picker/file_picker.dart';
+import '../widgets/app_logo.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
