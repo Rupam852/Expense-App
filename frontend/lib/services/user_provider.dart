@@ -575,6 +575,66 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // 7b. Delete User Account and Associated Data
+  Future<bool> deleteUserAccount() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      // 1. Delete Firebase User Account if active
+      if (_firebaseAuth != null) {
+        try {
+          final currentUser = _firebaseAuth!.currentUser;
+          if (currentUser != null) {
+            await currentUser.delete();
+            print('[Auth] Firebase Auth user deleted successfully.');
+          }
+        } catch (fbErr) {
+          print('[Auth] Firebase Auth user deletion skipped/failed: $fbErr');
+        }
+      }
+
+      // 2. Google Sign-Out if active
+      if (_googleSignIn != null) {
+        try {
+          await _googleSignIn!.signOut();
+        } catch (_) {}
+      }
+
+      // 3. Call backend delete account API
+      final result = await _apiService.deleteAccount();
+      if (result['success'] == true) {
+        // 4. Wipe local authentication state and keys
+        await _apiService.deleteToken();
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove('cached_user_profile');
+          await prefs.remove('user_gemini_api_key');
+          await prefs.remove('user_gemini_api_key_secondary');
+        } catch (_) {}
+
+        _userProfile = null;
+        _userGeminiApiKey = null;
+        _userGeminiApiKeySecondary = null;
+        _isAuthenticated = false;
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = result['error'] ?? 'Backend deletion failed.';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = 'Exception during account deletion: $e';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   // 8. Forgot Password - Send OTP Email
   Future<bool> sendForgotPasswordOtp(String email) async {
     _isLoading = true;
