@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="index.css">
 </head>
 <body>
+  <!-- Scroll Progress Bar -->
+  <div class="scroll-progress"></div>
 
   <!-- Ambient Animated Background Blobs -->
   <div class="bg-glow-blobs">
@@ -57,7 +59,11 @@
         </div>
       </div>
       <div class="hero-visual">
-        <div class="phone-mockup">
+        <div class="phone-container">
+          <div class="floating-pill pill-top-left">📊 Report Ready</div>
+          <div class="floating-pill pill-top-right">₹ Saved: ₹9,700</div>
+          <div class="floating-pill pill-bottom-right">🔒 Local Enclave</div>
+          <div class="phone-mockup">
           <div class="phone-speaker"></div>
           <div class="phone-screen">
             <!-- Mock App Interface -->
@@ -124,6 +130,7 @@
           </div>
         </div>
       </div>
+      </div>
     </div>
   </section>
 
@@ -188,6 +195,52 @@
         <div class="timeline-number">3</div>
         <h3>Export Statements</h3>
         <p>Generate clean, professional PDFs or spreadsheet logs in seconds. Ready for claim verification and accounting logs.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section class="faq" id="faq">
+    <div class="section-header">
+      <h2>Frequently Asked Questions</h2>
+      <p>Answers to common questions about Grow Expense App.</p>
+    </div>
+    <div class="faq-container">
+      <div class="faq-item">
+        <div class="faq-question">
+          <h3>Is my financial data shared with anyone?</h3>
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-answer">
+          <p>No. Grow Expense is built local-first. All UPI statements, transaction logs, and category budgets are stored directly on your phone's local secure database sandbox. We do not use intermediary databases or track your data.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">
+          <h3>How does the AI statement scanning work?</h3>
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-answer">
+          <p>When parsing statement files, the app communicates directly and securely with the Google Gemini API using the personal API key you configure. This keeps your connection encrypted, private, and directly between you and Google.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">
+          <h3>Is the Biometric lock secure?</h3>
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-answer">
+          <p>Yes. The app utilizes Android's native Biometric API. All authentication flows are verified in the device's secure enclave. Grow Expense never accesses, views, or stores your biometric records.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">
+          <h3>Can I back up my information?</h3>
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-answer">
+          <p>Yes. You can optionally enable private Firebase Sync inside the app. This links dynamically to your own Firebase profile to backup data. You can toggle this on or off at any time.</p>
+        </div>
       </div>
     </div>
   </section>

@@ -1181,3 +1181,160 @@ a {
   50% { transform: translate(-80px, 120px) scale(0.85); }
   100% { transform: translate(100px, -70px) scale(1.15); }
 }
+
+/* -----------------------------------------
+   13. Deluxe Interactive Designs
+   ----------------------------------------- */
+
+/* Scroll Progress Bar */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: var(--gradient-primary);
+  width: 0%;
+  z-index: 2050;
+}
+
+/* Phone Container & Floating Pills */
+.phone-container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.floating-pill {
+  position: absolute;
+  background: rgba(15, 19, 25, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.pill-top-left {
+  top: 12%;
+  left: -15%;
+  animation: float-pill-1 5s infinite alternate ease-in-out;
+  border-left: 2px solid var(--primary-green);
+}
+
+.pill-top-right {
+  top: 28%;
+  right: -20%;
+  animation: float-pill-2 6s infinite alternate ease-in-out;
+  border-right: 2px solid var(--accent-mint);
+}
+
+.pill-bottom-right {
+  bottom: 12%;
+  left: -20%;
+  animation: float-pill-3 5.5s infinite alternate ease-in-out;
+  border-left: 2px solid #3b82f6;
+}
+
+@keyframes float-pill-1 {
+  0% { transform: translateY(0) rotate(-2deg); }
+  100% { transform: translateY(-10px) rotate(2deg); }
+}
+
+@keyframes float-pill-2 {
+  0% { transform: translateY(0) rotate(2deg); }
+  100% { transform: translateY(-12px) rotate(-2deg); }
+}
+
+@keyframes float-pill-3 {
+  0% { transform: translateY(0) rotate(-1deg); }
+  100% { transform: translateY(-10px) rotate(1deg); }
+}
+
+/* FAQ Section */
+.faq {
+  padding: 100px 0;
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--glass-border);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.faq-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.faq-item {
+  background-color: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: var(--transition-smooth);
+}
+
+.faq-item:hover {
+  border-color: rgba(0, 208, 156, 0.25);
+  box-shadow: 0 4px 20px rgba(0, 208, 156, 0.03);
+}
+
+.faq-question {
+  padding: 24px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.faq-question h3 {
+  font-size: 1.1rem;
+  color: #fff;
+  font-weight: 600;
+  margin: 0;
+  transition: var(--transition-smooth);
+}
+
+.faq-item:hover .faq-question h3 {
+  color: var(--primary-green);
+}
+
+.faq-icon {
+  font-size: 1.4rem;
+  color: var(--primary-green);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  line-height: 1;
+}
+
+.faq-item.active .faq-icon {
+  transform: rotate(45deg);
+  color: #ef4444;
+}
+
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1), padding 0.4s ease;
+  padding: 0 30px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.faq-item.active .faq-answer {
+  max-height: 250px;
+  padding: 0 30px 24px 30px;
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+  padding-top: 16px;
+}
