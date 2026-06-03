@@ -1042,7 +1042,21 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
 
     // Convert file buffer to base64
     const base64Image = req.file.buffer.toString('base64');
-    const mimeType = req.file.mimetype;
+    let mimeType = req.file.mimetype;
+
+    // Fallback if mimetype is unrecognized or application/octet-stream
+    if (!mimeType || mimeType === 'application/octet-stream') {
+      const origName = (req.file.originalname || '').toLowerCase();
+      if (origName.endsWith('.png')) {
+        mimeType = 'image/png';
+      } else if (origName.endsWith('.webp')) {
+        mimeType = 'image/webp';
+      } else if (origName.endsWith('.heic')) {
+        mimeType = 'image/heic';
+      } else {
+        mimeType = 'image/jpeg'; // Safe default
+      }
+    }
 
     let rawContent = null;
     const models = await getDynamicModels(userGeminiKey);

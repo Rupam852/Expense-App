@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -174,7 +175,11 @@ class ApiService {
       }
 
       request.files.add(
-        await http.MultipartFile.fromPath('receipt', imagePath),
+        await http.MultipartFile.fromPath(
+          'receipt',
+          imagePath,
+          contentType: MediaType('image', 'jpeg'),
+        ),
       );
 
       final streamedResponse = await request.send();
