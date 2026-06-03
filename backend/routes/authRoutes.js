@@ -304,6 +304,31 @@ router.put('/profile', authenticateToken, async (req, res) => {
   }
 });
 
+// 5. Delete Account Route
+router.delete('/delete-account', authenticateToken, async (req, res) => {
+  try {
+    const userExist = await query('SELECT * FROM users WHERE id = $1', [req.user.userId]);
+    if (userExist.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    const email = userExist.rows[0].email;
+
+    // Delete password reset codes first to prevent stale credentials
+    await query('DELETE FROM password_resets WHERE email = $1', [email]);
+
+    // Delete user from main users table.
+    // ON DELETE CASCADE automatically deletes associated expenses, budgets, payment details, and deleted records log queue.
+    await query('DELETE FROM users WHERE id = $1', [req.user.userId]);
+
+    console.log(`[Auth] User ${email} deleted their account and all associated data.`);
+    res.status(200).json({ message: 'Account and associated data deleted successfully.' });
+  } catch (error) {
+    console.error('Delete account error:', error);
+    res.status(500).json({ error: 'Server error deleting account.' });
+  }
+});
+
 // Setup Mail Transporter for Gmail SMTP (optimized with connection pooling for speed)
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',

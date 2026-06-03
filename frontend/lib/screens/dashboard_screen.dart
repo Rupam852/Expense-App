@@ -1679,9 +1679,138 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       icon: const Icon(Icons.logout),
                       label: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
+                    const SizedBox(height: 12),
+                    // Delete Account Button
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _showDeleteAccountDialog(context, userProvider, expenseProvider);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.redAccent),
+                        foregroundColor: Colors.redAccent,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.delete_forever_outlined),
+                      label: const Text('Delete Account', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
                   ],
                 ),
               ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showDeleteAccountDialog(BuildContext context, UserProvider userProvider, ExpenseProvider expenseProvider) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // User must choose an action
+      builder: (context) {
+        bool isDeleting = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: Colors.redAccent.withOpacity(0.2),
+                ),
+              ),
+              title: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Delete Account?',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Warning: This action is permanent and irreversible.',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.redAccent, fontSize: 13),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Aapka account aur usse juda saara data (transactions, statement history, budgets, UPI settings) cloud database aur local storage se hamesha ke liye delete ho jayega.',
+                    style: GoogleFonts.inter(fontSize: 13, height: 1.4),
+                  ),
+                  if (isDeleting) ...[
+                    const SizedBox(height: 20),
+                    const Center(
+                      child: CircularProgressIndicator(color: Colors.redAccent),
+                    ),
+                  ],
+                ],
+              ),
+              actionsPadding: const EdgeInsets.all(16),
+              actions: [
+                TextButton(
+                  onPressed: isDeleting ? null : () => Navigator.of(context).pop(),
+                  child: Text(
+                    'Cancel',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: isDeleting
+                      ? null
+                      : () async {
+                          setDialogState(() {
+                            isDeleting = true;
+                          });
+
+                          // Call delete process
+                          final success = await userProvider.deleteUserAccount();
+                          if (success) {
+                            await expenseProvider.clearAllDataOnSignout();
+                            if (context.mounted) {
+                              Navigator.of(context).pop(); // Close dialog
+                              CustomToast.show(
+                                context,
+                                'Your account and data have been permanently deleted.',
+                                isError: false,
+                              );
+                            }
+                          } else {
+                            if (context.mounted) {
+                              setDialogState(() {
+                                isDeleting = false;
+                              });
+                              CustomToast.show(
+                                context,
+                                userProvider.errorMessage ?? 'Failed to delete account.',
+                                isError: true,
+                              );
+                            }
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: Text(
+                    'Permanently Delete',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
             );
           },
         );

@@ -492,4 +492,23 @@ class ApiService {
       return {'success': false, 'error': 'Profile update connection error: $e'};
     }
   }
+
+  // 10. Delete Account
+  Future<Map<String, dynamic>> deleteAccount() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.delete(
+        Uri.parse('$baseUrl/auth/delete-account'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 30));
+
+      final decoded = json.decode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': decoded['message']};
+      }
+      return {'success': false, 'error': decoded['error'] ?? 'Delete account failed.'};
+    } catch (e) {
+      return {'success': false, 'error': 'Account deletion connection error: $e'};
+    }
+  }
 }
