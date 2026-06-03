@@ -1411,18 +1411,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.only(left: 20.0, top: 20.0, right: 40.0),
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle_outline, color: Theme.of(context).primaryColor, size: 26),
-                    const SizedBox(width: 10),
-                    Text(
-                      'CSV Exported!',
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'CSV Generated!',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                  ),
                 ),
               ),
               Positioned(
@@ -1443,31 +1437,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 savedSuccessfully
                     ? 'Your CSV expense statement has been successfully generated and saved to your default Download folder.'
                     : 'Your CSV expense statement has been successfully generated.',
-                style: GoogleFonts.inter(fontSize: 13, height: 1.4),
+                style: GoogleFonts.inter(fontSize: 13, height: 1.4, color: Colors.grey[400]),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Text(
                 'File Name: $fileName',
-                style: GoogleFonts.inter(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500),
+                style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[500], fontWeight: FontWeight.w500),
               ),
             ],
           ),
           actions: [
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  TextButton.icon(
                     onPressed: () {
                       Navigator.of(context).pop();
                       Share.shareXFiles([XFile(localPath)], text: 'My Grow Expense Statement');
                     },
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      side: BorderSide(color: Theme.of(context).primaryColor),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
                     icon: Icon(Icons.share_outlined, color: Theme.of(context).primaryColor, size: 18),
                     label: Text(
                       'Share File',
@@ -1477,10 +1466,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
+                  const SizedBox(height: 10),
+                  ElevatedButton.icon(
                     onPressed: () async {
                       Navigator.of(context).pop();
                       final result = await OpenFile.open(localPath);
@@ -1495,9 +1482,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).primaryColor,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                     icon: const Icon(Icons.grid_on, size: 18),
@@ -1506,8 +1493,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         );
