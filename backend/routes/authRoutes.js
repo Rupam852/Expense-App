@@ -25,82 +25,83 @@ router.post('/register', async (req, res) => {
   }
 
   try {
-    // Check if user already exists
+    // Check if user already exists in main users table
     const userExist = await query('SELECT * FROM users WHERE email = $1', [email]);
     if (userExist.rows.length > 0) {
       return res.status(400).json({ error: 'User with this email already exists.' });
     }
 
-    let passwordHash = null;
-    if (password) {
-      const salt = await bcrypt.genSalt(10);
-      passwordHash = await bcrypt.hash(password, salt);
-    }
-
-    const isVerified = google_id ? true : false;
-
-    // Insert user
-    const newUser = await query(
-      `INSERT INTO users (email, password_hash, name, photo_url, google_id, is_verified)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, email, name, photo_url, google_id, is_verified, gemini_api_key, gemini_api_key_secondary, created_at`,
-      [email, passwordHash, name || 'User', photo_url || null, google_id || null, isVerified]
-    );
-
-    const user = newUser.rows[0];
-
-    if (!isVerified) {
-      try {
-        // Generate a 6-digit OTP code
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
-
-        await query('DELETE FROM password_resets WHERE email = $1', [email]);
-        await query(
-          'INSERT INTO password_resets (email, otp, expires_at) VALUES ($1, $2, $3)',
-          [email, otp, expiresAt]
-        );
-
-        // Send verification mail
-        const mailOptions = {
-          from: `"Grow Expense" <${process.env.EMAIL_USER}>`,
-          to: email,
-          subject: 'Grow Expense - Verify Your Email Address',
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-              <h2 style="color: #00D09C; text-align: center;">Grow Expense</h2>
-              <p>Hi ${name || 'User'},</p>
-              <p>Welcome to Grow Expense! Please verify your email address using the following One-Time Password (OTP) verification code:</p>
-              <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-radius: 5px; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #333;">
-                ${otp}
-              </div>
-              <p style="color: #666; font-size: 13px; text-align: center; margin-top: 20px;">
-                This OTP is valid for <strong>15 minutes</strong>.
-              </p>
-            </div>
-          `,
-        };
-        await transporter.sendMail(mailOptions);
-      } catch (mailErr) {
-        console.error('Registration Mail Error, rolling back user registration:', mailErr);
-        // Rollback user creation to prevent orphaned unverified user
-        await query('DELETE FROM users WHERE id = $1', [user.id]);
-        await query('DELETE FROM password_resets WHERE email = $1', [email]);
-        return res.status(500).json({ error: `Verification mail failed to send: ${mailErr.message}. Registration aborted.` });
-      }
-
+    // Google Sign-In registration: Direct insertion as verified user
+    if (google_id) {
+      const newUser = await query(
+        `INSERT INTO users (email, name, photo_url, google_id, is_verified)
+         VALUES ($1, $2, $3, $4, TRUE)
+         RETURNING id, email, name, photo_url, google_id, is_verified, gemini_api_key, gemini_api_key_secondary, created_at`,
+        [email, name || 'Google User', photo_url || null, google_id]
+      );
+      const user = newUser.rows[0];
+      const token = generateToken(user);
       return res.status(201).json({
-        message: 'Registration successful. Email verification required.',
-        needsVerification: true,
-        email
+        message: 'User registered successfully via Google.',
+        token,
+        user
       });
     }
 
-    const token = generateToken(user);
-    res.status(201).json({
-      message: 'User registered successfully.',
-      token,
-      user
+    // Manual Email/Password registration
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required for standard registration.' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    // Clean up any stale registration attempts in temp_users
+    await query('DELETE FROM temp_users WHERE email = $1', [email]);
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
+
+    // Save registration details to temp_users table
+    await query(
+      `INSERT INTO temp_users (email, password_hash, name, photo_url, otp, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [email, passwordHash, name || 'User', photo_url || null, otp, expiresAt]
+    );
+
+    // Send verification mail
+    const mailOptions = {
+      from: `"Grow Expense" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Grow Expense - Verify Your Email Address',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h2 style="color: #00D09C; text-align: center;">Grow Expense</h2>
+          <p>Hi ${name || 'User'},</p>
+          <p>Welcome to Grow Expense! Please verify your email address using the following One-Time Password (OTP) verification code:</p>
+          <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-radius: 5px; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #333;">
+            ${otp}
+          </div>
+          <p style="color: #666; font-size: 13px; text-align: center; margin-top: 20px;">
+            This OTP is valid for <strong>15 minutes</strong>.
+          </p>
+        </div>
+      `,
+    };
+
+    try {
+      await transporter.sendMail(mailOptions);
+    } catch (mailErr) {
+      console.error('Mail dispatch error on signup:', mailErr);
+      // Delete from temp_users since mail failed
+      await query('DELETE FROM temp_users WHERE email = $1', [email]);
+      return res.status(500).json({ error: `Verification mail failed to send: ${mailErr.message}. Registration aborted.` });
+    }
+
+    return res.status(201).json({
+      message: 'Registration initiated. Email verification required.',
+      needsVerification: true,
+      email
     });
   } catch (error) {
     console.error('Registration Error:', error);
@@ -123,7 +124,14 @@ router.post('/login', async (req, res) => {
       
       let user;
       if (userRes.rows.length === 0) {
-        // Create user on-the-fly for Google sign-in
+        // If not in main users, check if they exist in temp_users (started manual registration but didn't verify, now using Google)
+        const tempUserRes = await query('SELECT * FROM temp_users WHERE email = $1', [email]);
+        if (tempUserRes.rows.length > 0) {
+          // Delete from temp_users
+          await query('DELETE FROM temp_users WHERE email = $1', [email]);
+        }
+
+        // Create verified user on-the-fly for Google sign-in
         const newUser = await query(
           `INSERT INTO users (email, name, photo_url, google_id, is_verified)
            VALUES ($1, $2, $3, $4, TRUE)
@@ -134,35 +142,19 @@ router.post('/login', async (req, res) => {
       } else {
         user = userRes.rows[0];
         
-        // SECURITY FIX: If the existing account has not been verified (created manually but never validated),
-        // we must delete it to prevent "Unverified Email Account Takeover".
-        if (!user.is_verified) {
-          await query('DELETE FROM users WHERE id = $1', [user.id]);
-          
-          // Re-create the user fresh and verified via Google
-          const newUser = await query(
-            `INSERT INTO users (email, name, photo_url, google_id, is_verified)
-             VALUES ($1, $2, $3, $4, TRUE)
-             RETURNING id, email, name, photo_url, google_id, is_verified, gemini_api_key, gemini_api_key_secondary, created_at`,
-            [email, name || 'Google User', photo_url || null, google_id]
-          );
-          user = newUser.rows[0];
-        } else {
-          // If the account was already verified, we link Google login securely.
-          // Ensure google_id, is_verified, and profile updates are synced
-          const updatedUser = await query(
-            `UPDATE users 
-             SET google_id = COALESCE(google_id, $1), 
-                 photo_url = COALESCE(photo_url, $2),
-                 name = COALESCE(name, $3),
-                 is_verified = TRUE,
-                 updated_at = NOW()
-             WHERE id = $4
-             RETURNING id, email, name, photo_url, google_id, is_verified, gemini_api_key, gemini_api_key_secondary, created_at`,
-            [google_id, photo_url, name, user.id]
-          );
-          user = updatedUser.rows[0];
-        }
+        // Secure Link: Ensure google_id, is_verified, and profile updates are synced
+        const updatedUser = await query(
+          `UPDATE users 
+           SET google_id = COALESCE(google_id, $1), 
+               photo_url = COALESCE(photo_url, $2),
+               name = COALESCE(name, $3),
+               is_verified = TRUE,
+               updated_at = NOW()
+           WHERE id = $4
+           RETURNING id, email, name, photo_url, google_id, is_verified, gemini_api_key, gemini_api_key_secondary, created_at`,
+          [google_id, photo_url, name, user.id]
+        );
+        user = updatedUser.rows[0];
       }
 
       const token = generateToken(user);
@@ -170,53 +162,76 @@ router.post('/login', async (req, res) => {
     }
 
     // 2. Handle standard Email/Password Login
+    // A. Check verified users first
     const userRes = await query('SELECT * FROM users WHERE email = $1', [email]);
-    if (userRes.rows.length === 0) {
-      return res.status(400).json({ error: 'Invalid email or password.' });
+    if (userRes.rows.length > 0) {
+      const user = userRes.rows[0];
+      if (!user.password_hash) {
+        return res.status(400).json({ error: 'This email is linked to a Google account. Please use Google Login.' });
+      }
+
+      const isMatch = await bcrypt.compare(password, user.password_hash);
+      if (!isMatch) {
+        return res.status(400).json({ error: 'Invalid email or password.' });
+      }
+
+      const token = generateToken(user);
+      return res.status(200).json({
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          photo_url: user.photo_url,
+          google_id: user.google_id,
+          gemini_api_key: user.gemini_api_key,
+          gemini_api_key_secondary: user.gemini_api_key_secondary,
+          created_at: user.created_at
+        }
+      });
     }
 
-    const user = userRes.rows[0];
-    if (!user.password_hash) {
-      return res.status(400).json({ error: 'This email is linked to a Google account. Please use Google Login.' });
-    }
+    // B. Check temp_users (unverified signups)
+    const tempUserRes = await query('SELECT * FROM temp_users WHERE email = $1', [email]);
+    if (tempUserRes.rows.length > 0) {
+      const tempUser = tempUserRes.rows[0];
+      const isMatch = await bcrypt.compare(password, tempUser.password_hash);
+      if (!isMatch) {
+        return res.status(400).json({ error: 'Invalid email or password.' });
+      }
 
-    const isMatch = await bcrypt.compare(password, user.password_hash);
-    if (!isMatch) {
-      return res.status(400).json({ error: 'Invalid email or password.' });
-    }
+      // Generate a fresh OTP code
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
 
-    // Check if user is verified
-    if (!user.is_verified) {
-      try {
-        // Generate a 6-digit verification code
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
+      await query(
+        `UPDATE temp_users 
+         SET otp = $1, expires_at = $2, failed_attempts = 0 
+         WHERE email = $3`,
+        [otp, expiresAt, email]
+      );
 
-        await query('DELETE FROM password_resets WHERE email = $1', [email]);
-        await query(
-          'INSERT INTO password_resets (email, otp, expires_at) VALUES ($1, $2, $3)',
-          [email, otp, expiresAt]
-        );
-
-        // Mail the code
-        const mailOptions = {
-          from: `"Grow Expense" <${process.env.EMAIL_USER}>`,
-          to: email,
-          subject: 'Grow Expense - Verify Your Email Address',
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-              <h2 style="color: #00D09C; text-align: center;">Grow Expense</h2>
-              <p>Hi ${user.name || 'User'},</p>
-              <p>Please verify your email address to complete your login. Use the following One-Time Password (OTP) verification code:</p>
-              <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-radius: 5px; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #333;">
-                ${otp}
-              </div>
-              <p style="color: #666; font-size: 13px; text-align: center; margin-top: 20px;">
-                This OTP is valid for <strong>15 minutes</strong>.
-              </p>
+      // Mail the code
+      const mailOptions = {
+        from: `"Grow Expense" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: 'Grow Expense - Verify Your Email Address',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #00D09C; text-align: center;">Grow Expense</h2>
+            <p>Hi ${tempUser.name || 'User'},</p>
+            <p>Please verify your email address to complete your registration. Use the following One-Time Password (OTP) verification code:</p>
+            <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-radius: 5px; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #333;">
+              ${otp}
             </div>
-          `,
-        };
+            <p style="color: #666; font-size: 13px; text-align: center; margin-top: 20px;">
+              This OTP is valid for <strong>15 minutes</strong>.
+            </p>
+          </div>
+        `,
+      };
+
+      try {
         await transporter.sendMail(mailOptions);
       } catch (mailErr) {
         console.error('Login Verification Mail Error:', mailErr);
@@ -230,20 +245,8 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    const token = generateToken(user);
-    res.status(200).json({
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        photo_url: user.photo_url,
-        google_id: user.google_id,
-        gemini_api_key: user.gemini_api_key,
-        gemini_api_key_secondary: user.gemini_api_key_secondary,
-        created_at: user.created_at
-      }
-    });
+    // C. Not found in either
+    return res.status(400).json({ error: 'Invalid email or password.' });
   } catch (error) {
     console.error('Login Error:', error);
     res.status(500).json({ error: 'Server error during login.' });
@@ -459,7 +462,7 @@ router.post('/verify-signup', async (req, res) => {
 
   try {
     const otpRes = await query(
-      'SELECT * FROM password_resets WHERE email = $1 AND expires_at > CURRENT_TIMESTAMP',
+      'SELECT * FROM temp_users WHERE email = $1 AND expires_at > CURRENT_TIMESTAMP',
       [email]
     );
 
@@ -467,25 +470,31 @@ router.post('/verify-signup', async (req, res) => {
       return res.status(400).json({ error: 'Invalid or expired OTP verification code.' });
     }
 
-    const resetRecord = otpRes.rows[0];
-    if (resetRecord.otp !== otp) {
-      const attempts = (resetRecord.failed_attempts || 0) + 1;
+    const tempUser = otpRes.rows[0];
+    if (tempUser.otp !== otp) {
+      const attempts = (tempUser.failed_attempts || 0) + 1;
       if (attempts >= 5) {
-        await query('DELETE FROM password_resets WHERE email = $1', [email]);
-        return res.status(400).json({ error: 'Too many incorrect OTP attempts. This code has been invalidated. Please request a new code.' });
+        await query('DELETE FROM temp_users WHERE email = $1', [email]);
+        return res.status(400).json({ error: 'Too many incorrect OTP attempts. Registration has been reset. Please sign up again.' });
       } else {
-        await query('UPDATE password_resets SET failed_attempts = failed_attempts + 1 WHERE email = $1', [email]);
-        return res.status(400).json({ error: `Invalid OTP code. You have ${5 - attempts} attempts remaining before it is invalidated.` });
+        await query('UPDATE temp_users SET failed_attempts = failed_attempts + 1 WHERE email = $1', [email]);
+        return res.status(400).json({ error: `Invalid OTP code. You have ${5 - attempts} attempts remaining before registration is reset.` });
       }
     }
 
-    // OTP matches! Update user status to verified
-    await query('UPDATE users SET is_verified = TRUE WHERE email = $1', [email]);
-    await query('DELETE FROM password_resets WHERE email = $1', [email]);
+    // OTP matches! Create user in main users table
+    const newUser = await query(
+      `INSERT INTO users (email, password_hash, name, photo_url, is_verified)
+       VALUES ($1, $2, $3, $4, TRUE)
+       RETURNING id, email, name, photo_url, google_id, is_verified, gemini_api_key, gemini_api_key_secondary, created_at`,
+      [tempUser.email, tempUser.password_hash, tempUser.name, tempUser.photo_url]
+    );
 
-    // Fetch updated user to generate token
-    const userRes = await query('SELECT * FROM users WHERE email = $1', [email]);
-    const user = userRes.rows[0];
+    const user = newUser.rows[0];
+
+    // Delete from temp_users since verification succeeded
+    await query('DELETE FROM temp_users WHERE email = $1', [email]);
+
     const token = generateToken(user);
 
     res.status(200).json({
@@ -516,24 +525,28 @@ router.post('/resend-verification', async (req, res) => {
   }
 
   try {
+    // Check if email already verified in users
     const userRes = await query('SELECT * FROM users WHERE email = $1', [email]);
-    if (userRes.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found.' });
-    }
-
-    const user = userRes.rows[0];
-    if (user.is_verified) {
+    if (userRes.rows.length > 0) {
       return res.status(400).json({ error: 'Email is already verified.' });
     }
 
-    // Generate a 6-digit verification code
+    const tempUserRes = await query('SELECT * FROM temp_users WHERE email = $1', [email]);
+    if (tempUserRes.rows.length === 0) {
+      return res.status(404).json({ error: 'No active signup found for this email. Please sign up first.' });
+    }
+
+    const tempUser = tempUserRes.rows[0];
+
+    // Generate a new 6-digit verification code
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
 
-    await query('DELETE FROM password_resets WHERE email = $1', [email]);
     await query(
-      'INSERT INTO password_resets (email, otp, expires_at) VALUES ($1, $2, $3)',
-      [email, otp, expiresAt]
+      `UPDATE temp_users 
+       SET otp = $1, expires_at = $2, failed_attempts = 0 
+       WHERE email = $3`,
+      [otp, expiresAt, email]
     );
 
     // Send verification mail
@@ -544,7 +557,7 @@ router.post('/resend-verification', async (req, res) => {
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
           <h2 style="color: #00D09C; text-align: center;">Grow Expense</h2>
-          <p>Hi ${user.name || 'User'},</p>
+          <p>Hi ${tempUser.name || 'User'},</p>
           <p>Please verify your email address to complete your registration. Use the following One-Time Password (OTP) verification code:</p>
           <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-radius: 5px; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #333;">
             ${otp}
