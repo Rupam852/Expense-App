@@ -28,6 +28,11 @@
 /* -----------------------------------------
    2. Reset & General Setup
    ----------------------------------------- */
+html {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -635,6 +640,105 @@ a {
   }
 }
 
+/* Live APK Build & Security Status Panel */
+.apk-security-panel {
+  background-color: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 16px 20px;
+  margin-top: 24px;
+  width: 100%;
+  max-width: 540px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 8px;
+}
+
+.security-pulse {
+  width: 8px;
+  height: 8px;
+  background-color: var(--primary-green);
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 0 0 rgba(0, 208, 156, 0.7);
+  animation: pulse-green 1.8s infinite;
+}
+
+.panel-title {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+}
+
+.panel-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.panel-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.panel-item.text-centered {
+  align-items: center;
+}
+
+.item-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.item-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.item-value.highlight {
+  color: var(--primary-green);
+}
+
+.security-safe {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary-green);
+  background-color: var(--primary-green-dim);
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 208, 156, 0.15);
+}
+
+.shield-check-icon {
+  width: 14px;
+  height: 14px;
+  stroke: var(--primary-green);
+}
+
+@media (max-width: 576px) {
+  .panel-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+}
+
 /* -----------------------------------------
    5. Isometric Floating Dashboard Showcase
    ----------------------------------------- */
@@ -977,6 +1081,54 @@ a {
   }
 }
 
+/* Bento Grid SVG Icon Micro-Animations */
+.doc-line {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: left center;
+}
+.bento-card:hover .doc-line-1 {
+  transform: scaleX(0.75);
+}
+.bento-card:hover .doc-line-2 {
+  transform: scaleX(0.6);
+}
+
+.camera-lens {
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: 12px 13px;
+}
+.bento-card:hover .camera-lens {
+  transform: scale(1.22);
+}
+
+.lock-shackle {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center;
+}
+.bento-card:hover .lock-shackle {
+  transform: translateY(-2.5px);
+}
+
+.rollover-icon {
+  transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: center;
+}
+.bento-card:hover .rollover-icon {
+  transform: rotate(180deg);
+}
+
+.cloud-icon {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center;
+}
+@keyframes cloud-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3.5px); }
+}
+.bento-card:hover .cloud-icon {
+  animation: cloud-bounce 1.5s infinite ease-in-out;
+}
+
 /* -----------------------------------------
    8. How It Works Section
    ----------------------------------------- */
@@ -1061,11 +1213,197 @@ a {
 }
 
 /* -----------------------------------------
+   8.5. Testimonials Section & Carousel
+   ----------------------------------------- */
+.testimonials {
+  padding: 100px 0;
+  border-top: 1px solid var(--glass-border);
+  background-color: var(--bg-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+.carousel-wrapper {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 24px;
+  position: relative;
+}
+
+.carousel-container {
+  position: relative;
+  height: 240px; /* Safe fixed height to prevent layout shifts */
+  width: 100%;
+}
+
+.testimonial-card {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  padding: 40px;
+  box-shadow: var(--shadow-card);
+  opacity: 0;
+  transform: scale(0.95) translateY(12px);
+  pointer-events: none;
+  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.testimonial-card.active {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: auto;
+  z-index: 2;
+  border-color: rgba(0, 208, 156, 0.25);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(0, 208, 156, 0.04);
+}
+
+.card-quote {
+  font-family: var(--font-sans);
+  font-size: 1.1rem;
+  font-style: italic;
+  line-height: 1.7;
+  color: var(--text-main);
+  position: relative;
+}
+
+.card-quote::before {
+  content: '“';
+  font-family: var(--font-display);
+  font-size: 4rem;
+  color: var(--primary-green-dim);
+  position: absolute;
+  top: -45px;
+  left: -20px;
+  pointer-events: none;
+}
+
+.card-user {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.user-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  color: #000;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(0, 208, 156, 0.2);
+}
+
+.user-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.user-role {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Controls */
+.carousel-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 30px;
+}
+
+.control-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  color: var(--text-muted);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  transition: var(--transition-bounce);
+}
+
+.control-btn:hover {
+  background: var(--gradient-primary);
+  color: #000;
+  border-color: var(--primary-green);
+  transform: scale(1.05);
+  box-shadow: var(--shadow-glow);
+}
+
+.carousel-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.dot.active {
+  background-color: var(--primary-green);
+  width: 24px;
+  border-radius: 4px;
+  box-shadow: 0 0 10px rgba(0, 208, 156, 0.5);
+}
+
+@media (max-width: 768px) {
+  .carousel-container {
+    height: 310px; /* Allow more height for wrapping text on smaller screens */
+  }
+  .testimonial-card {
+    padding: 30px 24px;
+  }
+  .card-quote {
+    font-size: 0.98rem;
+  }
+  .testimonials {
+    padding: 60px 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .carousel-container {
+    height: 360px;
+  }
+}
+
+/* -----------------------------------------
    9. FAQ Section
    ----------------------------------------- */
 .faq {
   padding: 100px 0;
   border-top: 1px solid var(--glass-border);
+  background-color: var(--bg-secondary);
 }
 
 .faq-container {
