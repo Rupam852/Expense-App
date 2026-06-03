@@ -1353,3 +1353,46 @@ a {
 .modal-body strong {
   color: #fff;
 }
+
+/* -----------------------------------------
+   13. Additional Responsive Mobile Polish
+   ----------------------------------------- */
+@media (max-width: 768px) {
+  html, body {
+    overflow-x: hidden;
+  }
+  
+  .features,
+  .how-it-works,
+  .faq,
+  .cta {
+    padding: 60px 0;
+  }
+  
+  .blob-1 { width: 250px; height: 250px; }
+  .blob-2 { width: 300px; height: 300px; }
+  .blob-3 { width: 250px; height: 250px; }
+  .blob-4 { width: 200px; height: 200px; }
+}
+
+@media (max-width: 576px) {
+  .modal-header {
+    padding: 16px 20px;
+  }
+  .modal-body {
+    padding: 20px;
+  }
+  .faq-item.active .faq-answer {
+    max-height: 500px; /* Prevent text clipping on extreme wraps */
+  }
+}
+
+@media (max-width: 480px) {
+  .download-btn-large {
+    display: block;
+    width: 100%;
+    padding: 14px 20px;
+    font-size: 0.95rem;
+    box-sizing: border-box;
+  }
+}
