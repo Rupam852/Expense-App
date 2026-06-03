@@ -268,12 +268,24 @@ router.post('/verify-otp', async (req, res) => {
 
   try {
     const otpRes = await query(
-      'SELECT * FROM password_resets WHERE email = $1 AND otp = $2 AND expires_at > CURRENT_TIMESTAMP',
-      [email, otp]
+      'SELECT * FROM password_resets WHERE email = $1 AND expires_at > CURRENT_TIMESTAMP',
+      [email]
     );
 
     if (otpRes.rows.length === 0) {
       return res.status(400).json({ error: 'Invalid or expired OTP verification code.' });
+    }
+
+    const resetRecord = otpRes.rows[0];
+    if (resetRecord.otp !== otp) {
+      const attempts = (resetRecord.failed_attempts || 0) + 1;
+      if (attempts >= 5) {
+        await query('DELETE FROM password_resets WHERE email = $1', [email]);
+        return res.status(400).json({ error: 'Too many incorrect OTP attempts. This code has been invalidated. Please request a new code.' });
+      } else {
+        await query('UPDATE password_resets SET failed_attempts = failed_attempts + 1 WHERE email = $1', [email]);
+        return res.status(400).json({ error: `Invalid OTP code. You have ${5 - attempts} attempts remaining before it is invalidated.` });
+      }
     }
 
     res.status(200).json({ message: 'OTP verified successfully.' });
@@ -293,19 +305,31 @@ router.post('/reset-password', async (req, res) => {
   try {
     // 1. Verify OTP remains valid
     const otpRes = await query(
-      'SELECT * FROM password_resets WHERE email = $1 AND otp = $2 AND expires_at > CURRENT_TIMESTAMP',
-      [email, otp]
+      'SELECT * FROM password_resets WHERE email = $1 AND expires_at > CURRENT_TIMESTAMP',
+      [email]
     );
 
     if (otpRes.rows.length === 0) {
       return res.status(400).json({ error: 'Invalid or expired OTP verification code.' });
     }
 
+    const resetRecord = otpRes.rows[0];
+    if (resetRecord.otp !== otp) {
+      const attempts = (resetRecord.failed_attempts || 0) + 1;
+      if (attempts >= 5) {
+        await query('DELETE FROM password_resets WHERE email = $1', [email]);
+        return res.status(400).json({ error: 'Too many incorrect OTP attempts. This code has been invalidated. Please request a new code.' });
+      } else {
+        await query('UPDATE password_resets SET failed_attempts = failed_attempts + 1 WHERE email = $1', [email]);
+        return res.status(400).json({ error: `Invalid OTP code. You have ${5 - attempts} attempts remaining before it is invalidated.` });
+      }
+    }
+
     // 2. Hash new password
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(new_password, salt);
 
-    // 3. Update user database and clear OTP in a transaction-like sequence
+    // 3. Update user database and clear OTP
     await query('UPDATE users SET password_hash = $1 WHERE email = $2', [passwordHash, email]);
     await query('DELETE FROM password_resets WHERE email = $1', [email]);
 
