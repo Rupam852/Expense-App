@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -990,19 +992,76 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       // 2. Convert to CSV string using package:csv
       final csvString = const ListToCsvConverter().convert(csvData);
+      final fileName = 'Expense_Statement_${DateTime.now().millisecondsSinceEpoch}.csv';
+      bool savedSuccessfully = false;
 
-      // 3. Save as local file in app documents directory
-      final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/Expense_Statement_${DateTime.now().millisecondsSinceEpoch}.csv');
-      await file.writeAsString(csvString);
+      if (Platform.isAndroid) {
+        try {
+          final downloadDir = Directory('/storage/emulated/0/Download');
+          if (await downloadDir.exists()) {
+            final file = File('${downloadDir.path}/$fileName');
+            await file.writeAsString(csvString);
+            savedSuccessfully = true;
+          }
+        } catch (e) {
+          print('Direct write to Android Download folder failed: $e');
+        }
 
-      // 4. Trigger share sheet using share_plus
-      await Share.shareXFiles([XFile(file.path)], text: 'My Grow Expense Statement');
+        // If direct write failed (e.g. Scoped Storage on Android 10+), use FilePicker to save it
+        if (!savedSuccessfully) {
+          try {
+            final bytes = Uint8List.fromList(utf8.encode(csvString));
+            final selectedPath = await FilePicker.platform.saveFile(
+              dialogTitle: 'Save CSV Statement to Downloads:',
+              fileName: fileName,
+              bytes: bytes,
+            );
+            if (selectedPath != null) {
+              savedSuccessfully = true;
+            }
+          } catch (e) {
+            print('FilePicker saveFile failed: $e');
+          }
+        }
+      } else {
+        // Non-Android platforms: try using FilePicker saveFile
+        try {
+          final bytes = Uint8List.fromList(utf8.encode(csvString));
+          final selectedPath = await FilePicker.platform.saveFile(
+            dialogTitle: 'Save CSV Statement:',
+            fileName: fileName,
+            bytes: bytes,
+          );
+          if (selectedPath != null) {
+            savedSuccessfully = true;
+          }
+        } catch (e) {
+          print('FilePicker saveFile failed: $e');
+        }
+      }
 
-        CustomToast.show(
-          context,
-          'Spreadsheet statement generated and shared successfully!',
-        );
+      if (savedSuccessfully) {
+        if (mountedContext(context)) {
+          CustomToast.show(
+            context,
+            'CSV saved successfully to Downloads folder!',
+          );
+        }
+      } else {
+        // Fallback: Save to temp directory and open Share sheet
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/$fileName');
+        await file.writeAsString(csvString);
+        
+        if (mountedContext(context)) {
+          CustomToast.show(
+            context,
+            'Saving to downloads failed. Opening Share panel...',
+            isError: true,
+          );
+          await Share.shareXFiles([XFile(file.path)], text: 'My Grow Expense Statement');
+        }
+      }
     } catch (e) {
       print('CSV export error: $e');
       if (mountedContext(context)) {
