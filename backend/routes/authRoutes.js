@@ -50,36 +50,44 @@ router.post('/register', async (req, res) => {
     const user = newUser.rows[0];
 
     if (!isVerified) {
-      // Generate a 6-digit OTP code
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
+      try {
+        // Generate a 6-digit OTP code
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
 
-      await query('DELETE FROM password_resets WHERE email = $1', [email]);
-      await query(
-        'INSERT INTO password_resets (email, otp, expires_at) VALUES ($1, $2, $3)',
-        [email, otp, expiresAt]
-      );
+        await query('DELETE FROM password_resets WHERE email = $1', [email]);
+        await query(
+          'INSERT INTO password_resets (email, otp, expires_at) VALUES ($1, $2, $3)',
+          [email, otp, expiresAt]
+        );
 
-      // Send verification mail
-      const mailOptions = {
-        from: `"Grow Expense" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: 'Grow Expense - Verify Your Email Address',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            <h2 style="color: #00D09C; text-align: center;">Grow Expense</h2>
-            <p>Hi ${name || 'User'},</p>
-            <p>Welcome to Grow Expense! Please verify your email address using the following One-Time Password (OTP) verification code:</p>
-            <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-radius: 5px; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #333;">
-              ${otp}
+        // Send verification mail
+        const mailOptions = {
+          from: `"Grow Expense" <${process.env.EMAIL_USER}>`,
+          to: email,
+          subject: 'Grow Expense - Verify Your Email Address',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+              <h2 style="color: #00D09C; text-align: center;">Grow Expense</h2>
+              <p>Hi ${name || 'User'},</p>
+              <p>Welcome to Grow Expense! Please verify your email address using the following One-Time Password (OTP) verification code:</p>
+              <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-radius: 5px; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #333;">
+                ${otp}
+              </div>
+              <p style="color: #666; font-size: 13px; text-align: center; margin-top: 20px;">
+                This OTP is valid for <strong>15 minutes</strong>.
+              </p>
             </div>
-            <p style="color: #666; font-size: 13px; text-align: center; margin-top: 20px;">
-              This OTP is valid for <strong>15 minutes</strong>.
-            </p>
-          </div>
-        `,
-      };
-      await transporter.sendMail(mailOptions);
+          `,
+        };
+        await transporter.sendMail(mailOptions);
+      } catch (mailErr) {
+        console.error('Registration Mail Error, rolling back user registration:', mailErr);
+        // Rollback user creation to prevent orphaned unverified user
+        await query('DELETE FROM users WHERE id = $1', [user.id]);
+        await query('DELETE FROM password_resets WHERE email = $1', [email]);
+        return res.status(500).json({ error: `Verification mail failed to send: ${mailErr.message}. Registration aborted.` });
+      }
 
       return res.status(201).json({
         message: 'Registration successful. Email verification required.',
@@ -96,7 +104,7 @@ router.post('/register', async (req, res) => {
     });
   } catch (error) {
     console.error('Registration Error:', error);
-    res.status(500).json({ error: 'Server error during registration.' });
+    res.status(500).json({ error: `Server error during registration: ${error.message}` });
   }
 });
 
@@ -179,36 +187,41 @@ router.post('/login', async (req, res) => {
 
     // Check if user is verified
     if (!user.is_verified) {
-      // Generate a 6-digit verification code
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
+      try {
+        // Generate a 6-digit verification code
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
 
-      await query('DELETE FROM password_resets WHERE email = $1', [email]);
-      await query(
-        'INSERT INTO password_resets (email, otp, expires_at) VALUES ($1, $2, $3)',
-        [email, otp, expiresAt]
-      );
+        await query('DELETE FROM password_resets WHERE email = $1', [email]);
+        await query(
+          'INSERT INTO password_resets (email, otp, expires_at) VALUES ($1, $2, $3)',
+          [email, otp, expiresAt]
+        );
 
-      // Mail the code
-      const mailOptions = {
-        from: `"Grow Expense" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: 'Grow Expense - Verify Your Email Address',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            <h2 style="color: #00D09C; text-align: center;">Grow Expense</h2>
-            <p>Hi ${user.name || 'User'},</p>
-            <p>Please verify your email address to complete your login. Use the following One-Time Password (OTP) verification code:</p>
-            <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-radius: 5px; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #333;">
-              ${otp}
+        // Mail the code
+        const mailOptions = {
+          from: `"Grow Expense" <${process.env.EMAIL_USER}>`,
+          to: email,
+          subject: 'Grow Expense - Verify Your Email Address',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+              <h2 style="color: #00D09C; text-align: center;">Grow Expense</h2>
+              <p>Hi ${user.name || 'User'},</p>
+              <p>Please verify your email address to complete your login. Use the following One-Time Password (OTP) verification code:</p>
+              <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-radius: 5px; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #333;">
+                ${otp}
+              </div>
+              <p style="color: #666; font-size: 13px; text-align: center; margin-top: 20px;">
+                This OTP is valid for <strong>15 minutes</strong>.
+              </p>
             </div>
-            <p style="color: #666; font-size: 13px; text-align: center; margin-top: 20px;">
-              This OTP is valid for <strong>15 minutes</strong>.
-            </p>
-          </div>
-        `,
-      };
-      await transporter.sendMail(mailOptions);
+          `,
+        };
+        await transporter.sendMail(mailOptions);
+      } catch (mailErr) {
+        console.error('Login Verification Mail Error:', mailErr);
+        return res.status(500).json({ error: `Failed to send verification email: ${mailErr.message}` });
+      }
 
       return res.status(403).json({
         error: 'email_unverified',
