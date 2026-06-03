@@ -70,27 +70,24 @@ router.post('/register', async (req, res) => {
     );
 
     // Send verification mail
-    const mailOptions = {
-      from: `"Grow Expense" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: 'Grow Expense - Verify Your Email Address',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-          <h2 style="color: #00D09C; text-align: center;">Grow Expense</h2>
-          <p>Hi ${name || 'User'},</p>
-          <p>Welcome to Grow Expense! Please verify your email address using the following One-Time Password (OTP) verification code:</p>
-          <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-radius: 5px; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #333;">
-            ${otp}
-          </div>
-          <p style="color: #666; font-size: 13px; text-align: center; margin-top: 20px;">
-            This OTP is valid for <strong>15 minutes</strong>.
-          </p>
-        </div>
-      `,
-    };
-
     try {
-      await transporter.sendMail(mailOptions);
+      await sendEmail(
+        email,
+        'Grow Expense - Verify Your Email Address',
+        `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #00D09C; text-align: center;">Grow Expense</h2>
+            <p>Hi ${name || 'User'},</p>
+            <p>Welcome to Grow Expense! Please verify your email address using the following One-Time Password (OTP) verification code:</p>
+            <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-radius: 5px; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #333;">
+              ${otp}
+            </div>
+            <p style="color: #666; font-size: 13px; text-align: center; margin-top: 20px;">
+              This OTP is valid for <strong>15 minutes</strong>.
+            </p>
+          </div>
+        `
+      );
     } catch (mailErr) {
       console.error('Mail dispatch error on signup:', mailErr);
       // Delete from temp_users since mail failed
@@ -211,31 +208,28 @@ router.post('/login', async (req, res) => {
         [otp, expiresAt, email]
       );
 
-      // Mail the code
-      const mailOptions = {
-        from: `"Grow Expense" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: 'Grow Expense - Verify Your Email Address',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            <h2 style="color: #00D09C; text-align: center;">Grow Expense</h2>
-            <p>Hi ${tempUser.name || 'User'},</p>
-            <p>Please verify your email address to complete your registration. Use the following One-Time Password (OTP) verification code:</p>
-            <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-radius: 5px; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #333;">
-              ${otp}
-            </div>
-            <p style="color: #666; font-size: 13px; text-align: center; margin-top: 20px;">
-              This OTP is valid for <strong>15 minutes</strong>.
-            </p>
-          </div>
-        `,
-      };
-
       try {
-        await transporter.sendMail(mailOptions);
+        // Mail the code
+        await sendEmail(
+          email,
+          'Grow Expense - Verify Your Email Address',
+          `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+              <h2 style="color: #00D09C; text-align: center;">Grow Expense</h2>
+              <p>Hi ${tempUser.name || 'User'},</p>
+              <p>Please verify your email address to complete your registration. Use the following One-Time Password (OTP) verification code:</p>
+              <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-radius: 5px; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #333;">
+                ${otp}
+              </div>
+              <p style="color: #666; font-size: 13px; text-align: center; margin-top: 20px;">
+                This OTP is valid for <strong>15 minutes</strong>.
+              </p>
+            </div>
+          `
+        );
       } catch (mailErr) {
         console.error('Login Verification Mail Error:', mailErr);
-        return res.status(500).json({ error: `Failed to send verification email: ${mailErr.message}` });
+        return res.status(500).json({ error: `Verification mail failed to send: ${mailErr.message}` });
       }
 
       return res.status(403).json({
@@ -310,14 +304,47 @@ router.put('/profile', authenticateToken, async (req, res) => {
   }
 });
 
-// Setup Mail Transporter for Gmail SMTP
+// Setup Mail Transporter for Gmail SMTP (optimized with connection pooling for speed)
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // Use SSL/TLS
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  pool: true, // Use connection pooling
+  maxConnections: 3,
+  maxMessages: 100,
 });
+
+// Unified Email Sender supporting Google Apps Script HTTP API and local SMTP fallback
+const sendEmail = async (to, subject, html) => {
+  const emailApiUrl = process.env.EMAIL_API_URL;
+  if (emailApiUrl) {
+    console.log(`[Email] Sending email to ${to} via HTTP API...`);
+    const response = await fetch(emailApiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, subject, html }),
+    });
+    const data = await response.json();
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to send email via Apps Script API');
+    }
+    console.log(`[Email] Email successfully sent to ${to} via HTTP API.`);
+  } else {
+    console.log(`[Email] Sending email to ${to} via SMTP...`);
+    const mailOptions = {
+      from: `"Grow Expense" <${process.env.EMAIL_USER}>`,
+      to,
+      subject,
+      html,
+    };
+    await transporter.sendMail(mailOptions);
+    console.log(`[Email] Email successfully sent to ${to} via SMTP.`);
+  }
+};
 
 // A. Forgot Password - Generate & Mail OTP
 router.post('/forgot-password', async (req, res) => {
@@ -345,11 +372,10 @@ router.post('/forgot-password', async (req, res) => {
     );
 
     // 4. Send Email
-    const mailOptions = {
-      from: `"Grow Expense" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: 'Grow Expense - Password Reset OTP Verification Code',
-      html: `
+    await sendEmail(
+      email,
+      'Grow Expense - Password Reset OTP Verification Code',
+      `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
           <h2 style="color: #00D09C; text-align: center;">Grow Expense</h2>
           <p>Hi,</p>
@@ -361,10 +387,8 @@ router.post('/forgot-password', async (req, res) => {
             This OTP is valid for <strong>15 minutes</strong>. If you did not request this password reset, you can safely ignore this email.
           </p>
         </div>
-      `,
-    };
-
-    await transporter.sendMail(mailOptions);
+      `
+    );
     res.status(200).json({ message: 'OTP sent to email successfully.' });
   } catch (error) {
     console.error('Forgot Password error:', error);
@@ -550,11 +574,10 @@ router.post('/resend-verification', async (req, res) => {
     );
 
     // Send verification mail
-    const mailOptions = {
-      from: `"Grow Expense" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: 'Grow Expense - Verify Your Email Address',
-      html: `
+    await sendEmail(
+      email,
+      'Grow Expense - Verify Your Email Address',
+      `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
           <h2 style="color: #00D09C; text-align: center;">Grow Expense</h2>
           <p>Hi ${tempUser.name || 'User'},</p>
@@ -566,9 +589,8 @@ router.post('/resend-verification', async (req, res) => {
             This OTP is valid for <strong>15 minutes</strong>.
           </p>
         </div>
-      `,
-    };
-    await transporter.sendMail(mailOptions);
+      `
+    );
 
     res.status(200).json({ message: 'Verification OTP resent successfully.' });
   } catch (error) {

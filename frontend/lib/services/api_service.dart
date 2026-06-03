@@ -58,7 +58,7 @@ class ApiService {
           if (photoUrl != null) 'photo_url': photoUrl,
           if (googleId != null) 'google_id': googleId,
         }),
-      );
+      ).timeout(const Duration(seconds: 30));
 
       final decoded = json.decode(response.body);
       if (response.statusCode == 201) {
@@ -100,7 +100,7 @@ class ApiService {
           if (name != null) 'name': name,
           if (photoUrl != null) 'photo_url': photoUrl,
         }),
-      );
+      ).timeout(const Duration(seconds: 30));
 
       final decoded = json.decode(response.body);
       if (response.statusCode == 200) {
