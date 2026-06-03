@@ -109,4 +109,38 @@ document.addEventListener('DOMContentLoaded', () => {
       item.classList.toggle('active');
     });
   });
+
+  // 7. Global Mouse Tracking for Background Spotlight
+  document.addEventListener('mousemove', (e) => {
+    document.documentElement.style.setProperty('--global-mouse-x', `${e.clientX}px`);
+    document.documentElement.style.setProperty('--global-mouse-y', `${e.clientY}px`);
+  });
+
+  // 8. Hero Section Background Cyber Particles
+  const heroParticlesContainer = document.querySelector('.hero-particles');
+  if (heroParticlesContainer) {
+    const particleCount = 15;
+    for (let i = 0; i < particleCount; i++) {
+      createParticle(heroParticlesContainer);
+    }
+  }
+
+  function createParticle(container) {
+    const particle = document.createElement('div');
+    particle.classList.add('hero-particle');
+    
+    // Randomize initial properties
+    const size = Math.random() * 6 + 3; // 3px to 9px
+    const left = Math.random() * 100; // 0% to 100%
+    const duration = Math.random() * 12 + 12; // 12s to 24s
+    const delay = Math.random() * -24; // Staggered delay to make particles active immediately
+    
+    particle.style.width = `${size}px`;
+    particle.style.height = `${size}px`;
+    particle.style.left = `${left}%`;
+    particle.style.animationDuration = `${duration}s`;
+    particle.style.animationDelay = `${delay}s`;
+    
+    container.appendChild(particle);
+  }
 });
