@@ -62,6 +62,13 @@ class ApiService {
 
       final decoded = json.decode(response.body);
       if (response.statusCode == 201) {
+        if (decoded['needsVerification'] == true) {
+          return {
+            'success': true,
+            'needsVerification': true,
+            'email': decoded['email'],
+          };
+        }
         final token = decoded['token'];
         if (token != null) {
           await saveToken(token);
@@ -102,6 +109,14 @@ class ApiService {
           await saveToken(token);
         }
         return {'success': true, 'user': decoded['user']};
+      }
+      if (response.statusCode == 403 && decoded['needsVerification'] == true) {
+        return {
+          'success': false,
+          'error': 'email_unverified',
+          'needsVerification': true,
+          'email': decoded['email'],
+        };
       }
       return {'success': false, 'error': decoded['error'] ?? 'Login failed.'};
     } catch (e) {
@@ -165,6 +180,52 @@ class ApiService {
         return {'success': true, 'message': decoded['message']};
       }
       return {'success': false, 'error': decoded['error'] ?? 'Password reset failed.'};
+    } catch (e) {
+      return {'success': false, 'error': 'Cannot connect to backend server: $e'};
+    }
+  }
+
+  // 2e. Verify Signup Email OTP
+  Future<Map<String, dynamic>> verifySignup(String email, String otp) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/verify-signup'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'email': email, 'otp': otp}),
+      );
+
+      final decoded = json.decode(response.body);
+      if (response.statusCode == 200) {
+        final token = decoded['token'];
+        if (token != null) {
+          await saveToken(token);
+        }
+        return {
+          'success': true,
+          'message': decoded['message'],
+          'user': decoded['user'],
+        };
+      }
+      return {'success': false, 'error': decoded['error'] ?? 'OTP verification failed.'};
+    } catch (e) {
+      return {'success': false, 'error': 'Cannot connect to backend server: $e'};
+    }
+  }
+
+  // 2f. Resend Signup Verification OTP
+  Future<Map<String, dynamic>> resendSignupVerification(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/resend-verification'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'email': email}),
+      );
+
+      final decoded = json.decode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': decoded['message']};
+      }
+      return {'success': false, 'error': decoded['error'] ?? 'Failed to resend verification OTP.'};
     } catch (e) {
       return {'success': false, 'error': 'Cannot connect to backend server: $e'};
     }

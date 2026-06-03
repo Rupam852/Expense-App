@@ -29,6 +29,7 @@ export const initDB = async () => {
         name VARCHAR(255),
         photo_url TEXT,
         google_id VARCHAR(255) UNIQUE,
+        is_verified BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -70,6 +71,7 @@ export const initDB = async () => {
     await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) UNIQUE;`);
     await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS gemini_api_key TEXT;`);
     await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS gemini_api_key_secondary TEXT;`);
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;`);
     await query(`ALTER TABLE budgets ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;`);
 
     // 4. Payment Details Table
