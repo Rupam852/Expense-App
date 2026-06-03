@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../services/expense_provider.dart';
 import '../services/user_provider.dart';
 import '../widgets/app_logo.dart';
+import '../widgets/custom_toast.dart';
 
 class PaymentDetailsScreen extends StatefulWidget {
   const PaymentDetailsScreen({super.key});
@@ -53,9 +54,7 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
       setState(() {
         _cachedQrPath = image.path;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Custom payment QR code attached successfully.')),
-      );
+      CustomToast.show(context, 'Custom payment QR code attached successfully.');
     }
   }
 
@@ -74,12 +73,7 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
     });
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Payment profiles saved successfully!'),
-          backgroundColor: Color(0xFF00D09C),
-        ),
-      );
+      CustomToast.show(context, 'Payment profiles saved successfully!');
     }
   }
 

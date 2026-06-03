@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/user_provider.dart';
 import '../services/expense_provider.dart';
 import '../widgets/app_logo.dart';
+import '../widgets/custom_toast.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -54,11 +55,10 @@ class _LoginScreenState extends State<LoginScreen> {
       await expenseProvider.loadLocalData();
       await expenseProvider.triggerQuietSync();
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(userProvider.errorMessage ?? 'Authentication failed.'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
+      CustomToast.show(
+        context,
+        userProvider.errorMessage ?? 'Authentication failed.',
+        isError: true,
       );
     }
   }
@@ -72,11 +72,10 @@ class _LoginScreenState extends State<LoginScreen> {
       await expenseProvider.loadLocalData();
       await expenseProvider.triggerQuietSync();
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(userProvider.errorMessage ?? 'Google authentication failed.'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
+      CustomToast.show(
+        context,
+        userProvider.errorMessage ?? 'Google authentication failed.',
+        isError: true,
       );
     }
   }
