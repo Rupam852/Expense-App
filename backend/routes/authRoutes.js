@@ -323,12 +323,37 @@ const sendEmail = async (to, subject, html) => {
   const emailApiUrl = process.env.EMAIL_API_URL;
   if (emailApiUrl) {
     console.log(`[Email] Sending email to ${to} via HTTP API...`);
-    const response = await fetch(emailApiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to, subject, html }),
-    });
-    const data = await response.json();
+    let response;
+    try {
+      response = await fetch(emailApiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to, subject, html }),
+      });
+    } catch (fetchErr) {
+      throw new Error(`Failed to connect to email API: ${fetchErr.message}`);
+    }
+
+    if (!response.ok) {
+      throw new Error(`Email API returned HTTP status ${response.status}. Please check your Apps Script deployment.`);
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      const text = await response.text();
+      if (text.includes('Page not found') || text.includes('does not exist') || response.status === 404) {
+        throw new Error('Email API returned a 404 (Page Not Found). Please verify that your Google Apps Script is deployed as a Web App, "Who has access" is set to "Anyone", and the URL in your Render environment variables is correct.');
+      }
+      throw new Error('Email API returned an invalid response format (not JSON). Please make sure "Who has access" is set to "Anyone" in Google Apps Script.');
+    }
+
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseErr) {
+      throw new Error('Failed to parse Email API response as JSON.');
+    }
+
     if (!data.success) {
       throw new Error(data.error || 'Failed to send email via Apps Script API');
     }
