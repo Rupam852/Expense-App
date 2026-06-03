@@ -35,6 +35,21 @@ export const initDB = async () => {
       );
     `);
 
+    // 1b. Temp Users Table (Stores unverified signups)
+    await query(`
+      CREATE TABLE IF NOT EXISTS temp_users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        name VARCHAR(255),
+        photo_url TEXT,
+        otp VARCHAR(6) NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        failed_attempts INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     // 2. Expenses Table (with soft delete and client-generated primary key VARCHAR(36))
     await query(`
       CREATE TABLE IF NOT EXISTS expenses (
