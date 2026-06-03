@@ -258,11 +258,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     await showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
+      builder: (dialogCtx) {
         return StatefulBuilder(
-          builder: (context, setDialogState) {
+          builder: (statefulCtx, setDialogState) {
             Future.delayed(const Duration(milliseconds: 100), () {
-              if (!context.mounted) return;
+              if (!statefulCtx.mounted) return;
               if (progress < 0.9) {
                 setDialogState(() {
                   progress += 0.08;
@@ -279,8 +279,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   statusText = 'Compilation complete!';
                 });
                 Future.delayed(const Duration(milliseconds: 500), () {
-                  if (context.mounted && Navigator.of(context).canPop()) {
-                    Navigator.of(context).pop();
+                  if (statefulCtx.mounted && Navigator.of(statefulCtx).canPop()) {
+                    Navigator.of(statefulCtx).pop();
                   }
                 });
               }
@@ -305,7 +305,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       icon: const Icon(Icons.close, size: 20),
                       onPressed: () {
                         isCancelled = true;
-                        Navigator.of(context).pop();
+                        Navigator.of(statefulCtx).pop();
                       },
                     ),
                   ),
@@ -745,7 +745,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final importResult = await showDialog<String>(
         context: context,
         barrierDismissible: false,
-        builder: (context) => PremiumProgressDialog(
+        builder: (loaderCtx) => PremiumProgressDialog(
           title: isPdf ? 'Importing PDF Statement' : 'Importing Spreadsheet',
           importTask: () => expenseProvider.importStatement(path),
         ),
@@ -786,9 +786,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
+      builder: (dialogCtx) {
         return StatefulBuilder(
-          builder: (context, setStateDialog) {
+          builder: (statefulCtx, setStateDialog) {
             return AlertDialog(
               backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               shape: RoundedRectangleBorder(
@@ -854,7 +854,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               actionsPadding: const EdgeInsets.all(16),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () => Navigator.of(dialogCtx).pop(),
                   child: Text(
                     'Cancel',
                     style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.grey),
@@ -871,13 +871,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     }
 
                     // Close the dialog to show progress
-                    Navigator.of(context).pop();
+                    Navigator.of(dialogCtx).pop();
 
                     // Show progress loader
                     final result = await showDialog<String>(
                       context: context,
                       barrierDismissible: false,
-                      builder: (context) => PremiumProgressDialog(
+                      builder: (loaderCtx) => PremiumProgressDialog(
                         title: 'Decrypting & Importing Statement',
                         importTask: () => expenseProvider.importStatement(path, password: enteredPassword),
                       ),
@@ -1057,7 +1057,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (!mounted) return;
       showDialog(
         context: context,
-        builder: (context) {
+        builder: (dialogCtx) {
           return AlertDialog(
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             shape: RoundedRectangleBorder(
@@ -1090,7 +1090,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   top: 8,
                   child: IconButton(
                     icon: const Icon(Icons.close, size: 20),
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => Navigator.of(dialogCtx).pop(),
                   ),
                 ),
               ],
@@ -1141,7 +1141,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    Navigator.of(context).pop(); // Close info dialog
+                    Navigator.of(dialogCtx).pop(); // Close info dialog
                     _executeCSVExportWithProgress(context, csvString, fileName); // Start export flow
                   },
                   style: ElevatedButton.styleFrom(
@@ -1263,11 +1263,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     await showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
+      builder: (dialogCtx) {
         return StatefulBuilder(
-          builder: (context, setDialogState) {
+          builder: (statefulCtx, setDialogState) {
             Future.delayed(const Duration(milliseconds: 100), () {
-              if (!context.mounted) return;
+              if (!statefulCtx.mounted) return;
               if (progress < 0.9) {
                 setDialogState(() {
                   progress += 0.1;
@@ -1284,8 +1284,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   statusText = 'Export complete!';
                 });
                 Future.delayed(const Duration(milliseconds: 400), () {
-                  if (context.mounted) {
-                    Navigator.of(context).pop(); // Close progress dialog
+                  if (statefulCtx.mounted) {
+                    Navigator.of(statefulCtx).pop(); // Close progress dialog
                   }
                 });
               }
@@ -1310,7 +1310,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       icon: const Icon(Icons.close, size: 20),
                       onPressed: () {
                         isCancelled = true;
-                        Navigator.of(context).pop();
+                        Navigator.of(statefulCtx).pop();
                       },
                     ),
                   ),
@@ -1397,7 +1397,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   ) {
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogCtx) {
         return AlertDialog(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           shape: RoundedRectangleBorder(
@@ -1424,7 +1424,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 top: 8,
                 child: IconButton(
                   icon: const Icon(Icons.close, size: 20),
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () => Navigator.of(dialogCtx).pop(),
                 ),
               ),
             ],
@@ -1454,7 +1454,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   TextButton.icon(
                     onPressed: () {
-                      Navigator.of(context).pop();
+                      Navigator.of(dialogCtx).pop();
                       Share.shareXFiles([XFile(localPath)], text: 'My Grow Expense Statement');
                     },
                     icon: Icon(Icons.share_outlined, color: Theme.of(context).primaryColor, size: 18),
@@ -1469,7 +1469,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(height: 10),
                   ElevatedButton.icon(
                     onPressed: () async {
-                      Navigator.of(context).pop();
+                      Navigator.of(dialogCtx).pop();
                       final result = await OpenFile.open(localPath);
                       if (result.type != ResultType.done && context.mounted) {
                         CustomToast.show(
