@@ -995,6 +995,151 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  void _showOcrSourceDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final primaryColor = Theme.of(context).primaryColor;
+        
+        return AlertDialog(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: primaryColor.withOpacity(0.1),
+            ),
+          ),
+          title: Stack(
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.document_scanner_outlined, color: primaryColor, size: 26),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Smart OCR Scanner',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              Positioned(
+                right: 0,
+                top: 0,
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: CircleAvatar(
+                    radius: 14,
+                    backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
+                    child: Icon(
+                      Icons.close,
+                      size: 16,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Receipt scan karne ke liye source choose karein. AI automatic details extract kar lega:',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: isDark ? Colors.grey[300] : Colors.grey[700],
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const ExpenseEntryScreen(openCameraScanner: true),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: primaryColor.withOpacity(0.2)),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(Icons.camera_alt_outlined, color: primaryColor, size: 32),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Camera',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: primaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const ExpenseEntryScreen(openGalleryScanner: true),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: primaryColor.withOpacity(0.2)),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(Icons.photo_library_outlined, color: primaryColor, size: 32),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Gallery',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: primaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _showApiErrorDialog(BuildContext context, String actualError, UserProvider userProvider) {
     final hasSecondary = userProvider.userGeminiApiKeySecondary != null &&
         userProvider.userGeminiApiKeySecondary!.isNotEmpty;
@@ -1516,13 +1661,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   Expanded(
                     child: InkWell(
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const ExpenseEntryScreen(openCameraScanner: true),
-                          ),
-                        );
-                      },
+                      onTap: () => _showOcrSourceDialog(context),
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),

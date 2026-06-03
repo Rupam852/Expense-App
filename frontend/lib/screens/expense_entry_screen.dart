@@ -10,11 +10,13 @@ import '../models/expense.dart';
 
 class ExpenseEntryScreen extends StatefulWidget {
   final bool openCameraScanner;
+  final bool openGalleryScanner;
   final Expense? editExpense; // If passed, we are in Edit Mode
 
   const ExpenseEntryScreen({
     super.key,
     this.openCameraScanner = false,
+    this.openGalleryScanner = false,
     this.editExpense,
   });
 
@@ -67,6 +69,10 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
     if (widget.openCameraScanner) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _triggerScanner(ImageSource.camera);
+      });
+    } else if (widget.openGalleryScanner) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _triggerScanner(ImageSource.gallery);
       });
     }
   }
