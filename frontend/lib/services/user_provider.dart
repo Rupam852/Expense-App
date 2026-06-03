@@ -16,6 +16,7 @@ class UserProvider with ChangeNotifier {
   bool _biometricsEnabled = false;
   String? _errorMessage;
   String? _userGeminiApiKey;
+  String? _userGeminiApiKeySecondary;
   bool _showApiKeyPrompt = false;
 
   Map<String, dynamic>? get userProfile => _userProfile;
@@ -24,6 +25,7 @@ class UserProvider with ChangeNotifier {
   bool get biometricsEnabled => _biometricsEnabled;
   String? get errorMessage => _errorMessage;
   String? get userGeminiApiKey => _userGeminiApiKey;
+  String? get userGeminiApiKeySecondary => _userGeminiApiKeySecondary;
   bool get showApiKeyPrompt => _showApiKeyPrompt;
 
   void dismissApiKeyPrompt() {
@@ -53,6 +55,7 @@ class UserProvider with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       _userGeminiApiKey = prefs.getString('user_gemini_api_key');
+      _userGeminiApiKeySecondary = prefs.getString('user_gemini_api_key_secondary');
       final cachedProfileStr = prefs.getString('cached_user_profile');
       if (cachedProfileStr != null) {
         _userProfile = Map<String, dynamic>.from(json.decode(cachedProfileStr));
@@ -97,6 +100,13 @@ class UserProvider with ChangeNotifier {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_gemini_api_key', fetchedApiKey.toString().trim());
         _userGeminiApiKey = fetchedApiKey.toString().trim();
+      }
+
+      final fetchedApiKeySec = _userProfile?['gemini_api_key_secondary'];
+      if (fetchedApiKeySec != null && fetchedApiKeySec.toString().trim().isNotEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_gemini_api_key_secondary', fetchedApiKeySec.toString().trim());
+        _userGeminiApiKeySecondary = fetchedApiKeySec.toString().trim();
       }
 
       await _saveProfileLocally();
@@ -145,6 +155,13 @@ class UserProvider with ChangeNotifier {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('user_gemini_api_key', fetchedApiKey.toString().trim());
           _userGeminiApiKey = fetchedApiKey.toString().trim();
+        }
+
+        final fetchedApiKeySec = _userProfile?['gemini_api_key_secondary'];
+        if (fetchedApiKeySec != null && fetchedApiKeySec.toString().trim().isNotEmpty) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('user_gemini_api_key_secondary', fetchedApiKeySec.toString().trim());
+          _userGeminiApiKeySecondary = fetchedApiKeySec.toString().trim();
         }
 
         _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
@@ -197,6 +214,13 @@ class UserProvider with ChangeNotifier {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('user_gemini_api_key', fetchedApiKey.toString().trim());
           _userGeminiApiKey = fetchedApiKey.toString().trim();
+        }
+
+        final fetchedApiKeySec = _userProfile?['gemini_api_key_secondary'];
+        if (fetchedApiKeySec != null && fetchedApiKeySec.toString().trim().isNotEmpty) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('user_gemini_api_key_secondary', fetchedApiKeySec.toString().trim());
+          _userGeminiApiKeySecondary = fetchedApiKeySec.toString().trim();
         }
 
         _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
@@ -274,6 +298,13 @@ class UserProvider with ChangeNotifier {
           _userGeminiApiKey = fetchedApiKey.toString().trim();
         }
 
+        final fetchedApiKeySec = _userProfile?['gemini_api_key_secondary'];
+        if (fetchedApiKeySec != null && fetchedApiKeySec.toString().trim().isNotEmpty) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('user_gemini_api_key_secondary', fetchedApiKeySec.toString().trim());
+          _userGeminiApiKeySecondary = fetchedApiKeySec.toString().trim();
+        }
+
         _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
         await _saveProfileLocally();
         _isLoading = false;
@@ -326,7 +357,7 @@ class UserProvider with ChangeNotifier {
   }
 
   // 6. Profile modifications
-  Future<bool> updateProfile({required String name, String? photoUrl, String? geminiApiKey}) async {
+  Future<bool> updateProfile({required String name, String? photoUrl, String? geminiApiKey, String? geminiApiKeySecondary}) async {
     _isLoading = true;
     notifyListeners();
 
@@ -339,6 +370,9 @@ class UserProvider with ChangeNotifier {
       }
       if (geminiApiKey != null || geminiApiKey == '') {
         updated['gemini_api_key'] = geminiApiKey;
+      }
+      if (geminiApiKeySecondary != null || geminiApiKeySecondary == '') {
+        updated['gemini_api_key_secondary'] = geminiApiKeySecondary;
       }
       _userProfile = updated;
       await _saveProfileLocally();
@@ -353,7 +387,12 @@ class UserProvider with ChangeNotifier {
         return true;
       }
 
-      final res = await httpPutProfile(name: name, photoUrl: photoUrl, geminiApiKey: geminiApiKey);
+      final res = await httpPutProfile(
+        name: name,
+        photoUrl: photoUrl,
+        geminiApiKey: geminiApiKey,
+        geminiApiKeySecondary: geminiApiKeySecondary,
+      );
       if (res != null) {
         _userProfile = res;
         await _saveProfileLocally();
@@ -394,12 +433,18 @@ class UserProvider with ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>?> httpPutProfile({required String name, String? photoUrl, String? geminiApiKey}) async {
+  Future<Map<String, dynamic>?> httpPutProfile({
+    required String name,
+    String? photoUrl,
+    String? geminiApiKey,
+    String? geminiApiKeySecondary,
+  }) async {
     try {
       final response = await _apiService.updateProfileOnServer(
         name: name,
         photoUrl: photoUrl,
         geminiApiKey: geminiApiKey,
+        geminiApiKeySecondary: geminiApiKeySecondary,
       );
       if (response['success'] == true) {
         return response['user'];
@@ -432,29 +477,44 @@ class UserProvider with ChangeNotifier {
 
   // Save/Clear User Custom Gemini API Key
   Future<void> saveUserGeminiApiKey(String? key) async {
+    await saveUserGeminiApiKeys(primary: key, secondary: _userGeminiApiKeySecondary);
+  }
+
+  // Save/Clear both Primary and Secondary Gemini API Keys
+  Future<void> saveUserGeminiApiKeys({String? primary, String? secondary}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cleanKey = (key == null || key.trim().isEmpty) ? '' : key.trim();
-      
-      if (cleanKey.isEmpty) {
+      final cleanPrimary = (primary == null || primary.trim().isEmpty) ? '' : primary.trim();
+      final cleanSecondary = (secondary == null || secondary.trim().isEmpty) ? '' : secondary.trim();
+
+      if (cleanPrimary.isEmpty) {
         _userGeminiApiKey = null;
         await prefs.remove('user_gemini_api_key');
       } else {
-        _userGeminiApiKey = cleanKey;
-        await prefs.setString('user_gemini_api_key', cleanKey);
+        _userGeminiApiKey = cleanPrimary;
+        await prefs.setString('user_gemini_api_key', cleanPrimary);
+      }
+
+      if (cleanSecondary.isEmpty) {
+        _userGeminiApiKeySecondary = null;
+        await prefs.remove('user_gemini_api_key_secondary');
+      } else {
+        _userGeminiApiKeySecondary = cleanSecondary;
+        await prefs.setString('user_gemini_api_key_secondary', cleanSecondary);
       }
       notifyListeners();
 
-      // Synchronize key to database
+      // Synchronize keys to database
       if (_isAuthenticated && _userProfile != null) {
         await updateProfile(
           name: _userProfile!['name'] ?? 'User',
           photoUrl: _userProfile!['photo_url'],
-          geminiApiKey: cleanKey,
+          geminiApiKey: cleanPrimary,
+          geminiApiKeySecondary: cleanSecondary,
         );
       }
     } catch (e) {
-      print('Error saving custom Gemini API key: $e');
+      print('Error saving custom Gemini API keys: $e');
     }
   }
 
@@ -476,8 +536,12 @@ class UserProvider with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('cached_user_profile');
+      await prefs.remove('user_gemini_api_key');
+      await prefs.remove('user_gemini_api_key_secondary');
     } catch (_) {}
     _userProfile = null;
+    _userGeminiApiKey = null;
+    _userGeminiApiKeySecondary = null;
     _isAuthenticated = false;
     _isLoading = false;
     notifyListeners();

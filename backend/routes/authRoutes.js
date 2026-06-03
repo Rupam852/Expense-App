@@ -40,7 +40,7 @@ router.post('/register', async (req, res) => {
     const newUser = await query(
       `INSERT INTO users (email, password_hash, name, photo_url, google_id)
        VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, email, name, photo_url, google_id, gemini_api_key, created_at`,
+       RETURNING id, email, name, photo_url, google_id, gemini_api_key, gemini_api_key_secondary, created_at`,
       [email, passwordHash, name || 'User', photo_url || null, google_id || null]
     );
 
@@ -77,7 +77,7 @@ router.post('/login', async (req, res) => {
         const newUser = await query(
           `INSERT INTO users (email, name, photo_url, google_id)
            VALUES ($1, $2, $3, $4)
-           RETURNING id, email, name, photo_url, google_id, gemini_api_key, created_at`,
+           RETURNING id, email, name, photo_url, google_id, gemini_api_key, gemini_api_key_secondary, created_at`,
           [email, name || 'Google User', photo_url || null, google_id]
         );
         user = newUser.rows[0];
@@ -92,7 +92,7 @@ router.post('/login', async (req, res) => {
                  name = COALESCE(name, $3),
                  updated_at = NOW()
              WHERE id = $4
-             RETURNING id, email, name, photo_url, google_id, gemini_api_key, created_at`,
+             RETURNING id, email, name, photo_url, google_id, gemini_api_key, gemini_api_key_secondary, created_at`,
             [google_id, photo_url, name, user.id]
           );
           user = updatedUser.rows[0];
@@ -129,6 +129,7 @@ router.post('/login', async (req, res) => {
         photo_url: user.photo_url,
         google_id: user.google_id,
         gemini_api_key: user.gemini_api_key,
+        gemini_api_key_secondary: user.gemini_api_key_secondary,
         created_at: user.created_at
       }
     });
@@ -142,7 +143,7 @@ router.post('/login', async (req, res) => {
 router.get('/me', authenticateToken, async (req, res) => {
   try {
     const userRes = await query(
-      'SELECT id, email, name, photo_url, google_id, gemini_api_key, created_at FROM users WHERE id = $1',
+      'SELECT id, email, name, photo_url, google_id, gemini_api_key, gemini_api_key_secondary, created_at FROM users WHERE id = $1',
       [req.user.userId]
     );
 
@@ -159,7 +160,7 @@ router.get('/me', authenticateToken, async (req, res) => {
 
 // 4. Update Profile Route
 router.put('/profile', authenticateToken, async (req, res) => {
-  const { name, photo_url, gemini_api_key } = req.body;
+  const { name, photo_url, gemini_api_key, gemini_api_key_secondary } = req.body;
 
   try {
     const userExist = await query('SELECT * FROM users WHERE id = $1', [req.user.userId]);
@@ -171,16 +172,18 @@ router.put('/profile', authenticateToken, async (req, res) => {
     const newName = name !== undefined ? name : userObj.name;
     const newPhotoUrl = photo_url !== undefined ? photo_url : userObj.photo_url;
     const newGeminiKey = gemini_api_key !== undefined ? gemini_api_key : userObj.gemini_api_key;
+    const newGeminiKeySecondary = gemini_api_key_secondary !== undefined ? gemini_api_key_secondary : userObj.gemini_api_key_secondary;
 
     const updated = await query(
       `UPDATE users 
        SET name = $1, 
            photo_url = $2,
            gemini_api_key = $3,
+           gemini_api_key_secondary = $4,
            updated_at = NOW() 
-       WHERE id = $4 
-       RETURNING id, email, name, photo_url, google_id, gemini_api_key, created_at`,
-      [newName, newPhotoUrl, newGeminiKey, req.user.userId]
+       WHERE id = $5 
+       RETURNING id, email, name, photo_url, google_id, gemini_api_key, gemini_api_key_secondary, created_at`,
+      [newName, newPhotoUrl, newGeminiKey, newGeminiKeySecondary, req.user.userId]
     );
 
     res.status(200).json({
