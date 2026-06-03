@@ -9,6 +9,19 @@ import '../models/expense.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/custom_toast.dart';
 
+String getCurrencySymbol(String currencyCode) {
+  switch (currencyCode.toUpperCase()) {
+    case 'USD': return r'$';
+    case 'EUR': return '€';
+    case 'GBP': return '£';
+    case 'AUD': return 'A$';
+    case 'CAD': return 'C$';
+    case 'INR':
+    default:
+      return '₹';
+  }
+}
+
 class InvoiceScreen extends StatefulWidget {
   const InvoiceScreen({super.key});
 
@@ -226,7 +239,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
 
     final double selectedTotal = activeExpenses
         .where((e) => _selectedExpenseIds.contains(e.id))
-        .fold<double>(0.0, (sum, item) => sum + item.amount);
+        .fold<double>(0.0, (sum, item) => sum + expenseProvider.convertToINR(item.amount, item.currency));
 
     return Scaffold(
       appBar: AppBar(
@@ -325,7 +338,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                             style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
                           ),
                           secondary: Text(
-                            '₹${exp.amount.toStringAsFixed(2)}',
+                            '${getCurrencySymbol(exp.currency)}${exp.amount.toStringAsFixed(2)}',
                             style: GoogleFonts.outfit(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,

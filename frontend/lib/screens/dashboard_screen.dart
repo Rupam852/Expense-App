@@ -18,6 +18,19 @@ import 'package:open_file/open_file.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/custom_toast.dart';
 
+String getCurrencySymbol(String currencyCode) {
+  switch (currencyCode.toUpperCase()) {
+    case 'USD': return r'$';
+    case 'EUR': return '€';
+    case 'GBP': return '£';
+    case 'AUD': return 'A$';
+    case 'CAD': return 'C$';
+    case 'INR':
+    default:
+      return '₹';
+  }
+}
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -1925,7 +1938,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ).toList();
 
     final totalSpentThisMonth = monthlyExpenses.fold<double>(
-      0.0, (sum, item) => sum + item.amount
+      0.0, (sum, item) => sum + expenseProvider.convertToINR(item.amount, item.currency)
     );
 
     return Scaffold(
@@ -2422,7 +2435,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  '₹${exp.amount.toStringAsFixed(2)}',
+                                  '${getCurrencySymbol(exp.currency)}${exp.amount.toStringAsFixed(2)}',
                                   style: GoogleFonts.outfit(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
