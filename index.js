@@ -110,11 +110,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 7. Global Mouse Tracking for Background Spotlight
-  document.addEventListener('mousemove', (e) => {
-    document.documentElement.style.setProperty('--global-mouse-x', `${e.clientX}px`);
-    document.documentElement.style.setProperty('--global-mouse-y', `${e.clientY}px`);
-  });
+  // 7. Global Mouse Tracking for Background Spotlight (GPU-Accelerated requestAnimationFrame)
+  const spotlight = document.querySelector('.global-spotlight');
+  if (spotlight) {
+    let tick = false;
+    document.addEventListener('mousemove', (e) => {
+      if (!tick) {
+        window.requestAnimationFrame(() => {
+          // Center the 600px spotlight circle on the mouse position
+          const x = e.clientX - 300;
+          const y = e.clientY - 300;
+          spotlight.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+          tick = false;
+        });
+        tick = true;
+      }
+    });
+  }
 
   // 8. Hero Section Background Cyber Particles
   const heroParticlesContainer = document.querySelector('.hero-particles');
