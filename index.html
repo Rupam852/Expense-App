@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Grow Expense App - Secure Personal Finance Tracker</title>
+  <title>Grow Expense App - Secure Local Personal Finance Tracker</title>
   <link rel="icon" type="image/png" href="logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="index.css">
 </head>
 <body>
 
-  <!-- Scroll Progress Bar -->
+  <!-- Top Scroll Progress bar -->
   <div class="scroll-progress"></div>
 
-  <!-- Ambient Animated Background Blobs -->
+  <!-- Ambient Glowing Blobs -->
   <div class="bg-glow-blobs">
     <div class="blob blob-1"></div>
     <div class="blob blob-2"></div>
@@ -32,7 +32,7 @@
       </div>
       <nav class="nav-links">
         <a href="#features">Features</a>
-        <a href="#calculator">Budget Planner</a>
+        <a href="#planner">Budget Planner</a>
         <a href="#how-it-works">How It Works</a>
         <a href="#faq">FAQ</a>
         <a href="https://drive.google.com/file/d/1H2bEn1qGasbThHoygGaAReUSorSNd3qq/view?usp=sharing" target="_blank" class="download-btn-small">Download</a>
@@ -45,9 +45,11 @@
   <section class="hero">
     <div class="hero-container">
       <div class="hero-content">
-        <div class="hero-badge">🔒 100% Local & Encrypted</div>
-        <h1>Master Your Expenses, <span class="text-gradient">Zero Server Uploads</span></h1>
-        <p>Grow Expense is a secure, local-first finance manager. It stores transaction ledgers in a local SQLite database, imports password-protected statements, uses Gemini AI for OCR bill scanning, and syncs to a PostgreSQL Neon cloud database.</p>
+        <div class="hero-badge">
+          <span class="pulse-dot"></span> SQLite Local Sandbox + Postgres Sync
+        </div>
+        <h1>Take Control of Your Money <span class="text-gradient">Offline & Securely</span></h1>
+        <p class="hero-desc">Grow Expense is a local-first personal accounting app that secures your data inside an encrypted SQLite database on your device. Scan bills with local AI, import netbanking statements, and sync to Postgres Neon cloud.</p>
         
         <div class="hero-actions">
           <a href="https://drive.google.com/file/d/1H2bEn1qGasbThHoygGaAReUSorSNd3qq/view?usp=sharing" target="_blank" class="download-btn">
@@ -59,17 +61,17 @@
               <span class="btn-main">Direct APK File</span>
             </div>
           </a>
-          <a href="#features" class="learn-more-btn">Explore Bento Features</a>
+          <a href="#features" class="learn-more-btn">Explore Features</a>
         </div>
 
         <div class="hero-trust-badges">
           <span class="trust-badge">
             <svg class="trust-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            100% Offline Sandbox
+            Offline SQLite Sandbox
           </span>
           <span class="trust-badge">
             <svg class="trust-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            Zero Ads & Tracking
+            No Tracking & Ads
           </span>
           <span class="trust-badge">
             <svg class="trust-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -78,69 +80,60 @@
         </div>
       </div>
 
-      <!-- Floating 3D Dashboard Mockup -->
+      <!-- Overlapping Isometric Floating Dashboard Elements -->
       <div class="hero-visual">
-        <div class="dashboard-mockup">
-          <div class="dashboard-reflection"></div>
-          <div class="dash-sidebar">
-            <div class="dash-sidebar-logo">
-              <img src="logo.png" alt="Mini Logo">
+        <div class="isometric-canvas">
+          
+          <!-- Back Grid Card (Chart Overview) -->
+          <div class="iso-card card-back">
+            <div class="iso-card-header">
+              <span class="iso-card-dot red"></span>
+              <span class="iso-card-dot orange"></span>
+              <span class="iso-card-dot green"></span>
+              <span class="iso-card-title">Analytics Tracker</span>
             </div>
-            <div class="dash-nav-item active">📊</div>
-            <div class="dash-nav-item">🧾</div>
-            <div class="dash-nav-item">⚙️</div>
+            <div class="iso-chart">
+              <div class="chart-bar" style="height: 40%;"></div>
+              <div class="chart-bar" style="height: 65%;"></div>
+              <div class="chart-bar" style="height: 85%;"></div>
+              <div class="chart-bar" style="height: 50%;"></div>
+              <div class="chart-bar" style="height: 90%;"></div>
+            </div>
           </div>
-          <div class="dash-main">
-            <div class="dash-header">
-              <div class="dash-profile">
-                <div class="profile-pic"></div>
-                <div class="profile-text">
-                  <span class="p-name">Rupam Bairagya</span>
-                  <span class="p-status"><span class="pulse-dot"></span>Local Database Connected</span>
-                </div>
-              </div>
-              <div class="dash-badge">Active Budget</div>
-            </div>
-            
-            <div class="dash-balance-row">
-              <div class="balance-card">
-                <span class="b-label">Monthly Limit</span>
-                <span class="b-amount">₹30,000.00</span>
-                <div class="b-progress-bg">
-                  <div class="b-progress-fill" style="width: 58.5%;"></div>
-                </div>
-                <span class="b-desc">Spent: ₹17,550.00 (58.5%)</span>
-              </div>
-            </div>
 
-            <div class="dash-recent-title">Recent Transactions</div>
-            <div class="dash-list">
-              <div class="dash-item">
-                <span class="di-icon">🍔</span>
-                <div class="di-info">
-                  <span class="di-title">Food & Restaurant</span>
-                  <span class="di-date">Today, 2:30 PM</span>
-                </div>
-                <span class="di-amount negative">- ₹350</span>
-              </div>
-              <div class="dash-item">
-                <span class="di-icon">🛒</span>
-                <div class="di-info">
-                  <span class="di-title">Groceries & Market</span>
-                  <span class="di-date">Yesterday, 6:15 PM</span>
-                </div>
-                <span class="di-amount negative">- ₹1,200</span>
-              </div>
-              <div class="dash-item">
-                <span class="di-icon">⚡</span>
-                <div class="di-info">
-                  <span class="di-title">Electricity Bill</span>
-                  <span class="di-date">02 Jun 2026</span>
-                </div>
-                <span class="di-amount negative">- ₹4,500</span>
-              </div>
+          <!-- Middle Card (Monthly Budget limit) -->
+          <div class="iso-card card-middle">
+            <span class="iso-card-label">Active Month Budget</span>
+            <span class="iso-card-amount">₹30,000.00</span>
+            <div class="iso-progress-bg">
+              <div class="iso-progress-fill" style="width: 58.5%;"></div>
+            </div>
+            <div class="iso-card-footer">
+              <span>Spent: ₹17,550.00</span>
+              <span>Left: ₹12,450.00</span>
             </div>
           </div>
+
+          <!-- Front Card (Recent Transactions List) -->
+          <div class="iso-card card-front">
+            <div class="iso-tx-row">
+              <span class="iso-tx-emoji">🍔</span>
+              <div class="iso-tx-info">
+                <span class="iso-tx-title">Food & Dining</span>
+                <span class="iso-tx-desc">Lunch at restaurant</span>
+              </div>
+              <span class="iso-tx-amount negative">- ₹350.00</span>
+            </div>
+            <div class="iso-tx-row">
+              <span class="iso-tx-emoji">🛒</span>
+              <div class="iso-tx-info">
+                <span class="iso-tx-title">Shopping</span>
+                <span class="iso-tx-desc">Supermarket supplies</span>
+              </div>
+              <span class="iso-tx-amount negative">- ₹1,200.00</span>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -149,62 +142,62 @@
   <!-- Bento Grid Features Section -->
   <section id="features" class="features">
     <div class="section-header">
-      <h2>Sleek & Integrated Accounting</h2>
-      <p>Explore the features of the Grow Expense application mapped out in a premium, modern bento design.</p>
+      <h2>Sleek Features, Absolute Privacy</h2>
+      <p>A full suite of personal accounting tools built for the modern offline-first budget workflow.</p>
     </div>
     
     <div class="bento-grid">
-      <!-- Card 1: AI PDF Import (Spans 2 columns) -->
+      <!-- Card 1: AI Parser (Spans 2 columns) -->
       <div class="bento-card bento-wide">
         <div class="feature-icon-wrapper">
           <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
         </div>
         <div class="bento-content">
           <h3>Batch Statement Imports (PDF & Excel)</h3>
-          <p>Directly upload large bank statement PDF or Excel logs (including password-protected statement files) from Google Pay, PhonePe, or netbanking. The app automatically processes and maps transaction rows using the Gemini AI API, sorting categories and merchants in seconds.</p>
+          <p>Import statement spreadsheets or PDFs (including password-protected files) directly from Google Pay, PhonePe, and major netbanking portals. The application parses merchants, amounts, and dates instantly via the Google Gemini AI API.</p>
         </div>
       </div>
 
-      <!-- Card 2: Receipt OCR (Spans 1 column) -->
+      <!-- Card 2: Smart OCR Scanner (Spans 1 column) -->
       <div class="bento-card">
         <div class="feature-icon-wrapper">
           <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
         </div>
         <div class="bento-content">
-          <h3>Smart OCR Receipt Scanner</h3>
-          <p>Take photos of bills and receipts. The scanner calls the Gemini API (using either the app's default key or your custom key) to extract items, dates, and payment methods automatically.</p>
+          <h3>Smart OCR Bill Scanning</h3>
+          <p>Photograph physical receipts. The OCR scanning calls the Gemini AI API to extract total sums, dates, and catalog lists, adding them directly to your budget logs.</p>
         </div>
       </div>
 
-      <!-- Card 3: Biometric Lock (Spans 1 column) -->
+      <!-- Card 3: Local SQLite Sandbox (Spans 1 column) -->
       <div class="bento-card">
         <div class="feature-icon-wrapper">
           <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
         </div>
         <div class="bento-content">
-          <h3>Biometric Native Lock</h3>
-          <p>Secure database launches with your fingerprint or system passcode using Android BiometricPrompt.</p>
+          <h3>SQLite Local Database</h3>
+          <p>Your budgets and transaction records remain entirely offline on your phone inside an encrypted SQLite ledger sandbox database.</p>
         </div>
       </div>
 
-      <!-- Card 4: Neon DB Cloud Sync (Spans 2 columns) -->
+      <!-- Card 4: Postgres Neon Sync (Spans 2 columns) -->
       <div class="bento-card bento-wide">
         <div class="feature-icon-wrapper">
           <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.2 15c.9-1.2 1.4-2.7 1.4-4.2a7.5 7.5 0 0 0-14.8-1.5A5.5 5.5 0 0 0 2.5 15"></path><path d="M12 13v8M9 16l3-3 3 3"></path></svg>
         </div>
         <div class="bento-content">
-          <h3>SQLite Local Engine with Postgres Neon Cloud Sync</h3>
-          <p>Everything runs with zero network latency off a local SQLite database. If you wish to synchronize data across devices, you can securely sync your ledger entries directly to a PostgreSQL Neon database hosted on Render, synced via encrypted JWT authorization headers.</p>
+          <h3>Encrypted PostgreSQL Neon Cloud Sync</h3>
+          <p>Sync sqlite records across devices securely. Data is backed up to a PostgreSQL database hosted on Neon Cloud, transferring securely via encrypted JWT tokens over a Node.js backend. Sync status is completely togglable inside settings.</p>
         </div>
       </div>
     </div>
   </section>
 
   <!-- Interactive Budget Planner Section -->
-  <section class="calculator-section" id="calculator">
+  <section class="calculator-section" id="planner">
     <div class="section-header">
       <h2>Plan Your Savings Instantly</h2>
-      <p>Slide the slider to set your income and see how Grow Expense splits budgets securely.</p>
+      <p>Slide the slider to calculate budget recommendations according to your monthly income.</p>
     </div>
     <div class="calc-container">
       <div class="calc-card">
@@ -234,23 +227,23 @@
   <section id="how-it-works" class="how-it-works">
     <div class="section-header">
       <h2>Three Simple Steps</h2>
-      <p>See how the local personal accounting system coordinates your budget inputs.</p>
+      <p>Getting started with local personal accounting is straightforward.</p>
     </div>
     <div class="timeline">
       <div class="timeline-item">
         <div class="timeline-number">1</div>
         <h3>Import Statements</h3>
-        <p>Drop Google Pay or PhonePe statement spreadsheets. The parsing happens directly in your secure local container sandbox.</p>
+        <p>Drop statement files or photograph receipts. The AI engine parses merchants, sums, and timestamps locally.</p>
       </div>
       <div class="timeline-item">
         <div class="timeline-number">2</div>
-        <h3>Track Against Budgets</h3>
-        <p>Set specific category limits. Real-time budget progress updates notify you as transactions occur.</p>
+        <h3>Target Categories</h3>
+        <p>Allocate custom budget boundaries for food, travel, and shopping, monitoring real-time category dials.</p>
       </div>
       <div class="timeline-item">
         <div class="timeline-number">3</div>
-        <h3>Generate Logs & Invoices</h3>
-        <p>Compile details into audit-ready CSV logs or clean PDF reimbursement statements in seconds.</p>
+        <h3>Export Reports</h3>
+        <p>Export all columns to CSV spreadsheets, or compile entries into structured PDF statements for reimbursement.</p>
       </div>
     </div>
   </section>
