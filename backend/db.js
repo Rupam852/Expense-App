@@ -101,9 +101,11 @@ export const initDB = async () => {
         email VARCHAR(255) NOT NULL,
         otp VARCHAR(6) NOT NULL,
         expires_at TIMESTAMP NOT NULL,
+        failed_attempts INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    await query(`ALTER TABLE password_resets ADD COLUMN IF NOT EXISTS failed_attempts INTEGER DEFAULT 0;`);
 
     console.log('Database tables successfully verified/created!');
   } catch (error) {
