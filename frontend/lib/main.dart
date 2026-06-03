@@ -58,11 +58,12 @@ class AuthWrapper extends StatefulWidget {
 class _AuthWrapperState extends State<AuthWrapper> {
   bool _biometricVerified = false;
   bool _checkingBiometric = false;
+  bool _wasAuthenticated = false;
 
   @override
   void initState() {
     super.initState();
-    _triggerBiometricVerification();
+    // Transition in build() will trigger biometric lock check automatically
   }
 
   // Trigger Biometric Lock if enabled
@@ -109,6 +110,18 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     return Consumer<UserProvider>(
       builder: (context, userProvider, _) {
+        // Detect transition of authentication state to reset and re-trigger biometric check
+        if (userProvider.isAuthenticated && !_wasAuthenticated) {
+          _wasAuthenticated = true;
+          _biometricVerified = false;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _triggerBiometricVerification();
+          });
+        } else if (!userProvider.isAuthenticated && _wasAuthenticated) {
+          _wasAuthenticated = false;
+          _biometricVerified = false;
+        }
+
         // CASE A: User is not logged in: Route to Login/Register screen
         if (!userProvider.isAuthenticated) {
           return const LoginScreen();
