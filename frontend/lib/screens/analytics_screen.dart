@@ -91,8 +91,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     final Map<String, double> localCategorySums = {};
     double totalLocalSpent = 0.0;
     for (final exp in activeExpenses) {
-      localCategorySums[exp.category] = (localCategorySums[exp.category] ?? 0.0) + exp.amount;
-      totalLocalSpent += exp.amount;
+      final amtInINR = expenseProvider.convertToINR(exp.amount, exp.currency);
+      localCategorySums[exp.category] = (localCategorySums[exp.category] ?? 0.0) + amtInINR;
+      totalLocalSpent += amtInINR;
     }
 
     final List<PieChartSectionData> pieSections = [];
@@ -141,7 +142,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       
       final dailySum = expenseProvider.expenses.where((e) =>
         !e.isDeleted && DateFormat('yyyy-MM-dd').format(e.transactionDate) == queryStr
-      ).fold<double>(0.0, (sum, exp) => sum + exp.amount);
+      ).fold<double>(0.0, (sum, exp) => sum + expenseProvider.convertToINR(exp.amount, exp.currency));
       
       last7DaysSums[dateStr] = dailySum;
 

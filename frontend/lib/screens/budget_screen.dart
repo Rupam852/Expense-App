@@ -169,8 +169,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
     expenseProvider.expenses.where((e) =>
       !e.isDeleted && DateFormat('yyyy-MM').format(e.transactionDate) == currentMonthStr
     ).forEach((e) {
-      spendingMap[e.category] = (spendingMap[e.category] ?? 0.0) + e.amount;
-      totalMonthlySpent += e.amount;
+      final amtInINR = expenseProvider.convertToINR(e.amount, e.currency);
+      spendingMap[e.category] = (spendingMap[e.category] ?? 0.0) + amtInINR;
+      totalMonthlySpent += amtInINR;
     });
 
     double totalCategoryBudgetSum = 0.0;

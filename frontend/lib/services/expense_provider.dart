@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
 import 'database_helper.dart';
 import 'api_service.dart';
 import 'sync_service.dart';
@@ -24,6 +26,74 @@ class ExpenseProvider with ChangeNotifier {
   String? _syncErrorMessage;
 
   DateTime _selectedMonthYear = DateTime(DateTime.now().year, DateTime.now().month);
+
+  // Exchange Rates (1 INR = X of target currency)
+  final Map<String, double> _exchangeRates = {
+    'INR': 1.0,
+    'USD': 0.012,
+    'EUR': 0.011,
+    'GBP': 0.0094,
+    'AUD': 0.018,
+    'CAD': 0.016,
+  };
+
+  Map<String, double> get exchangeRates => _exchangeRates;
+
+  ExpenseProvider() {
+    initExchangeRates();
+  }
+
+  double convertToINR(double amount, String currency) {
+    final rate = _exchangeRates[currency.toUpperCase()] ?? 1.0;
+    if (rate == 0.0) return amount;
+    return amount / rate;
+  }
+
+  Future<void> initExchangeRates() async {
+    // 1. Load cached rates
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedRatesStr = prefs.getString('cached_exchange_rates');
+      if (cachedRatesStr != null) {
+        final decoded = json.decode(cachedRatesStr) as Map<String, dynamic>;
+        decoded.forEach((key, value) {
+          _exchangeRates[key] = (value as num).toDouble();
+        });
+      }
+    } catch (e) {
+      print('Error loading cached exchange rates: $e');
+    }
+
+    // 2. Fetch fresh rates in background
+    fetchFreshExchangeRates();
+  }
+
+  Future<void> fetchFreshExchangeRates() async {
+    try {
+      final response = await http.get(Uri.parse('https://open.er-api.com/v6/latest/INR')).timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+        if (decoded['result'] == 'success' && decoded['rates'] != null) {
+          final rates = decoded['rates'] as Map<String, dynamic>;
+          final List<String> supported = ['INR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD'];
+          Map<String, double> newRates = {};
+          for (final curr in supported) {
+            if (rates[curr] != null) {
+              final val = (rates[curr] as num).toDouble();
+              newRates[curr] = val;
+              _exchangeRates[curr] = val;
+            }
+          }
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('cached_exchange_rates', json.encode(newRates));
+          notifyListeners();
+          print('[Rates] Successfully updated exchange rates from API.');
+        }
+      }
+    } catch (e) {
+      print('[Rates] Failed to fetch live exchange rates: $e');
+    }
+  }
 
   List<Expense> get expenses => _expenses;
   List<Budget> get budgets => _budgets;
@@ -323,7 +393,7 @@ class ExpenseProvider with ChangeNotifier {
     double total = 0.0;
     for (final exp in _expenses) {
       if (exp.transactionDate.isBefore(currentMonthStart)) {
-        total += exp.amount;
+        total += convertToINR(exp.amount, exp.currency);
       }
     }
     return total;
