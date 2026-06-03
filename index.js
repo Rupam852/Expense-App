@@ -109,21 +109,4 @@ document.addEventListener('DOMContentLoaded', () => {
       item.classList.toggle('active');
     });
   });
-
-  // 7. Interactive Budget Planner Calculator Slider
-  const slider = document.getElementById('income-slider');
-  const incomeVal = document.getElementById('income-val');
-  const budgetVal = document.getElementById('budget-val');
-  const savingsVal = document.getElementById('savings-val');
-  const wantsVal = document.getElementById('wants-val');
-
-  if (slider) {
-    slider.addEventListener('input', (e) => {
-      const val = parseInt(e.target.value);
-      incomeVal.textContent = `₹${val.toLocaleString('en-IN')}`;
-      budgetVal.textContent = `₹${(val * 0.5).toLocaleString('en-IN')}`;
-      savingsVal.textContent = `₹${(val * 0.3).toLocaleString('en-IN')}`;
-      wantsVal.textContent = `₹${(val * 0.2).toLocaleString('en-IN')}`;
-    });
-  }
 });
