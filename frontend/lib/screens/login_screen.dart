@@ -6,6 +6,7 @@ import '../services/expense_provider.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/custom_toast.dart';
 import 'forgot_password_screen.dart';
+import 'email_verification_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -51,7 +52,14 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     }
 
-    if (success && mounted) {
+    if (userProvider.needsVerification && mounted) {
+      final targetEmail = userProvider.unverifiedEmail ?? _emailController.text.trim();
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => EmailVerificationScreen(email: targetEmail),
+        ),
+      );
+    } else if (success && mounted) {
       // Load offline database caches once successfully authenticated
       await expenseProvider.loadLocalData();
       await expenseProvider.triggerQuietSync();

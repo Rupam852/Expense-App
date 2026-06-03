@@ -18,6 +18,8 @@ class UserProvider with ChangeNotifier {
   String? _userGeminiApiKey;
   String? _userGeminiApiKeySecondary;
   bool _showApiKeyPrompt = false;
+  bool _needsVerification = false;
+  String? _unverifiedEmail;
 
   Map<String, dynamic>? get userProfile => _userProfile;
   bool get isAuthenticated => _isAuthenticated;
@@ -27,10 +29,17 @@ class UserProvider with ChangeNotifier {
   String? get userGeminiApiKey => _userGeminiApiKey;
   String? get userGeminiApiKeySecondary => _userGeminiApiKeySecondary;
   bool get showApiKeyPrompt => _showApiKeyPrompt;
+  bool get needsVerification => _needsVerification;
+  String? get unverifiedEmail => _unverifiedEmail;
 
   void dismissApiKeyPrompt() {
     _showApiKeyPrompt = false;
     notifyListeners();
+  }
+
+  void clearVerificationState() {
+    _needsVerification = false;
+    _unverifiedEmail = null;
   }
 
   fb.FirebaseAuth? _firebaseAuth;
@@ -126,6 +135,8 @@ class UserProvider with ChangeNotifier {
   }) async {
     _isLoading = true;
     _errorMessage = null;
+    _needsVerification = false;
+    _unverifiedEmail = null;
     notifyListeners();
 
     try {
@@ -147,6 +158,15 @@ class UserProvider with ChangeNotifier {
       );
 
       if (result['success'] == true) {
+        if (result['needsVerification'] == true) {
+          _needsVerification = true;
+          _unverifiedEmail = result['email'];
+          _isLoading = false;
+          _isAuthenticated = false;
+          notifyListeners();
+          return true; // Success but requires verification
+        }
+
         _userProfile = result['user'];
         _isAuthenticated = true;
 
@@ -190,6 +210,8 @@ class UserProvider with ChangeNotifier {
   }) async {
     _isLoading = true;
     _errorMessage = null;
+    _needsVerification = false;
+    _unverifiedEmail = null;
     notifyListeners();
 
     try {
@@ -229,7 +251,13 @@ class UserProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = result['error'];
+        if (result['needsVerification'] == true) {
+          _needsVerification = true;
+          _unverifiedEmail = result['email'];
+          _errorMessage = 'Email not verified. Please verify your email first.';
+        } else {
+          _errorMessage = result['error'];
+        }
         _isLoading = false;
         notifyListeners();
         return false;
@@ -616,6 +644,77 @@ class UserProvider with ChangeNotifier {
       }
     } catch (e) {
       _errorMessage = 'System password reset exception: $e';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // 11. Verify Signup Email OTP
+  Future<bool> verifyUserSignup(String email, String otp) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await _apiService.verifySignup(email, otp);
+      _isLoading = false;
+      if (result['success'] == true) {
+        _userProfile = result['user'];
+        _isAuthenticated = true;
+        _needsVerification = false;
+        _unverifiedEmail = null;
+
+        final fetchedApiKey = _userProfile?['gemini_api_key'];
+        if (fetchedApiKey != null && fetchedApiKey.toString().trim().isNotEmpty) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('user_gemini_api_key', fetchedApiKey.toString().trim());
+          _userGeminiApiKey = fetchedApiKey.toString().trim();
+        }
+
+        final fetchedApiKeySec = _userProfile?['gemini_api_key_secondary'];
+        if (fetchedApiKeySec != null && fetchedApiKeySec.toString().trim().isNotEmpty) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('user_gemini_api_key_secondary', fetchedApiKeySec.toString().trim());
+          _userGeminiApiKeySecondary = fetchedApiKeySec.toString().trim();
+        }
+
+        _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
+        await _saveProfileLocally();
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = result['error'];
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = 'System signup verification exception: $e';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // 12. Resend Signup Verification OTP
+  Future<bool> resendSignupVerificationOtp(String email) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await _apiService.resendSignupVerification(email);
+      _isLoading = false;
+      if (result['success'] == true) {
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = result['error'];
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = 'System resend exception: $e';
       _isLoading = false;
       notifyListeners();
       return false;

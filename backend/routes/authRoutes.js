@@ -37,17 +37,58 @@ router.post('/register', async (req, res) => {
       passwordHash = await bcrypt.hash(password, salt);
     }
 
+    const isVerified = google_id ? true : false;
+
     // Insert user
     const newUser = await query(
-      `INSERT INTO users (email, password_hash, name, photo_url, google_id)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, email, name, photo_url, google_id, gemini_api_key, gemini_api_key_secondary, created_at`,
-      [email, passwordHash, name || 'User', photo_url || null, google_id || null]
+      `INSERT INTO users (email, password_hash, name, photo_url, google_id, is_verified)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, email, name, photo_url, google_id, is_verified, gemini_api_key, gemini_api_key_secondary, created_at`,
+      [email, passwordHash, name || 'User', photo_url || null, google_id || null, isVerified]
     );
 
     const user = newUser.rows[0];
-    const token = generateToken(user);
 
+    if (!isVerified) {
+      // Generate a 6-digit OTP code
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
+
+      await query('DELETE FROM password_resets WHERE email = $1', [email]);
+      await query(
+        'INSERT INTO password_resets (email, otp, expires_at) VALUES ($1, $2, $3)',
+        [email, otp, expiresAt]
+      );
+
+      // Send verification mail
+      const mailOptions = {
+        from: `"Grow Expense" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: 'Grow Expense - Verify Your Email Address',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #00D09C; text-align: center;">Grow Expense</h2>
+            <p>Hi ${name || 'User'},</p>
+            <p>Welcome to Grow Expense! Please verify your email address using the following One-Time Password (OTP) verification code:</p>
+            <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-radius: 5px; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #333;">
+              ${otp}
+            </div>
+            <p style="color: #666; font-size: 13px; text-align: center; margin-top: 20px;">
+              This OTP is valid for <strong>15 minutes</strong>.
+            </p>
+          </div>
+        `,
+      };
+      await transporter.sendMail(mailOptions);
+
+      return res.status(201).json({
+        message: 'Registration successful. Email verification required.',
+        needsVerification: true,
+        email
+      });
+    }
+
+    const token = generateToken(user);
     res.status(201).json({
       message: 'User registered successfully.',
       token,
@@ -76,9 +117,9 @@ router.post('/login', async (req, res) => {
       if (userRes.rows.length === 0) {
         // Create user on-the-fly for Google sign-in
         const newUser = await query(
-          `INSERT INTO users (email, name, photo_url, google_id)
-           VALUES ($1, $2, $3, $4)
-           RETURNING id, email, name, photo_url, google_id, gemini_api_key, gemini_api_key_secondary, created_at`,
+          `INSERT INTO users (email, name, photo_url, google_id, is_verified)
+           VALUES ($1, $2, $3, $4, TRUE)
+           RETURNING id, email, name, photo_url, google_id, is_verified, gemini_api_key, gemini_api_key_secondary, created_at`,
           [email, name || 'Google User', photo_url || null, google_id]
         );
         user = newUser.rows[0];
@@ -118,6 +159,46 @@ router.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       return res.status(400).json({ error: 'Invalid email or password.' });
+    }
+
+    // Check if user is verified
+    if (!user.is_verified) {
+      // Generate a 6-digit verification code
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
+
+      await query('DELETE FROM password_resets WHERE email = $1', [email]);
+      await query(
+        'INSERT INTO password_resets (email, otp, expires_at) VALUES ($1, $2, $3)',
+        [email, otp, expiresAt]
+      );
+
+      // Mail the code
+      const mailOptions = {
+        from: `"Grow Expense" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: 'Grow Expense - Verify Your Email Address',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #00D09C; text-align: center;">Grow Expense</h2>
+            <p>Hi ${user.name || 'User'},</p>
+            <p>Please verify your email address to complete your login. Use the following One-Time Password (OTP) verification code:</p>
+            <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-radius: 5px; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #333;">
+              ${otp}
+            </div>
+            <p style="color: #666; font-size: 13px; text-align: center; margin-top: 20px;">
+              This OTP is valid for <strong>15 minutes</strong>.
+            </p>
+          </div>
+        `,
+      };
+      await transporter.sendMail(mailOptions);
+
+      return res.status(403).json({
+        error: 'email_unverified',
+        needsVerification: true,
+        email
+      });
     }
 
     const token = generateToken(user);
@@ -337,6 +418,120 @@ router.post('/reset-password', async (req, res) => {
   } catch (error) {
     console.error('Reset password error:', error);
     res.status(500).json({ error: 'Server error resetting password.' });
+  }
+});
+
+// D. Verify Signup Email
+router.post('/verify-signup', async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) {
+    return res.status(400).json({ error: 'Email and OTP are required.' });
+  }
+
+  try {
+    const otpRes = await query(
+      'SELECT * FROM password_resets WHERE email = $1 AND expires_at > CURRENT_TIMESTAMP',
+      [email]
+    );
+
+    if (otpRes.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid or expired OTP verification code.' });
+    }
+
+    const resetRecord = otpRes.rows[0];
+    if (resetRecord.otp !== otp) {
+      const attempts = (resetRecord.failed_attempts || 0) + 1;
+      if (attempts >= 5) {
+        await query('DELETE FROM password_resets WHERE email = $1', [email]);
+        return res.status(400).json({ error: 'Too many incorrect OTP attempts. This code has been invalidated. Please request a new code.' });
+      } else {
+        await query('UPDATE password_resets SET failed_attempts = failed_attempts + 1 WHERE email = $1', [email]);
+        return res.status(400).json({ error: `Invalid OTP code. You have ${5 - attempts} attempts remaining before it is invalidated.` });
+      }
+    }
+
+    // OTP matches! Update user status to verified
+    await query('UPDATE users SET is_verified = TRUE WHERE email = $1', [email]);
+    await query('DELETE FROM password_resets WHERE email = $1', [email]);
+
+    // Fetch updated user to generate token
+    const userRes = await query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = userRes.rows[0];
+    const token = generateToken(user);
+
+    res.status(200).json({
+      message: 'Email verified successfully. Account activated.',
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        photo_url: user.photo_url,
+        google_id: user.google_id,
+        gemini_api_key: user.gemini_api_key,
+        gemini_api_key_secondary: user.gemini_api_key_secondary,
+        created_at: user.created_at
+      }
+    });
+  } catch (error) {
+    console.error('Verify signup error:', error);
+    res.status(500).json({ error: 'Server error verifying email code.' });
+  }
+});
+
+// E. Resend Signup Verification OTP
+router.post('/resend-verification', async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required.' });
+  }
+
+  try {
+    const userRes = await query('SELECT * FROM users WHERE email = $1', [email]);
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    const user = userRes.rows[0];
+    if (user.is_verified) {
+      return res.status(400).json({ error: 'Email is already verified.' });
+    }
+
+    // Generate a 6-digit verification code
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
+
+    await query('DELETE FROM password_resets WHERE email = $1', [email]);
+    await query(
+      'INSERT INTO password_resets (email, otp, expires_at) VALUES ($1, $2, $3)',
+      [email, otp, expiresAt]
+    );
+
+    // Send verification mail
+    const mailOptions = {
+      from: `"Grow Expense" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Grow Expense - Verify Your Email Address',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h2 style="color: #00D09C; text-align: center;">Grow Expense</h2>
+          <p>Hi ${user.name || 'User'},</p>
+          <p>Please verify your email address to complete your registration. Use the following One-Time Password (OTP) verification code:</p>
+          <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-radius: 5px; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #333;">
+            ${otp}
+          </div>
+          <p style="color: #666; font-size: 13px; text-align: center; margin-top: 20px;">
+            This OTP is valid for <strong>15 minutes</strong>.
+          </p>
+        </div>
+      `,
+    };
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ message: 'Verification OTP resent successfully.' });
+  } catch (error) {
+    console.error('Resend verification error:', error);
+    res.status(500).json({ error: 'Server error resending verification code.' });
   }
 });
 
