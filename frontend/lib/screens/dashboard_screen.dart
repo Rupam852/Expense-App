@@ -1774,11 +1774,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final expenseProvider = Provider.of<ExpenseProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Auto-prompt custom Gemini API Key popup if missing right after login!
+    // Auto-prompt custom Gemini API Key popup if missing right after login, with a 800ms transition delay
     if (userProvider.showApiKeyPrompt) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showGeminiKeyDialog(context, userProvider);
         userProvider.dismissApiKeyPrompt();
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (mounted) {
+            _showGeminiKeyDialog(context, userProvider);
+          }
+        });
       });
     }
 
