@@ -155,4 +155,33 @@ document.addEventListener('DOMContentLoaded', () => {
     
     container.appendChild(particle);
   }
+
+  // 9. Navbar Scroll Spy (Highlight active section)
+  const spySections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.nav-links a[href^="#"]');
+  
+  const spyObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.getAttribute('id');
+        navLinks.forEach(link => {
+          const href = link.getAttribute('href').substring(1);
+          if (href === id) {
+            link.classList.add('active');
+          } else {
+            link.classList.remove('active');
+          }
+        });
+      }
+    });
+  }, {
+    threshold: 0.2,
+    rootMargin: '-80px 0px -40% 0px'
+  });
+  
+  spySections.forEach(section => {
+    if (section.getAttribute('id')) {
+      spyObserver.observe(section);
+    }
+  });
 });

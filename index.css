@@ -282,6 +282,7 @@ a {
 }
 
 .nav-links a:hover,
+.nav-links a.active,
 .nav-link-btn:hover {
   color: var(--text-main);
 }
@@ -299,6 +300,7 @@ a {
 }
 
 .nav-links a:hover::after,
+.nav-links a.active::after,
 .nav-link-btn:hover::after {
   width: 100%;
 }
@@ -376,6 +378,44 @@ a {
     transform: translateY(-90vh) scale(0.5) rotate(360deg);
     opacity: 0;
   }
+}
+
+/* Hero Entrance Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-badge,
+.hero-content h1,
+.hero-content p.hero-desc,
+.hero-actions,
+.hero-trust-badges {
+  opacity: 0;
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.hero-badge { animation-delay: 0.1s; }
+.hero-content h1 { animation-delay: 0.25s; }
+.hero-content p.hero-desc { animation-delay: 0.4s; }
+.hero-actions { animation-delay: 0.55s; }
+.hero-trust-badges { animation-delay: 0.7s; }
+
+.hero-visual {
+  opacity: 0;
+  animation: fadeIn 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: 0.3s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .hero-container {
@@ -1064,7 +1104,8 @@ a {
   transition: var(--transition-smooth);
 }
 
-.faq-item:hover .faq-question h3 {
+.faq-item:hover .faq-question h3,
+.faq-item.active .faq-question h3 {
   color: var(--primary-green);
 }
 
