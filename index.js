@@ -202,12 +202,96 @@ document.addEventListener('DOMContentLoaded', () => {
         scrollTick = true;
       }
     });
-    
     backToTopBtn.addEventListener('click', () => {
       window.scrollTo({
         top: 0,
         behavior: 'smooth'
       });
     });
+  }
+
+  // 11. Testimonials Carousel Controller
+  const testimonialCards = document.querySelectorAll('.testimonial-card');
+  const testimonialDots = document.querySelectorAll('.carousel-dots .dot');
+  const prevBtn = document.getElementById('carousel-prev');
+  const nextBtn = document.getElementById('carousel-next');
+  let currentSlide = 0;
+  let autoplayInterval;
+
+  const showSlide = (index) => {
+    testimonialCards.forEach((card, i) => {
+      if (i === index) {
+        card.classList.add('active');
+      } else {
+        card.classList.remove('active');
+      }
+    });
+
+    testimonialDots.forEach((dot, i) => {
+      if (i === index) {
+        dot.classList.add('active');
+      } else {
+        dot.classList.remove('active');
+      }
+    });
+
+    currentSlide = index;
+  };
+
+  const nextSlide = () => {
+    let next = currentSlide + 1;
+    if (next >= testimonialCards.length) {
+      next = 0;
+    }
+    showSlide(next);
+  };
+
+  const prevSlide = () => {
+    let prev = currentSlide - 1;
+    if (prev < 0) {
+      prev = testimonialCards.length - 1;
+    }
+    showSlide(prev);
+  };
+
+  const startAutoplay = () => {
+    stopAutoplay();
+    autoplayInterval = setInterval(nextSlide, 6000);
+  };
+
+  const stopAutoplay = () => {
+    if (autoplayInterval) {
+      clearInterval(autoplayInterval);
+    }
+  };
+
+  const resetAutoplay = () => {
+    stopAutoplay();
+    startAutoplay();
+  };
+
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+      nextSlide();
+      resetAutoplay();
+    });
+  }
+
+  if (prevBtn) {
+    prevBtn.addEventListener('click', () => {
+      prevSlide();
+      resetAutoplay();
+    });
+  }
+
+  testimonialDots.forEach((dot, index) => {
+    dot.addEventListener('click', () => {
+      showSlide(index);
+      resetAutoplay();
+    });
+  });
+
+  if (testimonialCards.length > 0) {
+    startAutoplay();
   }
 });
