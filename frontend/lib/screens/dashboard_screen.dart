@@ -12,6 +12,7 @@ import '../services/user_provider.dart';
 import '../models/expense.dart';
 import 'expense_entry_screen.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:open_file/open_file.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/custom_toast.dart';
 
@@ -61,7 +62,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (oldTotal > 0) {
         if (!mounted) return;
         
-        final formattedTotal = NumberFormat('#,##,###.##').format(oldTotal);
         final parts = lastKnown.split('-');
         String oldMonthLabel = lastKnown;
         if (parts.length == 2) {
@@ -70,11 +70,182 @@ class _DashboardScreenState extends State<DashboardScreen> {
             oldMonthLabel = DateFormat('MMMM yyyy').format(oldDate);
           } catch (_) {}
         }
+
+        final currentMonthStart = DateTime(now.year, now.month);
+        final oldExpenseIds = expenseProvider.expenses
+            .where((e) => e.transactionDate.isBefore(currentMonthStart))
+            .map((e) => e.id)
+            .toList();
         
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (dialogCtx) {
+        _showMonthRolloverDialog(context, oldTotal, oldMonthLabel, oldExpenseIds, currentMonthStr);
+      } else {
+        // If there were no expenses in previous month, just update the stored month string
+        await prefs.setString('last_known_month_year', currentMonthStr);
+      }
+    }
+  }
+
+  void _showMonthRolloverDialog(
+    BuildContext context,
+    double oldTotal,
+    String oldMonthLabel,
+    List<String> oldExpenseIds,
+    String currentMonthStr,
+  ) {
+    final formattedTotal = NumberFormat('#,##,###.##').format(oldTotal);
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: Theme.of(context).primaryColor.withOpacity(0.1),
+            ),
+          ),
+          title: Row(
+            children: [
+              const Icon(Icons.cleaning_services_outlined, color: Color(0xFF00D09C), size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Month Rollover Clear-up',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'A new month has started! Your total expenses for the previous month ($oldMonthLabel) were:',
+                style: GoogleFonts.inter(fontSize: 13, height: 1.4),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: Text(
+                  '₹$formattedTotal',
+                  style: GoogleFonts.outfit(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Click "Starting new month" to clean up old transactions, or generate a statement bill first.',
+                style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+          actionsPadding: const EdgeInsets.all(16),
+          actions: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(dialogCtx).pop();
+                    _generateRolloverBill(context, oldTotal, oldMonthLabel, oldExpenseIds, currentMonthStr);
+                  },
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: BorderSide(color: Theme.of(context).primaryColor),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(Icons.picture_as_pdf_outlined),
+                  label: Text(
+                    'Generate all Expenses bill',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(dialogCtx).pop();
+                    _clearRolloverData(context, currentMonthStr);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(Icons.cleaning_services_outlined),
+                  label: Text(
+                    'Starting new month',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _generateRolloverBill(
+    BuildContext context,
+    double oldTotal,
+    String oldMonthLabel,
+    List<String> oldExpenseIds,
+    String currentMonthStr,
+  ) async {
+    if (oldExpenseIds.isEmpty) return;
+
+    final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+    
+    double progress = 0.0;
+    String statusText = 'Compiling transactions...';
+    bool apiFinished = false;
+    bool popped = false;
+    String? localPath;
+
+    expenseProvider.downloadInvoice(oldExpenseIds).then((path) {
+      localPath = path;
+      apiFinished = true;
+    });
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (!context.mounted) return;
+              if (progress < 0.9) {
+                setDialogState(() {
+                  progress += 0.08;
+                  if (progress > 0.4 && progress < 0.7) {
+                    statusText = 'Generating PDF layout...';
+                  } else if (progress >= 0.7) {
+                    statusText = 'Compiling total expenses...';
+                  }
+                });
+              } else if (apiFinished && !popped) {
+                popped = true;
+                setDialogState(() {
+                  progress = 1.0;
+                  statusText = 'Compilation complete!';
+                });
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  if (context.mounted && Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  }
+                });
+              }
+            });
+
             return AlertDialog(
               backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               shape: RoundedRectangleBorder(
@@ -83,101 +254,224 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   color: Theme.of(context).primaryColor.withOpacity(0.1),
                 ),
               ),
-              title: Row(
-                children: [
-                  const Icon(Icons.cleaning_services_outlined, color: Color(0xFF00D09C), size: 28),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Month Rollover Clear-up',
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
+              content: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.picture_as_pdf_outlined,
+                        color: Theme.of(context).primaryColor,
+                        size: 32,
                       ),
                     ),
-                  ),
-                ],
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'A new month has started! Your total expenses for the previous month ($oldMonthLabel) were:',
-                    style: GoogleFonts.inter(fontSize: 13, height: 1.4),
-                  ),
-                  const SizedBox(height: 16),
-                  Center(
-                    child: Text(
-                      '₹$formattedTotal',
+                    const SizedBox(height: 20),
+                    Text(
+                      'Generating Statement',
                       style: GoogleFonts.outfit(
-                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      statusText,
+                      style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                        valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
+                        minHeight: 6,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${(progress * 100).toInt()}%',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).primaryColor,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Click OK to clean up all old transactions from this device and the cloud database.',
-                    style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
-              ),
-              actionsPadding: const EdgeInsets.all(16),
-              actions: [
-                ElevatedButton(
-                  onPressed: () async {
-                    // Close alert dialog
-                    Navigator.of(dialogCtx).pop();
-                    
-                    // Show progress dialog
-                    BuildContext? progressDialogContext;
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (progressCtx) {
-                        progressDialogContext = progressCtx;
-                        return const Center(
-                          child: CircularProgressIndicator(),
-                        );
-                      },
-                    );
-                    
-                    final success = await expenseProvider.deleteOldExpenses();
-                    
-                    if (progressDialogContext != null && Navigator.canPop(progressDialogContext!)) {
-                      Navigator.pop(progressDialogContext!);
-                    }
-                    
-                      CustomToast.show(
-                        context,
-                        success 
-                            ? 'Old expenses cleared successfully!' 
-                            : 'Old expenses cleared locally. Cloud deletion pending.',
-                        isError: !success,
-                      );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'OK',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             );
           },
         );
-      } else {
-        // If there were no expenses in previous month, just update the stored month string
-        await prefs.setString('last_known_month_year', currentMonthStr);
-      }
+      },
+    );
+
+    if (!mounted) return;
+
+    if (localPath != null) {
+      _showRolloverStatementActionDialog(context, localPath!, oldTotal, oldMonthLabel, oldExpenseIds, currentMonthStr);
+    } else {
+      CustomToast.show(
+        context,
+        'Failed to generate PDF statement. Make sure you are online.',
+        isError: true,
+      );
+      _showMonthRolloverDialog(context, oldTotal, oldMonthLabel, oldExpenseIds, currentMonthStr);
+    }
+  }
+
+  void _showRolloverStatementActionDialog(
+    BuildContext context,
+    String localPath,
+    double oldTotal,
+    String oldMonthLabel,
+    List<String> oldExpenseIds,
+    String currentMonthStr,
+  ) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: Theme.of(context).primaryColor.withOpacity(0.1)),
+          ),
+          contentPadding: EdgeInsets.zero,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_rounded),
+                      onPressed: () {
+                        Navigator.of(dialogCtx).pop();
+                        _showMonthRolloverDialog(context, oldTotal, oldMonthLabel, oldExpenseIds, currentMonthStr);
+                      },
+                    ),
+                    Expanded(
+                      child: Text(
+                        'Statement Generated',
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  children: [
+                    Text(
+                      'Your PDF statement for $oldMonthLabel has been compiled containing ${oldExpenseIds.length} transactions.',
+                      style: GoogleFonts.inter(fontSize: 13, height: 1.4),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Share.shareXFiles([XFile(localPath)], text: 'Expense statement for $oldMonthLabel');
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                            foregroundColor: Theme.of(context).primaryColor,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          icon: const Icon(Icons.share_outlined, size: 18),
+                          label: Text(
+                            'Share PDF',
+                            style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12),
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            final result = await OpenFile.open(localPath);
+                            if (result.type != ResultType.done && context.mounted) {
+                              CustomToast.show(
+                                context,
+                                'Cannot open PDF: ${result.message}',
+                                isError: true,
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          icon: const Icon(Icons.picture_as_pdf, size: 18),
+                          label: Text(
+                            'View Statement',
+                            style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _clearRolloverData(BuildContext context, String currentMonthStr) async {
+    final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+    final prefs = await SharedPreferences.getInstance();
+
+    BuildContext? progressDialogContext;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (progressCtx) {
+        progressDialogContext = progressCtx;
+        return const Center(
+          child: CircularProgressIndicator(),
+        );
+      },
+    );
+
+    final success = await expenseProvider.deleteOldExpenses();
+
+    if (progressDialogContext != null && Navigator.canPop(progressDialogContext!)) {
+      Navigator.pop(progressDialogContext!);
+    }
+
+    if (success) {
+      await prefs.setString('last_known_month_year', currentMonthStr);
+    }
+
+    if (context.mounted) {
+      CustomToast.show(
+        context,
+        success
+            ? 'Old expenses cleared successfully!'
+            : 'Old expenses cleared locally. Cloud deletion pending.',
+        isError: !success,
+      );
     }
   }
 
