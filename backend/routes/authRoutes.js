@@ -143,8 +143,8 @@ router.post('/login', async (req, res) => {
         const updatedUser = await query(
           `UPDATE users 
            SET google_id = COALESCE(google_id, $1), 
-               photo_url = COALESCE(photo_url, $2),
-               name = COALESCE(name, $3),
+               photo_url = COALESCE($2, photo_url),
+               name = COALESCE($3, name),
                is_verified = TRUE,
                updated_at = NOW()
            WHERE id = $4
