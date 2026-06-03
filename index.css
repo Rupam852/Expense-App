@@ -43,6 +43,7 @@ body {
   overflow-x: hidden;
   position: relative;
   -webkit-font-smoothing: antialiased;
+  -webkit-overflow-scrolling: touch; /* Force native inertial momentum scroll on iOS */
   
   /* Hide scrollbar for IE, Edge and Firefox */
   -ms-overflow-style: none;  /* IE and Edge */
@@ -175,10 +176,11 @@ body::after {
   transform: translate3d(-1000px, -1000px, 0);
 }
 
-/* Hide main scrollbar for Chrome, Safari and Opera */
-html::-webkit-scrollbar,
-body::-webkit-scrollbar {
-  display: none;
+/* Hide all scrollbars globally on WebKit/Blink browsers (Chrome, Safari, WebView) */
+::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Scroll Progress Bar */
@@ -1401,8 +1403,13 @@ a {
    13. Additional Responsive Mobile Polish
    ----------------------------------------- */
 @media (max-width: 768px) {
-  html, body {
+  html {
+    overflow-x: visible; /* Prevent layout scroll-locking on iOS */
+  }
+  
+  body {
     overflow-x: hidden;
+    -webkit-overflow-scrolling: touch; /* Momentum scrolling */
   }
   
   .features,
@@ -1410,6 +1417,10 @@ a {
   .faq,
   .cta {
     padding: 60px 0;
+  }
+  
+  .blob {
+    animation: none !important; /* Stop GPU-intensive background animations on mobile to save CPU/battery */
   }
   
   .blob-1 { width: 250px; height: 250px; }
