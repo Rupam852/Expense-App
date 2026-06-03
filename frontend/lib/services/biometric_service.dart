@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -42,8 +43,14 @@ class BiometricService {
           useErrorDialogs: true,
         ),
       );
+      if (didAuthenticate) {
+        HapticFeedback.mediumImpact();
+      } else {
+        HapticFeedback.vibrate();
+      }
       return didAuthenticate;
     } catch (e) {
+      HapticFeedback.vibrate();
       print('Native biometric lock prompt error: $e');
       return false;
     }

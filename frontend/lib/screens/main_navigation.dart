@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/expense_provider.dart';
 import 'dashboard_screen.dart';
@@ -78,6 +79,7 @@ class _MainNavigationState extends State<MainNavigation> with WidgetsBindingObse
         bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
+          HapticFeedback.selectionClick();
           setState(() {
             _currentIndex = index;
           });
@@ -111,7 +113,10 @@ class _MainNavigationState extends State<MainNavigation> with WidgetsBindingObse
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _openQuickAddExpense,
+        onPressed: () {
+          HapticFeedback.lightImpact();
+          _openQuickAddExpense();
+        },
         tooltip: 'Add Transaction',
         child: const Icon(Icons.add, size: 28),
       ),

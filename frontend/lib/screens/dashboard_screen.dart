@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -239,6 +240,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     List<String> oldExpenseIds,
     String currentMonthStr,
   ) async {
+    HapticFeedback.mediumImpact();
     if (oldExpenseIds.isEmpty) return;
 
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
@@ -500,6 +502,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _clearRolloverData(BuildContext context, String currentMonthStr) async {
+    HapticFeedback.vibrate();
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
     final prefs = await SharedPreferences.getInstance();
 

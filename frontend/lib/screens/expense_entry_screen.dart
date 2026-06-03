@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -361,6 +362,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
 
   // Trigger camera or gallery scanner
   void _triggerScanner(ImageSource source) async {
+    HapticFeedback.mediumImpact();
     final userProvider = Provider.of<UserProvider>(context, listen: false);
 
     final picker = ImagePicker();
@@ -463,6 +465,8 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   void _save() async {
     if (_isSaving) return; // Prevent double taps
     if (!_formKey.currentState!.validate()) return;
+
+    HapticFeedback.mediumImpact();
 
     final amount = double.tryParse(_amountController.text) ?? 0.0;
     if (amount <= 0) {
