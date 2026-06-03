@@ -4,6 +4,7 @@
    1. Design System & Variables
    ----------------------------------------- */
 :root {
+  --gradient-primary: linear-gradient(135deg, #00d09c 0%, #05f2a8 100%);
   --bg-primary: #08090a;
   --bg-secondary: #0f1319;
   --bg-tertiary: #171d25;
@@ -909,7 +910,7 @@ a {
 }
 
 .footer p {
-  color: var(--text-dark);
+  color: var(--text-muted);
   font-size: 0.9rem;
 }
 
@@ -917,7 +918,7 @@ a {
   display: flex;
   align-items: center;
   gap: 16px;
-  color: var(--text-dark);
+  color: var(--text-muted);
   font-size: 0.9rem;
 }
 
