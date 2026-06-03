@@ -294,31 +294,4 @@ document.addEventListener('DOMContentLoaded', () => {
   if (testimonialCards.length > 0) {
     startAutoplay();
   }
-
-  // 12. Interactive Product Tour Tab Switcher
-  const tourTabs = document.querySelectorAll('.tour-tab');
-  const tourPanels = document.querySelectorAll('.tour-panel');
-
-  tourTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      const targetTab = tab.getAttribute('data-tab');
-
-      // Update active classes on tab buttons
-      tourTabs.forEach(t => {
-        t.classList.remove('active');
-        t.setAttribute('aria-selected', 'false');
-      });
-      tab.classList.add('active');
-      tab.setAttribute('aria-selected', 'true');
-
-      // Switch active panel
-      tourPanels.forEach(panel => {
-        panel.classList.remove('active');
-      });
-      const activePanel = document.getElementById(`pane-${targetTab}`);
-      if (activePanel) {
-        activePanel.classList.add('active');
-      }
-    });
-  });
 });

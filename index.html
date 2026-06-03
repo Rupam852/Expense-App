@@ -235,198 +235,48 @@
           <p>Everything runs with zero network latency off a local offline database. If you wish to synchronize data across devices, you can securely sync your ledger entries directly to a secure backup cloud server synced via encrypted authorization tokens.</p>
         </div>
       </div>
-    </div>
-  </section>
 
-  <!-- Product Tour Section -->
-  <section id="product-tour" class="product-tour">
-    <div class="section-header">
-      <h2>Inside Grow Expense</h2>
-      <p>An interactive tour of all application views, secure offline schemas, database architectures, and native API connections.</p>
-    </div>
-    
-    <div class="tour-container">
-      <!-- Tab Switchers -->
-      <div class="tour-tabs" role="tablist">
-        <button class="tour-tab active" data-tab="dashboard" role="tab" aria-selected="true">
-          <span class="tab-icon">🏠</span> Dashboard
-        </button>
-        <button class="tour-tab" data-tab="ocr" role="tab" aria-selected="false">
-          <span class="tab-icon">📷</span> AI OCR Scanner
-        </button>
-        <button class="tour-tab" data-tab="editor" role="tab" aria-selected="false">
-          <span class="tab-icon">✏️</span> Ledger Editor
-        </button>
-        <button class="tour-tab" data-tab="budgets" role="tab" aria-selected="false">
-          <span class="tab-icon">🎯</span> Budget Dials
-        </button>
-        <button class="tour-tab" data-tab="rollover" role="tab" aria-selected="false">
-          <span class="tab-icon">📄</span> PDF & Rollover
-        </button>
-        <button class="tour-tab" data-tab="security" role="tab" aria-selected="false">
-          <span class="tab-icon">🔐</span> Enclave & Sync
-        </button>
+      <!-- Card 6: Interactive Expense Analytics (Spans 1 column) -->
+      <div class="bento-card">
+        <div class="feature-icon-wrapper">
+          <svg class="feature-svg-icon analytics-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+        </div>
+        <div class="bento-content">
+          <h3>Interactive Charts & Expense Analytics</h3>
+          <p>Visualize your monthly category outflows. Beautiful, real-time pie charts and dynamic bar graphs help you track spending patterns and locate savings opportunities instantly.</p>
+        </div>
       </div>
 
-      <!-- Tour Display Canvas -->
-      <div class="tour-canvas">
-        <!-- Tab 1: Dashboard -->
-        <div class="tour-panel active" id="pane-dashboard" role="tabpanel">
-          <div class="panel-details">
-            <h3>🏠 Live Dashboard & Balance Ledger</h3>
-            <p class="panel-intro">The landing pad of Grow Expense. It displays real-time calculations of your net worth, income streams, and category-level outflows.</p>
-            
-            <div class="detail-split">
-              <div class="tech-column">
-                <h4>🛠️ Under The Hood</h4>
-                <ul>
-                  <li><strong>State Provider:</strong> Utilizes Flutter's <code>Provider</code> pattern via <code>ExpenseProvider</code> to propagate reactive SQLite data updates globally.</li>
-                  <li><strong>Currency Formatter:</strong> Interrogates system preferences using <code>intl</code>'s <code>NumberFormat</code>. Backed by a dynamic fallback helper supporting USD (<code>$</code>), EUR (<code>€</code>), GBP (<code>£</code>), AUD (<code>A$</code>), CAD (<code>C$</code>), and INR (<code>₹</code>) based on default locale.</li>
-                  <li><strong>Deduplication Shield:</strong> Prevents transaction duplicates from CSV imports by pre-checking if the same encrypted amount, category, and date parameters exist locally.</li>
-                </ul>
-              </div>
-              <div class="features-column">
-                <h4>✨ UI Features</h4>
-                <ul>
-                  <li><strong>Real-time Totals Grid:</strong> Stacked balance tiles showcasing net balance, monthly income, and monthly expense dials.</li>
-                  <li><strong>Multi-wallet Registers:</strong> Horizontal sliding card deck linking user transactions directly to active accounts (e.g. HDFC Bank, GPay, Cash).</li>
-                  <li><strong>Recent Transaction Feed:</strong> Filterable feed list with scroll animations, categorization emojis, and swipe-to-delete support.</li>
-                </ul>
-              </div>
-            </div>
-          </div>
+      <!-- Card 7: Multi-Wallet & Account Mapping (Spans 1 column) -->
+      <div class="bento-card">
+        <div class="feature-icon-wrapper">
+          <svg class="feature-svg-icon wallet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="12" y1="4" x2="12" y2="20"></line></svg>
         </div>
-
-        <!-- Tab 2: AI OCR Shutter -->
-        <div class="tour-panel" id="pane-ocr" role="tabpanel">
-          <div class="panel-details">
-            <h3>📷 AI OCR & Statement Scanner</h3>
-            <p class="panel-intro">Snap a photo of an invoice or upload a netbanking statement. The app's AI engine automatically classifies and indexes the fields.</p>
-            
-            <div class="detail-split">
-              <div class="tech-column">
-                <h4>🛠️ Under The Hood</h4>
-                <ul>
-                  <li><strong>Render Cloud Gateway:</strong> Uploads JPEG bytes as <code>MultipartFile</code> to the secure Node.js Render proxy, which invokes the Gemini Vision API.</li>
-                  <li><strong>Custom API Key Headers:</strong> Passes user-specific keys in request headers (<code>x-user-gemini-key</code> and <code>x-user-gemini-key-secondary</code>) to run OCR under their own free tier quota.</li>
-                  <li><strong>Large PDF Handler:</strong> Configures a <code>3-minute</code> network timeout for large netbanking statement uploads, supporting password-protected files via <code>x-file-password</code> headers.</li>
-                </ul>
-              </div>
-              <div class="features-column">
-                <h4>✨ UI Features</h4>
-                <ul>
-                  <li><strong>In-app Camera Shutter:</strong> Integrates <code>image_picker</code> to directly launch native camera shutters or pick images from the device gallery.</li>
-                  <li><strong>Interactive Password Prompt:</strong> Auto-triggers secure popup inputs when a netbanking PDF is encrypted.</li>
-                  <li><strong>AI Fields Auto-filling:</strong> Directly populates category dropdowns, description text, and date wheels upon receiving parsed JSON.</li>
-                </ul>
-              </div>
-            </div>
-          </div>
+        <div class="bento-content">
+          <h3>Multi-Wallet & Payment Profiles</h3>
+          <p>Define custom payment sources—such as Cash, Credit Cards, or specific bank accounts. Link expenses directly to payment profiles and maintain clean registers for different transaction channels.</p>
         </div>
+      </div>
 
-        <!-- Tab 3: Ledger Editor -->
-        <div class="tour-panel" id="pane-editor" role="tabpanel">
-          <div class="panel-details">
-            <h3>✏️ Manual Entry & Custom Wallets</h3>
-            <p class="panel-intro">The ledger editor lets you record cash and card transactions manually when automated statement parsing is not desired.</p>
-            
-            <div class="detail-split">
-              <div class="tech-column">
-                <h4>🛠️ Under The Hood</h4>
-                <ul>
-                  <li><strong>SQLite Schema:</strong> Records write directly to the local SQLite table: <code>expenses(id, amount, currency, category, description, transaction_date, receipt_url, is_recurring, recurrence_period, is_deleted, created_at, updated_at, is_synced)</code>.</li>
-                  <li><strong>Haptic Vibration Engine:</strong> Calls native Android vibration routines. Fires <code>HapticFeedback.lightImpact()</code> on tab/dropdown switches and <code>HapticFeedback.mediumImpact()</code> on successful record saves.</li>
-                </ul>
-              </div>
-              <div class="features-column">
-                <h4>✨ UI Features</h4>
-                <ul>
-                  <li><strong>Wallet Mapper:</strong> Select from custom-defined payment accounts (Cash, credit cards, banking nodes).</li>
-                  <li><strong>Category Picker:</strong> Dropdown overlay supporting standard categories (Food, Shopping, Travel, Entertainment, Utilities, Income) and custom user categories.</li>
-                  <li><strong>Recurring Transaction Switch:</strong> Toggle to auto-repeat entries daily, weekly, or monthly.</li>
-                </ul>
-              </div>
-            </div>
-          </div>
+      <!-- Card 8: Tactile Haptic UX Feedback (Spans 1 column) -->
+      <div class="bento-card">
+        <div class="feature-icon-wrapper">
+          <svg class="feature-svg-icon haptics-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
         </div>
-
-        <!-- Tab 4: Budget Dials -->
-        <div class="tour-panel" id="pane-budgets" role="tabpanel">
-          <div class="panel-details">
-            <h3>🎯 Budget Progress Dials & Alarms</h3>
-            <p class="panel-intro">Establish boundaries for different spending sectors and monitor your limits in real-time.</p>
-            
-            <div class="detail-split">
-              <div class="tech-column">
-                <h4>🛠️ Under The Hood</h4>
-                <ul>
-                  <li><strong>SQLite Table Schema:</strong> Budgets are tracked locally in <code>budgets(id, category, amount_limit, month_year, created_at, updated_at, is_deleted, is_synced)</code>.</li>
-                  <li><strong>Interactive Limit Dials:</strong> Compiles category-level expense sums dynamically, comparing them to active limits on the current month-year string.</li>
-                </ul>
-              </div>
-              <div class="features-column">
-                <h4>✨ UI Features</h4>
-                <ul>
-                  <li><strong>Dynamic Progress Meters:</strong> Custom circular dials that fill in color (green $\rightarrow$ orange $\rightarrow$ red) as you approach your target budget threshold.</li>
-                  <li><strong>Over-spending Alarms:</strong> Visual warning badges and notification banners that trigger instantly when category balances exceed limits.</li>
-                </ul>
-              </div>
-            </div>
-          </div>
+        <div class="bento-content">
+          <h3>Tactile Haptic Feedback Profiles</h3>
+          <p>Experience physical, responsive actions. The application utilizes targeted haptic vibration cues for key flows—firing light taps on tab changes, standard impacts on saves, and warning double-pulses on data resets.</p>
         </div>
+      </div>
 
-        <!-- Tab 5: Rollover & PDF -->
-        <div class="tour-panel" id="pane-rollover" role="tabpanel">
-          <div class="panel-details">
-            <h3>📄 Month Rollover & Native PDF Exporter</h3>
-            <p class="panel-intro">Clear up cache memory and back up your transaction registers into standard PDF files at the end of each month.</p>
-            
-            <div class="detail-split">
-              <div class="tech-column">
-                <h4>🛠️ Under The Hood</h4>
-                <ul>
-                  <li><strong>MethodChannel Bridge:</strong> Invokes a native Android wrapper <code>com.example.groww_expense_tracker/save_file</code> via MethodChannel <code>saveFileToDownloads</code>.</li>
-                  <li><strong>Scoped Storage Compliance:</strong> Bypasses Android 11+ storage permission locks by writing PDF byte arrays directly to the public <code>Downloads</code> directory using Android's native MediaStore API.</li>
-                  <li><strong>SQLite Purging:</strong> Executes a clean-up transaction deleting database expenses older than the current month. Updates SharedPreferences' <code>last_known_month_year</code> values.</li>
-                </ul>
-              </div>
-              <div class="features-column">
-                <h4>✨ UI Features</h4>
-                <ul>
-                  <li><strong>Rollover Prompt:</strong> Auto-triggers on the first app boot of a new month, showing the previous month's total spend.</li>
-                  <li><strong>Print-Ready Exporter:</strong> Generates beautiful PDF ledgers styled with structured grid items, totals, and receipts.</li>
-                  <li><strong>CSV Export Grid:</strong> Allows downloading raw spreadsheets of transactions for easy accounting backups.</li>
-                </ul>
-              </div>
-            </div>
-          </div>
+      <!-- Card 9: Secure Google Auth & Sync (Spans 1 column) -->
+      <div class="bento-card">
+        <div class="feature-icon-wrapper">
+          <svg class="feature-svg-icon auth-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
         </div>
-
-        <!-- Tab 6: Security & Sync -->
-        <div class="tour-panel" id="pane-security" role="tabpanel">
-          <div class="panel-details">
-            <h3>🔐 Security Enclave & Cloud Backup</h3>
-            <p class="panel-intro">Keep your ledger lock-secured and synchronize your encrypted records across multiple devices.</p>
-            
-            <div class="detail-split">
-              <div class="tech-column">
-                <h4>🛠️ Under The Hood</h4>
-                <ul>
-                  <li><strong>AES-256 Symmetric Encryption:</strong> All database fields (amounts, categories, descriptions) are encrypted using AES-256 CBC. Symmetric keys and IVs are generated on first boot and locked in <code>FlutterSecureStorage</code>.</li>
-                  <li><strong>BiometricPrompt Engine:</strong> Uses Android's native Biometric API. Verifies fingerprints and face unlocks in the device's hardware Secure Enclave.</li>
-                  <li><strong>Neon PostgreSQL Sync:</strong> Synchronizes offline SQLite rows to a secure Postgres server. Checks <code>deleted_records(id, table_name, created_at)</code> and sync timestamps to manage conflicts.</li>
-                </ul>
-              </div>
-              <div class="features-column">
-                <h4>✨ UI Features</h4>
-                <ul>
-                  <li><strong>Global Biometric Guard:</strong> Locks the app screen on startup until biometric checks succeed.</li>
-                  <li><strong>Verification OTP:</strong> Dual-phase registration utilizing an Apps Script proxy node to securely mail OTP verification letters.</li>
-                  <li><strong>Sync Portal:</strong> One-tap sync trigger with sync status indicators and offline-to-online change summaries.</li>
-                </ul>
-              </div>
-            </div>
-          </div>
+        <div class="bento-content">
+          <h3>Google Sign-In & OTP Authentication</h3>
+          <p>Access optional database backup services securely. Log in instantly with your Google account or register via email with a secure two-phase OTP verification guard to protect your sync streams.</p>
         </div>
       </div>
     </div>
