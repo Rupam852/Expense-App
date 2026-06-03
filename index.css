@@ -38,10 +38,11 @@
 
 body {
   background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.007) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.007) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
   background-size: 60px 60px;
-  background-position: center;
+  background-position: 0 0;
+  animation: grid-drift 100s linear infinite;
   font-family: var(--font-sans);
   background-color: var(--bg-primary);
   color: var(--text-main);
@@ -1026,10 +1027,11 @@ a {
 
 .modal-body {
   background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.007) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.007) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
   background-size: 60px 60px;
-  background-position: center;
+  background-position: 0 0;
+  animation: grid-drift 100s linear infinite;
   padding: 30px;
   overflow-y: auto;
   color: var(--text-muted);
@@ -1108,15 +1110,15 @@ a {
   height: 100%;
   min-height: 100vh;
   overflow: hidden;
-  z-index: -2;
+  z-index: -1;
   pointer-events: none;
 }
 
 .blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(120px);
-  opacity: 0.12;
+  filter: blur(100px);
+  opacity: 0.22;
   mix-blend-mode: screen;
 }
 
