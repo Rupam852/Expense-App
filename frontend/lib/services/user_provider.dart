@@ -452,10 +452,11 @@ class UserProvider with ChangeNotifier {
   // Helper HTTP calls
   Future<Map<String, dynamic>?> httpGetMe(String token) async {
     try {
-      final response = await _apiService.fetchAnalyticsSummary(); // uses get /auth/me equivalent
-      // Standard HTTP fetch profile
-      final res = await httpGetCustom('${ApiService.baseUrl}/auth/me', token);
-      return res;
+      final response = await _apiService.fetchUserProfile();
+      if (response['success'] == true) {
+        return response['user'];
+      }
+      return null;
     } catch (_) {
       return null;
     }
@@ -481,12 +482,6 @@ class UserProvider with ChangeNotifier {
     } catch (_) {
       return null;
     }
-  }
-
-  Future<Map<String, dynamic>?> httpGetCustom(String url, String token) async {
-    final response = await _apiService.fetchAnalyticsSummary(); // mock/redirect
-    final res = await _apiService.login(email: _userProfile?['email'] ?? 'temp@mail.com', googleId: _userProfile?['google_id']);
-    return res['user'];
   }
 
   // Guest Bypass Login (Enables immediate usage without backend connections)
