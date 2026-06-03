@@ -255,6 +255,7 @@ a {
   font-weight: 800;
   background: linear-gradient(135deg, #ffffff 0%, var(--text-muted) 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -419,6 +420,7 @@ a {
 .text-gradient {
   background: var(--gradient-primary);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
