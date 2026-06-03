@@ -262,19 +262,26 @@ a {
   gap: 28px;
 }
 
-.nav-links a {
+.nav-links a,
+.nav-link-btn {
   font-size: 0.9rem;
   font-weight: 500;
   color: var(--text-muted);
   transition: var(--transition-smooth);
   position: relative;
+  background: none;
+  border: none;
+  font-family: var(--font-sans);
+  cursor: pointer;
 }
 
-.nav-links a:hover {
+.nav-links a:hover,
+.nav-link-btn:hover {
   color: var(--text-main);
 }
 
-.nav-links a::after {
+.nav-links a::after,
+.nav-link-btn::after {
   content: '';
   position: absolute;
   width: 0%;
@@ -285,7 +292,8 @@ a {
   transition: var(--transition-smooth);
 }
 
-.nav-links a:hover::after {
+.nav-links a:hover::after,
+.nav-link-btn:hover::after {
   width: 100%;
 }
 
@@ -307,21 +315,6 @@ a {
 
 .download-btn-small::after {
   display: none !important;
-}
-
-.nav-link-btn {
-  background: none;
-  border: none;
-  font-family: var(--font-sans);
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: var(--transition-smooth);
-}
-
-.nav-link-btn:hover {
-  color: var(--text-main);
 }
 
 @media (max-width: 768px) {
@@ -500,7 +493,7 @@ a {
   .hero-container {
     grid-template-columns: 1fr;
     text-align: center;
-    gap: 50px;
+    gap: 40px;
   }
   .hero-content {
     align-items: center;
@@ -511,6 +504,47 @@ a {
   }
   .hero-actions, .hero-trust-badges {
     justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero {
+    padding: 120px 0 60px 0;
+  }
+  .hero-content h1 {
+    font-size: 2.4rem;
+    line-height: 1.2;
+  }
+  .hero-content p.hero-desc {
+    font-size: 1rem;
+    margin-bottom: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero {
+    padding: 100px 0 40px 0;
+  }
+  .hero-content h1 {
+    font-size: 2rem;
+  }
+  .hero-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .download-btn, .learn-more-btn {
+    justify-content: center;
+    width: 100%;
+    text-align: center;
+  }
+  .isometric-canvas {
+    transform: rotateX(15deg) rotateY(-20deg) scale(0.78);
+    transform-origin: center center;
+  }
+  .hero-visual {
+    min-height: 330px;
   }
 }
 
@@ -847,6 +881,15 @@ a {
   }
 }
 
+@media (max-width: 768px) {
+  .bento-card {
+    padding: 24px;
+  }
+  .section-header h2 {
+    font-size: 2rem;
+  }
+}
+
 /* -----------------------------------------
    8. How It Works Section
    ----------------------------------------- */
@@ -923,7 +966,7 @@ a {
     padding-left: 65px;
   }
   .timeline-number {
-    left: 5px;
+    left: 6px;
     width: 40px;
     height: 40px;
     font-size: 1.05rem;
@@ -1078,6 +1121,9 @@ a {
   .cta h2 {
     font-size: 2rem;
   }
+  .cta-container {
+    padding: 40px 20px;
+  }
 }
 
 /* -----------------------------------------
@@ -1135,6 +1181,16 @@ a {
   .footer-container {
     flex-direction: column;
     text-align: center;
+  }
+  .faq-question {
+    padding: 18px 20px;
+  }
+  .faq-answer {
+    padding: 0 20px;
+  }
+  .faq-item.active .faq-answer {
+    padding: 0 20px 18px 20px;
+    padding-top: 12px;
   }
 }
 
