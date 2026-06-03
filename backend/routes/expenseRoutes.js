@@ -653,89 +653,114 @@ function deduplicateTransactions(expenses) {
 }
 
 // Call Google Gemini Native REST API for a specific text chunk
-async function callGeminiForChunk(chunkText, systemRulesText, userApiKey, models) {
+async function callGeminiForChunk(chunkText, systemRulesText, userApiKey, models, secondaryApiKey = null) {
   let rawContent = null;
   let lastError = null;
-  
-  for (const model of models) {
-    try {
-      const apiVersion = 'v1beta';
-      const bodyPayload = {
-        systemInstruction: {
-          parts: [{ text: systemRulesText }]
-        },
-        contents: [
-          {
-            parts: [
-              {
-                text: `Raw text content:
-                ---------------------
-                ${chunkText}
-                ---------------------`
-              }
-            ]
+
+  const keysToTry = [userApiKey];
+  if (secondaryApiKey && secondaryApiKey.trim().length > 0) {
+    keysToTry.push(secondaryApiKey);
+  }
+
+  for (let k = 0; k < keysToTry.length; k++) {
+    const activeKey = keysToTry[k];
+    const currentModels = k === 0 ? models : await getDynamicModels(activeKey);
+
+    for (const model of currentModels) {
+      try {
+        const apiVersion = 'v1beta';
+        const bodyPayload = {
+          systemInstruction: {
+            parts: [{ text: systemRulesText }]
+          },
+          contents: [
+            {
+              parts: [
+                {
+                  text: `Raw text content:
+                  ---------------------
+                  ${chunkText}
+                  ---------------------`
+                }
+              ]
+            }
+          ],
+          safetySettings: [
+            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+          ],
+          generationConfig: {
+            maxOutputTokens: 8192,
+            responseMimeType: 'application/json'
           }
-        ],
-        safetySettings: [
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ],
-        generationConfig: {
-          maxOutputTokens: 8192,
-          responseMimeType: 'application/json'
-        }
-      };
+        };
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout per model attempt
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout per model attempt
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userApiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(bodyPayload),
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
+        const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${activeKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(bodyPayload),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
 
-      if (response.ok) {
-        const data = await response.json();
-        const candidate = data.candidates?.[0];
-        const finishReason = candidate?.finishReason;
-        const text = candidate?.content?.parts?.[0]?.text?.trim();
-        
-        if (text) {
-          const truncated = isJsonTruncated(text);
-          logDiagnostic(`[Chunk Import] Model ${model} returned output (length=${text.length}, finishReason=${finishReason || 'STOP'}, isTruncated=${truncated})`);
+        if (response.ok) {
+          const data = await response.json();
+          const candidate = data.candidates?.[0];
+          const finishReason = candidate?.finishReason;
+          const text = candidate?.content?.parts?.[0]?.text?.trim();
           
-          if (!truncated || model === models[models.length - 1]) {
-            rawContent = text;
-            break;
-          } else {
-            logDiagnostic(`[Chunk Import] Model ${model} output was truncated. Falling back to the next model...`);
+          if (text) {
+            const truncated = isJsonTruncated(text);
+            logDiagnostic(`[Chunk Import] Model ${model} returned output (length=${text.length}, finishReason=${finishReason || 'STOP'}, isTruncated=${truncated})`);
+            
+            if (!truncated || model === currentModels[currentModels.length - 1]) {
+              rawContent = text;
+              break;
+            } else {
+              logDiagnostic(`[Chunk Import] Model ${model} output was truncated. Falling back to the next model...`);
+            }
+          }
+        } else {
+          const errText = await response.text();
+          logDiagnostic(`Gemini model ${model} chunk call failed with status ${response.status}: ${errText}`);
+          
+          lastError = new Error(errText);
+          if (response.status === 400 || response.status === 403 || response.status === 429) {
+            break; // Break inner models loop to try secondary key immediately
           }
         }
-      } else {
-        const errText = await response.text();
-        logDiagnostic(`Gemini model ${model} chunk call failed with status ${response.status}: ${errText}`);
-        
-        // Short-circuit on fatal key/rate-limit/bad-request errors
-        if (response.status === 400 || response.status === 403 || response.status === 429) {
-          throw new Error(`Google Gemini API error (${response.status}): ${errText}`);
-        }
-        lastError = new Error(errText);
+      } catch (err) {
+        logDiagnostic(`Gemini model ${model} chunk call exception: ${err.message}`);
+        lastError = err;
       }
-    } catch (err) {
-      logDiagnostic(`Gemini model ${model} chunk call exception: ${err.message}`);
-      lastError = err;
+    }
+
+    if (rawContent) {
+      break; // Successfully got content, stop trying keys
     }
   }
 
   if (!rawContent) {
-    throw lastError || new Error('No response from Gemini API models.');
+    let errMsg = lastError ? lastError.message : 'No response from Gemini API models.';
+    try {
+      const parsed = JSON.parse(errMsg);
+      if (parsed.error && parsed.error.message) {
+        errMsg = parsed.error.message;
+      }
+    } catch (_) {}
+    
+    if (keysToTry.length > 1) {
+      throw new Error(`Both Primary and Secondary API keys failed. Secondary key error: ${errMsg}`);
+    } else {
+      throw new Error(`Primary API Key failed: ${errMsg}`);
+    }
   }
 
   let cleanJson = rawContent.trim();
@@ -1035,8 +1060,9 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
   }
 
   try {
-        const userGeminiKey = req.headers['x-user-gemini-key'] || process.env.GEMINI_API_KEY;
-    if (!userGeminiKey) {
+    const primaryKey = req.headers['x-user-gemini-key'] || process.env.GEMINI_API_KEY;
+    const secondaryKey = req.headers['x-user-gemini-key-secondary'];
+    if (!primaryKey) {
       return res.status(400).json({ error: 'Google AI Studio API Key is required. Please set your key in Settings.' });
     }
 
@@ -1059,91 +1085,110 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
     }
 
     let rawContent = null;
-    const models = await getDynamicModels(userGeminiKey);
-    let lastError = null;
     let usedModel = null;
+    let lastError = null;
 
-    for (const model of models) {
-      try {
-        console.log(`Sending receipt image to Google Gemini Native REST API using model ${model} (${req.file.size} bytes)...`);
+    const keysToTry = [primaryKey];
+    if (secondaryKey && secondaryKey.trim().length > 0) {
+      keysToTry.push(secondaryKey);
+    }
 
-        const apiVersion = 'v1beta';
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 35000); // 35 seconds timeout per model attempt
+    for (let k = 0; k < keysToTry.length; k++) {
+      const activeKey = keysToTry[k];
+      const models = await getDynamicModels(activeKey);
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${userGeminiKey}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  {
-                    text: `Analyze this image (which could be a store receipt, utility bill, restaurant invoice, or a screenshot of a UPI transaction like GPay, PhonePe, Paytm). 
-                    Extract the following financial details accurately:
-                    1. amount (numeric float value)
-                    2. currency (3-letter ISO code, e.g. INR, USD, EUR. Default to INR if it seems Indian, like UPI screenshots)
-                    3. category (Categorize into precisely one of these values: Food & Drinks, Shopping, Recharges & Bills, Travel & Fuel, Medical & Health, Entertainment, Money Transfers, Investments & Fees, Others)
-                    4. description (Brief summary of what was purchased or description of the transaction)
-                    5. transaction_date (ISO 8601 string, e.g., '2026-06-01T20:00:00Z'. Extract transaction timestamp, or estimate/use current date if not visible)
-                    6. vendor (Name of the shop, store, merchant, or individual who received the money. For UPI, extract the receiver's name)
-                    
-                    Ensure the response is ONLY a single, clean JSON object without markdown formatting blocks or extra text.
-                    JSON structure:
+      for (const model of models) {
+        try {
+          console.log(`Sending receipt image to Google Gemini Native REST API using model ${model} (${req.file.size} bytes)...`);
+
+          const apiVersion = 'v1beta';
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 35000); // 35 seconds timeout per model attempt
+
+          const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${activeKey}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
                     {
-                      "amount": 150.00,
-                      "currency": "INR",
-                      "category": "Food & Drinks",
-                      "description": "Lunch at restaurant",
-                      "transaction_date": "2026-06-01T13:45:00.000Z",
-                      "vendor": "Burger King"
-                    }`
-                  },
-                  {
-                    inlineData: {
-                      mimeType: mimeType,
-                      data: base64Image
+                      text: `Analyze this image (which could be a store receipt, utility bill, restaurant invoice, or a screenshot of a UPI transaction like GPay, PhonePe, Paytm). 
+                      Extract the following financial details accurately:
+                      1. amount (numeric float value)
+                      2. currency (3-letter ISO code, e.g. INR, USD, EUR. Default to INR if it seems Indian, like UPI screenshots)
+                      3. category (Categorize into precisely one of these values: Food & Drinks, Shopping, Recharges & Bills, Travel & Fuel, Medical & Health, Entertainment, Money Transfers, Investments & Fees, Others)
+                      4. description (Brief summary of what was purchased or description of the transaction)
+                      5. transaction_date (ISO 8601 string, e.g., '2026-06-01T20:00:00Z'. Extract transaction timestamp, or estimate/use current date if not visible)
+                      6. vendor (Name of the shop, store, merchant, or individual who received the money. For UPI, extract the receiver's name)
+                      
+                      Ensure the response is ONLY a single, clean JSON object without markdown formatting blocks or extra text.
+                      JSON structure:
+                      {
+                        "amount": 150.00,
+                        "currency": "INR",
+                        "category": "Food & Drinks",
+                        "description": "Lunch at restaurant",
+                        "transaction_date": "2026-06-01T13:45:00.000Z",
+                        "vendor": "Burger King"
+                      }`
+                    },
+                    {
+                      inlineData: {
+                        mimeType: mimeType,
+                        data: base64Image
+                      }
                     }
-                  }
-                ]
+                  ]
+                }
+              ],
+              generationConfig: {
+                maxOutputTokens: 1000
               }
-            ],
-            generationConfig: {
-              maxOutputTokens: 1000
-            }
-          }),
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
+            }),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
 
-        if (response.ok) {
-          const data = await response.json();
-          const candidate = data.candidates?.[0];
-          const finishReason = candidate?.finishReason;
-          const text = candidate?.content?.parts?.[0]?.text?.trim();
-          
-          if (text) {
-            const truncated = isJsonTruncated(text);
-            console.log(`[Receipt Scan] Model ${model} returned output (length=${text.length}, finishReason=${finishReason || 'STOP'}, isTruncated=${truncated})`);
+          if (response.ok) {
+            const data = await response.json();
+            const candidate = data.candidates?.[0];
+            const finishReason = candidate?.finishReason;
+            const text = candidate?.content?.parts?.[0]?.text?.trim();
             
-            if (!truncated || model === models[models.length - 1]) {
-              rawContent = text;
-              usedModel = model;
-              break;
-            } else {
-              console.log(`[Receipt Scan] Model ${model} output was truncated. Falling back to the next model...`);
+            if (text) {
+              const truncated = isJsonTruncated(text);
+              console.log(`[Receipt Scan] Model ${model} returned output (length=${text.length}, finishReason=${finishReason || 'STOP'}, isTruncated=${truncated})`);
+              
+              if (!truncated || model === models[models.length - 1]) {
+                rawContent = text;
+                usedModel = model;
+                break;
+              } else {
+                console.log(`[Receipt Scan] Model ${model} output was truncated. Falling back to the next model...`);
+              }
+            }
+          } else {
+            const errText = await response.text();
+            console.warn(`Gemini model ${model} failed with status ${response.status}: ${errText}`);
+            lastError = new Error(errText);
+            
+            if (response.status === 400 || response.status === 403 || response.status === 429) {
+              break; // Break inner models loop to try secondary key immediately
             }
           }
-        } else {
-          const errText = await response.text();
-          console.warn(`Gemini model ${model} failed with status ${response.status}: ${errText}`);
-          lastError = new Error(errText);
+        } catch (err) {
+          console.error(`Gemini model ${model} exception:`, err);
+          lastError = err;
         }
-      } catch (err) {
-        console.error(`Gemini model ${model} exception:`, err);
-        lastError = err;
+      }
+
+      if (rawContent) {
+        break; // Succeeded with this key!
+      } else {
+        console.warn(`[Receipt Scan] Key attempt ${k+1}/${keysToTry.length} failed. ${secondaryKey ? 'Trying fallback key...' : ''}`);
       }
     }
 
@@ -1165,7 +1210,12 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
           }
         } catch (_) {}
       }
-      return res.status(500).json({ error: `OCR Service failed: ${errMsg}` });
+
+      if (keysToTry.length > 1) {
+        return res.status(500).json({ error: `Both Primary and Secondary API keys failed. Secondary key error: ${errMsg}` });
+      } else {
+        return res.status(500).json({ error: `Primary API Key failed: ${errMsg}` });
+      }
     }
 
     // Clean JSON wrapper markdown blocks like ```json ... ``` if returned by the LLM
@@ -1292,6 +1342,7 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const userApiKey = req.headers['x-user-gemini-key'] || process.env.GEMINI_API_KEY;
+      const userApiKeySecondary = req.headers['x-user-gemini-key-secondary'];
       if (userApiKey && userApiKey.trim().length > 0) {
         logDiagnostic(`[Spreadsheet Import] Gemini API Key found. Parsing using Google Gemini AI...`);
         
@@ -1334,15 +1385,17 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
 
         const models = await getDynamicModels(userApiKey);
         const systemRulesText = getSystemRulesText(userName);
+        let lastChunkError = null;
 
         const chunkPromises = chunks.map((chunkText, index) => {
-          return callGeminiForChunk(chunkText, systemRulesText, userApiKey, models)
+          return callGeminiForChunk(chunkText, systemRulesText, userApiKey, models, userApiKeySecondary)
             .then(chunkArray => {
               logDiagnostic(`[Spreadsheet Import] Chunk ${index + 1}/${chunks.length} returned ${chunkArray.length} items.`);
               return chunkArray;
             })
             .catch(chunkErr => {
               logDiagnostic(`[Spreadsheet Import] Error processing chunk ${index + 1}/${chunks.length}: ${chunkErr.message}`);
+              lastChunkError = chunkErr;
               return [];
             });
         });
@@ -1354,7 +1407,8 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
         }
 
         if (mergedArray.length === 0) {
-          return res.status(422).json({ error: 'No valid transactions could be extracted from this spreadsheet.' });
+          const errMsg = lastChunkError ? lastChunkError.message : 'No valid transactions could be extracted from this spreadsheet.';
+          return res.status(422).json({ error: errMsg });
         }
 
         const importNow = new Date();
@@ -1671,6 +1725,7 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
       logDiagnostic(`[PDF Import] Parsed: filename=${req.file.originalname}, pages=${pdfData.numpages}, actualSplitPages=${pages.length}, textLength=${rawText.length}`);
 
       const userApiKey = req.headers['x-user-gemini-key'] || process.env.GEMINI_API_KEY;
+      const userApiKeySecondary = req.headers['x-user-gemini-key-secondary'];
       if (!userApiKey) {
         return res.status(400).json({ error: 'Gemini API Key required. Please set your Google Gemini API Key in Settings.' });
       }
@@ -1689,15 +1744,17 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
 
       const models = await getDynamicModels(userApiKey);
       const systemRulesText = getSystemRulesText(userName);
+      let lastChunkError = null;
 
       const chunkPromises = chunks.map((chunkText, index) => {
-        return callGeminiForChunk(chunkText, systemRulesText, userApiKey, models)
+        return callGeminiForChunk(chunkText, systemRulesText, userApiKey, models, userApiKeySecondary)
           .then(chunkArray => {
             logDiagnostic(`[PDF Import] Chunk ${index + 1}/${chunks.length} returned ${chunkArray.length} items.`);
             return chunkArray;
           })
           .catch(chunkErr => {
             logDiagnostic(`[PDF Import] Error processing chunk ${index + 1}/${chunks.length}: ${chunkErr.message}`);
+            lastChunkError = chunkErr;
             return []; // Return empty array on failure so other chunks still succeed
           });
       });
@@ -1709,7 +1766,8 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
       }
 
       if (mergedArray.length === 0) {
-        return res.status(422).json({ error: 'No valid transactions could be extracted from this PDF.' });
+        const errMsg = lastChunkError ? lastChunkError.message : 'No valid transactions could be extracted from this PDF.';
+        return res.status(422).json({ error: errMsg });
       }
 
       const importNow = new Date();

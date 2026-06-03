@@ -80,14 +80,17 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
 
   void _showGeminiKeyDialog(BuildContext context, UserProvider userProvider) {
     final keyController = TextEditingController(text: userProvider.userGeminiApiKey ?? '');
+    final secondaryKeyController = TextEditingController(text: userProvider.userGeminiApiKeySecondary ?? '');
     bool isObscured = true;
+    bool isSecondaryObscured = true;
 
     showDialog(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            final hasKey = userProvider.userGeminiApiKey != null && userProvider.userGeminiApiKey!.isNotEmpty;
+            final hasKeys = (userProvider.userGeminiApiKey != null && userProvider.userGeminiApiKey!.isNotEmpty) ||
+                (userProvider.userGeminiApiKeySecondary != null && userProvider.userGeminiApiKeySecondary!.isNotEmpty);
             return AlertDialog(
               backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               shape: RoundedRectangleBorder(
@@ -102,7 +105,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Google AI Studio Key',
+                      'AI API Key Settings',
                       style: GoogleFonts.outfit(
                         fontWeight: FontWeight.bold,
                         fontSize: 20,
@@ -111,51 +114,91 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                   ),
                 ],
               ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Apna personal free Google AI Studio (Gemini) API key enter karein. Isse transaction scan aur statement import directly aapke key se free mein chalenge.',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      height: 1.4,
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Apna Google AI Studio (Gemini) API keys enter karein. Agar primary key fail hoti hai to optional backup key automatically use hogi.',
+                      style: GoogleFonts.inter(fontSize: 13, height: 1.4),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: keyController,
-                    obscureText: isObscured,
-                    style: GoogleFonts.inter(fontSize: 14),
-                    decoration: InputDecoration(
-                      labelText: 'Google AI Studio Key',
-                      labelStyle: TextStyle(color: Theme.of(context).primaryColor),
-                      hintText: 'AIzaSy...',
-                      filled: true,
-                      fillColor: Theme.of(context).primaryColor.withOpacity(0.03),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                    const SizedBox(height: 10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withOpacity(0.07),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          isObscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                          size: 20,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('🔵 Google Gemini  (AIzaSy...)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
+                          Text('   aistudio.google.com — free, fast', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Primary Key Field
+                    TextFormField(
+                      controller: keyController,
+                      obscureText: isObscured,
+                      style: GoogleFonts.inter(fontSize: 14),
+                      decoration: InputDecoration(
+                        labelText: 'Primary API Key',
+                        labelStyle: TextStyle(color: Theme.of(context).primaryColor),
+                        hintText: 'AIzaSy...',
+                        filled: true,
+                        fillColor: Theme.of(context).primaryColor.withOpacity(0.03),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        onPressed: () => setState(() => isObscured = !isObscured),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            isObscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                            size: 20,
+                          ),
+                          onPressed: () => setState(() => isObscured = !isObscured),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  SelectableText(
-                    'Key nahi hai? Free mein generate karein:\naistudio.google.com',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: Theme.of(context).primaryColor,
-                      fontWeight: FontWeight.w600,
-                      height: 1.4,
+                    const SizedBox(height: 16),
+                    // Secondary Key Field
+                    TextFormField(
+                      controller: secondaryKeyController,
+                      obscureText: isSecondaryObscured,
+                      style: GoogleFonts.inter(fontSize: 14),
+                      decoration: InputDecoration(
+                        labelText: 'Secondary API Key (Optional)',
+                        labelStyle: TextStyle(color: Theme.of(context).primaryColor),
+                        hintText: 'AIzaSy... (Backup key)',
+                        filled: true,
+                        fillColor: Theme.of(context).primaryColor.withOpacity(0.03),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            isSecondaryObscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                            size: 20,
+                          ),
+                          onPressed: () => setState(() => isSecondaryObscured = !isSecondaryObscured),
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    SelectableText(
+                      'Free keys generate karein:\naistudio.google.com',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: Theme.of(context).primaryColor,
+                        fontWeight: FontWeight.w600,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               actionsPadding: const EdgeInsets.all(16),
               actions: [
@@ -166,34 +209,38 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                     style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                   ),
                 ),
-                if (hasKey)
+                if (hasKeys)
                   TextButton(
                     onPressed: () async {
-                      await userProvider.saveUserGeminiApiKey(null);
+                      await userProvider.saveUserGeminiApiKeys(primary: null, secondary: null);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Custom API Key cleared successfully!')),
+                          const SnackBar(content: Text('Custom API Keys cleared successfully!')),
                         );
                         Navigator.of(context).pop();
                       }
                     },
                     style: TextButton.styleFrom(foregroundColor: Colors.red),
                     child: Text(
-                      'Clear Key',
+                      'Clear Keys',
                       style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                     ),
                   ),
                 ElevatedButton(
                   onPressed: () async {
                     final keyVal = keyController.text.trim();
-                    await userProvider.saveUserGeminiApiKey(keyVal.isEmpty ? null : keyVal);
+                    final secondaryVal = secondaryKeyController.text.trim();
+                    await userProvider.saveUserGeminiApiKeys(
+                      primary: keyVal.isEmpty ? null : keyVal,
+                      secondary: secondaryVal.isEmpty ? null : secondaryVal,
+                    );
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            keyVal.isEmpty
+                            (keyVal.isEmpty && secondaryVal.isEmpty)
                                 ? 'Switched back to shared server key!'
-                                : 'API Key saved successfully!',
+                                : 'API Keys saved successfully!',
                           ),
                         ),
                       );
@@ -207,13 +254,104 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: Text(
-                    'Save Key',
+                    'Save Keys',
                     style: GoogleFonts.inter(fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
             );
           },
+        );
+      },
+    );
+  }
+
+  void _showApiErrorDialog(BuildContext context, String actualError, UserProvider userProvider) {
+    final hasSecondary = userProvider.userGeminiApiKeySecondary != null &&
+        userProvider.userGeminiApiKeySecondary!.isNotEmpty;
+    final displayMessage = hasSecondary
+        ? actualError
+        : 'Your API fail';
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: Theme.of(context).primaryColor.withOpacity(0.1),
+            ),
+          ),
+          title: Row(
+            children: [
+              const Icon(Icons.error_outline_rounded, color: Colors.red, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'API Processing Error',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                displayMessage,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  height: 1.4,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              if (!hasSecondary) ...[
+                const SizedBox(height: 16),
+                Text(
+                  'Tip: You can add an optional backup secondary API key in settings. If the primary key fails, the backup key will automatically keep the AI features working.',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Close',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              ),
+            ),
+            if (!hasSecondary)
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _showGeminiKeyDialog(context, userProvider);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: Text(
+                  'Add Backup Key',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                ),
+              ),
+          ],
         );
       },
     );
@@ -294,15 +432,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
     } else {
       final errorMsg = expenseProvider.syncErrorMessage ?? '';
       if (errorMsg.isNotEmpty && errorMsg != 'cancelled') {
-        if (errorMsg.contains('API Key') || errorMsg.contains('API key')) {
-          _showGeminiKeyDialog(context, userProvider);
-        }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(expenseProvider.syncErrorMessage ?? 'Receipt extraction failed. Entering manually.'),
-            backgroundColor: Colors.amber[800],
-          ),
-        );
+        _showApiErrorDialog(context, errorMsg, userProvider);
       }
     }
   }

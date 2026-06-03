@@ -170,8 +170,12 @@ class ApiService {
         if (userKey != null && userKey.trim().isNotEmpty) {
           request.headers['x-user-gemini-key'] = userKey.trim();
         }
+        final userKeySecondary = prefs.getString('user_gemini_api_key_secondary');
+        if (userKeySecondary != null && userKeySecondary.trim().isNotEmpty) {
+          request.headers['x-user-gemini-key-secondary'] = userKeySecondary.trim();
+        }
       } catch (err) {
-        print('Error reading user_gemini_api_key: $err');
+        print('Error reading user_gemini_api_keys: $err');
       }
 
       request.files.add(
@@ -230,8 +234,12 @@ class ApiService {
         if (userKey != null && userKey.trim().isNotEmpty) {
           request.headers['x-user-gemini-key'] = userKey.trim();
         }
+        final userKeySecondary = prefs.getString('user_gemini_api_key_secondary');
+        if (userKeySecondary != null && userKeySecondary.trim().isNotEmpty) {
+          request.headers['x-user-gemini-key-secondary'] = userKeySecondary.trim();
+        }
       } catch (err) {
-        print('Error reading user_gemini_api_key: $err');
+        print('Error reading user_gemini_api_keys: $err');
       }
 
       request.files.add(
@@ -338,6 +346,7 @@ class ApiService {
     required String name,
     String? photoUrl,
     String? geminiApiKey,
+    String? geminiApiKeySecondary,
   }) async {
     try {
       final headers = await _getHeaders();
@@ -348,6 +357,7 @@ class ApiService {
           'name': name,
           if (photoUrl != null) 'photo_url': photoUrl,
           if (geminiApiKey != null) 'gemini_api_key': geminiApiKey,
+          if (geminiApiKeySecondary != null) 'gemini_api_key_secondary': geminiApiKeySecondary,
         }),
       );
 
