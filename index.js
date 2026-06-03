@@ -89,4 +89,31 @@ document.addEventListener('DOMContentLoaded', () => {
     el.style.transition = 'opacity 0.6s ease-out, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
     observer.observe(el);
   });
+
+  // 5. Scroll Progress Bar
+  const scrollProgress = document.querySelector('.scroll-progress');
+  window.addEventListener('scroll', () => {
+    const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
+    if (totalScroll > 0) {
+      const percentage = (window.scrollY / totalScroll) * 100;
+      scrollProgress.style.width = `${percentage}%`;
+    }
+  });
+
+  // 6. FAQ Accordion Toggle
+  const faqItems = document.querySelectorAll('.faq-item');
+  faqItems.forEach(item => {
+    const question = item.querySelector('.faq-question');
+    question.addEventListener('click', () => {
+      // Close other active items
+      faqItems.forEach(otherItem => {
+        if (otherItem !== item && otherItem.classList.contains('active')) {
+          otherItem.classList.remove('active');
+          otherItem.style.maxHeight = null;
+        }
+      });
+      // Toggle current item
+      item.classList.toggle('active');
+    });
+  });
 });
