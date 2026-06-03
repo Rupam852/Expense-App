@@ -125,16 +125,32 @@ router.post('/login', async (req, res) => {
         user = newUser.rows[0];
       } else {
         user = userRes.rows[0];
-        // Ensure google_id and profile updates are synced
-        if (!user.google_id || (photo_url && user.photo_url !== photo_url)) {
+        
+        // SECURITY FIX: If the existing account has not been verified (created manually but never validated),
+        // we must delete it to prevent "Unverified Email Account Takeover".
+        if (!user.is_verified) {
+          await query('DELETE FROM users WHERE id = $1', [user.id]);
+          
+          // Re-create the user fresh and verified via Google
+          const newUser = await query(
+            `INSERT INTO users (email, name, photo_url, google_id, is_verified)
+             VALUES ($1, $2, $3, $4, TRUE)
+             RETURNING id, email, name, photo_url, google_id, is_verified, gemini_api_key, gemini_api_key_secondary, created_at`,
+            [email, name || 'Google User', photo_url || null, google_id]
+          );
+          user = newUser.rows[0];
+        } else {
+          // If the account was already verified, we link Google login securely.
+          // Ensure google_id, is_verified, and profile updates are synced
           const updatedUser = await query(
             `UPDATE users 
              SET google_id = COALESCE(google_id, $1), 
                  photo_url = COALESCE(photo_url, $2),
                  name = COALESCE(name, $3),
+                 is_verified = TRUE,
                  updated_at = NOW()
              WHERE id = $4
-             RETURNING id, email, name, photo_url, google_id, gemini_api_key, gemini_api_key_secondary, created_at`,
+             RETURNING id, email, name, photo_url, google_id, is_verified, gemini_api_key, gemini_api_key_secondary, created_at`,
             [google_id, photo_url, name, user.id]
           );
           user = updatedUser.rows[0];
