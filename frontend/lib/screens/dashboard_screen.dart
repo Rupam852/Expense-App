@@ -23,8 +23,8 @@ String getCurrencySymbol(String currencyCode) {
     case 'USD': return r'$';
     case 'EUR': return '€';
     case 'GBP': return '£';
-    case 'AUD': return 'A$';
-    case 'CAD': return 'C$';
+    case 'AUD': return r'A$';
+    case 'CAD': return r'C$';
     case 'INR':
     default:
       return '₹';
