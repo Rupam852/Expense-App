@@ -1,4 +1,4 @@
-// Grow Expense App - Landing Page Interactive Logic
+// Grow Expense App - Rebuilt Interactive Logic
 
 document.addEventListener('DOMContentLoaded', () => {
   // 1. Navigation Scroll Effect
@@ -13,7 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   window.addEventListener('scroll', handleScroll);
-  // Run once initially to check scroll state
   handleScroll();
 
   // 2. Privacy Policy Modal Controls
@@ -24,34 +23,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const openModal = () => {
     privacyModal.classList.add('active');
-    document.body.style.overflow = 'hidden'; // Stop scrolling behind modal
+    document.body.style.overflow = 'hidden';
   };
 
   const closeModal = () => {
     privacyModal.classList.remove('active');
-    document.body.style.overflow = ''; // Restore scrolling
+    document.body.style.overflow = '';
   };
 
   if (openPrivacyBtn) openPrivacyBtn.addEventListener('click', openModal);
   if (openPrivacyFooter) openPrivacyFooter.addEventListener('click', openModal);
   if (closePrivacyBtn) closePrivacyBtn.addEventListener('click', closeModal);
 
-  // Close modal when clicking on overlay background
   privacyModal.addEventListener('click', (e) => {
     if (e.target === privacyModal) {
       closeModal();
     }
   });
 
-  // Close modal with Escape key
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && privacyModal.classList.contains('active')) {
       closeModal();
     }
   });
 
-  // 3. Feature Card Radial Spotlight Glow Effect
-  const cards = document.querySelectorAll('.feature-card');
+  // 3. Bento Card Radial Spotlight Glow Effect
+  const cards = document.querySelectorAll('.bento-card');
   
   cards.forEach(card => {
     card.addEventListener('mousemove', (e) => {
@@ -64,12 +61,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 4. Subtle Smooth Entrance Animation for timelines and lists
-  const observeElements = document.querySelectorAll('.feature-card, .timeline-item');
+  // 4. Subtle Smooth Entrance Scroll Animation
+  const observeElements = document.querySelectorAll('.bento-card, .timeline-item, .calc-card');
   
   const observerOptions = {
-    threshold: 0.1,
-    rootMargin: '0px 0px -50px 0px'
+    threshold: 0.05,
+    rootMargin: '0px 0px -40px 0px'
   };
 
   const observer = new IntersectionObserver((entries, observer) => {
@@ -82,10 +79,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }, observerOptions);
 
-  // Set initial hidden styles and observe
   observeElements.forEach(el => {
     el.style.opacity = '0';
-    el.style.transform = 'translateY(20px)';
+    el.style.transform = 'translateY(25px)';
     el.style.transition = 'opacity 0.6s ease-out, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
     observer.observe(el);
   });
@@ -105,15 +101,29 @@ document.addEventListener('DOMContentLoaded', () => {
   faqItems.forEach(item => {
     const question = item.querySelector('.faq-question');
     question.addEventListener('click', () => {
-      // Close other active items
       faqItems.forEach(otherItem => {
         if (otherItem !== item && otherItem.classList.contains('active')) {
           otherItem.classList.remove('active');
-          otherItem.style.maxHeight = null;
         }
       });
-      // Toggle current item
       item.classList.toggle('active');
     });
   });
+
+  // 7. Interactive Budget Planner Calculator Slider
+  const slider = document.getElementById('income-slider');
+  const incomeVal = document.getElementById('income-val');
+  const budgetVal = document.getElementById('budget-val');
+  const savingsVal = document.getElementById('savings-val');
+  const wantsVal = document.getElementById('wants-val');
+
+  if (slider) {
+    slider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value);
+      incomeVal.textContent = `₹${val.toLocaleString('en-IN')}`;
+      budgetVal.textContent = `₹${(val * 0.5).toLocaleString('en-IN')}`;
+      savingsVal.textContent = `₹${(val * 0.3).toLocaleString('en-IN')}`;
+      wantsVal.textContent = `₹${(val * 0.2).toLocaleString('en-IN')}`;
+    });
+  }
 });
