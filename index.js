@@ -1,4 +1,4 @@
-// Grow Expense App - Rebuilt Interactive Logic
+// Grow Expense App - Rebuilt Custom Interactive Logic
 
 document.addEventListener('DOMContentLoaded', () => {
   // 1. Navigation Scroll Effect
