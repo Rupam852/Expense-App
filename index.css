@@ -269,6 +269,9 @@ a {
   color: var(--text-muted);
   transition: var(--transition-smooth);
   position: relative;
+}
+
+.nav-link-btn {
   background: none;
   border: none;
   font-family: var(--font-sans);
