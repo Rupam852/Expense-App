@@ -546,4 +546,79 @@ class UserProvider with ChangeNotifier {
     _isLoading = false;
     notifyListeners();
   }
+
+  // 8. Forgot Password - Send OTP Email
+  Future<bool> sendForgotPasswordOtp(String email) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await _apiService.forgotPassword(email);
+      _isLoading = false;
+      if (result['success'] == true) {
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = result['error'];
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = 'System forgot password exception: $e';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // 9. Verify OTP code
+  Future<bool> verifyForgotPasswordOtp(String email, String otp) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await _apiService.verifyOtp(email, otp);
+      _isLoading = false;
+      if (result['success'] == true) {
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = result['error'];
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = 'System OTP verification exception: $e';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // 10. Reset Password
+  Future<bool> resetUserPassword(String email, String otp, String newPassword) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await _apiService.resetPassword(email, otp, newPassword);
+      _isLoading = false;
+      if (result['success'] == true) {
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = result['error'];
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = 'System password reset exception: $e';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
 }

@@ -1,5 +1,6 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
+import nodemailer from 'nodemailer';
 import jwt from 'jsonwebtoken';
 import { query } from '../db.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
@@ -193,6 +194,125 @@ router.put('/profile', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Profile update error:', error);
     res.status(500).json({ error: 'Server error updating profile.' });
+  }
+});
+
+// Setup Mail Transporter for Gmail SMTP
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+// A. Forgot Password - Generate & Mail OTP
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required.' });
+  }
+
+  try {
+    // 1. Verify if user exists
+    const userExist = await query('SELECT * FROM users WHERE email = $1', [email]);
+    if (userExist.rows.length === 0) {
+      return res.status(404).json({ error: 'User with this email does not exist.' });
+    }
+
+    // 2. Generate a 6-digit random code
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes expiration
+
+    // 3. Clear any existing OTPs and write the new one
+    await query('DELETE FROM password_resets WHERE email = $1', [email]);
+    await query(
+      'INSERT INTO password_resets (email, otp, expires_at) VALUES ($1, $2, $3)',
+      [email, otp, expiresAt]
+    );
+
+    // 4. Send Email
+    const mailOptions = {
+      from: `"Grow Expense" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Grow Expense - Password Reset OTP Verification Code',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h2 style="color: #00D09C; text-align: center;">Grow Expense</h2>
+          <p>Hi,</p>
+          <p>We received a request to reset your password. Please use the following One-Time Password (OTP) verification code to proceed with the reset process:</p>
+          <div style="background-color: #f9f9f9; padding: 15px; text-align: center; border-radius: 5px; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #333;">
+            ${otp}
+          </div>
+          <p style="color: #666; font-size: 13px; text-align: center; margin-top: 20px;">
+            This OTP is valid for <strong>15 minutes</strong>. If you did not request this password reset, you can safely ignore this email.
+          </p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.status(200).json({ message: 'OTP sent to email successfully.' });
+  } catch (error) {
+    console.error('Forgot Password error:', error);
+    res.status(500).json({ error: 'Server error processing forgot password request.' });
+  }
+});
+
+// B. Verify OTP
+router.post('/verify-otp', async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) {
+    return res.status(400).json({ error: 'Email and OTP are required.' });
+  }
+
+  try {
+    const otpRes = await query(
+      'SELECT * FROM password_resets WHERE email = $1 AND otp = $2 AND expires_at > CURRENT_TIMESTAMP',
+      [email, otp]
+    );
+
+    if (otpRes.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid or expired OTP verification code.' });
+    }
+
+    res.status(200).json({ message: 'OTP verified successfully.' });
+  } catch (error) {
+    console.error('Verify OTP error:', error);
+    res.status(500).json({ error: 'Server error verifying OTP code.' });
+  }
+});
+
+// C. Reset Password
+router.post('/reset-password', async (req, res) => {
+  const { email, otp, new_password } = req.body;
+  if (!email || !otp || !new_password) {
+    return res.status(400).json({ error: 'Email, OTP, and new password are required.' });
+  }
+
+  try {
+    // 1. Verify OTP remains valid
+    const otpRes = await query(
+      'SELECT * FROM password_resets WHERE email = $1 AND otp = $2 AND expires_at > CURRENT_TIMESTAMP',
+      [email, otp]
+    );
+
+    if (otpRes.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid or expired OTP verification code.' });
+    }
+
+    // 2. Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(new_password, salt);
+
+    // 3. Update user database and clear OTP in a transaction-like sequence
+    await query('UPDATE users SET password_hash = $1 WHERE email = $2', [passwordHash, email]);
+    await query('DELETE FROM password_resets WHERE email = $1', [email]);
+
+    res.status(200).json({ message: 'Password reset completed successfully.' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Server error resetting password.' });
   }
 });
 

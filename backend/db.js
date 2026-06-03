@@ -94,6 +94,17 @@ export const initDB = async () => {
       );
     `);
 
+    // 6. Password Resets Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS password_resets (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        email VARCHAR(255) NOT NULL,
+        otp VARCHAR(6) NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     console.log('Database tables successfully verified/created!');
   } catch (error) {
     console.error('Error initializing database:', error);
