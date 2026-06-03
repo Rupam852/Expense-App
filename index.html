@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grow Expense App - Smart Personal Finance Tracker</title>
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <div class="logo-area">
+        <img src="logo.png" alt="Grow Expense Logo" class="nav-logo">
+        <span class="nav-brand">Grow Expense</span>
+      </div>
+      <nav class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="https://drive.google.com/file/d/1H2bEn1qGasbThHoygGaAReUSorSNd3qq/view?usp=sharing" target="_blank" class="download-btn-small">Download</a>
+        <button id="open-privacy-btn" class="nav-link-btn">Privacy Policy</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-container">
+      <div class="hero-content">
+        <div class="badge">🚀 Version 1.0 Live</div>
+        <h1>Take Control of Your <span class="text-gradient">Money</span> Locally & Securely</h1>
+        <p>Grow Expense is a personal finance tracker that runs completely on your device. Import your UPI bank statements, parse them with local AI, generate claim bills, and secure everything with biometric locks.</p>
+        <div class="hero-actions">
+          <a href="https://drive.google.com/file/d/1H2bEn1qGasbThHoygGaAReUSorSNd3qq/view?usp=sharing" target="_blank" class="download-btn">
+            <svg class="android-icon" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M16.607 20.892L18.423 22.708C18.665 22.95 18.665 23.342 18.423 23.584C18.181 23.826 17.789 23.826 17.547 23.584L15.65 21.687C14.512 22.529 13.064 23 11.5 23C7.358 23 4 19.642 4 15.5C4 11.358 7.358 8 11.5 8C15.642 8 19 11.358 19 15.5C19 17.064 18.529 18.512 17.687 19.65L19.584 21.547C19.826 21.789 19.826 22.181 19.584 22.423C19.342 22.665 18.95 22.665 18.708 22.423L16.607 20.892ZM11.5 9.5C8.186 9.5 5.5 12.186 5.5 15.5C5.5 18.814 8.186 21.5 11.5 21.5C14.814 21.5 17.5 18.814 17.5 15.5C17.5 12.186 14.814 9.5 11.5 9.5ZM10.5 4.5V1H12.5V4.5H10.5ZM5.5 4H8V2H5.5C4.673 2 4 2.673 4 3.5V6H6V4.5H5.5V4ZM18.5 4H16V2H18.5C19.327 2 20 2.673 20 3.5V6H18V4.5H18.5V4Z"/>
+            </svg>
+            <div class="btn-text-area">
+              <span class="btn-sub">Download for Android</span>
+              <span class="btn-main">Direct APK File</span>
+            </div>
+          </a>
+          <a href="#features" class="learn-more-btn">Explore Features</a>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="phone-mockup">
+          <div class="phone-speaker"></div>
+          <div class="phone-screen">
+            <!-- Mock App Interface -->
+            <div class="app-header">
+              <img src="logo.png" alt="App Logo" class="app-mini-logo">
+              <div class="app-user-profile"></div>
+            </div>
+            
+            <div class="app-balance-card">
+              <span class="card-label">Active Month Budget</span>
+              <h2 class="card-amount">₹24,850.00</h2>
+              <div class="card-bar-bg">
+                <div class="card-bar-fill"></div>
+              </div>
+              <div class="card-footer-row">
+                <span>Spent: ₹15,150.00</span>
+                <span>Remaining: ₹9,700.00</span>
+              </div>
+            </div>
+
+            <div class="app-section-title">Quick Actions</div>
+            <div class="app-action-grid">
+              <div class="app-action-item">
+                <div class="app-action-icon green">📊</div>
+                <span>Import Statement</span>
+              </div>
+              <div class="app-action-item">
+                <div class="app-action-icon blue">📄</div>
+                <span>Invoice PDF</span>
+              </div>
+              <div class="app-action-item">
+                <div class="app-action-icon orange">📈</div>
+                <span>Export CSV</span>
+              </div>
+            </div>
+
+            <div class="app-section-title">Recent Transactions</div>
+            <div class="app-transaction-list">
+              <div class="app-tx-item">
+                <div class="tx-cat-icon">🍔</div>
+                <div class="tx-details">
+                  <span class="tx-title">Food & Drinks</span>
+                  <span class="tx-desc">Lunch at restaurant</span>
+                </div>
+                <span class="tx-amount negative">- ₹350.00</span>
+              </div>
+              <div class="app-tx-item">
+                <div class="tx-cat-icon">🛒</div>
+                <div class="tx-details">
+                  <span class="tx-title">Shopping</span>
+                  <span class="tx-desc">Supermarket supplies</span>
+                </div>
+                <span class="tx-amount negative">- ₹1,200.00</span>
+              </div>
+              <div class="app-tx-item">
+                <div class="tx-cat-icon">⚡</div>
+                <div class="tx-details">
+                  <span class="tx-title">Recharges & Bills</span>
+                  <span class="tx-desc">Electricity bill payment</span>
+                </div>
+                <span class="tx-amount negative">- ₹4,500.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section id="features" class="features">
+    <div class="section-header">
+      <h2>Designed for Speed, Security & Simplicity</h2>
+      <p>A full suite of personal accounting tools running locally on your device.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <h3>AI Statement Scanner</h3>
+        <p>Directly import PDF or Spreadsheet statements from GPay, PhonePe, and other UPI apps. Parse categories instantly via Google Gemini API safely.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📄</div>
+        <h3>Reimbursement claim bills</h3>
+        <p>Compile pichle mahine ke transactions into single high-resolution PDF statements matching corporate audit compliance. Share them instantly.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>Automated CSV Export</h3>
+        <p>Export all transaction rows directly into standard spreadsheets for customized Pivot tables, filters, or sharing with your accountant.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <h3>Biometric Privacy Lock</h3>
+        <p>Keep your financial data away from prying eyes. Protect your ledger entries using your device's native fingerprint or passcode lock.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌐</div>
+        <h3>100% Offline-First</h3>
+        <p>Your database stays on your phone. No logins needed to start, zero external servers tracking your budget, and immediate startup response.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">☁️</div>
+        <h3>Secure Cloud Backup</h3>
+        <p>Sync dynamically to your private Firebase account only when you want to backup. Total data ownership belongs to you.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works Section -->
+  <section id="how-it-works" class="how-it-works">
+    <div class="section-header">
+      <h2>How It Works</h2>
+      <p>Three simple steps to automate your budgeting flow.</p>
+    </div>
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-number">1</div>
+        <h3>Import Your Transactions</h3>
+        <p>Upload a statement file. The local AI engine maps details, dates, and amounts without leaking them outside your phone.</p>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-number">2</div>
+        <h3>Track Against Budgets</h3>
+        <p>See real-time progress meters. Set monthly targets and categorize bills to know where your funds are heading.</p>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-number">3</div>
+        <h3>Export Statements</h3>
+        <p>Generate clean, professional PDFs or spreadsheet logs in seconds. Ready for claim verification and accounting logs.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta">
+    <div class="cta-container">
+      <h2>Start Tracking Expenses Smartly Today</h2>
+      <p>Download the official Grow Expense Android APK securely and own your financial data.</p>
+      <a href="https://drive.google.com/file/d/1H2bEn1qGasbThHoygGaAReUSorSNd3qq/view?usp=sharing" target="_blank" class="download-btn-large">
+        Download Grow Expense App (APK)
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <p>&copy; 2026 Grow Expense. Local-first financial tracking.</p>
+      <div class="footer-links">
+        <button id="open-privacy-footer" class="footer-link-btn">Privacy Policy</button>
+        <span class="divider">|</span>
+        <span>Version 1.0.0</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Privacy Policy Modal -->
+  <div id="privacy-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Privacy Policy for Grow Expense App</h2>
+        <button id="close-privacy-btn" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="last-updated">Last Updated: June 2026</p>
+        
+        <h3>1. Information Collection and Use</h3>
+        <p>Grow Expense App is designed as a **local-first** application. This means all personal financial data, budgets, accounts, and transaction history are stored securely on your device's local database. We do not transmit or sell your personal data to external databases or third parties.</p>
+        
+        <h3>2. Statement Scanning and AI Parsing</h3>
+        <p>When you use the UPI statement parsing feature, the app processes the file contents. If you choose to parse via AI features, the file details are passed directly to Google's AI Studio (Gemini) using the API Key you provide. This transaction is encrypted and communicates directly with Google. No intermediary servers store or process your statements.</p>
+        
+        <h3>3. Device Permissions</h3>
+        <ul>
+          <li><strong>Storage / Files:</strong> Used solely to pick statement documents for parsing, and to save generated PDF and CSV logs to your device's Downloads directory.</li>
+          <li><strong>Biometrics / Device Lock:</strong> Used to confirm identity when launching the app. The biometric authentication is handled entirely by your phone's native operating system (Android BiometricPrompt). The app never sees, stores, or accesses your actual fingerprint or passcode records.</li>
+        </ul>
+
+        <h3>4. Optional Cloud Sync</h3>
+        <p>If you choose to enable the optional Firebase Backup sync feature, your local database records will sync dynamically to your personal Firebase cloud storage. This feature is entirely optional and can be toggled off at any time. Data ownership belongs solely to you.</p>
+
+        <h3>5. Updates to This Privacy Policy</h3>
+        <p>We may update our Privacy Policy from time to time. Since the app is local-first, policy modifications will be published here on the landing page.</p>
+
+        <h3>6. Contact Us</h3>
+        <p>If you have any questions or feedback regarding privacy, feel free to contact us through our official project channels.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="index.js"></script>
+</body>
+</html>
