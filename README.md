@@ -1,6 +1,6 @@
 # Grow Expense App
 
-[![Web App Deployment](https://img.shields.io/badge/Live-Vercel--deployed-00d09c?style=flat-square)](https://growexpenseapp.vercel.app)
+[![Web App Deployment](https://img.shields.io/badge/Live-Vercel--deployed-00d09c?style=flat-square)](https://growexpense.vercel.app)
 [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Web-blue?style=flat-square&color=05f2a8)]()
 [![Privacy](https://img.shields.io/badge/Privacy-100%25%20Local--First-00d09c?style=flat-square)]()
 
