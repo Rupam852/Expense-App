@@ -1134,7 +1134,24 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
     }
 
     if (!rawContent) {
-      return res.status(500).json({ error: `OCR Service failed: ${lastError ? lastError.message : 'No response from models'}` });
+      let errMsg = 'No response from models';
+      if (lastError && lastError.message) {
+        errMsg = lastError.message;
+        try {
+          const parsed = JSON.parse(lastError.message);
+          if (parsed.error && parsed.error.message) {
+            const rawMsg = parsed.error.message;
+            if (rawMsg.includes('quota') || rawMsg.includes('Quota')) {
+              errMsg = 'Google AI Studio (Gemini) API Quota exceeded. Please try again after 15-20 seconds.';
+            } else if (rawMsg.includes('API key') || rawMsg.includes('API Key') || rawMsg.includes('key not valid')) {
+              errMsg = 'Google AI Studio API Key is invalid. Please check your key in Settings.';
+            } else {
+              errMsg = rawMsg;
+            }
+          }
+        } catch (_) {}
+      }
+      return res.status(500).json({ error: `OCR Service failed: ${errMsg}` });
     }
 
     // Clean JSON wrapper markdown blocks like ```json ... ``` if returned by the LLM

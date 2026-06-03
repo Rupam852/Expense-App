@@ -233,34 +233,22 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
 
     setState(() {
       _receiptLocalPath = image.path;
-      _isLocalLoading = true;
     });
 
     if (!mounted) return;
     
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            CircularProgressIndicator(color: Colors.white),
-            SizedBox(width: 16),
-            Text('Gemini OCR analyzing receipt / transaction image...'),
-          ],
-        ),
-        duration: Duration(seconds: 15),
+    final extracted = await showDialog<Map<String, dynamic>?>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => OcrProgressDialog(
+        title: 'Analyzing Receipt / Screenshot',
+        ocrTask: () => expenseProvider.scanReceiptOCR(image.path),
       ),
     );
 
-    final extracted = await expenseProvider.scanReceiptOCR(image.path);
-
     if (!mounted) return;
-    ScaffoldMessenger.of(context).clearSnackBars();
-
-    setState(() {
-      _isLocalLoading = false;
-    });
 
     if (extracted != null) {
       // Prefill fields dynamically!
@@ -305,15 +293,17 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
       );
     } else {
       final errorMsg = expenseProvider.syncErrorMessage ?? '';
-      if (errorMsg.contains('API Key') || errorMsg.contains('API key')) {
-        _showGeminiKeyDialog(context, userProvider);
+      if (errorMsg.isNotEmpty && errorMsg != 'cancelled') {
+        if (errorMsg.contains('API Key') || errorMsg.contains('API key')) {
+          _showGeminiKeyDialog(context, userProvider);
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(expenseProvider.syncErrorMessage ?? 'Receipt extraction failed. Entering manually.'),
+            backgroundColor: Colors.amber[800],
+          ),
+        );
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(expenseProvider.syncErrorMessage ?? 'Receipt extraction failed. Entering manually.'),
-          backgroundColor: Colors.amber[800],
-        ),
-      );
     }
   }
 
@@ -411,18 +401,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
       appBar: AppBar(
         title: Text(widget.editExpense != null ? 'Edit Transaction' : 'Add Transaction'),
       ),
-      body: _isLocalLoading
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Reading receipt fields... Please wait.'),
-                ],
-              ),
-            )
-          : SingleChildScrollView(
+      body: SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
               child: Form(
                 key: _formKey,
@@ -708,6 +687,232 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                 ),
               ),
             ),
+    );
+  }
+}
+
+class OcrProgressDialog extends StatefulWidget {
+  final Future<Map<String, dynamic>?> Function() ocrTask;
+  final String title;
+
+  const OcrProgressDialog({
+    super.key,
+    required this.ocrTask,
+    required this.title,
+  });
+
+  @override
+  State<OcrProgressDialog> createState() => _OcrProgressDialogState();
+}
+
+class _OcrProgressDialogState extends State<OcrProgressDialog> with SingleTickerProviderStateMixin {
+  double _progress = 0.0;
+  String _statusText = 'Preparing image...';
+  bool _isCompleted = false;
+  bool _isCancelled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startSimulation();
+    _executeTask();
+  }
+
+  void _startSimulation() async {
+    // 0% -> 15% quickly
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (!mounted || _isCancelled) return;
+    setState(() {
+      _progress = 0.15;
+      _statusText = 'Uploading image to Gemini...';
+    });
+
+    // 15% -> 45% over 3 seconds
+    for (int i = 0; i < 30; i++) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (!mounted || _isCompleted || _isCancelled) return;
+      setState(() {
+        _progress += 0.01;
+      });
+    }
+
+    if (!mounted || _isCompleted || _isCancelled) return;
+    setState(() {
+      _statusText = 'Gemini OCR analyzing text & figures...';
+    });
+
+    // 45% -> 85% over 5 seconds
+    for (int i = 0; i < 80; i++) {
+      await Future.delayed(const Duration(milliseconds: 60));
+      if (!mounted || _isCompleted || _isCancelled) return;
+      setState(() {
+        _progress += 0.005;
+      });
+    }
+
+    if (!mounted || _isCompleted || _isCancelled) return;
+    setState(() {
+      _statusText = 'Extracting transaction fields...';
+    });
+
+    // 85% -> 95% very slowly
+    for (int i = 0; i < 20; i++) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (!mounted || _isCompleted || _isCancelled) return;
+      setState(() {
+        _progress += 0.002;
+      });
+    }
+  }
+
+  void _executeTask() async {
+    final result = await widget.ocrTask();
+    if (!mounted || _isCancelled) return;
+
+    if (result != null) {
+      setState(() {
+        _isCompleted = true;
+        _progress = 1.0;
+        _statusText = 'Analysis complete!';
+      });
+
+      // Wait a brief moment for the user to see the 100% completion
+      await Future.delayed(const Duration(milliseconds: 600));
+      if (mounted && !_isCancelled) {
+        Navigator.of(context).pop(result);
+      }
+    } else {
+      if (mounted && !_isCancelled) {
+        Navigator.of(context).pop(null);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final primaryColor = const Color(0xFF00D09C);
+    
+    return PopScope(
+      canPop: false,
+      child: Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Theme.of(context).primaryColor.withOpacity(0.1),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 36, left: 24, right: 24, bottom: 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 65,
+                      height: 65,
+                      decoration: BoxDecoration(
+                        color: primaryColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Icon(
+                          _isCompleted && _progress == 1.0
+                              ? Icons.check_circle_outline
+                              : Icons.psychology_outlined,
+                          color: primaryColor,
+                          size: 32,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      widget.title,
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _statusText,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: LinearProgressIndicator(
+                        value: _progress,
+                        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                        valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                        minHeight: 8,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Secure Scan',
+                          style: GoogleFonts.inter(fontSize: 10, color: Colors.grey),
+                        ),
+                        Text(
+                          '${(_progress * 100).toInt()}%',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: primaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: ClipOval(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      splashColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                      onTap: () {
+                        _isCancelled = true;
+                        Navigator.of(context).pop(null);
+                      },
+                      child: SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: Icon(
+                          Icons.close_rounded,
+                          color: Theme.of(context).iconTheme.color?.withOpacity(0.6) ?? Colors.grey.shade600,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
