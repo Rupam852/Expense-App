@@ -109,6 +109,67 @@ class ApiService {
     }
   }
 
+  // 2b. Forgot Password - Send OTP Email
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/forgot-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'email': email}),
+      );
+
+      final decoded = json.decode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': decoded['message']};
+      }
+      return {'success': false, 'error': decoded['error'] ?? 'Forgot password OTP request failed.'};
+    } catch (e) {
+      return {'success': false, 'error': 'Cannot connect to backend server: $e'};
+    }
+  }
+
+  // 2c. Verify OTP
+  Future<Map<String, dynamic>> verifyOtp(String email, String otp) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/verify-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'email': email, 'otp': otp}),
+      );
+
+      final decoded = json.decode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': decoded['message']};
+      }
+      return {'success': false, 'error': decoded['error'] ?? 'OTP verification failed.'};
+    } catch (e) {
+      return {'success': false, 'error': 'Cannot connect to backend server: $e'};
+    }
+  }
+
+  // 2d. Reset Password
+  Future<Map<String, dynamic>> resetPassword(String email, String otp, String newPassword) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/reset-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'email': email,
+          'otp': otp,
+          'new_password': newPassword,
+        }),
+      );
+
+      final decoded = json.decode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': decoded['message']};
+      }
+      return {'success': false, 'error': decoded['error'] ?? 'Password reset failed.'};
+    } catch (e) {
+      return {'success': false, 'error': 'Cannot connect to backend server: $e'};
+    }
+  }
+
   // 3. Sync SQLite Data to Postgres Neon
   Future<Map<String, dynamic>> syncData({
     required List<Map<String, dynamic>> expenses,

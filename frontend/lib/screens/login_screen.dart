@@ -5,6 +5,7 @@ import '../services/user_provider.dart';
 import '../services/expense_provider.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/custom_toast.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -196,6 +197,32 @@ class _LoginScreenState extends State<LoginScreen> {
                       return null;
                     },
                   ),
+                  
+                  // Forgot Password (Only in Login Mode)
+                  if (!_isRegisterMode) ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const ForgotPasswordScreen(),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          'Forgot Password?',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  
                   const SizedBox(height: 24),
 
                   // Submit Button
