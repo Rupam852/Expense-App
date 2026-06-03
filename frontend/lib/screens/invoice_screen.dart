@@ -196,42 +196,94 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
         if (mounted) {
           showDialog(
             context: context,
-            builder: (context) {
+            builder: (dialogCtx) {
               return AlertDialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                title: Text('Invoice Generated!', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-                content: Text(
-                  'Your PDF invoice has been compiled containing ${_selectedExpenseIds.length} transactions.\n\nTotal expenses calculation has been automatically computed.',
-                  style: GoogleFonts.inter(fontSize: 13),
+                backgroundColor: Theme.of(dialogCtx).scaffoldBackgroundColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(
+                    color: Theme.of(dialogCtx).primaryColor.withOpacity(0.1),
+                  ),
+                ),
+                titlePadding: EdgeInsets.zero,
+                title: Stack(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(left: 20.0, top: 20.0, right: 40.0),
+                      child: Text(
+                        'Invoice Generated!',
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 22,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: IconButton(
+                        icon: const Icon(Icons.close, size: 20),
+                        onPressed: () => Navigator.of(dialogCtx).pop(),
+                      ),
+                    ),
+                  ],
+                ),
+                content: Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    'Your PDF invoice has been compiled containing ${_selectedExpenseIds.length} transactions.\n\nTotal expenses calculation has been automatically computed.',
+                    style: GoogleFonts.inter(fontSize: 13, height: 1.4, color: Colors.grey[400]),
+                  ),
                 ),
                 actions: [
-                  TextButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      Share.shareXFiles([XFile(localPath!)], text: 'Expense statement reimbursement claim');
-                    },
-                    icon: const Icon(Icons.share_outlined),
-                    label: const Text('Share PDF'),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      Navigator.of(context).pop();
-                      final result = await OpenFile.open(localPath!);
-                      if (result.type != ResultType.done && context.mounted) {
-                        CustomToast.show(
-                          context,
-                          'Cannot open PDF: ${result.message}',
-                          isError: true,
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).primaryColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        TextButton.icon(
+                          onPressed: () {
+                            Navigator.of(dialogCtx).pop();
+                            Share.shareXFiles([XFile(localPath!)], text: 'Expense statement reimbursement claim');
+                          },
+                          icon: Icon(Icons.share_outlined, color: Theme.of(dialogCtx).primaryColor, size: 18),
+                          label: Text(
+                            'Share PDF',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(dialogCtx).primaryColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            Navigator.of(dialogCtx).pop();
+                            final result = await OpenFile.open(localPath!);
+                            if (result.type != ResultType.done && dialogCtx.mounted) {
+                              CustomToast.show(
+                                dialogCtx,
+                                'Cannot open PDF: ${result.message}',
+                                isError: true,
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(dialogCtx).primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(Icons.picture_as_pdf, size: 18),
+                          label: Text(
+                            'View Statement',
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
                     ),
-                    icon: const Icon(Icons.picture_as_pdf),
-                    label: const Text('View Statement'),
                   ),
                 ],
               );
