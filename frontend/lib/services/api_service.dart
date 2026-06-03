@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -428,9 +430,24 @@ class ApiService {
         // Save the byte array to device local directory as a PDF file
         final bytes = response.bodyBytes;
         final dir = await getApplicationDocumentsDirectory();
-        final file = File('${dir.path}/Invoice_${DateTime.now().millisecondsSinceEpoch}.pdf');
+        final fileName = 'Invoice_${DateTime.now().millisecondsSinceEpoch}.pdf';
+        final file = File('${dir.path}/$fileName');
         
         await file.writeAsBytes(bytes);
+
+        // Auto-save copy to public Downloads folder on Android
+        if (Platform.isAndroid) {
+          try {
+            await saveFileToDownloads(
+              fileName: fileName,
+              bytes: bytes,
+              mimeType: 'application/pdf',
+            );
+          } catch (e) {
+            print('Auto-saving generated PDF to public Downloads failed: $e');
+          }
+        }
+
         return file.path; // Return saved file path
       }
       return null;
@@ -510,5 +527,47 @@ class ApiService {
     } catch (e) {
       return {'success': false, 'error': 'Account deletion connection error: $e'};
     }
+  }
+
+  // 11. Fetch User Profile
+  Future<Map<String, dynamic>> fetchUserProfile() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/auth/me'),
+        headers: headers,
+      );
+
+      final decoded = json.decode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'user': decoded};
+      }
+      return {'success': false, 'error': decoded['error'] ?? 'Failed to fetch user profile.'};
+    } catch (e) {
+      return {'success': false, 'error': 'Profile fetch connection error: $e'};
+    }
+  }
+
+  // 12. Save File to Downloads (Android Scoped Storage native wrapper)
+  static Future<bool> saveFileToDownloads({
+    required String fileName,
+    required Uint8List bytes,
+    required String mimeType,
+  }) async {
+    if (Platform.isAndroid) {
+      try {
+        const platform = MethodChannel('com.example.groww_expense_tracker/save_file');
+        final bool success = await platform.invokeMethod('saveFileToDownloads', {
+          'fileName': fileName,
+          'fileBytes': bytes,
+          'mimeType': mimeType,
+        });
+        return success;
+      } catch (e) {
+        print('Native saveFileToDownloads failed: $e');
+        return false;
+      }
+    }
+    return false;
   }
 }

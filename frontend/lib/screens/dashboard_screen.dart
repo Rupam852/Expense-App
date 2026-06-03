@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/expense_provider.dart';
 import '../services/user_provider.dart';
+import '../services/api_service.dart';
 import '../models/expense.dart';
 import 'expense_entry_screen.dart';
 import 'package:file_picker/file_picker.dart';
@@ -1006,40 +1007,196 @@ class _DashboardScreenState extends State<DashboardScreen> {
       // 2. Convert to CSV string using package:csv
       final csvString = const ListToCsvConverter().convert(csvData);
       final fileName = 'Expense_Statement_${DateTime.now().millisecondsSinceEpoch}.csv';
-      bool savedSuccessfully = false;
 
-      if (Platform.isAndroid) {
-        try {
-          final downloadDir = Directory('/storage/emulated/0/Download');
-          if (await downloadDir.exists()) {
-            final file = File('${downloadDir.path}/$fileName');
-            await file.writeAsString(csvString);
-            savedSuccessfully = true;
-          }
-        } catch (e) {
-          print('Direct write to Android Download folder failed: $e');
-        }
+      // 3. Show info pop-up outlining the benefits of CSV
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(
+                color: Theme.of(context).primaryColor.withOpacity(0.1),
+              ),
+            ),
+            titlePadding: EdgeInsets.zero,
+            title: Stack(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 20.0, top: 20.0, right: 40.0),
+                  child: Row(
+                    children: [
+                      Icon(Icons.table_view_outlined, color: Theme.of(context).primaryColor, size: 26),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Export CSV Statement',
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, size: 20),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Exporting your data to a CSV file provides you with full control over your financial records:',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildCsvBenefitItem(
+                  context,
+                  Icons.grid_on,
+                  'Excel & Google Sheets Support',
+                  'Edit and analyze raw rows directly on mobile or desktop.',
+                ),
+                const SizedBox(height: 12),
+                _buildCsvBenefitItem(
+                  context,
+                  Icons.bar_chart,
+                  'Custom Graphs & Filters',
+                  'Build custom Pivot Tables and compute detailed totals.',
+                ),
+                const SizedBox(height: 12),
+                _buildCsvBenefitItem(
+                  context,
+                  Icons.receipt_long,
+                  'CA & Accountant Friendly',
+                  'Share standard logs directly for tax filing and audits.',
+                ),
+                const SizedBox(height: 12),
+                _buildCsvBenefitItem(
+                  context,
+                  Icons.shield_outlined,
+                  'Secure Offline Backup',
+                  'Store a clean copy of your transactional ledger offline.',
+                ),
+              ],
+            ),
+            actions: [
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close info dialog
+                    _executeCSVExportWithProgress(context, csvString, fileName); // Start export flow
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: const Icon(Icons.download_for_offline),
+                  label: Text(
+                    'Generate CSV',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      print('CSV setup error: $e');
+      if (mountedContext(context)) {
+        CustomToast.show(context, 'Export preparation failed: $e', isError: true);
+      }
+    }
+  }
 
-        // If direct write failed (e.g. Scoped Storage on Android 10+), use FilePicker to save it
-        if (!savedSuccessfully) {
-          try {
-            final bytes = Uint8List.fromList(utf8.encode(csvString));
-            final selectedPath = await FilePicker.platform.saveFile(
-              dialogTitle: 'Save CSV Statement to Downloads:',
-              fileName: fileName,
-              bytes: bytes,
-            );
-            if (selectedPath != null) {
-              savedSuccessfully = true;
-            }
-          } catch (e) {
-            print('FilePicker saveFile failed: $e');
-          }
-        }
-      } else {
-        // Non-Android platforms: try using FilePicker saveFile
-        try {
-          final bytes = Uint8List.fromList(utf8.encode(csvString));
+  Widget _buildCsvBenefitItem(
+    BuildContext context,
+    IconData icon,
+    String title,
+    String desc,
+  ) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: Theme.of(context).primaryColor.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: Theme.of(context).primaryColor, size: 16),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                desc,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _executeCSVExportWithProgress(BuildContext context, String csvString, String fileName) async {
+    double progress = 0.0;
+    String statusText = 'Structuring spreadsheet columns...';
+    bool saveFinished = false;
+    bool popped = false;
+    bool savedSuccessfully = false;
+    String? localTempPath;
+
+    // Start file write process in parallel
+    Future.microtask(() async {
+      try {
+        final bytes = Uint8List.fromList(utf8.encode(csvString));
+        
+        // 1. Always save to local temporary directory for reliable opening and sharing
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/$fileName');
+        await file.writeAsString(csvString);
+        localTempPath = file.path;
+
+        // 2. Try to save to public Downloads on Android, or trigger picker on desktop/iOS
+        if (Platform.isAndroid) {
+          savedSuccessfully = await ApiService.saveFileToDownloads(
+            fileName: fileName,
+            bytes: bytes,
+            mimeType: 'text/csv',
+          );
+        } else {
           final selectedPath = await FilePicker.platform.saveFile(
             dialogTitle: 'Save CSV Statement:',
             fileName: fileName,
@@ -1048,39 +1205,247 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (selectedPath != null) {
             savedSuccessfully = true;
           }
-        } catch (e) {
-          print('FilePicker saveFile failed: $e');
         }
+      } catch (e) {
+        print('In-progress write failed: $e');
+      } finally {
+        saveFinished = true;
       }
+    });
 
-      if (savedSuccessfully) {
-        if (mountedContext(context)) {
-          CustomToast.show(
-            context,
-            'CSV saved successfully to Downloads folder!',
-          );
-        }
-      } else {
-        // Fallback: Save to temp directory and open Share sheet
-        final tempDir = await getTemporaryDirectory();
-        final file = File('${tempDir.path}/$fileName');
-        await file.writeAsString(csvString);
-        
-        if (mountedContext(context)) {
-          CustomToast.show(
-            context,
-            'Saving to downloads failed. Opening Share panel...',
-            isError: true,
-          );
-          await Share.shareXFiles([XFile(file.path)], text: 'My Grow Expense Statement');
-        }
-      }
-    } catch (e) {
-      print('CSV export error: $e');
-      if (mountedContext(context)) {
-        CustomToast.show(context, 'Export failed: $e', isError: true);
+    // Show custom progress dialog
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (!context.mounted) return;
+              if (progress < 0.9) {
+                setDialogState(() {
+                  progress += 0.1;
+                  if (progress > 0.4 && progress < 0.7) {
+                    statusText = 'Injecting category rows...';
+                  } else if (progress >= 0.7) {
+                    statusText = 'Writing file to Downloads...';
+                  }
+                });
+              } else if (saveFinished && !popped) {
+                popped = true;
+                setDialogState(() {
+                  progress = 1.0;
+                  statusText = 'Export complete!';
+                });
+                Future.delayed(const Duration(milliseconds: 400), () {
+                  if (context.mounted) {
+                    Navigator.of(context).pop(); // Close progress dialog
+                  }
+                });
+              }
+            });
+
+            return AlertDialog(
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                ),
+              ),
+              content: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.table_chart_outlined,
+                        color: Theme.of(context).primaryColor,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Generating CSV Report',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      statusText,
+                      style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                        valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
+                        minHeight: 6,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${(progress * 100).toInt()}%',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (localTempPath != null) {
+      // Show the second popup: View CSV and Share CSV
+      _showCSVSuccessDialog(context, localTempPath!, fileName, savedSuccessfully);
+    } else {
+      if (context.mounted) {
+        CustomToast.show(context, 'CSV Export failed.', isError: true);
       }
     }
+  }
+
+  void _showCSVSuccessDialog(
+    BuildContext context,
+    String localPath,
+    String fileName,
+    bool savedSuccessfully,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: Theme.of(context).primaryColor.withOpacity(0.1),
+            ),
+          ),
+          titlePadding: EdgeInsets.zero,
+          title: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 20.0, top: 20.0, right: 40.0),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle_outline, color: Theme.of(context).primaryColor, size: 26),
+                    const SizedBox(width: 10),
+                    Text(
+                      'CSV Exported!',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                right: 8,
+                top: 8,
+                child: IconButton(
+                  icon: const Icon(Icons.close, size: 20),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                savedSuccessfully
+                    ? 'Your CSV expense statement has been successfully generated and saved to your default Download folder.'
+                    : 'Your CSV expense statement has been successfully generated.',
+                style: GoogleFonts.inter(fontSize: 13, height: 1.4),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'File Name: $fileName',
+                style: GoogleFonts.inter(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+          actions: [
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      Share.shareXFiles([XFile(localPath)], text: 'My Grow Expense Statement');
+                    },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      side: BorderSide(color: Theme.of(context).primaryColor),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    icon: Icon(Icons.share_outlined, color: Theme.of(context).primaryColor, size: 18),
+                    label: Text(
+                      'Share File',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.of(context).pop();
+                      final result = await OpenFile.open(localPath);
+                      if (result.type != ResultType.done && context.mounted) {
+                        CustomToast.show(
+                          context,
+                          'Cannot open CSV: ${result.message}',
+                          isError: true,
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    icon: const Icon(Icons.grid_on, size: 18),
+                    label: Text(
+                      'View CSV',
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
   }
 
   bool mountedContext(BuildContext context) {
@@ -1916,11 +2281,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final expenseProvider = Provider.of<ExpenseProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Auto-prompt custom Gemini API Key popup if missing right after login, with a 800ms transition delay
+    // Auto-prompt custom Gemini API Key popup if missing right after login, with a 1300ms transition delay
     if (userProvider.showApiKeyPrompt) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         userProvider.dismissApiKeyPrompt();
-        Future.delayed(const Duration(milliseconds: 800), () {
+        Future.delayed(const Duration(milliseconds: 1300), () {
           if (mounted) {
             _showGeminiKeyDialog(context, userProvider);
           }
