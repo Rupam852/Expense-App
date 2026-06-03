@@ -222,16 +222,6 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   // Trigger camera or gallery scanner
   void _triggerScanner(ImageSource source) async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    if (userProvider.userGeminiApiKey == null || userProvider.userGeminiApiKey!.trim().isEmpty) {
-      _showGeminiKeyDialog(context, userProvider);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter your Google AI Studio API Key in Settings to scan receipts.'),
-          backgroundColor: Colors.amber,
-        ),
-      );
-      return;
-    }
 
     final picker = ImagePicker();
     final image = await picker.pickImage(
@@ -314,6 +304,10 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
         ),
       );
     } else {
+      final errorMsg = expenseProvider.syncErrorMessage ?? '';
+      if (errorMsg.contains('API Key') || errorMsg.contains('API key')) {
+        _showGeminiKeyDialog(context, userProvider);
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(expenseProvider.syncErrorMessage ?? 'Receipt extraction failed. Entering manually.'),
