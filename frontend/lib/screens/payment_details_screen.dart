@@ -6,6 +6,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/expense_provider.dart';
 import '../services/user_provider.dart';
+import '../widgets/app_logo.dart';
 
 class PaymentDetailsScreen extends StatefulWidget {
   const PaymentDetailsScreen({super.key});
