@@ -685,12 +685,6 @@ async function callGeminiForChunk(chunkText, systemRulesText, userApiKey, models
               ]
             }
           ],
-          safetySettings: [
-            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-          ],
           generationConfig: {
             maxOutputTokens: 8192,
             responseMimeType: 'application/json'
@@ -732,7 +726,8 @@ async function callGeminiForChunk(chunkText, systemRulesText, userApiKey, models
           logDiagnostic(`Gemini model ${model} chunk call failed with status ${response.status}: ${errText}`);
           
           lastError = new Error(errText);
-          if (response.status === 400 || response.status === 403 || response.status === 429) {
+          const isKeyError = response.status === 403 || errText.toLowerCase().includes('key') || errText.toLowerCase().includes('credential');
+          if (isKeyError) {
             break; // Break inner models loop to try secondary key immediately
           }
         }
@@ -1175,7 +1170,8 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
             console.warn(`Gemini model ${model} failed with status ${response.status}: ${errText}`);
             lastError = new Error(errText);
             
-            if (response.status === 400 || response.status === 403 || response.status === 429) {
+            const isKeyError = response.status === 403 || errText.toLowerCase().includes('key') || errText.toLowerCase().includes('credential');
+            if (isKeyError) {
               break; // Break inner models loop to try secondary key immediately
             }
           }
