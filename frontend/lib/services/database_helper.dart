@@ -13,27 +13,54 @@ class DatabaseHelper {
   // AES-256 Symmetric key and IV setup (Pure Dart cryptography)
   static const _secureStorage = FlutterSecureStorage();
   static const _keyStoreName = 'groww_db_enc_key';
+  static const _ivStoreName = 'groww_db_enc_iv';
   
   static enc.Key? _dynamicKey;
-  static final _encryptionIV = enc.IV.fromUtf8('groww_sec_iv_16b'); // 16 characters
+  static enc.IV? _dynamicIV;
   static enc.Encrypter? _crypter;
 
   static Future<void> _initEncryptionKey() async {
-    if (_dynamicKey != null && _crypter != null) return;
+    if (_dynamicKey != null && _dynamicIV != null && _crypter != null) return;
     try {
       String? keyVal = await _secureStorage.read(key: _keyStoreName);
+      String? ivVal = await _secureStorage.read(key: _ivStoreName);
+
       if (keyVal == null) {
-        // Save the default fallback key to secure storage on first run.
-        // This guarantees zero breaking changes for existing installations, 
-        // while migrating it securely into Keystore/Keychain container dynamically!
-        keyVal = 'groww_secure_app_salt_32_bytes_k';
-        await _secureStorage.write(key: _keyStoreName, value: keyVal);
+        // New installation: generate a random key and random IV
+        final newKey = enc.Key.fromSecureRandom(32);
+        final newIV = enc.IV.fromSecureRandom(16);
+
+        await _secureStorage.write(key: _keyStoreName, value: newKey.base64);
+        await _secureStorage.write(key: _ivStoreName, value: newIV.base64);
+
+        _dynamicKey = newKey;
+        _dynamicIV = newIV;
+        _crypter = enc.Encrypter(enc.AES(_dynamicKey!, mode: enc.AESMode.cbc));
+      } else {
+        // Existing installation:
+        if (keyVal == 'groww_secure_app_salt_32_bytes_k') {
+          // This is using the old static key.
+          // We will use the static key and static IV for initial DB loading,
+          // then trigger a migration.
+          _dynamicKey = enc.Key.fromUtf8('groww_secure_app_salt_32_bytes_k');
+          _dynamicIV = enc.IV.fromUtf8('groww_sec_iv_16b');
+          _crypter = enc.Encrypter(enc.AES(_dynamicKey!, mode: enc.AESMode.cbc));
+        } else {
+          // Using a securely generated key. The IV should also be in secure storage.
+          _dynamicKey = enc.Key.fromBase64(keyVal);
+          if (ivVal != null) {
+            _dynamicIV = enc.IV.fromBase64(ivVal);
+          } else {
+            // Fallback just in case IV is missing but key is not the static one
+            _dynamicIV = enc.IV.fromUtf8('groww_sec_iv_16b');
+          }
+          _crypter = enc.Encrypter(enc.AES(_dynamicKey!, mode: enc.AESMode.cbc));
+        }
       }
-      _dynamicKey = enc.Key.fromUtf8(keyVal);
-      _crypter = enc.Encrypter(enc.AES(_dynamicKey!, mode: enc.AESMode.cbc));
     } catch (e) {
       print('Secure storage key retrieval failed: $e');
       _dynamicKey = enc.Key.fromUtf8('groww_secure_app_salt_32_bytes_k');
+      _dynamicIV = enc.IV.fromUtf8('groww_sec_iv_16b');
       _crypter = enc.Encrypter(enc.AES(_dynamicKey!, mode: enc.AESMode.cbc));
     }
   }
@@ -41,8 +68,10 @@ class DatabaseHelper {
   static String encryptVal(String plainText) {
     if (plainText.isEmpty) return plainText;
     try {
-      final crypter = _crypter ?? enc.Encrypter(enc.AES(enc.Key.fromUtf8('groww_secure_app_salt_32_bytes_k'), mode: enc.AESMode.cbc));
-      final encrypted = crypter.encrypt(plainText, iv: _encryptionIV);
+      final key = _dynamicKey ?? enc.Key.fromUtf8('groww_secure_app_salt_32_bytes_k');
+      final iv = _dynamicIV ?? enc.IV.fromUtf8('groww_sec_iv_16b');
+      final crypter = _crypter ?? enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
+      final encrypted = crypter.encrypt(plainText, iv: iv);
       return encrypted.base64;
     } catch (e) {
       print('Encryption error: $e');
@@ -53,8 +82,10 @@ class DatabaseHelper {
   static String decryptVal(String cipherText) {
     if (cipherText.isEmpty) return cipherText;
     try {
-      final crypter = _crypter ?? enc.Encrypter(enc.AES(enc.Key.fromUtf8('groww_secure_app_salt_32_bytes_k'), mode: enc.AESMode.cbc));
-      final decrypted = crypter.decrypt64(cipherText, iv: _encryptionIV);
+      final key = _dynamicKey ?? enc.Key.fromUtf8('groww_secure_app_salt_32_bytes_k');
+      final iv = _dynamicIV ?? enc.IV.fromUtf8('groww_sec_iv_16b');
+      final crypter = _crypter ?? enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
+      final decrypted = crypter.decrypt64(cipherText, iv: iv);
       return decrypted;
     } catch (e) {
       // Return plaintext if decryption fails (self-healing for legacy/plaintext rows)
@@ -83,10 +114,105 @@ class DatabaseHelper {
 
   DatabaseHelper._init();
 
+  static Future<void> _migrateDatabaseIfNecessary(Database db) async {
+    try {
+      String? keyVal = await _secureStorage.read(key: _keyStoreName);
+      if (keyVal != 'groww_secure_app_salt_32_bytes_k') {
+        // No migration needed because the key is already migrated/randomized.
+        return;
+      }
+
+      print('Starting Database Encryption Key Migration...');
+
+      // 1. Fetch all expenses and budgets
+      final expensesRaw = await db.query('expenses');
+      final budgetsRaw = await db.query('budgets');
+
+      // We decrypt using the old key and IV (which are currently active in _dynamicKey / _dynamicIV).
+      final decryptedExpenses = expensesRaw.map((row) {
+        final newRow = Map<String, dynamic>.from(row);
+        newRow['amount'] = decryptVal(row['amount']?.toString() ?? '');
+        newRow['category'] = decryptVal(row['category']?.toString() ?? 'Others');
+        newRow['description'] = decryptVal(row['description']?.toString() ?? '');
+        return newRow;
+      }).toList();
+
+      final decryptedBudgets = budgetsRaw.map((row) {
+        final newRow = Map<String, dynamic>.from(row);
+        newRow['category'] = decryptVal(row['category']?.toString() ?? 'Others');
+        newRow['amount_limit'] = decryptVal(row['amount_limit']?.toString() ?? '0.0');
+        return newRow;
+      }).toList();
+
+      // 2. Generate the new secure random key and IV
+      final newKey = enc.Key.fromSecureRandom(32);
+      final newIV = enc.IV.fromSecureRandom(16);
+      final newCrypter = enc.Encrypter(enc.AES(newKey, mode: enc.AESMode.cbc));
+
+      // Helper function to encrypt with the new key and IV
+      String encryptWithNewKey(String plainText) {
+        if (plainText.isEmpty) return plainText;
+        return newCrypter.encrypt(plainText, iv: newIV).base64;
+      }
+
+      // 3. Update the database rows inside a transaction
+      await db.transaction((txn) async {
+        for (final exp in decryptedExpenses) {
+          final id = exp['id'];
+          final encAmount = encryptWithNewKey(exp['amount']?.toString() ?? '0.0');
+          final encCategory = encryptWithNewKey(exp['category']?.toString() ?? 'Others');
+          final encDesc = encryptWithNewKey(exp['description']?.toString() ?? '');
+
+          await txn.update(
+            'expenses',
+            {
+              'amount': encAmount,
+              'category': encCategory,
+              'description': encDesc,
+            },
+            where: 'id = ?',
+            whereArgs: [id],
+          );
+        }
+
+        for (final bud in decryptedBudgets) {
+          final id = bud['id'];
+          final encCategory = encryptWithNewKey(bud['category']?.toString() ?? 'Others');
+          final encAmountLimit = encryptWithNewKey(bud['amount_limit']?.toString() ?? '0.0');
+
+          await txn.update(
+            'budgets',
+            {
+              'category': encCategory,
+              'amount_limit': encAmountLimit,
+            },
+            where: 'id = ?',
+            whereArgs: [id],
+          );
+        }
+      });
+
+      // 4. Update Flutter Secure Storage with the new random key and IV
+      await _secureStorage.write(key: _keyStoreName, value: newKey.base64);
+      await _secureStorage.write(key: _ivStoreName, value: newIV.base64);
+
+      // 5. Update active in-memory keys/IV/crypter
+      _dynamicKey = newKey;
+      _dynamicIV = newIV;
+      _crypter = newCrypter;
+
+      print('Database Encryption Key Migration completed successfully!');
+    } catch (e) {
+      print('Database migration failed: $e');
+      // Do not rethrow since we want the app to still load (even with old key/IV) if migration fails.
+    }
+  }
+
   Future<Database> get database async {
     if (_database != null) return _database!;
     await _initEncryptionKey();
     _database = await _initDB('expense_app.db');
+    await _migrateDatabaseIfNecessary(_database!);
     return _database!;
   }
 
