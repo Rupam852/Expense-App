@@ -62,6 +62,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     String statusText = 'Compiling selected transactions...';
     bool apiFinished = false;
     bool popped = false;
+    bool isCancelled = false;
     String? localPath;
 
     // Start API request in parallel
@@ -110,6 +111,23 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                 side: BorderSide(
                   color: Theme.of(context).primaryColor.withOpacity(0.1),
                 ),
+              ),
+              titlePadding: EdgeInsets.zero,
+              title: Stack(
+                children: [
+                  const SizedBox(height: 36, width: double.infinity),
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () {
+                        isCancelled = true;
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ),
+                ],
               ),
               content: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12.0),
@@ -173,51 +191,55 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     // After progress dialog closes, show either success modal or error SnackBar
     if (!mounted) return;
 
-    if (localPath != null) {
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: Text('Invoice Generated!', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-            content: Text(
-              'Your PDF invoice has been compiled containing ${_selectedExpenseIds.length} transactions.\n\nTotal expenses calculation has been automatically computed.',
-              style: GoogleFonts.inter(fontSize: 13),
-            ),
-            actions: [
-              TextButton.icon(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  Share.shareXFiles([XFile(localPath!)], text: 'Expense statement reimbursement claim');
-                },
-                icon: const Icon(Icons.share_outlined),
-                label: const Text('Share PDF'),
-              ),
-              ElevatedButton.icon(
-                onPressed: () async {
-                  Navigator.of(context).pop();
-                  final result = await OpenFile.open(localPath!);
-                  if (result.type != ResultType.done && context.mounted) {
-                    CustomToast.show(
-                      context,
-                      'Cannot open PDF: ${result.message}',
-                      isError: true,
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    if (!isCancelled && localPath != null) {
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) {
+              return AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                title: Text('Invoice Generated!', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                content: Text(
+                  'Your PDF invoice has been compiled containing ${_selectedExpenseIds.length} transactions.\n\nTotal expenses calculation has been automatically computed.',
+                  style: GoogleFonts.inter(fontSize: 13),
                 ),
-                icon: const Icon(Icons.picture_as_pdf),
-                label: const Text('View Statement'),
-              ),
-            ],
+                actions: [
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      Share.shareXFiles([XFile(localPath!)], text: 'Expense statement reimbursement claim');
+                    },
+                    icon: const Icon(Icons.share_outlined),
+                    label: const Text('Share PDF'),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.of(context).pop();
+                      final result = await OpenFile.open(localPath!);
+                      if (result.type != ResultType.done && context.mounted) {
+                        CustomToast.show(
+                          context,
+                          'Cannot open PDF: ${result.message}',
+                          isError: true,
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).primaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    icon: const Icon(Icons.picture_as_pdf),
+                    label: const Text('View Statement'),
+                  ),
+                ],
+              );
+            },
           );
-        },
-      );
-    } else {
+        }
+      });
+    } else if (!isCancelled) {
       CustomToast.show(
         context,
         'Failed to generate PDF. Make sure you are online and try again.',

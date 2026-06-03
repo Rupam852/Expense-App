@@ -247,6 +247,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     String statusText = 'Compiling transactions...';
     bool apiFinished = false;
     bool popped = false;
+    bool isCancelled = false;
     String? localPath;
 
     expenseProvider.downloadInvoice(oldExpenseIds).then((path) {
@@ -292,6 +293,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 side: BorderSide(
                   color: Theme.of(context).primaryColor.withOpacity(0.1),
                 ),
+              ),
+              titlePadding: EdgeInsets.zero,
+              title: Stack(
+                children: [
+                  const SizedBox(height: 36, width: double.infinity),
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () {
+                        isCancelled = true;
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ),
+                ],
               ),
               content: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12.0),
@@ -354,9 +372,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     if (!mounted) return;
 
-    if (localPath != null) {
-      _showRolloverStatementActionDialog(context, localPath!, oldTotal, oldMonthLabel, oldExpenseIds, currentMonthStr);
-    } else {
+    if (!isCancelled && localPath != null) {
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (mounted) {
+          _showRolloverStatementActionDialog(context, localPath!, oldTotal, oldMonthLabel, oldExpenseIds, currentMonthStr);
+        }
+      });
+    } else if (!isCancelled) {
       CustomToast.show(
         context,
         'Failed to generate PDF statement. Make sure you are online.',
@@ -1199,6 +1221,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     bool saveFinished = false;
     bool popped = false;
     bool savedSuccessfully = false;
+    bool isCancelled = false;
     String? localTempPath;
 
     // Start file write process in parallel
@@ -1276,6 +1299,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   color: Theme.of(context).primaryColor.withOpacity(0.1),
                 ),
               ),
+              titlePadding: EdgeInsets.zero,
+              title: Stack(
+                children: [
+                  const SizedBox(height: 36, width: double.infinity),
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () {
+                        isCancelled = true;
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ),
+                ],
+              ),
               content: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12.0),
                 child: Column(
@@ -1335,10 +1375,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       },
     );
 
-    if (localTempPath != null) {
-      // Show the second popup: View CSV and Share CSV
-      _showCSVSuccessDialog(context, localTempPath!, fileName, savedSuccessfully);
-    } else {
+    if (!isCancelled && localTempPath != null) {
+      // Show the second popup: View CSV and Share CSV with a small delay so transition completes cleanly
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (context.mounted) {
+          _showCSVSuccessDialog(context, localTempPath!, fileName, savedSuccessfully);
+        }
+      });
+    } else if (!isCancelled) {
       if (context.mounted) {
         CustomToast.show(context, 'CSV Export failed.', isError: true);
       }
