@@ -49,17 +49,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkMonthRolloverAndPrompt();
+      _checkInitialPrompts();
     });
   }
 
-  Future<void> _checkMonthRolloverAndPrompt() async {
+  Future<bool> _checkMonthRolloverAndPrompt() async {
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
     
     // Give a short delay to allow offline data to be loaded/ready
     await Future.delayed(const Duration(milliseconds: 500));
     
-    if (!mounted) return;
+    if (!mounted) return false;
     
     final prefs = await SharedPreferences.getInstance();
     final lastKnown = prefs.getString('last_known_month_year');
@@ -69,14 +69,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (lastKnown == null) {
       // First boot: set it to current month and do nothing
       await prefs.setString('last_known_month_year', currentMonthStr);
-      return;
+      return false;
     }
     
     if (lastKnown != currentMonthStr) {
       // Month rolled over! Let's check if we have old expenses
       final oldTotal = expenseProvider.getOldExpensesTotal();
       if (oldTotal > 0) {
-        if (!mounted) return;
+        if (!mounted) return false;
         
         final parts = lastKnown.split('-');
         String oldMonthLabel = lastKnown;
@@ -94,9 +94,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
             .toList();
         
         _showMonthRolloverDialog(context, oldTotal, oldMonthLabel, oldExpenseIds, currentMonthStr);
+        return true;
       } else {
         // If there were no expenses in previous month, just update the stored month string
         await prefs.setString('last_known_month_year', currentMonthStr);
+        return false;
+      }
+    }
+    return false;
+  }
+
+  Future<void> _checkInitialPrompts() async {
+    // Wait for the home screen slide/fade entry transitions to fully complete (1.5s delay)
+    await Future.delayed(const Duration(milliseconds: 1500));
+    if (!mounted) return;
+
+    // Check and trigger month rollover dialog if needed
+    final bool rolloverPrompted = await _checkMonthRolloverAndPrompt();
+    if (!mounted) return;
+
+    // If rollover was prompted, we skip the API prompt to avoid stacked overlapping dialogs.
+    // If not, we check and trigger the Gemini API Key prompt.
+    if (!rolloverPrompted) {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      if (userProvider.showApiKeyPrompt) {
+        userProvider.dismissApiKeyPrompt();
+        _showGeminiKeyDialog(context, userProvider);
       }
     }
   }
@@ -2281,17 +2304,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final expenseProvider = Provider.of<ExpenseProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Auto-prompt custom Gemini API Key popup if missing right after login, with a 1300ms transition delay
-    if (userProvider.showApiKeyPrompt) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        userProvider.dismissApiKeyPrompt();
-        Future.delayed(const Duration(milliseconds: 1300), () {
-          if (mounted) {
-            _showGeminiKeyDialog(context, userProvider);
-          }
-        });
-      });
-    }
+
 
     final _selectedMonthYear = expenseProvider.selectedMonthYear;
     final selectedMonthStr = DateFormat('yyyy-MM').format(_selectedMonthYear);
