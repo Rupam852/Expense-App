@@ -8,13 +8,8 @@ import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-const logBuffer = [];
 function logDiagnostic(msg) {
   console.log(msg);
-  logBuffer.push(`[${new Date().toISOString()}] ${msg}`);
-  if (logBuffer.length > 200) {
-    logBuffer.shift();
-  }
 }
 
 // Resilient helper to extract floating numbers from formatted currency text (e.g., "₹1,863.34" -> 1863.34)
@@ -1866,8 +1861,6 @@ router.delete('/old-data', authenticateToken, async (req, res) => {
   }
 });
 
-router.get('/debug-logs', (req, res) => {
-  res.status(200).json({ logs: logBuffer });
-});
+
 
 export default router;

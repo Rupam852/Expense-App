@@ -98,6 +98,20 @@ router.get('/generate', authenticateToken, async (req, res) => {
     let currentY = tableTop + 25;
     let totalSum = 0.0;
 
+    // Fetch rates to convert other currencies to INR
+    let rates = { INR: 1.0, USD: 0.012, EUR: 0.011, GBP: 0.0094, AUD: 0.018, CAD: 0.016 };
+    try {
+      const response = await fetch('https://open.er-api.com/v6/latest/INR');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.result === 'success' && data.rates) {
+          rates = data.rates;
+        }
+      }
+    } catch (err) {
+      console.warn('[PDF Invoice] Failed to fetch live exchange rates, using defaults:', err.message);
+    }
+
     expensesRes.rows.forEach(exp => {
       // If we are getting close to page end, start a new page
       if (currentY > 700) {
@@ -108,7 +122,10 @@ router.get('/generate', authenticateToken, async (req, res) => {
       const dateStr = new Date(exp.transaction_date).toLocaleDateString();
       const amountNum = parseFloat(exp.amount) || 0.0;
       const amountStr = `${amountNum.toFixed(2)} ${exp.currency}`;
-      totalSum += amountNum;
+      
+      const rate = rates[exp.currency.toUpperCase()] || 1.0;
+      const amountInINR = rate !== 0 ? (amountNum / rate) : amountNum;
+      totalSum += amountInINR;
 
       doc.fillColor('#2d3748').fontSize(9);
       doc.text(dateStr, 50, currentY);
