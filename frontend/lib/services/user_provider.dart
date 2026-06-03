@@ -58,6 +58,8 @@ class UserProvider with ChangeNotifier {
       print('Firebase not initialized on target platform: Running in standard Backend API Mode. Details: $e');
     }
 
+    _biometricsEnabled = await _biometricService.isBiometricsEnabled();
+
     // Load cached profile instantly for fast visual boot
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -71,9 +73,6 @@ class UserProvider with ChangeNotifier {
     } catch (e) {
       print('Error restoring cached profile: $e');
     }
-
-    // Load user-scoped biometric preference
-    _biometricsEnabled = await _biometricService.isBiometricsEnabled(email: _userProfile?['email']);
     
     // Check if we have an active JWT stored already (keeps user logged in)
     final token = await _apiService.getToken();
@@ -102,7 +101,6 @@ class UserProvider with ChangeNotifier {
     final result = await _fetchProfileDetails();
     if (result != null) {
       _userProfile = result;
-      _biometricsEnabled = await _biometricService.isBiometricsEnabled(email: _userProfile?['email']);
       _isAuthenticated = true;
 
       // Automatically sync Gemini key from remote DB to local preferences
@@ -170,7 +168,6 @@ class UserProvider with ChangeNotifier {
         }
 
         _userProfile = result['user'];
-        _biometricsEnabled = await _biometricService.isBiometricsEnabled(email: _userProfile?['email']);
         _isAuthenticated = true;
 
         final fetchedApiKey = _userProfile?['gemini_api_key'];
@@ -232,7 +229,6 @@ class UserProvider with ChangeNotifier {
 
       if (result['success'] == true) {
         _userProfile = result['user'];
-        _biometricsEnabled = await _biometricService.isBiometricsEnabled(email: _userProfile?['email']);
         _isAuthenticated = true;
 
         final fetchedApiKey = _userProfile?['gemini_api_key'];
@@ -358,7 +354,7 @@ class UserProvider with ChangeNotifier {
 
   // 4. Biometric Authentication Boot Check
   Future<bool> performBiometricUnlock() async {
-    final enabled = await _biometricService.isBiometricsEnabled(email: _userProfile?['email']);
+    final enabled = await _biometricService.isBiometricsEnabled();
     if (!enabled) return true; // Biometrics toggled off: skip
 
     final active = await _biometricService.isHardwareSupported();
@@ -382,7 +378,7 @@ class UserProvider with ChangeNotifier {
       if (!success) return false;
     }
 
-    await _biometricService.setBiometricsEnabled(value, email: _userProfile?['email']);
+    await _biometricService.setBiometricsEnabled(value);
     _biometricsEnabled = value;
     notifyListeners();
     return true;
@@ -496,7 +492,6 @@ class UserProvider with ChangeNotifier {
       'name': 'Guest Member',
       'photo_url': null,
     };
-    _biometricsEnabled = await _biometricService.isBiometricsEnabled(email: _userProfile?['email']);
     _isAuthenticated = true;
     _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
     await _saveProfileLocally();
@@ -571,7 +566,6 @@ class UserProvider with ChangeNotifier {
     _userGeminiApiKey = null;
     _userGeminiApiKeySecondary = null;
     _isAuthenticated = false;
-    _biometricsEnabled = false;
     _isLoading = false;
     notifyListeners();
   }
@@ -619,7 +613,6 @@ class UserProvider with ChangeNotifier {
         _userGeminiApiKey = null;
         _userGeminiApiKeySecondary = null;
         _isAuthenticated = false;
-        _biometricsEnabled = false;
         _isLoading = false;
         notifyListeners();
         return true;

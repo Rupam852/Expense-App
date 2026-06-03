@@ -20,17 +20,15 @@ class BiometricService {
   }
 
   // Get user preference (whether biometric lock is active or toggled off)
-  Future<bool> isBiometricsEnabled({String? email}) async {
+  Future<bool> isBiometricsEnabled() async {
     final prefs = await SharedPreferences.getInstance();
-    final key = email != null ? 'biometrics_enabled_$email' : 'biometrics_enabled';
-    return prefs.getBool(key) ?? false;
+    return prefs.getBool('biometrics_enabled') ?? false;
   }
 
   // Set user preference
-  Future<void> setBiometricsEnabled(bool enabled, {String? email}) async {
+  Future<void> setBiometricsEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
-    final key = email != null ? 'biometrics_enabled_$email' : 'biometrics_enabled';
-    await prefs.setBool(key, enabled);
+    await prefs.setBool('biometrics_enabled', enabled);
   }
 
   // Prompt native biometric sheet
