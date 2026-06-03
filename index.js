@@ -184,4 +184,30 @@ document.addEventListener('DOMContentLoaded', () => {
       spyObserver.observe(section);
     }
   });
+
+  // 10. Back to Top Button visibility & action
+  const backToTopBtn = document.getElementById('back-to-top');
+  if (backToTopBtn) {
+    let scrollTick = false;
+    window.addEventListener('scroll', () => {
+      if (!scrollTick) {
+        window.requestAnimationFrame(() => {
+          if (window.scrollY > 400) {
+            backToTopBtn.classList.add('visible');
+          } else {
+            backToTopBtn.classList.remove('visible');
+          }
+          scrollTick = false;
+        });
+        scrollTick = true;
+      }
+    });
+    
+    backToTopBtn.addEventListener('click', () => {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    });
+  }
 });
