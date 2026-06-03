@@ -4,17 +4,17 @@
    1. Design System & Variables
    ----------------------------------------- */
 :root {
-  --bg-primary: #040507;
-  --bg-secondary: #080b0f;
-  --bg-tertiary: #0e1218;
-  --primary-green: #00d09c;
+  --bg-primary: #101216; /* groww_theme darkBg */
+  --bg-secondary: #181b22; /* groww_theme darkCard */
+  --bg-tertiary: #242936; /* groww_theme darkBorder */
+  --primary-green: #00d09c; /* groww_theme jadeGreen */
   --primary-green-glow: rgba(0, 208, 156, 0.4);
-  --primary-green-dim: rgba(0, 208, 156, 0.08);
+  --primary-green-dim: rgba(0, 208, 156, 0.1);
   --accent-mint: #05f2a8;
-  --text-main: #f3f4f6;
-  --text-muted: #9ca3af;
+  --text-main: #f1f3f5; /* groww_theme darkTextPrimary */
+  --text-muted: #8e96a4; /* groww_theme darkTextSecondary */
   --text-dark: #4b5563;
-  --glass-bg: rgba(8, 11, 15, 0.6);
+  --glass-bg: rgba(24, 27, 34, 0.7);
   --glass-border: rgba(255, 255, 255, 0.06);
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-display: 'Outfit', var(--font-sans);
