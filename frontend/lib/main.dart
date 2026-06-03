@@ -8,6 +8,7 @@ import 'services/expense_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_navigation.dart';
 import 'widgets/app_logo.dart';
+import 'widgets/custom_toast.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -86,12 +87,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
       });
 
       if (!success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Biometric authentication failed. Tap the lock to try again.'),
-            duration: const Duration(days: 365), // Keeps bar visible
-            action: SnackBarAction(label: 'Retry', onPressed: _manualBiometricRetry),
-          ),
+        CustomToast.show(
+          context,
+          'Biometric authentication failed. Tap the button to try again.',
+          isError: true,
         );
       }
     } else {
@@ -102,7 +101,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   void _manualBiometricRetry() async {
-    ScaffoldMessenger.of(context).clearSnackBars();
+    CustomToast.dismissAll();
     await _triggerBiometricVerification();
   }
 

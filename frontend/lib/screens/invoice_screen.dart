@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import '../services/expense_provider.dart';
 import '../models/expense.dart';
 import '../widgets/app_logo.dart';
+import '../widgets/custom_toast.dart';
 
 class InvoiceScreen extends StatefulWidget {
   const InvoiceScreen({super.key});
@@ -184,8 +185,10 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                   Navigator.of(context).pop();
                   final result = await OpenFile.open(localPath!);
                   if (result.type != ResultType.done && context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Cannot open PDF: ${result.message}')),
+                    CustomToast.show(
+                      context,
+                      'Cannot open PDF: ${result.message}',
+                      isError: true,
                     );
                   }
                 },
@@ -202,11 +205,10 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
         },
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to generate PDF. Make sure you are online and try again.'),
-          backgroundColor: Colors.amber,
-        ),
+      CustomToast.show(
+        context,
+        'Failed to generate PDF. Make sure you are online and try again.',
+        isError: true,
       );
     }
   }

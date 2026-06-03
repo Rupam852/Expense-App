@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../services/expense_provider.dart';
 import '../services/user_provider.dart';
 import '../models/expense.dart';
+import '../widgets/custom_toast.dart';
 
 class ExpenseEntryScreen extends StatefulWidget {
   final bool openCameraScanner;
@@ -220,9 +221,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                     onPressed: () async {
                       await userProvider.saveUserGeminiApiKeys(primary: null, secondary: null);
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Custom API Keys cleared successfully!')),
-                        );
+                        CustomToast.show(context, 'Custom API Keys cleared successfully!');
                         Navigator.of(context).pop();
                       }
                     },
@@ -241,14 +240,11 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                       secondary: secondaryVal.isEmpty ? null : secondaryVal,
                     );
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            (keyVal.isEmpty && secondaryVal.isEmpty)
-                                ? 'Switched back to shared server key!'
-                                : 'API Keys saved successfully!',
-                          ),
-                        ),
+                      CustomToast.show(
+                        context,
+                        (keyVal.isEmpty && secondaryVal.isEmpty)
+                            ? 'Switched back to shared server key!'
+                            : 'API Keys saved successfully!',
                       );
                       Navigator.of(context).pop();
                     }
@@ -277,7 +273,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
         userProvider.userGeminiApiKeySecondary!.isNotEmpty;
     final displayMessage = hasSecondary
         ? actualError
-        : 'Your API fail';
+        : 'Your API fail.\n\nDetails: $actualError';
 
     showDialog(
       context: context,
@@ -429,12 +425,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
         }
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Receipt scan successful! Fields autofilled.'),
-          backgroundColor: Color(0xFF00D09C),
-        ),
-      );
+      CustomToast.show(context, 'Receipt scan successful! Fields autofilled.');
     } else {
       final errorMsg = expenseProvider.syncErrorMessage ?? '';
       if (errorMsg.isNotEmpty && errorMsg != 'cancelled') {
@@ -475,9 +466,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
 
     final amount = double.tryParse(_amountController.text) ?? 0.0;
     if (amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter an expense amount greater than 0.')),
-      );
+      CustomToast.show(context, 'Please enter an expense amount greater than 0.', isError: true);
       return;
     }
 
@@ -519,9 +508,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving transaction: $e')),
-        );
+        CustomToast.show(context, 'Error saving transaction: $e', isError: true);
       }
       setState(() {
         _isSaving = false;

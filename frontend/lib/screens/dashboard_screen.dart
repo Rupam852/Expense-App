@@ -13,6 +13,7 @@ import '../models/expense.dart';
 import 'expense_entry_screen.dart';
 import 'package:file_picker/file_picker.dart';
 import '../widgets/app_logo.dart';
+import '../widgets/custom_toast.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -22,6 +23,10 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  void _showToast(String message, {bool isError = false, Duration duration = const Duration(seconds: 4)}) {
+    if (!mounted) return;
+    CustomToast.show(context, message, isError: isError, duration: duration);
+  }
 
   @override
   void initState() {
@@ -145,16 +150,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Navigator.pop(progressDialogContext!);
                     }
                     
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(success 
-                              ? '✅ Old expenses cleared successfully!' 
-                              : '⚠️ Old expenses cleared locally. Cloud deletion pending.'),
-                          backgroundColor: success ? const Color(0xFF00D09C) : Colors.amber[800],
-                        ),
+                      CustomToast.show(
+                        context,
+                        success 
+                            ? 'Old expenses cleared successfully!' 
+                            : 'Old expenses cleared locally. Cloud deletion pending.',
+                        isError: !success,
                       );
-                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).primaryColor,
@@ -233,11 +235,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     if (userProvider.userGeminiApiKey == null || userProvider.userGeminiApiKey!.trim().isEmpty) {
       _showGeminiKeyDialog(context, userProvider);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter your Google AI Studio API Key to parse PDF statements.'),
-          backgroundColor: Colors.amber,
-        ),
+      CustomToast.show(
+        context,
+        'Please enter your Google AI Studio API Key to parse PDF statements.',
+        isError: true,
       );
       return;
     }
@@ -400,15 +401,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final displayMsg = importResult == 'success'
               ? '✅ Transactions imported successfully!'
               : '✅ $importResult';
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                displayMsg,
-                style: const TextStyle(fontSize: 13),
-              ),
-              backgroundColor: const Color(0xFF00D09C),
-              duration: const Duration(seconds: 6),
-            ),
+          CustomToast.show(
+            context,
+            displayMsg.replaceAll('✅ ', ''),
           );
         } else if (importResult == 'PasswordRequired' || importResult == 'InvalidPassword') {
           _promptForPasswordAndImport(
@@ -538,15 +533,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         final displayMsg = result == 'success'
                             ? '✅ Transactions imported successfully!'
                             : '✅ $result';
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              displayMsg,
-                              style: const TextStyle(fontSize: 13),
-                            ),
-                            backgroundColor: const Color(0xFF00D09C),
-                            duration: const Duration(seconds: 6),
-                          ),
+                        CustomToast.show(
+                          context,
+                          displayMsg.replaceAll('✅ ', ''),
                         );
                       } else if (result == 'InvalidPassword' || result == 'PasswordRequired') {
                         // Re-prompt!
@@ -686,9 +675,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final expenses = expenseProvider.expenses;
 
     if (expenses.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No transaction logs to export.')),
-      );
+      CustomToast.show(context, 'No transaction logs to export.', isError: true);
       return;
     }
 
@@ -718,20 +705,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       // 4. Trigger share sheet using share_plus
       await Share.shareXFiles([XFile(file.path)], text: 'My Grow Expense Statement');
 
-      if (mountedContext(context)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Spreadsheet statement generated and shared successfully!'),
-            backgroundColor: Color(0xFF00D09C),
-          ),
+        CustomToast.show(
+          context,
+          'Spreadsheet statement generated and shared successfully!',
         );
-      }
     } catch (e) {
       print('CSV export error: $e');
       if (mountedContext(context)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e'), backgroundColor: Colors.red),
-        );
+        CustomToast.show(context, 'Export failed: $e', isError: true);
       }
     }
   }
@@ -943,9 +924,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onPressed: () async {
                       await userProvider.saveUserGeminiApiKeys(primary: null, secondary: null);
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Custom API Keys cleared successfully!')),
-                        );
+                        CustomToast.show(context, 'Custom API Keys cleared successfully!');
                         Navigator.of(context).pop();
                       }
                     },
@@ -964,14 +943,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       secondary: secondaryVal.isEmpty ? null : secondaryVal,
                     );
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            (keyVal.isEmpty && secondaryVal.isEmpty)
-                                ? 'Switched back to shared server key!'
-                                : 'API Keys saved successfully!',
-                          ),
-                        ),
+                      CustomToast.show(
+                        context,
+                        (keyVal.isEmpty && secondaryVal.isEmpty)
+                            ? 'Switched back to shared server key!'
+                            : 'API Keys saved successfully!',
                       );
                       Navigator.of(context).pop();
                     }
@@ -1145,7 +1121,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         userProvider.userGeminiApiKeySecondary!.isNotEmpty;
     final displayMessage = hasSecondary
         ? actualError
-        : 'Your API fail';
+        : 'Your API fail.\n\nDetails: $actualError';
 
     showDialog(
       context: context,
@@ -1304,8 +1280,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       onChanged: (val) async {
                         final success = await userProvider.toggleBiometrics(val);
                         if (!success && context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(userProvider.errorMessage ?? 'Failed to enable biometrics.')),
+                          CustomToast.show(
+                            context,
+                            userProvider.errorMessage ?? 'Failed to enable biometrics.',
+                            isError: true,
                           );
                         }
                       },
@@ -1404,11 +1382,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Navigator.of(context).pop();
                 
                 // Show deleting feedback SnackBar
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('⏳ Deleting all ${expensesToDelete.length} records for $monthLabel...'),
-                    backgroundColor: const Color(0xFF1A1A2E),
-                  ),
+                CustomToast.show(
+                  context,
+                  'Deleting all ${expensesToDelete.length} records for $monthLabel...',
+                  duration: const Duration(seconds: 2),
                 );
 
                 // Run fast bulk delete
@@ -1416,12 +1393,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 await provider.deleteMultipleExpenses(ids);
 
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).clearSnackBars();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('✅ $monthLabel history cleared successfully!'),
-                      backgroundColor: const Color(0xFF00D09C),
-                    ),
+                  CustomToast.show(
+                    context,
+                    '$monthLabel history cleared successfully!',
                   );
                 }
               },
@@ -1502,16 +1476,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ? null 
                 : () async {
                     final success = await expenseProvider.triggerManualSync();
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(success 
-                              ? 'Cloud recovery sync completed!' 
-                              : expenseProvider.syncErrorMessage ?? 'Sync failed.'),
-                          backgroundColor: success ? const Color(0xFF00D09C) : Colors.amber[800],
-                        ),
+                      CustomToast.show(
+                        context,
+                        success 
+                            ? 'Cloud recovery sync completed!' 
+                            : expenseProvider.syncErrorMessage ?? 'Sync failed.',
+                        isError: !success,
                       );
-                    }
                   },
             icon: expenseProvider.isSyncing
                 ? const SizedBox(
@@ -1884,9 +1855,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       onDismissed: (direction) {
                         expenseProvider.deleteExpense(exp.id);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Transaction deleted.')),
-                        );
+                        CustomToast.show(context, 'Transaction deleted.');
                       },
                       child: GestureDetector(
                         onTap: () {
