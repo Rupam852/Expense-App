@@ -46,10 +46,10 @@
     <div class="hero-container">
       <div class="hero-content">
         <div class="hero-badge">
-          <span class="pulse-dot"></span> SQLite Local Sandbox + Postgres Sync
+          <span class="pulse-dot"></span> Secure Local Sandbox + Encrypted Cloud Sync
         </div>
         <h1>Take Control of Your Money <span class="text-gradient">Offline & Securely</span></h1>
-        <p class="hero-desc">Grow Expense is a local-first personal accounting app that secures your data inside an encrypted SQLite database on your device. Scan bills with local AI, import netbanking statements, and sync to Postgres Neon cloud.</p>
+        <p class="hero-desc">Grow Expense is a local-first personal accounting app that secures your data inside an encrypted database on your device. Scan bills with secure AI, import netbanking statements, and sync to a private backup cloud.</p>
         
         <div class="hero-actions">
           <a href="https://drive.google.com/file/d/1H2bEn1qGasbThHoygGaAReUSorSNd3qq/view?usp=sharing" target="_blank" class="download-btn">
@@ -67,7 +67,7 @@
         <div class="hero-trust-badges">
           <span class="trust-badge">
             <svg class="trust-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            Offline SQLite Sandbox
+            Secure Offline Sandbox
           </span>
           <span class="trust-badge">
             <svg class="trust-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -154,7 +154,7 @@
         </div>
         <div class="bento-content">
           <h3>Batch Statement Imports (PDF & Excel)</h3>
-          <p>Import statement spreadsheets or PDFs (including password-protected files) directly from Google Pay, PhonePe, and major netbanking portals. The application parses merchants, amounts, and dates instantly via the Google Gemini AI API.</p>
+          <p>Import statement spreadsheets or PDFs (including password-protected files) directly from Google Pay, PhonePe, and major netbanking portals. The application parses merchants, amounts, and dates instantly via the Google secure AI engine.</p>
         </div>
       </div>
 
@@ -165,7 +165,7 @@
         </div>
         <div class="bento-content">
           <h3>Smart OCR Bill Scanning</h3>
-          <p>Photograph physical receipts. The OCR scanning calls the Gemini AI API to extract total sums, dates, and catalog lists, adding them directly to your budget logs.</p>
+          <p>Photograph physical receipts. The OCR scanning calls the secure AI engine to extract total sums, dates, and catalog lists, adding them directly to your budget logs.</p>
         </div>
       </div>
 
@@ -175,8 +175,8 @@
           <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
         </div>
         <div class="bento-content">
-          <h3>SQLite Local Database</h3>
-          <p>Your budgets and transaction records remain entirely offline on your phone inside an encrypted SQLite ledger sandbox database.</p>
+          <h3>Secure Local Database</h3>
+          <p>Your budgets and transaction records remain entirely offline on your phone inside an encrypted encrypted sandbox database.</p>
         </div>
       </div>
 
@@ -186,7 +186,7 @@
           <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.2 15c.9-1.2 1.4-2.7 1.4-4.2a7.5 7.5 0 0 0-14.8-1.5A5.5 5.5 0 0 0 2.5 15"></path><path d="M12 13v8M9 16l3-3 3 3"></path></svg>
         </div>
         <div class="bento-content">
-          <h3>Encrypted PostgreSQL Neon Cloud Sync</h3>
+          <h3>Encrypted Cloud Sync</h3>
           <p>Sync sqlite records across devices securely. Data is backed up to a PostgreSQL database hosted on Neon Cloud, transferring securely via encrypted JWT tokens over a Node.js backend. Sync status is completely togglable inside settings.</p>
         </div>
       </div>
@@ -230,7 +230,7 @@
           <span class="faq-icon">+</span>
         </div>
         <div class="faq-answer">
-          <p>No. Grow Expense stores all statement rows and manual entries on an offline SQLite database inside your phone's secure local sandbox. Cloud sync to our PostgreSQL Neon server is completely optional and can be managed directly from user settings.</p>
+          <p>No. Grow Expense stores all statement rows and manual entries on a secure offline database inside your phone's local sandbox. Cloud sync to our backup server is completely optional and can be managed directly from user settings.</p>
         </div>
       </div>
       <div class="faq-item">
@@ -239,7 +239,7 @@
           <span class="faq-icon">+</span>
         </div>
         <div class="faq-answer">
-          <p>When parsing statements or scanning receipts, the app sends the document or image to our Node.js server hosted on Render. The server invokes the Google Gemini API to extract key fields. You can also configure a custom Gemini API Key in the app preferences to run calls on your own API quota.</p>
+          <p>When parsing statements or scanning receipts, the app sends the document or image to our secure cloud gateway, which uses advanced AI models to extract key fields. You can also configure a custom AI API Key in the app preferences to run calls on your own quota.</p>
         </div>
       </div>
       <div class="faq-item">
@@ -300,7 +300,7 @@
         <p>Grow Expense App is designed as a **local-first** application. This means all personal financial data, budgets, accounts, and transaction history are stored securely on your device's local database. We do not transmit or sell your personal data to external databases or third parties.</p>
         
         <h3>2. Statement Scanning and AI Parsing</h3>
-        <p>When you use the UPI statement parsing feature, the app processes the file contents. If you choose to parse via AI features, the file details are passed directly to Google's AI Studio (Gemini) using the API Key you provide. This transaction is encrypted and communicates directly with Google. No intermediary servers store or process your statements.</p>
+        <p>When you use the UPI statement parsing feature, the app processes the file contents. If you choose to parse via AI features, the file details are passed directly to our secure AI models using the API Key you provide. This transaction is encrypted and communicates directly with Google. No intermediary servers store or process your statements.</p>
         
         <h3>3. Device Permissions</h3>
         <ul>
@@ -309,7 +309,7 @@
         </ul>
 
         <h3>4. Optional Cloud Sync</h3>
-        <p>If you choose to enable the optional Firebase Backup sync feature, your local database records will sync dynamically to your personal Firebase cloud storage. This feature is entirely optional and can be toggled off at any time. Data ownership belongs solely to you.</p>
+        <p>If you choose to enable the optional Private Cloud Backup sync feature, your local database records will sync dynamically to your personal private backup cloud storage. This feature is entirely optional and can be toggled off at any time. Data ownership belongs solely to you.</p>
 
         <h3>5. Updates to This Privacy Policy</h3>
         <p>We may update our Privacy Policy from time to time. Since the app is local-first, policy modifications will be published here on the landing page.</p>
