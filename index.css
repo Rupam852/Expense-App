@@ -1450,3 +1450,113 @@ a {
     box-sizing: border-box;
   }
 }
+
+/* Scroll target offset to prevent fixed header overlap */
+section[id] {
+  scroll-margin-top: 90px;
+}
+
+/* Button metallic sweep shine animation */
+.download-btn,
+.download-btn-large,
+.download-btn-small {
+  position: relative;
+  overflow: hidden;
+}
+
+.download-btn::before,
+.download-btn-large::before,
+.download-btn-small::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.35),
+    transparent
+  );
+  transform: skewX(-20deg);
+  pointer-events: none;
+}
+
+.download-btn::before {
+  animation: shine 5s infinite ease-in-out;
+  animation-delay: 1s;
+}
+
+.download-btn-large::before {
+  animation: shine 5s infinite ease-in-out;
+  animation-delay: 3s;
+}
+
+.download-btn-small::before {
+  animation: shine 6s infinite ease-in-out;
+  animation-delay: 0.5s;
+}
+
+@keyframes shine {
+  0% {
+    left: -150%;
+  }
+  15%, 100% {
+    left: 150%;
+  }
+}
+
+/* Back to Top floating action button */
+.back-to-top-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--glass-border);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 999;
+  opacity: 0;
+  pointer-events: none;
+  transition: var(--transition-bounce);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+.back-to-top-btn svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.3s ease;
+}
+
+.back-to-top-btn:hover {
+  color: #000;
+  background: var(--gradient-primary);
+  border-color: var(--primary-green);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-glow);
+}
+
+.back-to-top-btn:hover svg {
+  transform: translateY(-2px);
+}
+
+.back-to-top-btn.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+  .back-to-top-btn {
+    bottom: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+  }
+}
