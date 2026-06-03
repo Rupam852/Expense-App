@@ -141,6 +141,18 @@ class ApiService {
 
   // 4. Smart OCR Receipt Scanning (File Upload)
   Future<Map<String, dynamic>> scanReceipt(String imagePath) async {
+    // Step 1: Warm-up ping — wakes Render server if sleeping (avoids cold-start timeout)
+    try {
+      print('[OCR] Sending warm-up ping to wake server...');
+      await http.get(Uri.parse('$baseUrl/')).timeout(const Duration(seconds: 30));
+      print('[OCR] Server is awake. Proceeding with file upload...');
+    } catch (e) {
+      print('[OCR] Warm-up ping failed, proceeding anyway: $e');
+    }
+
+    // Small delay after warm-up to let server fully initialize
+    await Future.delayed(const Duration(seconds: 2));
+
     try {
       final token = await getToken();
       final uri = Uri.parse('$baseUrl/expenses/scan-receipt');

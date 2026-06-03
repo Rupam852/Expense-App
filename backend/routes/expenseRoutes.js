@@ -1035,7 +1035,7 @@ router.post('/scan-receipt', upload.single('receipt'), async (req, res) => {
   }
 
   try {
-        const userGeminiKey = req.headers['x-user-gemini-key'];
+        const userGeminiKey = req.headers['x-user-gemini-key'] || process.env.GEMINI_API_KEY;
     if (!userGeminiKey) {
       return res.status(400).json({ error: 'Google AI Studio API Key is required. Please set your key in Settings.' });
     }
@@ -1260,7 +1260,7 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
 
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      const userApiKey = req.headers['x-user-gemini-key'];
+      const userApiKey = req.headers['x-user-gemini-key'] || process.env.GEMINI_API_KEY;
       if (userApiKey && userApiKey.trim().length > 0) {
         logDiagnostic(`[Spreadsheet Import] Gemini API Key found. Parsing using Google Gemini AI...`);
         
@@ -1639,7 +1639,7 @@ router.post('/import', authenticateToken, upload.single('file'), async (req, res
       const pages = rawText.split('---PAGE_BREAK---').map(p => p.trim()).filter(Boolean);
       logDiagnostic(`[PDF Import] Parsed: filename=${req.file.originalname}, pages=${pdfData.numpages}, actualSplitPages=${pages.length}, textLength=${rawText.length}`);
 
-      const userApiKey = req.headers['x-user-gemini-key'];
+      const userApiKey = req.headers['x-user-gemini-key'] || process.env.GEMINI_API_KEY;
       if (!userApiKey) {
         return res.status(400).json({ error: 'Gemini API Key required. Please set your Google Gemini API Key in Settings.' });
       }
