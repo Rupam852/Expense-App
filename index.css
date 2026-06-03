@@ -1910,196 +1910,46 @@ section[id] {
   }
 }
 
-/* -----------------------------------------
-   14. Interactive Product Tour Section
-   ----------------------------------------- */
-.product-tour {
-  padding: 100px 0;
-  border-top: 1px solid var(--glass-border);
-  background-color: var(--bg-primary);
-  position: relative;
-  overflow: hidden;
+/* Bento Grid Micro-Animations for New Cards */
+.analytics-icon line {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: bottom;
+}
+.bento-card:hover .analytics-icon line:nth-child(1) {
+  transform: scaleY(1.3);
+}
+.bento-card:hover .analytics-icon line:nth-child(2) {
+  transform: scaleY(1.15);
+}
+.bento-card:hover .analytics-icon line:nth-child(3) {
+  transform: scaleY(1.45);
 }
 
-.tour-container {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 0 24px;
+.wallet-icon rect {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center;
+}
+.bento-card:hover .wallet-icon rect {
+  transform: scale(1.06) translate(0.5px, 0.5px);
 }
 
-/* Tabs list */
-.tour-tabs {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--glass-border);
-  border-radius: 50px;
-  padding: 6px;
-  margin-bottom: 40px;
-  overflow-x: auto;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE */
+@keyframes haptic-pulse {
+  0%, 100% { transform: scale(1); }
+  40% { transform: scale(0.88); }
+  70% { transform: scale(1.12); }
+}
+.haptics-icon {
+  transform-origin: center;
+}
+.bento-card:hover .haptics-icon {
+  animation: haptic-pulse 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.tour-tabs::-webkit-scrollbar {
-  display: none; /* Webkit */
+.auth-icon {
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center;
 }
-
-.tour-tab {
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-family: var(--font-display);
-  font-size: 0.9rem;
-  font-weight: 600;
-  padding: 12px 20px;
-  border-radius: 40px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: var(--transition-smooth);
-}
-
-.tour-tab:hover {
-  color: #fff;
-  background-color: rgba(255, 255, 255, 0.03);
-}
-
-.tour-tab.active {
-  color: #000;
-  background: var(--gradient-primary);
-  box-shadow: var(--shadow-glow);
-}
-
-/* Tour panel display canvas */
-.tour-canvas {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: 28px;
-  padding: 44px;
-  box-shadow: var(--shadow-card);
-  position: relative;
-  min-height: 380px;
-}
-
-.tour-panel {
-  display: none;
-  opacity: 0;
-  transform: translateY(15px) scale(0.99);
-  transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.tour-panel.active {
-  display: block;
-  opacity: 1;
-  transform: translateY(0) scale(1);
-}
-
-.panel-details h3 {
-  font-size: 1.6rem;
-  color: #fff;
-  margin-bottom: 12px;
-}
-
-.panel-intro {
-  color: var(--text-muted);
-  font-size: 1rem;
-  margin-bottom: 30px;
-  max-width: 760px;
-  border-left: 2px solid var(--primary-green-glow);
-  padding-left: 14px;
-  line-height: 1.6;
-}
-
-.detail-split {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 40px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  padding-top: 28px;
-}
-
-.tech-column h4,
-.features-column h4 {
-  font-family: var(--font-display);
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--primary-green);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 16px;
-}
-
-.tech-column ul,
-.features-column ul {
-  list-style: none;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.tech-column li,
-.features-column li {
-  font-size: 0.92rem;
-  color: var(--text-muted);
-  line-height: 1.5;
-  position: relative;
-  padding-left: 20px;
-}
-
-.tech-column li::before,
-.features-column li::before {
-  content: '▪';
-  color: var(--primary-green);
-  position: absolute;
-  left: 0;
-  top: 0;
-  font-size: 0.9rem;
-}
-
-.tech-column code {
-  background-color: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: Consolas, Monaco, monospace;
-  font-size: 0.82rem;
-  color: #fff;
-}
-
-@media (max-width: 992px) {
-  .tour-canvas {
-    padding: 30px 24px;
-  }
-  
-  .detail-split {
-    grid-template-columns: 1fr;
-    gap: 30px;
-  }
-  
-  .tour-tabs {
-    justify-content: flex-start;
-    border-radius: 16px;
-    padding: 6px;
-  }
-  
-  .tour-tab {
-    flex: none;
-    border-radius: 12px;
-    padding: 10px 16px;
-    font-size: 0.85rem;
-  }
-}
-
-@media (max-width: 768px) {
-  .product-tour {
-    padding: 60px 0;
-  }
+.bento-card:hover .auth-icon {
+  transform: rotate(15deg) scale(1.1);
 }
 
