@@ -42,6 +42,9 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  bool _isGlobalLoading = false;
+  String _globalLoadingMessage = 'Loading...';
+
   void _showToast(String message, {bool isError = false, Duration duration = const Duration(seconds: 4)}) {
     if (!mounted) return;
     CustomToast.show(context, message, isError: isError, duration: duration);
@@ -673,39 +676,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     HapticFeedback.vibrate();
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
     final prefs = await SharedPreferences.getInstance();
-    final navigator = Navigator.of(context);
 
-    bool operationCompleted = false;
-    BuildContext? progressDialogContext;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (progressCtx) {
-        progressDialogContext = progressCtx;
-        if (operationCompleted) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (progressCtx.mounted) {
-              Navigator.of(progressCtx).pop();
-            }
-          });
-        }
-        return const Center(
-          child: CircularProgressIndicator(),
-        );
-      },
-    );
+    setState(() {
+      _isGlobalLoading = true;
+      _globalLoadingMessage = 'Clearing old transactions...';
+    });
 
-    final success = await expenseProvider.deleteOldExpenses();
-    operationCompleted = true;
-
-    // Small delay to ensure the dialog builder has had a chance to build
-    await Future.delayed(const Duration(milliseconds: 100));
-
-    if (progressDialogContext != null && progressDialogContext!.mounted) {
-      Navigator.of(progressDialogContext!).pop();
-    } else {
-      if (navigator.mounted) {
-        navigator.pop();
+    bool success = false;
+    try {
+      success = await expenseProvider.deleteOldExpenses();
+    } catch (e) {
+      print('Clear rollover error: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGlobalLoading = false;
+        });
       }
     }
 
@@ -2889,41 +2875,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
-                final navigator = Navigator.of(context);
-                navigator.pop(); // Dismiss confirmation dialog using outer context navigator
+                Navigator.of(dialogCtx).pop(); // Dismiss confirmation dialog using dialog context safely
                 
-                // Show loading indicator
-                bool operationCompleted = false;
-                BuildContext? loadingDialogContext;
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (loadingCtx) {
-                    loadingDialogContext = loadingCtx;
-                    if (operationCompleted) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (loadingCtx.mounted) {
-                          Navigator.of(loadingCtx).pop();
-                        }
-                      });
-                    }
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
-                  },
-                );
-                
-                final success = await expenseProvider.restoreFromCloud();
-                operationCompleted = true;
-                
-                // Small delay to ensure dialog push transition finishes before popping
-                await Future.delayed(const Duration(milliseconds: 100));
+                setState(() {
+                  _isGlobalLoading = true;
+                  _globalLoadingMessage = 'Restoring from Cloud...';
+                });
 
-                if (loadingDialogContext != null && loadingDialogContext!.mounted) {
-                  Navigator.of(loadingDialogContext!).pop(); // Dismiss loading spinner
-                } else {
-                  if (navigator.mounted) {
-                    navigator.pop();
+                bool success = false;
+                try {
+                  success = await expenseProvider.restoreFromCloud();
+                } catch (e) {
+                  print('Restore error: $e');
+                } finally {
+                  if (mounted) {
+                    setState(() {
+                      _isGlobalLoading = false;
+                    });
                   }
                 }
 
@@ -2974,7 +2942,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       0.0, (sum, item) => sum + expenseProvider.convertToINR(item.amount, item.currency)
     );
 
-    return Scaffold(
+    final scaffold = Scaffold(
       appBar: AppBar(
         title: Row(
           children: [
@@ -3484,6 +3452,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
         ),
+      ),
+    );
+
+    return PopScope(
+      canPop: !_isGlobalLoading,
+      child: Stack(
+        children: [
+          scaffold,
+          if (_isGlobalLoading)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.55),
+                child: Center(
+                  child: Card(
+                    elevation: 8,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    color: isDark ? const Color(0xFF1E222D) : Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            _globalLoadingMessage,
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
