@@ -40,6 +40,14 @@ Unlike traditional accounting software that stores your sensitive financial logs
 * Immersive tactile response optimized for Android haptic engines.
 * Micro-impact vibration on tab changes, standard impacts on button saves, and prominent double-vibration warnings on database deletions or authentication failures.
 
+### ⚡ 6. Ultra-Fast Supabase Sync
+* Everything runs with zero network latency off a local SQLite database.
+* Execute the fastest ledger synchronization directly to your secure Supabase database, merging data seamlessly in milliseconds.
+
+### 🔑 7. Secure Supabase Auth & Google Guard
+* Protect your backup sync streams with secure Supabase Authentication.
+* Log in instantly with your Google account or register via email with a secure two-phase OTP verification guard, keeping your data authorization tokens encrypted client-side.
+
 ---
 
 ## 🛠️ Repository Structure
