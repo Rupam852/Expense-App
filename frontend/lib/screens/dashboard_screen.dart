@@ -158,6 +158,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildWarningBullet({
+    required bool isDark,
+    required String title,
+    required String body,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 6.0),
+          child: Container(
+            width: 5,
+            height: 5,
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFFFBBF24) : const Color(0xFF78350F),
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              style: GoogleFonts.inter(
+                fontSize: 11.5,
+                height: 1.45,
+                color: isDark ? const Color(0xFFFBBF24).withOpacity(0.9) : const Color(0xFF78350F).withOpacity(0.9),
+              ),
+              children: [
+                TextSpan(
+                  text: title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: body),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<bool> _checkOnboardingNotice() async {
     final prefs = await SharedPreferences.getInstance();
     final hasSeen = prefs.getBool('has_seen_onboarding_notice') ?? false;
@@ -2689,14 +2731,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(
-                        '⚠️ Deleting transactions locally will not auto-sync to the cloud. When you tap "Backup to Cloud", your local ledger will merge with the cloud database, and any items deleted on this device will be automatically and permanently removed from the cloud as well.',
-                        style: GoogleFonts.inter(
-                          fontSize: 11.5,
-                          height: 1.45,
-                          color: isDark ? const Color(0xFFFBBF24) : const Color(0xFF78350F),
-                          fontWeight: FontWeight.w500,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Manual Sync & Deletion Notice:',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? const Color(0xFFFBBF24) : const Color(0xFF78350F),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          _buildWarningBullet(
+                            isDark: isDark,
+                            title: 'No Auto-Sync on Delete: ',
+                            body: 'Deleting transactions locally will not update the cloud database automatically.',
+                          ),
+                          const SizedBox(height: 6),
+                          _buildWarningBullet(
+                            isDark: isDark,
+                            title: 'Database Merger: ',
+                            body: 'Tapping "Backup to Cloud" or pulling down to refresh on the home screen will merge your local database with the cloud.',
+                          ),
+                          const SizedBox(height: 6),
+                          _buildWarningBullet(
+                            isDark: isDark,
+                            title: 'Cloud Database Cleanup: ',
+                            body: 'During this manual merge, any transactions previously deleted on this device will be permanently removed from the cloud database as well.',
+                          ),
+                        ],
                       ),
                     ),
                   ],
