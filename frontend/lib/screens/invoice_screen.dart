@@ -57,6 +57,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     if (_selectedExpenseIds.isEmpty) return;
 
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+    final selectedMonthStr = DateFormat('yyyy-MM').format(expenseProvider.selectedMonthYear);
 
     double progress = 0.0;
     String statusText = 'Compiling selected transactions...';
@@ -65,8 +66,8 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     bool isCancelled = false;
     String? localPath;
 
-    // Start API request in parallel
-    expenseProvider.downloadInvoice(_selectedExpenseIds).then((path) {
+    // Start API request in parallel — passes monthYear for correct naming & history save
+    expenseProvider.downloadInvoice(_selectedExpenseIds, monthYear: selectedMonthStr).then((path) {
       localPath = path;
       apiFinished = true;
     });
