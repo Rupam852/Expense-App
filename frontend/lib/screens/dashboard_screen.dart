@@ -2665,6 +2665,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 24),
               
+              // Premium Yellow Warning Box
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF2C2415) : const Color(0xFFFFFDF5),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFFF59E0B).withOpacity(0.2) : const Color(0xFFF59E0B).withOpacity(0.4),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      color: Color(0xFFF59E0B),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        '⚠️ Hamari app locally data delete karne par auto-sync nahi karti hai. Jab aap "Backup to Cloud" press karenge, toh local database aur cloud database merge ho jayenge, aur app se pichle dino me delete kiye gaye sabhi expenses cloud database se bhi automatically permanently remove ho jayenge.',
+                        style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          height: 1.45,
+                          color: isDark ? const Color(0xFFFBBF24) : const Color(0xFF78350F),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
               // Option 1: Backup to Cloud (Upload Sync)
               InkWell(
                 onTap: () async {
