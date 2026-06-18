@@ -222,7 +222,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -247,6 +247,15 @@ class DatabaseHelper {
         ''');
       } catch (e) {
         print('Deleted records migration error: $e');
+      }
+    }
+    if (oldVersion < 4) {
+      try {
+        await db.execute('UPDATE expenses SET is_synced = 0');
+        await db.execute('UPDATE budgets SET is_synced = 0');
+        print('[Migration] Marked all local expenses/budgets as unsynced to trigger database reconciliation.');
+      } catch (e) {
+        print('Force sync migration error: $e');
       }
     }
   }
@@ -316,11 +325,11 @@ class DatabaseHelper {
     final encDescription = encryptVal(expense.description);
     
     if (preventDuplicates) {
-      // Deduplication check: check if same transaction already exists locally
+      // Deduplication check: check if same transaction already exists locally on the same day
       final existing = await db.query(
         'expenses',
-        where: 'amount = ? AND description = ? AND transaction_date = ? AND is_deleted = 0',
-        whereArgs: [encAmount, encDescription, expense.transactionDate.toIso8601String()],
+        where: 'amount = ? AND description = ? AND substr(transaction_date, 1, 10) = ? AND is_deleted = 0',
+        whereArgs: [encAmount, encDescription, expense.transactionDate.toIso8601String().substring(0, 10)],
       );
       
       if (existing.isNotEmpty) {
@@ -606,11 +615,25 @@ class DatabaseHelper {
   // Bulk upsert backend-delivered items on successful synchronization
   Future<void> syncDownExpenses(List<Expense> expenses) async {
     final db = await instance.database;
+    
+    // Optimisation: load existing synced IDs and their updated_at values to avoid redundant encryption and db writes
+    final List<Map<String, dynamic>> localItems = await db.query('expenses', columns: ['id', 'updated_at', 'is_synced']);
+    final Map<String, String> existingSynced = {};
+    for (final row in localItems) {
+      if (row['is_synced'] == 1) {
+        existingSynced[row['id'] as String] = row['updated_at']?.toString() ?? '';
+      }
+    }
+
     await db.transaction((txn) async {
       for (final exp in expenses) {
         if (exp.isDeleted) {
           await txn.delete('expenses', where: 'id = ?', whereArgs: [exp.id]);
         } else {
+          // Skip if it exists locally, is marked synced, and has the same updated_at
+          if (existingSynced.containsKey(exp.id) && existingSynced[exp.id] == exp.updatedAt.toIso8601String()) {
+            continue;
+          }
           final map = exp.toMap();
           map['is_synced'] = 1; // Mark as clean synced
           map['amount'] = encryptVal(map['amount'].toString());
@@ -628,11 +651,25 @@ class DatabaseHelper {
 
   Future<void> syncDownBudgets(List<Budget> budgets) async {
     final db = await instance.database;
+    
+    // Optimisation: load existing synced IDs and their updated_at values
+    final List<Map<String, dynamic>> localItems = await db.query('budgets', columns: ['id', 'updated_at', 'is_synced']);
+    final Map<String, String> existingSynced = {};
+    for (final row in localItems) {
+      if (row['is_synced'] == 1) {
+        existingSynced[row['id'] as String] = row['updated_at']?.toString() ?? '';
+      }
+    }
+
     await db.transaction((txn) async {
       for (final bud in budgets) {
         if (bud.isDeleted) {
           await txn.delete('budgets', where: 'id = ?', whereArgs: [bud.id]);
         } else {
+          // Skip if it exists locally, is marked synced, and has the same updated_at
+          if (existingSynced.containsKey(bud.id) && existingSynced[bud.id] == bud.updatedAt.toIso8601String()) {
+            continue;
+          }
           final map = bud.toMap();
           map['is_synced'] = 1;
           map['category'] = encryptVal(map['category'].toString());

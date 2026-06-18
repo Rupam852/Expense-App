@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'theme/groww_theme.dart';
 import 'services/user_provider.dart';
@@ -9,17 +9,16 @@ import 'screens/login_screen.dart';
 import 'screens/main_navigation.dart';
 import 'widgets/app_logo.dart';
 import 'widgets/custom_toast.dart';
+import 'services/supabase_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Resilient Firebase Core Initialization
-  try {
-    await Firebase.initializeApp();
-    print('Firebase Core initialized successfully.');
-  } catch (e) {
-    print('Firebase Core initialization bypassed. Standard Offline & Express API mode active. Detail: $e');
-  }
+
+  // Initialize Supabase (replaces Firebase)
+  await Supabase.initialize(
+    url: SupabaseService.supabaseUrl,
+    anonKey: SupabaseService.supabaseAnonKey,
+  );
 
   runApp(
     MultiProvider(
@@ -31,6 +30,7 @@ void main() async {
     ),
   );
 }
+
 
 class GrowExpenseApp extends StatelessWidget {
   const GrowExpenseApp({super.key});
