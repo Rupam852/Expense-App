@@ -2839,18 +2839,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onPressed: () async {
                 Navigator.of(context).pop();
                 // Show loading indicator
+                BuildContext? loadingDialogContext;
                 showDialog(
                   context: context,
                   barrierDismissible: false,
-                  builder: (context) => const Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                  builder: (dialogCtx) {
+                    loadingDialogContext = dialogCtx;
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  },
                 );
                 
                 final success = await expenseProvider.restoreFromCloud();
                 
+                // Small delay to ensure dialog push transition finishes before popping
+                await Future.delayed(const Duration(milliseconds: 200));
+
                 if (context.mounted) {
-                  Navigator.of(context).pop(); // Dismiss loading
+                  if (loadingDialogContext != null) {
+                    Navigator.of(loadingDialogContext!).pop(); // Dismiss loading
+                  } else {
+                    Navigator.of(context).pop();
+                  }
                   CustomToast.show(
                     context,
                     success 
