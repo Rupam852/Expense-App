@@ -2687,7 +2687,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        '⚠️ Hamari app locally data delete karne par auto-sync nahi karti hai. Jab aap "Backup to Cloud" press karenge, toh local database aur cloud database merge ho jayenge, aur app se pichle dino me delete kiye gaye sabhi expenses cloud database se bhi automatically permanently remove ho jayenge.',
+                        '⚠️ Deleting transactions locally will not auto-sync to the cloud. When you tap "Backup to Cloud", your local ledger will merge with the cloud database, and any items deleted on this device will be automatically and permanently removed from the cloud as well.',
                         style: GoogleFonts.inter(
                           fontSize: 11.5,
                           height: 1.45,
