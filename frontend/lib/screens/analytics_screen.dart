@@ -55,22 +55,57 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
   Color _getCategoryColor(String category) {
     switch (category.toLowerCase()) {
-      case 'food & drinks':
-        return const Color(0xFFFF5A5F);
       case 'shopping':
-        return const Color(0xFFF2C94C);
+        return const Color(0xFFEC407A); // Pinkish-Red
+      case 'groceries':
+        return const Color(0xFF66BB6A); // Green
+      case 'food & dining':
+      case 'food & drinks':
+        return const Color(0xFFFF7043); // Orange-red
+      case 'transport':
+        return const Color(0xFF42A5F5); // Blue
+      case 'bills & recharges':
       case 'recharges & bills':
-        return const Color(0xFF00D09C);
-      case 'travel & fuel':
-        return const Color(0xFFF2994A);
-      case 'medical & health':
-        return const Color(0xFFEB5757);
-      case 'entertainment':
-        return const Color(0xFF27AE60);
+        return const Color(0xFF26A69A); // Teal
+      case 'transfers':
       case 'money transfers':
-        return const Color(0xFF56CCF2);
+        return const Color(0xFF78909C); // Blue-grey
+      case 'medical':
+      case 'medical & health':
+        return const Color(0xFFEF5350); // Red
+      case 'travel':
+      case 'travel & fuel':
+        return const Color(0xFF29B6F6); // Light Blue
+      case 'repayments':
+        return const Color(0xFFAB47BC); // Purple
+      case 'personal':
+        return const Color(0xFFFFCA28); // Amber
+      case 'services':
+        return const Color(0xFF5C6BC0); // Indigo
+      case 'insurance':
+        return const Color(0xFF8D6E63); // Brown
+      case 'entertainment':
+        return const Color(0xFFFF5252); // Bright Red
+      case 'gaming':
+        return const Color(0xFF7E57C2); // Deep Purple
+      case 'small shops':
+        return const Color(0xFF26C6DA); // Cyan
+      case 'rent':
+        return const Color(0xFF9CCC65); // Light Green
+      case 'logistics':
+        return const Color(0xFFFFA726); // Orange
+      case 'subscription':
+        return const Color(0xFFE57373); // Soft Red
+      case 'investment':
       case 'investments & fees':
-        return const Color(0xFF9B51E0);
+        return const Color(0xFF26A69A); // Teal
+      case 'fitness':
+        return const Color(0xFF81C784); // Soft Green
+      case 'pet':
+        return const Color(0xFFA1887F); // Soft Brown
+      case 'miscellaneous':
+      case 'others':
+        return const Color(0xFF90A4AE); // Blue-grey secondary
       default:
         return Colors.grey;
     }
