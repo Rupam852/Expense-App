@@ -32,7 +32,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
   
-  String _selectedCategory = 'Food & dining';
+  String? _selectedCategory;
   String _selectedCurrency = 'INR';
   DateTime _selectedDate = DateTime.now();
   
@@ -424,7 +424,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
           // Match category case-insensitively or set default
           final matched = _categories.firstWhere(
             (c) => c.toLowerCase() == cat.toLowerCase(),
-            orElse: () => 'Others',
+            orElse: () => 'Miscellaneous',
           );
           _selectedCategory = matched;
         }
@@ -530,7 +530,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
       if (widget.editExpense != null) {
         final updated = widget.editExpense!.copyWith(
           amount: amount,
-          category: _selectedCategory,
+          category: _selectedCategory!,
           description: _descriptionController.text.trim(),
           transactionDate: _selectedDate,
           currency: _selectedCurrency,
@@ -543,7 +543,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
       } else {
         await expenseProvider.addExpense(
           amount: amount,
-          category: _selectedCategory,
+          category: _selectedCategory!,
           description: _descriptionController.text.trim(),
           date: _selectedDate,
           currency: _selectedCurrency,
@@ -717,6 +717,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                     DropdownButtonFormField<String>(
                       value: _selectedCategory,
                       decoration: const InputDecoration(labelText: 'Category'),
+                      hint: const Text('Select Category'),
                       items: _categories.map((c) => DropdownMenuItem(
                         value: c,
                         child: Text(c),
@@ -727,6 +728,12 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                             _selectedCategory = val;
                           });
                         }
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please select a category';
+                        }
+                        return null;
                       },
                     ),
                     const SizedBox(height: 16),
