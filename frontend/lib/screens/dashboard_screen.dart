@@ -105,10 +105,117 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return false;
   }
 
+  Future<bool> _checkOnboardingNotice() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasSeen = prefs.getBool('has_seen_onboarding_notice') ?? false;
+    if (!hasSeen) {
+      if (!mounted) return false;
+      await _showOnboardingNoticeDialog(context);
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> _showOnboardingNoticeDialog(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return AlertDialog(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: Theme.of(context).primaryColor.withOpacity(0.1),
+            ),
+          ),
+          title: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Color(0xFF00D09C), size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Important Notice',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Welcome to Grow Expense! Please note that our app is designed to store and manage transaction details only for the current calendar month.',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  height: 1.4,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Once the month ends, opening the app the next day will present your entire month\'s expense totals and enable options to generate invoices for all of that month\'s transactions.',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  height: 1.4,
+                  color: isDark ? Colors.grey[300] : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'The new month will then start fresh to keep your expense tracking clean, focused, and organized.',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  height: 1.4,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+          actionsPadding: const EdgeInsets.all(16),
+          actions: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  await prefs.setBool('has_seen_onboarding_notice', true);
+                  Navigator.of(dialogCtx).pop();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: const Text('Got it', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _checkInitialPrompts() async {
     // Wait for the home screen slide/fade entry transitions to fully complete (1.5s delay)
     await Future.delayed(const Duration(milliseconds: 1500));
     if (!mounted) return;
+
+    // Check and trigger onboarding notice popup first
+    final bool onboardingNoticePrompted = await _checkOnboardingNotice();
+    if (!mounted) return;
+
+    if (onboardingNoticePrompted) {
+      return;
+    }
 
     // Check and trigger month rollover dialog if needed
     final bool rolloverPrompted = await _checkMonthRolloverAndPrompt();
@@ -2591,7 +2698,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                DateFormat('MMMM yyyy').format(_selectedMonthYear!).toUpperCase(),
+                                '${isSelectedMonthCurrent ? DateTime.now().day : 1} ${DateFormat('MMMM yyyy').format(_selectedMonthYear).toUpperCase()}',
                                 style: GoogleFonts.inter(
                                   fontSize: 11,
                                   color: Colors.white,
