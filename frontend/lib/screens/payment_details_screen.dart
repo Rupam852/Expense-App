@@ -1,11 +1,12 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:qr_code_tools/qr_code_tools.dart';
+import 'package:qr_code_dart_decoder/qr_code_dart_decoder.dart';
 import '../services/expense_provider.dart';
 import '../services/user_provider.dart';
 import '../widgets/app_logo.dart';
@@ -70,7 +71,11 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
 
       // Attempt to decode QR data from image and auto-fill UPI ID
       try {
-        final qrData = await QrCodeToolsPlugin.decodeFrom(savedPath);
+        final Uint8List imageBytes = await File(savedPath).readAsBytes();
+        final decoder = QrCodeDartDecoder();
+        final result = await decoder.decodeFile(imageBytes);
+        final qrData = result?.text;
+
         if (qrData != null && qrData.isNotEmpty) {
           String? extractedUpiId;
 
