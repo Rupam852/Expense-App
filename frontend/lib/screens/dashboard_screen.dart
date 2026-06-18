@@ -2760,6 +2760,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             title: 'Cloud Database Cleanup: ',
                             body: 'During this manual merge, any transactions previously deleted on this device will be permanently removed from the cloud database as well.',
                           ),
+                          const SizedBox(height: 6),
+                          _buildWarningBullet(
+                            isDark: isDark,
+                            title: 'Data Recovery Option: ',
+                            body: 'If you accidentally delete local transactions, you can still recover them by tapping "Restore from Cloud" before initiating a manual sync or refresh.',
+                          ),
                         ],
                       ),
                     ),
