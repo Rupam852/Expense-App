@@ -389,7 +389,10 @@ function getSystemRulesText(userName) {
   [
     ["${currentYear}-${String(now.getMonth() + 1).padStart(2, '0')}-25T12:00:00.000Z", 450.00, "Zomato", "Meals", "INR"],
     ["${currentYear}-${String(now.getMonth() + 1).padStart(2, '0')}-26T14:30:00.000Z", 1500.00, "UPI Transfer to Anil Kumar", "UPI Transfers", "INR"]
-  // Smart helper to auto-categorize transactions based on merchant/description keywords
+  ]`;
+}
+
+// Smart helper to auto-categorize transactions based on merchant/description keywords
 function autoCategorizeDescription(description) {
   const desc = String(description || '').toLowerCase();
 
