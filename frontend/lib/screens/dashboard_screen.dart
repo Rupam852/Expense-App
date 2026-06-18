@@ -2839,7 +2839,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogCtx) {
         return AlertDialog(
           backgroundColor: isDark ? const Color(0xFF181B22) : Colors.white,
           shape: RoundedRectangleBorder(
@@ -2864,7 +2864,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.of(dialogCtx).pop(),
               child: Text(
                 'Cancel',
                 style: GoogleFonts.inter(fontWeight: FontWeight.w600),
@@ -2872,14 +2872,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
-                Navigator.of(context).pop();
+                final navigator = Navigator.of(context);
+                navigator.pop(); // Dismiss confirmation dialog using outer context navigator
+                
                 // Show loading indicator
                 BuildContext? loadingDialogContext;
                 showDialog(
                   context: context,
                   barrierDismissible: false,
-                  builder: (dialogCtx) {
-                    loadingDialogContext = dialogCtx;
+                  builder: (loadingCtx) {
+                    loadingDialogContext = loadingCtx;
                     return const Center(
                       child: CircularProgressIndicator(),
                     );
@@ -2891,12 +2893,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 // Small delay to ensure dialog push transition finishes before popping
                 await Future.delayed(const Duration(milliseconds: 200));
 
+                if (loadingDialogContext != null && loadingDialogContext!.mounted) {
+                  Navigator.of(loadingDialogContext!).pop(); // Dismiss loading spinner
+                }
+
                 if (context.mounted) {
-                  if (loadingDialogContext != null) {
-                    Navigator.of(loadingDialogContext!).pop(); // Dismiss loading
-                  } else {
-                    Navigator.of(context).pop();
-                  }
                   CustomToast.show(
                     context,
                     success 
