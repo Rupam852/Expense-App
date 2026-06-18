@@ -13,7 +13,7 @@ Grow Expense is an ultra-premium, local-first personal finance tracker and accou
 Unlike traditional accounting software that stores your sensitive financial logs on centralized servers, Grow Expense operates as a **secure offline enclave**. 
 * **Zero Accounts Needed:** Open the app and start managing your budgets instantly. No logins, phone numbers, or emails required.
 * **Local Sandbox Database:** All accounts, ledgers, and statement entries are saved inside your device's encrypted sandbox database.
-* **Optional Encrypted Sync:** If you wish to back up your ledger across multiple devices, you can toggle on private cloud sync securely using client-side encrypted authorization tokens.
+* **Optional Encrypted Supabase Sync:** If you wish to back up your ledger across multiple devices, you can securely sync your data to a private Supabase database using encrypted authorization tokens.
 
 ---
 
