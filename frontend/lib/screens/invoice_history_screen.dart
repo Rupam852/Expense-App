@@ -284,6 +284,17 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
     } catch (_) { return ''; }
   }
 
+  String _formatTime(String? isoDate) {
+    if (isoDate == null) return '';
+    try {
+      final dt = DateTime.parse(isoDate).toLocal();
+      final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
+      final period = dt.hour >= 12 ? 'PM' : 'AM';
+      final min = dt.minute.toString().padLeft(2, '0');
+      return '${hour.toString().padLeft(2, '0')}:$min $period';
+    } catch (_) { return ''; }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -402,6 +413,7 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
         final fileName = inv['file_name'] as String? ?? 'Invoice';
         final fileSize = _formatFileSize(inv['file_size_bytes']);
         final createdAt = _formatDate(inv['created_at'] as String?);
+        final createdTime = _formatTime(inv['created_at'] as String?);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -446,6 +458,12 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
                           Icon(Icons.insert_drive_file_outlined, size: 11, color: Colors.grey[400]),
                           const SizedBox(width: 4),
                           Text(fileSize, style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[400])),
+                          if (createdTime.isNotEmpty) ...[
+                            const SizedBox(width: 10),
+                            Icon(Icons.access_time_outlined, size: 11, color: Colors.grey[400]),
+                            const SizedBox(width: 4),
+                            Text(createdTime, style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[400])),
+                          ],
                         ],
                       ),
                     ],
