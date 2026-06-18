@@ -525,6 +525,12 @@ class ExpenseProvider with ChangeNotifier {
           }
         }
 
+        final now = DateTime.now();
+        if (parsedDate.year != now.year || parsedDate.month != now.month) {
+          // Skip transactions from other months
+          continue;
+        }
+
         final exp = Expense(
           id: cryptoUuid(),
           amount: amount.abs(), // expenses are positive values in UI

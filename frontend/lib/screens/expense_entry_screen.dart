@@ -443,7 +443,15 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
         }
         if (extracted['transaction_date'] != null) {
           try {
-            _selectedDate = DateTime.parse(extracted['transaction_date']);
+            final parsedDate = DateTime.parse(extracted['transaction_date']);
+            final now = DateTime.now();
+            final firstDay = DateTime(now.year, now.month, 1);
+            final lastDay = DateTime(now.year, now.month + 1, 0);
+            if (!parsedDate.isBefore(firstDay) && !parsedDate.isAfter(lastDay)) {
+              _selectedDate = parsedDate;
+            } else {
+              _selectedDate = DateTime.now();
+            }
           } catch (_) {}
         }
       });
@@ -458,11 +466,20 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   }
 
   void _presentDatePicker() async {
+    final now = DateTime.now();
+    final firstDayCurrentMonth = DateTime(now.year, now.month, 1);
+    final lastDayCurrentMonth = DateTime(now.year, now.month + 1, 0);
+
+    DateTime initial = _selectedDate;
+    if (initial.isBefore(firstDayCurrentMonth) || initial.isAfter(lastDayCurrentMonth)) {
+      initial = now;
+    }
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
+      initialDate: initial,
+      firstDate: firstDayCurrentMonth,
+      lastDate: lastDayCurrentMonth,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -492,6 +509,14 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
     final amount = double.tryParse(_amountController.text) ?? 0.0;
     if (amount <= 0) {
       CustomToast.show(context, 'Please enter an expense amount greater than 0.', isError: true);
+      return;
+    }
+
+    final now = DateTime.now();
+    final firstDay = DateTime(now.year, now.month, 1);
+    final lastDay = DateTime(now.year, now.month + 1, 0);
+    if (_selectedDate.isBefore(firstDay) || _selectedDate.isAfter(lastDay)) {
+      CustomToast.show(context, 'Please select a date within the current month.', isError: true);
       return;
     }
 
