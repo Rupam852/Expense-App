@@ -196,8 +196,6 @@ class ExpenseProvider with ChangeNotifier {
     await _dbHelper.deleteExpense(id);
     _expenses.removeWhere((e) => e.id == id);
     notifyListeners();
-    // Silent background sync after deleting
-    triggerQuietSync();
   }
 
   Future<void> deleteMultipleExpenses(List<String> ids) async {
@@ -206,8 +204,6 @@ class ExpenseProvider with ChangeNotifier {
       _expenses.removeWhere((e) => e.id == id);
     }
     notifyListeners();
-    // Silent background sync after bulk delete
-    triggerQuietSync();
   }
 
   // ──────────────────────────────────────────────────────
@@ -237,8 +233,6 @@ class ExpenseProvider with ChangeNotifier {
     await _dbHelper.deleteBudget(id);
     _budgets.removeWhere((b) => b.id == id);
     notifyListeners();
-    // Silent background sync after budget delete
-    triggerQuietSync();
   }
 
   // ──────────────────────────────────────────────────────
