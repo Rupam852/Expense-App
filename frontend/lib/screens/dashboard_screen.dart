@@ -3501,16 +3501,30 @@ class _PremiumProgressDialogState extends State<PremiumProgressDialog> with Sing
     final result = await widget.importTask();
     if (!mounted || _isCancelled) return;
 
-    setState(() {
-      _isCompleted = true;
-      _progress = 1.0;
-      _statusText = (result != null && (result == 'success' || result.startsWith('Parsed')))
-          ? result
-          : 'Error parsing file.';
-    });
+    // Smoothly animate the remaining progress to 100%
+    _isCompleted = true;
+    final startVal = _progress;
+    const steps = 15;
+    const target = 1.0;
+    final diff = target - startVal;
 
-    // Wait a brief moment for the user to see the 100% completion
-    await Future.delayed(const Duration(milliseconds: 1000));
+    for (int i = 1; i <= steps; i++) {
+      await Future.delayed(const Duration(milliseconds: 30));
+      if (!mounted || _isCancelled) return;
+      setState(() {
+        _progress = startVal + (diff * (i / steps));
+        if (_progress >= 1.0) {
+          _statusText = (result != null && (result == 'success' || result.startsWith('Parsed')))
+              ? result
+              : 'Error parsing file.';
+        } else if (_progress >= 0.7) {
+          _statusText = 'Syncing database...';
+        }
+      });
+    }
+
+    // Wait a brief moment for the user to see the 100% completion status
+    await Future.delayed(const Duration(milliseconds: 800));
     if (mounted && !_isCancelled) {
       Navigator.of(context).pop(result);
     }
