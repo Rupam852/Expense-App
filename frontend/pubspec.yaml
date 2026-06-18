@@ -48,6 +48,7 @@ dependencies:
   firebase_core: ^2.27.0
   firebase_auth: ^4.17.8
   google_sign_in: ^6.2.1
+  connectivity_plus: ^7.1.1
 
 dev_dependencies:
   flutter_test:

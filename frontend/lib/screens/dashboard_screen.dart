@@ -19,6 +19,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:open_file/open_file.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/custom_toast.dart';
+import 'invoice_history_screen.dart';
 
 String getCurrencySymbol(String currencyCode) {
   switch (currencyCode.toUpperCase()) {
@@ -105,6 +106,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return false;
   }
 
+  // Helper: builds a single point row for the onboarding notice dialog
+  Widget _buildNoticePoint(BuildContext context, {
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String body,
+    required bool isDark,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(top: 2),
+          padding: const EdgeInsets.all(7),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Icon(icon, color: color, size: 18),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                body,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  height: 1.45,
+                  color: isDark ? Colors.grey[400] : Colors.grey[700],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<bool> _checkOnboardingNotice() async {
     final prefs = await SharedPreferences.getInstance();
     final hasSeen = prefs.getBool('has_seen_onboarding_notice') ?? false;
@@ -150,32 +200,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Welcome to Grow Expense! Please note that our app is designed to store and manage transaction details only for the current calendar month.',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  height: 1.4,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white : Colors.black87,
-                ),
+              // Point 1
+              _buildNoticePoint(
+                context,
+                icon: Icons.calendar_month_outlined,
+                color: const Color(0xFF00D09C),
+                title: 'Current Month Only',
+                body: 'This app tracks your transactions for the current calendar month only. Each new month starts fresh — your past data is always safe.',
+                isDark: isDark,
               ),
               const SizedBox(height: 12),
-              Text(
-                'Once the month ends, opening the app the next day will present your entire month\'s expense totals and enable options to generate invoices for all of that month\'s transactions.',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  height: 1.4,
-                  color: isDark ? Colors.grey[300] : Colors.black87,
-                ),
+              // Point 2
+              _buildNoticePoint(
+                context,
+                icon: Icons.receipt_long_outlined,
+                color: const Color(0xFF6C63FF),
+                title: 'Month-End Summary',
+                body: 'When the month ends, opening the app the next day shows your complete monthly total and lets you generate a PDF invoice for all that month\'s transactions.',
+                isDark: isDark,
               ),
               const SizedBox(height: 12),
-              Text(
-                'The new month will then start fresh to keep your expense tracking clean, focused, and organized.',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  height: 1.4,
-                  color: Colors.grey,
-                ),
+              // Point 3
+              _buildNoticePoint(
+                context,
+                icon: Icons.history_edu_outlined,
+                color: const Color(0xFFFF6B6B),
+                title: 'Invoice History Archive',
+                body: 'Every invoice you generate is automatically saved to your History (Settings → History) so you can re-download, share, or review past months anytime.',
+                isDark: isDark,
               ),
             ],
           ),
@@ -195,7 +247,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
-                child: const Text('Got it', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text('Got it, Let\'s go! →', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
               ),
             ),
           ],
@@ -359,7 +411,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     bool isCancelled = false;
     String? localPath;
 
-    expenseProvider.downloadInvoice(oldExpenseIds).then((path) {
+    expenseProvider.downloadInvoice(oldExpenseIds, monthYear: currentMonthStr).then((path) {
       localPath = path;
       apiFinished = true;
     });
@@ -2272,7 +2324,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     
                     const Divider(),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
+
+                    // History Button
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).primaryColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.history_edu_outlined, color: Theme.of(context).primaryColor, size: 22),
+                      ),
+                      title: Text(
+                        'Invoice History',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        'View & manage saved month-end invoices',
+                        style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                      ),
+                      trailing: const Icon(Icons.chevron_right, size: 20),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const InvoiceHistoryScreen()),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 8),
+                    const Divider(),
+                    const SizedBox(height: 8),
 
                     // Logout Button
                     ElevatedButton.icon(

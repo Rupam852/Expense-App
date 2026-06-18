@@ -413,7 +413,7 @@ class ApiService {
   }
 
   // 7. Generate Invoice PDF Download
-  Future<String?> generateInvoice(List<String> expenseIds) async {
+  Future<String?> generateInvoice(List<String> expenseIds, {String? monthYear}) async {
     try {
       final token = await getToken();
       final queryParams = 'ids=${expenseIds.join(',')}';
@@ -430,9 +430,12 @@ class ApiService {
         // Save the byte array to device local directory as a PDF file
         final bytes = response.bodyBytes;
         final dir = await getApplicationDocumentsDirectory();
-        final fileName = 'Invoice_${DateTime.now().millisecondsSinceEpoch}.pdf';
+        final now = DateTime.now();
+        final myMonthYear = monthYear ?? '${now.year}-${now.month.toString().padLeft(2, '0')}';
+        final monthLabel = _monthLabel(myMonthYear);
+        final fileName = 'Statement_${monthLabel}_${now.year}.pdf';
         final file = File('${dir.path}/$fileName');
-        
+
         await file.writeAsBytes(bytes);
 
         // Auto-save copy to public Downloads folder on Android
@@ -448,6 +451,16 @@ class ApiService {
           }
         }
 
+        // Silently save to cloud Invoice History in background
+        saveInvoiceToHistory(
+          fileName: fileName,
+          monthYear: myMonthYear,
+          pdfBytes: bytes,
+        ).catchError((Object e) {
+          print('[History] Silent cloud save failed: $e');
+          return <String, dynamic>{'success': false};
+        });
+
         return file.path; // Return saved file path
       }
       return null;
@@ -456,6 +469,20 @@ class ApiService {
       return null;
     }
   }
+
+  // Helper: convert YYYY-MM to month label like "June"
+  String _monthLabel(String monthYear) {
+    try {
+      final parts = monthYear.split('-');
+      final month = int.parse(parts[1]);
+      const months = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'];
+      return months[month];
+    } catch (_) {
+      return monthYear;
+    }
+  }
+
 
   // 8. Delete Old Month/Year Expenses (Older than current month)
   Future<Map<String, dynamic>> deleteOldExpenses() async {
@@ -570,4 +597,111 @@ class ApiService {
     }
     return false;
   }
+
+  // =====================================================
+  // 13. Invoice History API Methods
+  // =====================================================
+
+  /// Fetch list of all saved invoices (no pdf_data, just metadata)
+  Future<Map<String, dynamic>> fetchInvoiceHistory() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .get(Uri.parse('$baseUrl/invoices/history'), headers: headers)
+          .timeout(const Duration(seconds: 20));
+      final decoded = json.decode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'invoices': decoded['invoices']};
+      }
+      return {'success': false, 'error': decoded['error'] ?? 'Failed to load history.'};
+    } catch (e) {
+      return {'success': false, 'error': 'Connection error: $e'};
+    }
+  }
+
+  /// Save a generated PDF invoice to cloud history
+  Future<Map<String, dynamic>> saveInvoiceToHistory({
+    required String fileName,
+    required String monthYear,
+    required Uint8List pdfBytes,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      final base64Pdf = base64Encode(pdfBytes);
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/invoices/history/save'),
+            headers: headers,
+            body: json.encode({
+              'file_name': fileName,
+              'month_year': monthYear,
+              'pdf_base64': base64Pdf,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+      final decoded = json.decode(response.body);
+      if (response.statusCode == 201) {
+        return {'success': true, 'invoice': decoded['invoice']};
+      }
+      return {'success': false, 'error': decoded['error'] ?? 'Failed to save invoice.'};
+    } catch (e) {
+      return {'success': false, 'error': 'Connection error: $e'};
+    }
+  }
+
+  /// Rename an invoice in history
+  Future<Map<String, dynamic>> renameInvoice(String id, String newName) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .patch(
+            Uri.parse('$baseUrl/invoices/history/$id/rename'),
+            headers: headers,
+            body: json.encode({'file_name': newName}),
+          )
+          .timeout(const Duration(seconds: 15));
+      final decoded = json.decode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'invoice': decoded['invoice']};
+      }
+      return {'success': false, 'error': decoded['error'] ?? 'Failed to rename.'};
+    } catch (e) {
+      return {'success': false, 'error': 'Connection error: $e'};
+    }
+  }
+
+  /// Download PDF bytes for a specific invoice
+  Future<Uint8List?> downloadInvoiceBytes(String id) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .get(Uri.parse('$baseUrl/invoices/history/$id/download'), headers: headers)
+          .timeout(const Duration(seconds: 30));
+      if (response.statusCode == 200) {
+        return response.bodyBytes;
+      }
+      return null;
+    } catch (e) {
+      print('[History] Download error: $e');
+      return null;
+    }
+  }
+
+  /// Delete an invoice from history
+  Future<Map<String, dynamic>> deleteInvoice(String id) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .delete(Uri.parse('$baseUrl/invoices/history/$id'), headers: headers)
+          .timeout(const Duration(seconds: 15));
+      final decoded = json.decode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true};
+      }
+      return {'success': false, 'error': decoded['error'] ?? 'Failed to delete.'};
+    } catch (e) {
+      return {'success': false, 'error': 'Connection error: $e'};
+    }
+  }
 }
+

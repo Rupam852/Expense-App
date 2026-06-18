@@ -332,10 +332,10 @@ class ExpenseProvider with ChangeNotifier {
   }
 
   // Invoice generate download PDF path helper
-  Future<String?> downloadInvoice(List<String> expenseIds) async {
+  Future<String?> downloadInvoice(List<String> expenseIds, {String? monthYear}) async {
     _isSyncing = true;
     notifyListeners();
-    final path = await _apiService.generateInvoice(expenseIds);
+    final path = await _apiService.generateInvoice(expenseIds, monthYear: monthYear);
     _isSyncing = false;
     notifyListeners();
     return path;

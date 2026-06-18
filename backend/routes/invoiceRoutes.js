@@ -190,4 +190,129 @@ router.get('/generate', authenticateToken, async (req, res) => {
   }
 });
 
+// =====================================================
+// INVOICE HISTORY ROUTES
+// =====================================================
+
+// GET /invoices/history — list all saved invoices for the user
+router.get('/history', authenticateToken, async (req, res) => {
+  const userId = req.user.userId;
+  try {
+    const result = await query(
+      `SELECT id, file_name, month_year, file_size_bytes, created_at, updated_at
+       FROM invoice_history
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [userId]
+    );
+    res.json({ invoices: result.rows });
+  } catch (error) {
+    console.error('[History] List error:', error);
+    res.status(500).json({ error: 'Failed to fetch invoice history.' });
+  }
+});
+
+// POST /invoices/history/save — save a PDF to history (body: { file_name, month_year, pdf_base64 })
+router.post('/history/save', authenticateToken, async (req, res) => {
+  const userId = req.user.userId;
+  const { file_name, month_year, pdf_base64 } = req.body;
+
+  if (!file_name || !month_year || !pdf_base64) {
+    return res.status(400).json({ error: 'file_name, month_year, and pdf_base64 are required.' });
+  }
+
+  try {
+    const pdfBuffer = Buffer.from(pdf_base64, 'base64');
+    const fileSizeBytes = pdfBuffer.length;
+
+    const result = await query(
+      `INSERT INTO invoice_history (user_id, file_name, month_year, pdf_data, file_size_bytes)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, file_name, month_year, file_size_bytes, created_at`,
+      [userId, file_name, month_year, pdfBuffer, fileSizeBytes]
+    );
+    res.status(201).json({ invoice: result.rows[0] });
+  } catch (error) {
+    console.error('[History] Save error:', error);
+    res.status(500).json({ error: 'Failed to save invoice to history.' });
+  }
+});
+
+// PATCH /invoices/history/:id/rename — rename an invoice file
+router.patch('/history/:id/rename', authenticateToken, async (req, res) => {
+  const userId = req.user.userId;
+  const { id } = req.params;
+  const { file_name } = req.body;
+
+  if (!file_name || file_name.trim() === '') {
+    return res.status(400).json({ error: 'file_name is required.' });
+  }
+
+  try {
+    const result = await query(
+      `UPDATE invoice_history
+       SET file_name = $1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2 AND user_id = $3
+       RETURNING id, file_name, month_year, file_size_bytes, created_at, updated_at`,
+      [file_name.trim(), id, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Invoice not found or access denied.' });
+    }
+    res.json({ invoice: result.rows[0] });
+  } catch (error) {
+    console.error('[History] Rename error:', error);
+    res.status(500).json({ error: 'Failed to rename invoice.' });
+  }
+});
+
+// GET /invoices/history/:id/download — stream PDF bytes for download
+router.get('/history/:id/download', authenticateToken, async (req, res) => {
+  const userId = req.user.userId;
+  const { id } = req.params;
+
+  try {
+    const result = await query(
+      `SELECT file_name, pdf_data FROM invoice_history WHERE id = $1 AND user_id = $2`,
+      [id, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Invoice not found or access denied.' });
+    }
+
+    const { file_name, pdf_data } = result.rows[0];
+    const safeFileName = encodeURIComponent(file_name.endsWith('.pdf') ? file_name : `${file_name}.pdf`);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFileName}"`);
+    res.send(pdf_data);
+  } catch (error) {
+    console.error('[History] Download error:', error);
+    res.status(500).json({ error: 'Failed to download invoice.' });
+  }
+});
+
+// DELETE /invoices/history/:id — delete an invoice from history
+router.delete('/history/:id', authenticateToken, async (req, res) => {
+  const userId = req.user.userId;
+  const { id } = req.params;
+
+  try {
+    const result = await query(
+      `DELETE FROM invoice_history WHERE id = $1 AND user_id = $2 RETURNING id`,
+      [id, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Invoice not found or access denied.' });
+    }
+    res.json({ success: true, deleted_id: result.rows[0].id });
+  } catch (error) {
+    console.error('[History] Delete error:', error);
+    res.status(500).json({ error: 'Failed to delete invoice.' });
+  }
+});
+
 export default router;

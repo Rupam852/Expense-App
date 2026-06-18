@@ -89,6 +89,20 @@ export const initDB = async () => {
     await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;`);
     await query(`ALTER TABLE budgets ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;`);
 
+    // 7. Invoice History Table (stores month-end generated PDFs as binary)
+    await query(`
+      CREATE TABLE IF NOT EXISTS invoice_history (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        file_name VARCHAR(255) NOT NULL,
+        month_year VARCHAR(7) NOT NULL,
+        pdf_data BYTEA NOT NULL,
+        file_size_bytes INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     // 4. Payment Details Table
     await query(`
       CREATE TABLE IF NOT EXISTS payment_details (
