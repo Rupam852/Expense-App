@@ -11,6 +11,9 @@ dependencies:
   flutter:
     sdk: flutter
 
+  flutter_localizations:
+    sdk: flutter
+
   # Navigation & Icons
   cupertino_icons: ^1.0.6
 
@@ -31,7 +34,7 @@ dependencies:
   # Modern UI & Graphs
   google_fonts: ^6.2.1
   fl_chart: ^0.66.0
-  intl: ^0.19.0
+  intl: ^0.20.2
   qr_flutter: ^4.1.0
   qr_code_dart_decoder: 0.1.2
 
