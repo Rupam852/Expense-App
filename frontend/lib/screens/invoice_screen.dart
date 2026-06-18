@@ -81,7 +81,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
           builder: (context, setDialogState) {
             // Set up a delayed check to animate progress smoothly
             Future.delayed(const Duration(milliseconds: 100), () {
-              if (!context.mounted) return;
+              if (!context.mounted || popped) return;
               if (progress < 0.9) {
                 setDialogState(() {
                   progress += 0.08;
@@ -91,7 +91,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                     statusText = 'Compiling total expenses...';
                   }
                 });
-              } else if (apiFinished && !popped) {
+              } else if (apiFinished) {
                 popped = true;
                 setDialogState(() {
                   progress = 1.0;
@@ -102,6 +102,15 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                     Navigator.of(context).pop(); // Close progress dialog exactly once
                   }
                 });
+              } else {
+                // Creep up slowly towards 98% to show progress is alive
+                if (progress < 0.98) {
+                  setDialogState(() {
+                    progress += 0.01;
+                  });
+                } else {
+                  setDialogState(() {});
+                }
               }
             });
 

@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import '../services/api_service.dart';
+import '../services/supabase_service.dart';
 import '../widgets/custom_toast.dart';
 
 class InvoiceHistoryScreen extends StatefulWidget {
@@ -16,7 +16,7 @@ class InvoiceHistoryScreen extends StatefulWidget {
 }
 
 class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
-  final _apiService = ApiService.instance;
+  final _supabase = SupabaseService.instance;
 
   List<Map<String, dynamic>> _invoices = [];
   bool _isLoading = true;
@@ -27,7 +27,6 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
   void initState() {
     super.initState();
     _initAndLoad();
-    // Listen for connectivity changes in real-time
     Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
       final offline = results.isEmpty || results.every((r) => r == ConnectivityResult.none);
       if (mounted) {
@@ -47,20 +46,17 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
 
   Future<void> _loadHistory() async {
     setState(() { _isLoading = true; _error = null; });
-    final result = await _apiService.fetchInvoiceHistory();
-    if (!mounted) return;
-    if (result['success'] == true) {
-      final list = (result['invoices'] as List).cast<Map<String, dynamic>>();
-      setState(() { _invoices = list; _isLoading = false; });
-    } else {
-      setState(() { _error = result['error']; _isLoading = false; });
+    try {
+      final list = await _supabase.fetchInvoiceHistory();
+      if (mounted) setState(() { _invoices = list; _isLoading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _error = e.toString(); _isLoading = false; });
     }
   }
 
   // ─── Rename ─────────────────────────────────────────────────────────────────
   Future<void> _showRenameDialog(Map<String, dynamic> invoice) async {
     final controller = TextEditingController(text: invoice['file_name'] as String? ?? '');
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -99,20 +95,19 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
       ),
     );
     if (result == null || result.isEmpty) return;
-    final res = await _apiService.renameInvoice(invoice['id'] as String, result);
-    if (!mounted) return;
-    if (res['success'] == true) {
-      CustomToast.show(context, '✅ Invoice renamed successfully.');
+    try {
+      await _supabase.renameInvoice(invoice['id'] as String, result);
+      if (mounted) CustomToast.show(context, 'Invoice renamed successfully.');
       await _loadHistory();
-    } else {
-      CustomToast.show(context, 'Failed to rename: ${res['error']}', isError: true);
+    } catch (e) {
+      if (mounted) CustomToast.show(context, 'Rename failed: $e', isError: true);
     }
   }
 
   // ─── Download ────────────────────────────────────────────────────────────────
   Future<void> _downloadInvoice(Map<String, dynamic> invoice) async {
-    CustomToast.show(context, 'Downloading…');
-    final bytes = await _apiService.downloadInvoiceBytes(invoice['id'] as String);
+    CustomToast.show(context, 'Downloading...');
+    final bytes = await _supabase.downloadInvoiceBytes(invoice['storage_path'] as String);
     if (!mounted) return;
     if (bytes == null) {
       CustomToast.show(context, 'Download failed. Check your connection.', isError: true);
@@ -121,15 +116,13 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
     final fileName = invoice['file_name'] as String? ?? 'Invoice.pdf';
     final safeFileName = fileName.endsWith('.pdf') ? fileName : '$fileName.pdf';
 
-    // Try native Downloads first
-    final saved = await ApiService.saveFileToDownloads(
+    final saved = await SupabaseService.saveFileToDownloads(
       fileName: safeFileName,
       bytes: bytes,
       mimeType: 'application/pdf',
     );
 
     if (!saved) {
-      // Fallback: save to app documents dir and open with viewer
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/$safeFileName');
       await file.writeAsBytes(bytes);
@@ -139,14 +132,14 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
         CustomToast.show(context, 'Saved to: ${file.path}');
       }
     } else {
-      if (mounted) CustomToast.show(context, '✅ Saved to Downloads folder!');
+      if (mounted) CustomToast.show(context, 'Saved to Downloads folder!');
     }
   }
 
   // ─── Share ───────────────────────────────────────────────────────────────────
   Future<void> _shareInvoice(Map<String, dynamic> invoice) async {
-    CustomToast.show(context, 'Preparing to share…');
-    final bytes = await _apiService.downloadInvoiceBytes(invoice['id'] as String);
+    CustomToast.show(context, 'Preparing to share...');
+    final bytes = await _supabase.downloadInvoiceBytes(invoice['storage_path'] as String);
     if (!mounted) return;
     if (bytes == null) {
       CustomToast.show(context, 'Share failed. Check your connection.', isError: true);
@@ -161,7 +154,7 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
     await Share.shareXFiles(
       [XFile(tempFile.path)],
       subject: safeFileName,
-      text: 'Grow Expense — Monthly Invoice',
+      text: 'Grow Expense — Monthly Statement',
     );
   }
 
@@ -170,7 +163,7 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
     final monthYear = invoice['month_year'] as String? ?? '';
     final confirmed = await showDialog<bool>(
       context: context,
-      barrierDismissible: true, // back gesture closes popup
+      barrierDismissible: true,
       builder: (ctx) => AlertDialog(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -191,16 +184,12 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
                     child: const Icon(Icons.delete_outline, color: Colors.red, size: 28),
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    'Delete Invoice?',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20),
-                  ),
+                  Text('Delete Invoice?', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20)),
                 ],
               ),
             ),
             Positioned(
-              right: 8,
-              top: 8,
+              right: 8, top: 8,
               child: IconButton(
                 icon: const Icon(Icons.close, size: 20),
                 onPressed: () => Navigator.of(ctx).pop(false),
@@ -253,13 +242,15 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
       ),
     );
     if (confirmed != true) return;
-    final res = await _apiService.deleteInvoice(invoice['id'] as String);
-    if (!mounted) return;
-    if (res['success'] == true) {
-      CustomToast.show(context, '🗑️ Invoice deleted successfully.');
+    try {
+      await _supabase.deleteInvoice(
+        invoice['id'] as String,
+        invoice['storage_path'] as String,
+      );
+      if (mounted) CustomToast.show(context, 'Invoice deleted.');
       await _loadHistory();
-    } else {
-      CustomToast.show(context, 'Delete failed: ${res['error']}', isError: true);
+    } catch (e) {
+      if (mounted) CustomToast.show(context, 'Delete failed: $e', isError: true);
     }
   }
 
@@ -270,14 +261,10 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
       final parts = monthYear.split('-');
       final year = int.parse(parts[0]);
       final month = int.parse(parts[1]);
-      const months = [
-        '', 'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December',
-      ];
+      const months = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'];
       return '${months[month]} $year';
-    } catch (_) {
-      return monthYear;
-    }
+    } catch (_) { return monthYear; }
   }
 
   String _formatFileSize(dynamic bytes) {
@@ -294,9 +281,7 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
       return '${dt.day.toString().padLeft(2, '0')} '
              '${_formatMonthYear('${dt.year}-${dt.month.toString().padLeft(2, '0')}').split(' ')[0].substring(0, 3)} '
              '${dt.year}';
-    } catch (_) {
-      return '';
-    }
+    } catch (_) { return ''; }
   }
 
   @override
@@ -313,17 +298,10 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text(
-          'Invoice History',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20),
-        ),
+        title: Text('Invoice History', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20)),
         actions: [
           if (!_isOffline)
-            IconButton(
-              icon: const Icon(Icons.refresh_rounded),
-              tooltip: 'Refresh',
-              onPressed: _loadHistory,
-            ),
+            IconButton(icon: const Icon(Icons.refresh_rounded), tooltip: 'Refresh', onPressed: _loadHistory),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
@@ -335,7 +313,6 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
   }
 
   Widget _buildBody(bool isDark, Color primaryColor) {
-    // Offline state
     if (_isOffline) {
       return Center(
         child: Padding(
@@ -345,17 +322,11 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
             children: [
               Container(
                 padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
+                decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.1), shape: BoxShape.circle),
                 child: const Icon(Icons.wifi_off_rounded, size: 56, color: Colors.orange),
               ),
               const SizedBox(height: 24),
-              Text(
-                'You are offline',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 22),
-              ),
+              Text('You are offline', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 22)),
               const SizedBox(height: 10),
               Text(
                 'Please turn on your internet connection.\nInvoice history will load automatically once connected.',
@@ -368,14 +339,8 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
       );
     }
 
-    // Loading state
-    if (_isLoading) {
-      return Center(
-        child: CircularProgressIndicator(color: primaryColor),
-      );
-    }
+    if (_isLoading) return Center(child: CircularProgressIndicator(color: primaryColor));
 
-    // Error state
     if (_error != null) {
       return Center(
         child: Column(
@@ -402,7 +367,6 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
       );
     }
 
-    // Empty state
     if (_invoices.isEmpty) {
       return Center(
         child: Padding(
@@ -412,17 +376,11 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
             children: [
               Container(
                 padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.08),
-                  shape: BoxShape.circle,
-                ),
+                decoration: BoxDecoration(color: primaryColor.withValues(alpha: 0.08), shape: BoxShape.circle),
                 child: Icon(Icons.history_edu_outlined, size: 56, color: primaryColor),
               ),
               const SizedBox(height: 24),
-              Text(
-                'No Invoices Yet',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 22),
-              ),
+              Text('No Invoices Yet', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 22)),
               const SizedBox(height: 10),
               Text(
                 'Invoices you generate from the\nBilling & Invoicing screen will appear here\nautomatically, saved month-by-month.',
@@ -435,7 +393,6 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
       );
     }
 
-    // Invoice list
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: _invoices.length,
@@ -454,22 +411,17 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+                blurRadius: 12, offset: const Offset(0, 4),
               ),
             ],
-            border: Border.all(
-              color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.05),
-            ),
+            border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.05)),
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
-                // PDF icon badge
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: 48, height: 48,
                   decoration: BoxDecoration(
                     color: primaryColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
@@ -477,22 +429,13 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
                   child: Icon(Icons.picture_as_pdf_rounded, color: primaryColor, size: 26),
                 ),
                 const SizedBox(width: 14),
-                // Info
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        monthLabel,
-                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
-                      ),
+                      Text(monthLabel, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15)),
                       const SizedBox(height: 2),
-                      Text(
-                        fileName,
-                        style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      Text(fileName, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]), maxLines: 1, overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 4),
                       Row(
                         children: [
@@ -508,7 +451,6 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
                     ],
                   ),
                 ),
-                // 3-dot menu
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert_rounded, size: 22),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -523,39 +465,27 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
                     }
                   },
                   itemBuilder: (_) => [
-                    PopupMenuItem(
-                      value: 'rename',
-                      child: Row(children: [
-                        Icon(Icons.drive_file_rename_outline_rounded, size: 18, color: primaryColor),
-                        const SizedBox(width: 12),
-                        Text('Rename File', style: GoogleFonts.inter(fontSize: 13)),
-                      ]),
-                    ),
-                    PopupMenuItem(
-                      value: 'download',
-                      child: Row(children: [
-                        Icon(Icons.download_rounded, size: 18, color: primaryColor),
-                        const SizedBox(width: 12),
-                        Text('Download', style: GoogleFonts.inter(fontSize: 13)),
-                      ]),
-                    ),
-                    PopupMenuItem(
-                      value: 'share',
-                      child: Row(children: [
-                        Icon(Icons.share_outlined, size: 18, color: primaryColor),
-                        const SizedBox(width: 12),
-                        Text('Share', style: GoogleFonts.inter(fontSize: 13)),
-                      ]),
-                    ),
+                    PopupMenuItem(value: 'rename', child: Row(children: [
+                      Icon(Icons.drive_file_rename_outline_rounded, size: 18, color: primaryColor),
+                      const SizedBox(width: 12),
+                      Text('Rename File', style: GoogleFonts.inter(fontSize: 13)),
+                    ])),
+                    PopupMenuItem(value: 'download', child: Row(children: [
+                      Icon(Icons.download_rounded, size: 18, color: primaryColor),
+                      const SizedBox(width: 12),
+                      Text('Download', style: GoogleFonts.inter(fontSize: 13)),
+                    ])),
+                    PopupMenuItem(value: 'share', child: Row(children: [
+                      Icon(Icons.share_outlined, size: 18, color: primaryColor),
+                      const SizedBox(width: 12),
+                      Text('Share', style: GoogleFonts.inter(fontSize: 13)),
+                    ])),
                     const PopupMenuDivider(),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Row(children: [
-                        const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red),
-                        const SizedBox(width: 12),
-                        Text('Delete', style: GoogleFonts.inter(fontSize: 13, color: Colors.red)),
-                      ]),
-                    ),
+                    PopupMenuItem(value: 'delete', child: Row(children: [
+                      const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red),
+                      const SizedBox(width: 12),
+                      Text('Delete', style: GoogleFonts.inter(fontSize: 13, color: Colors.red)),
+                    ])),
                   ],
                 ),
               ],

@@ -1,14 +1,18 @@
-import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'api_service.dart';
-import 'biometric_service.dart';
-import 'package:firebase_auth/firebase_auth.dart' as fb;
+import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'biometric_service.dart';
+import 'supabase_service.dart';
 
 class UserProvider with ChangeNotifier {
-  final _apiService = ApiService.instance;
+  final _supabase = SupabaseService.instance;
   final _biometricService = BiometricService.instance;
+  final _googleSignIn = GoogleSignIn(
+    serverClientId: '570982599451-4u24qllrvum0an48hp9vktj8ba5g49ul.apps.googleusercontent.com',
+    scopes: ['email', 'profile'],
+  );
 
   Map<String, dynamic>? _userProfile;
   bool _isAuthenticated = false;
@@ -42,25 +46,14 @@ class UserProvider with ChangeNotifier {
     _unverifiedEmail = null;
   }
 
-  fb.FirebaseAuth? _firebaseAuth;
-  GoogleSignIn? _googleSignIn;
-
   UserProvider() {
-    _initFirebaseAndPrefs();
+    _init();
   }
 
-  // Resilient Firebase and settings caching setup
-  Future<void> _initFirebaseAndPrefs() async {
-    try {
-      _firebaseAuth = fb.FirebaseAuth.instance;
-      _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
-    } catch (e) {
-      print('Firebase not initialized on target platform: Running in standard Backend API Mode. Details: $e');
-    }
-
+  Future<void> _init() async {
     _biometricsEnabled = await _biometricService.isBiometricsEnabled();
 
-    // Load cached profile instantly for fast visual boot
+    // Load locally cached profile for instant boot
     try {
       final prefs = await SharedPreferences.getInstance();
       _userGeminiApiKey = prefs.getString('user_gemini_api_key');
@@ -70,63 +63,82 @@ class UserProvider with ChangeNotifier {
         _userProfile = Map<String, dynamic>.from(json.decode(cachedProfileStr));
         _isAuthenticated = true;
       }
-    } catch (e) {
-      print('Error restoring cached profile: $e');
-    }
-    
-    // Check if we have an active JWT stored already (keeps user logged in)
-    final token = await _apiService.getToken();
-    if (token != null) {
+    } catch (_) {}
+
+    // Check Supabase session
+    final session = _supabase.currentSession;
+    if (session != null) {
       _isAuthenticated = true;
-      // Fetch user profile from backend quietly
       _fetchProfileQuietly();
     }
+
+    // Listen for auth state changes (login/logout/token-refresh)
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final event = data.event;
+      if (event == AuthChangeEvent.signedIn || event == AuthChangeEvent.tokenRefreshed) {
+        _isAuthenticated = true;
+        _fetchProfileQuietly();
+      } else if (event == AuthChangeEvent.signedOut) {
+        _isAuthenticated = false;
+        _userProfile = null;
+        notifyListeners();
+      }
+    });
+
     notifyListeners();
   }
 
-  // Local caching helper
+  // ──────────────────────────────────────────────────────
+  // LOCAL CACHE
+  // ──────────────────────────────────────────────────────
+
   Future<void> _saveProfileLocally() async {
-    if (_userProfile != null) {
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('cached_user_profile', json.encode(_userProfile));
-      } catch (e) {
-        print('Error saving profile locally: $e');
-      }
-    }
+    if (_userProfile == null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('cached_user_profile', json.encode(_userProfile));
+    } catch (_) {}
   }
 
-  // Quiet profile fetcher to sync database modifications
   Future<void> _fetchProfileQuietly() async {
-    final result = await _fetchProfileDetails();
-    if (result != null) {
-      _userProfile = result;
+    try {
+      final profile = await _supabase.fetchProfile();
+      final user = _supabase.currentUser;
+      if (user == null) return;
+
+      _userProfile = {
+        'id': user.id,
+        'email': user.email,
+        'name': profile?['name'] ?? user.userMetadata?['name'] ?? user.userMetadata?['full_name'] ?? 'User',
+        'photo_url': profile?['photo_url'] ?? user.userMetadata?['avatar_url'],
+        'gemini_api_key': profile?['gemini_api_key'],
+        'gemini_api_key_secondary': profile?['gemini_api_key_secondary'],
+      };
       _isAuthenticated = true;
 
-      // Automatically sync Gemini key from remote DB to local preferences
-      final fetchedApiKey = _userProfile?['gemini_api_key'];
-      if (fetchedApiKey != null && fetchedApiKey.toString().trim().isNotEmpty) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user_gemini_api_key', fetchedApiKey.toString().trim());
-        _userGeminiApiKey = fetchedApiKey.toString().trim();
+      // Cache Gemini keys locally
+      final prefs = await SharedPreferences.getInstance();
+      final key = _userProfile!['gemini_api_key']?.toString().trim();
+      final keySec = _userProfile!['gemini_api_key_secondary']?.toString().trim();
+      if (key != null && key.isNotEmpty) {
+        await prefs.setString('user_gemini_api_key', key);
+        _userGeminiApiKey = key;
       }
-
-      final fetchedApiKeySec = _userProfile?['gemini_api_key_secondary'];
-      if (fetchedApiKeySec != null && fetchedApiKeySec.toString().trim().isNotEmpty) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user_gemini_api_key_secondary', fetchedApiKeySec.toString().trim());
-        _userGeminiApiKeySecondary = fetchedApiKeySec.toString().trim();
+      if (keySec != null && keySec.isNotEmpty) {
+        await prefs.setString('user_gemini_api_key_secondary', keySec);
+        _userGeminiApiKeySecondary = keySec;
       }
 
       await _saveProfileLocally();
       notifyListeners();
-    } else {
-      // Token is stale or backend is down, we remain logged in locally (offline first) but log trace
-      print('Quiet profile loading unsuccessful. Standing by in offline mode.');
+    } catch (e) {
+      print('[UserProvider] Quiet profile fetch failed (offline?): $e');
     }
   }
 
-  // 1. Manual Signup (Firebase + Backend sync fallback)
+  // ──────────────────────────────────────────────────────
+  // 1. REGISTER (Email + Password)
+  // ──────────────────────────────────────────────────────
   Future<bool> registerUser({
     required String email,
     required String password,
@@ -140,70 +152,50 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Step A: Attempt Firebase registration if initialized
-      if (_firebaseAuth != null) {
-        try {
-          await _firebaseAuth!.createUserWithEmailAndPassword(email: email, password: password);
-        } catch (fbErr) {
-          print('Firebase custom user registration bypassed: $fbErr');
-        }
-      }
-
-      // Step B: Synchronize with our Express / Postgres backend
-      final result = await _apiService.register(
+      final response = await _supabase.signUpWithEmail(
         email: email,
         password: password,
         name: name,
-        photoUrl: photoUrl,
       );
 
-      if (result['success'] == true) {
-        if (result['needsVerification'] == true) {
-          _needsVerification = true;
-          _unverifiedEmail = result['email'];
+      if (response.user != null) {
+        // If session is already present → Supabase "Confirm Email" is OFF
+        // User is logged in directly, no OTP screen needed
+        if (response.session != null) {
+          await _fetchProfileQuietly();
+          _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
           _isLoading = false;
-          _isAuthenticated = false;
           notifyListeners();
-          return true; // Success but requires verification
+          return true;
         }
-
-        _userProfile = result['user'];
-        _isAuthenticated = true;
-
-        final fetchedApiKey = _userProfile?['gemini_api_key'];
-        if (fetchedApiKey != null && fetchedApiKey.toString().trim().isNotEmpty) {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('user_gemini_api_key', fetchedApiKey.toString().trim());
-          _userGeminiApiKey = fetchedApiKey.toString().trim();
-        }
-
-        final fetchedApiKeySec = _userProfile?['gemini_api_key_secondary'];
-        if (fetchedApiKeySec != null && fetchedApiKeySec.toString().trim().isNotEmpty) {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('user_gemini_api_key_secondary', fetchedApiKeySec.toString().trim());
-          _userGeminiApiKeySecondary = fetchedApiKeySec.toString().trim();
-        }
-
-        _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
-        await _saveProfileLocally();
+        // Session is null → Supabase "Confirm Email" is ON, OTP required
+        _needsVerification = true;
+        _unverifiedEmail = email;
         _isLoading = false;
         notifyListeners();
         return true;
-      } else {
-        _errorMessage = result['error'];
-        _isLoading = false;
-        notifyListeners();
-        return false;
       }
+      _errorMessage = 'Registration failed. Please try again.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } on AuthException catch (e) {
+      _errorMessage = _getFriendlyErrorMessage(e);
+      _isLoading = false;
+      notifyListeners();
+      return false;
     } catch (e) {
-      _errorMessage = 'System registration exception: $e';
+      _errorMessage = 'Registration error: $e';
       _isLoading = false;
       notifyListeners();
       return false;
     }
   }
 
-  // 2. Manual Email Login
+
+  // ──────────────────────────────────────────────────────
+  // 2. LOGIN (Email + Password)
+  // ──────────────────────────────────────────────────────
   Future<bool> loginUser({
     required String email,
     required String password,
@@ -215,295 +207,171 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Step A: Try Firebase verification if present
-      if (_firebaseAuth != null) {
-        try {
-          await _firebaseAuth!.signInWithEmailAndPassword(email: email, password: password);
-        } catch (fbErr) {
-          print('Firebase login bypassed: $fbErr');
-        }
-      }
-
-      // Step B: Authenticate against Express API and obtain JWT
-      final result = await _apiService.login(email: email, password: password);
-
-      if (result['success'] == true) {
-        _userProfile = result['user'];
-        _isAuthenticated = true;
-
-        final fetchedApiKey = _userProfile?['gemini_api_key'];
-        if (fetchedApiKey != null && fetchedApiKey.toString().trim().isNotEmpty) {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('user_gemini_api_key', fetchedApiKey.toString().trim());
-          _userGeminiApiKey = fetchedApiKey.toString().trim();
-        }
-
-        final fetchedApiKeySec = _userProfile?['gemini_api_key_secondary'];
-        if (fetchedApiKeySec != null && fetchedApiKeySec.toString().trim().isNotEmpty) {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('user_gemini_api_key_secondary', fetchedApiKeySec.toString().trim());
-          _userGeminiApiKeySecondary = fetchedApiKeySec.toString().trim();
-        }
-
+      final response = await _supabase.signInWithEmail(
+        email: email,
+        password: password,
+      );
+      if (response.user != null) {
+        await _fetchProfileQuietly();
         _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
-        await _saveProfileLocally();
         _isLoading = false;
         notifyListeners();
         return true;
-      } else {
-        if (result['needsVerification'] == true) {
-          _needsVerification = true;
-          _unverifiedEmail = result['email'];
-          _errorMessage = 'Email not verified. Please verify your email first.';
-        } else {
-          _errorMessage = result['error'];
-        }
-        _isLoading = false;
-        notifyListeners();
-        return false;
       }
+      _errorMessage = 'Login failed. Check your credentials.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } on AuthException catch (e) {
+      if (e.message.toLowerCase().contains('email not confirmed')) {
+        _needsVerification = true;
+        _unverifiedEmail = email;
+        _errorMessage = 'Email not verified. Please check your inbox.';
+      } else {
+        _errorMessage = _getFriendlyErrorMessage(e);
+      }
+      _isLoading = false;
+      notifyListeners();
+      return false;
     } catch (e) {
-      _errorMessage = 'System authentication exception: $e';
+      _errorMessage = 'Login error: $e';
       _isLoading = false;
       notifyListeners();
       return false;
     }
   }
 
-  // 3. Google Sign-In (Firebase + Backend registration synchronizer)
+  // ──────────────────────────────────────────────────────
+  // 3. GOOGLE SIGN IN
+  // ──────────────────────────────────────────────────────
   Future<bool> loginWithGoogle() async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      if (_googleSignIn == null) {
-        _errorMessage = 'Google sign-in is not configured on this device.';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-
-      final GoogleSignInAccount? googleUser = await _googleSignIn!.signIn();
+      final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
-        _errorMessage = 'Google authentication cancelled by user.';
+        _errorMessage = 'Google sign-in cancelled.';
         _isLoading = false;
         notifyListeners();
         return false;
       }
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      // Sync with Firebase Auth
-      if (_firebaseAuth != null) {
-        try {
-          final credential = fb.GoogleAuthProvider.credential(
-            accessToken: googleAuth.accessToken,
-            idToken: googleAuth.idToken,
-          );
-          await _firebaseAuth!.signInWithCredential(credential);
-        } catch (fbErr) {
-          print('Firebase Google Sync bypassed: $fbErr');
-        }
+      final googleAuth = await googleUser.authentication;
+      if (googleAuth.idToken == null) {
+        _errorMessage = 'Google authentication failed. Please try again.';
+        _isLoading = false;
+        notifyListeners();
+        return false;
       }
 
-      // Sync Google attributes to our postgres backend
-      final result = await _apiService.login(
-        email: googleUser.email,
-        googleId: googleUser.id,
-        name: googleUser.displayName,
-        photoUrl: googleUser.photoUrl,
+      // Sign in to Supabase with the Google ID token
+      final response = await _supabase.signInWithGoogleIdToken(
+        idToken: googleAuth.idToken!,
+        accessToken: googleAuth.accessToken,
       );
 
-      if (result['success'] == true) {
-        _userProfile = result['user'];
-        _isAuthenticated = true;
-
-        final fetchedApiKey = _userProfile?['gemini_api_key'];
-        if (fetchedApiKey != null && fetchedApiKey.toString().trim().isNotEmpty) {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('user_gemini_api_key', fetchedApiKey.toString().trim());
-          _userGeminiApiKey = fetchedApiKey.toString().trim();
-        }
-
-        final fetchedApiKeySec = _userProfile?['gemini_api_key_secondary'];
-        if (fetchedApiKeySec != null && fetchedApiKeySec.toString().trim().isNotEmpty) {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('user_gemini_api_key_secondary', fetchedApiKeySec.toString().trim());
-          _userGeminiApiKeySecondary = fetchedApiKeySec.toString().trim();
-        }
-
+      if (response.user != null) {
+        await _fetchProfileQuietly();
         _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
-        await _saveProfileLocally();
         _isLoading = false;
         notifyListeners();
         return true;
-      } else {
-        _errorMessage = result['error'];
-        _isLoading = false;
-        notifyListeners();
-        return false;
       }
+      _errorMessage = 'Google sign-in failed.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } on AuthException catch (e) {
+      _errorMessage = _getFriendlyErrorMessage(e);
+      _isLoading = false;
+      notifyListeners();
+      return false;
     } catch (e) {
-      _errorMessage = 'Google Authentication exception: $e';
+      _errorMessage = 'Google sign-in error: $e';
       _isLoading = false;
       notifyListeners();
       return false;
     }
   }
 
-  // 4. Biometric Authentication Boot Check
+  // ──────────────────────────────────────────────────────
+  // 4. BIOMETRICS
+  // ──────────────────────────────────────────────────────
   Future<bool> performBiometricUnlock() async {
     final enabled = await _biometricService.isBiometricsEnabled();
-    if (!enabled) return true; // Biometrics toggled off: skip
-
+    if (!enabled) return true;
     final active = await _biometricService.isHardwareSupported();
     if (!active) return true;
-
     return await _biometricService.authenticate();
   }
 
-  // 5. Toggle Biometrics Settings
   Future<bool> toggleBiometrics(bool value) async {
     final supported = await _biometricService.isHardwareSupported();
     if (!supported && value) {
-      _errorMessage = 'Biometric security hardware is not supported or active on this device.';
+      _errorMessage = 'Biometric hardware not supported on this device.';
       notifyListeners();
       return false;
     }
-
     if (value) {
-      // Authenticate once before enabling
       final success = await _biometricService.authenticate();
       if (!success) return false;
     }
-
     await _biometricService.setBiometricsEnabled(value);
     _biometricsEnabled = value;
     notifyListeners();
     return true;
   }
 
-  // 6. Profile modifications
-  Future<bool> updateProfile({required String name, String? photoUrl, String? geminiApiKey, String? geminiApiKeySecondary}) async {
-    _isLoading = true;
-    notifyListeners();
-
-    // Instantly update local state to avoid network lag or offline delays!
-    if (_userProfile != null) {
-      final updated = Map<String, dynamic>.from(_userProfile!);
-      updated['name'] = name;
-      if (photoUrl != null) {
-        updated['photo_url'] = photoUrl;
-      }
-      if (geminiApiKey != null || geminiApiKey == '') {
-        updated['gemini_api_key'] = geminiApiKey;
-      }
-      if (geminiApiKeySecondary != null || geminiApiKeySecondary == '') {
-        updated['gemini_api_key_secondary'] = geminiApiKeySecondary;
-      }
-      _userProfile = updated;
-      await _saveProfileLocally();
-      notifyListeners();
-    }
-
-    try {
-      final token = await _apiService.getToken();
-      if (token == null) {
-        _isLoading = false;
-        notifyListeners();
-        return true;
-      }
-
-      final res = await httpPutProfile(
-        name: name,
-        photoUrl: photoUrl,
-        geminiApiKey: geminiApiKey,
-        geminiApiKeySecondary: geminiApiKeySecondary,
-      );
-      if (res != null) {
-        _userProfile = res;
-        await _saveProfileLocally();
-      }
-      _isLoading = false;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      print('Quiet profile server update deferred (offline active): $e');
-      _isLoading = false;
-      notifyListeners();
-      return true; // Return true as offline update is complete
-    }
-  }
-
-  // Standard API call helper to fetch profile details
-  Future<Map<String, dynamic>?> _fetchProfileDetails() async {
-    try {
-      final token = await _apiService.getToken();
-      if (token == null) return null;
-
-      final response = await httpGetMe(token);
-      return response;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  // Helper HTTP calls
-  Future<Map<String, dynamic>?> httpGetMe(String token) async {
-    try {
-      final response = await _apiService.fetchUserProfile();
-      if (response['success'] == true) {
-        return response['user'];
-      }
-      return null;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<Map<String, dynamic>?> httpPutProfile({
+  // ──────────────────────────────────────────────────────
+  // 5. UPDATE PROFILE
+  // ──────────────────────────────────────────────────────
+  Future<bool> updateProfile({
     required String name,
     String? photoUrl,
     String? geminiApiKey,
     String? geminiApiKeySecondary,
   }) async {
-    try {
-      final response = await _apiService.updateProfileOnServer(
-        name: name,
-        photoUrl: photoUrl,
-        geminiApiKey: geminiApiKey,
-        geminiApiKeySecondary: geminiApiKeySecondary,
-      );
-      if (response['success'] == true) {
-        return response['user'];
-      }
-      return null;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  // Guest Bypass Login (Enables immediate usage without backend connections)
-  void enterAsGuest() async {
-    _userProfile = {
-      'id': 'guest-user-uuid',
-      'email': 'guest@growexpense.local',
-      'name': 'Guest Member',
-      'photo_url': null,
-    };
-    _isAuthenticated = true;
-    _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
-    await _saveProfileLocally();
+    _isLoading = true;
     notifyListeners();
+
+    // Instant local update
+    if (_userProfile != null) {
+      _userProfile = {
+        ..._userProfile!,
+        'name': name,
+        if (photoUrl != null) 'photo_url': photoUrl,
+        if (geminiApiKey != null) 'gemini_api_key': geminiApiKey,
+        if (geminiApiKeySecondary != null) 'gemini_api_key_secondary': geminiApiKeySecondary,
+      };
+      await _saveProfileLocally();
+      notifyListeners();
+    }
+
+    try {
+      await _supabase.upsertProfile({
+        'name': name,
+        if (photoUrl != null) 'photo_url': photoUrl,
+        if (geminiApiKey != null) 'gemini_api_key': geminiApiKey,
+        if (geminiApiKeySecondary != null) 'gemini_api_key_secondary': geminiApiKeySecondary,
+      });
+    } catch (e) {
+      print('[UserProvider] Profile update deferred (offline): $e');
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return true;
   }
 
-  // Save/Clear User Custom Gemini API Key
+  // ──────────────────────────────────────────────────────
+  // 6. GEMINI KEY MANAGEMENT
+  // ──────────────────────────────────────────────────────
   Future<void> saveUserGeminiApiKey(String? key) async {
     await saveUserGeminiApiKeys(primary: key, secondary: _userGeminiApiKeySecondary);
   }
 
-  // Save/Clear both Primary and Secondary Gemini API Keys
   Future<void> saveUserGeminiApiKeys({String? primary, String? secondary}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -527,41 +395,37 @@ class UserProvider with ChangeNotifier {
       }
       notifyListeners();
 
-      // Synchronize keys to database
-      if (_isAuthenticated && _userProfile != null) {
+      if (_isAuthenticated) {
         await updateProfile(
-          name: _userProfile!['name'] ?? 'User',
-          photoUrl: _userProfile!['photo_url'],
+          name: _userProfile?['name'] ?? 'User',
+          photoUrl: _userProfile?['photo_url'],
           geminiApiKey: cleanPrimary,
           geminiApiKeySecondary: cleanSecondary,
         );
       }
     } catch (e) {
-      print('Error saving custom Gemini API keys: $e');
+      print('[UserProvider] Error saving Gemini keys: $e');
     }
   }
 
-  // 7. Clear authentication states
+  // ──────────────────────────────────────────────────────
+  // 7. LOGOUT
+  // ──────────────────────────────────────────────────────
   Future<void> logout() async {
     _isLoading = true;
     notifyListeners();
 
-    try {
-      if (_googleSignIn != null) {
-        await _googleSignIn!.signOut();
-      }
-      if (_firebaseAuth != null) {
-        await _firebaseAuth!.signOut();
-      }
-    } catch (_) {}
+    try { await _googleSignIn.signOut(); } catch (_) {}
+    try { await _supabase.signOut(); } catch (_) {}
 
-    await _apiService.deleteToken();
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('cached_user_profile');
       await prefs.remove('user_gemini_api_key');
       await prefs.remove('user_gemini_api_key_secondary');
+      await prefs.remove('last_sync_time');
     } catch (_) {}
+
     _userProfile = null;
     _userGeminiApiKey = null;
     _userGeminiApiKeySecondary = null;
@@ -570,209 +434,217 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // 7b. Delete User Account and Associated Data
+  // ──────────────────────────────────────────────────────
+  // 7b. DELETE ACCOUNT
+  // ──────────────────────────────────────────────────────
   Future<bool> deleteUserAccount() async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      // 1. Delete Firebase User Account if active
-      if (_firebaseAuth != null) {
-        try {
-          final currentUser = _firebaseAuth!.currentUser;
-          if (currentUser != null) {
-            await currentUser.delete();
-            print('[Auth] Firebase Auth user deleted successfully.');
-          }
-        } catch (fbErr) {
-          print('[Auth] Firebase Auth user deletion skipped/failed: $fbErr');
-        }
-      }
+      try { await _googleSignIn.signOut(); } catch (_) {}
+      await _supabase.deleteAccount();
 
-      // 2. Google Sign-Out if active
-      if (_googleSignIn != null) {
-        try {
-          await _googleSignIn!.signOut();
-        } catch (_) {}
-      }
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('cached_user_profile');
+        await prefs.remove('user_gemini_api_key');
+        await prefs.remove('user_gemini_api_key_secondary');
+        await prefs.remove('last_sync_time');
+      } catch (_) {}
 
-      // 3. Call backend delete account API
-      final result = await _apiService.deleteAccount();
-      if (result['success'] == true) {
-        // 4. Wipe local authentication state and keys
-        await _apiService.deleteToken();
-        try {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.remove('cached_user_profile');
-          await prefs.remove('user_gemini_api_key');
-          await prefs.remove('user_gemini_api_key_secondary');
-        } catch (_) {}
-
-        _userProfile = null;
-        _userGeminiApiKey = null;
-        _userGeminiApiKeySecondary = null;
-        _isAuthenticated = false;
-        _isLoading = false;
-        notifyListeners();
-        return true;
-      } else {
-        _errorMessage = result['error'] ?? 'Backend deletion failed.';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
+      _userProfile = null;
+      _userGeminiApiKey = null;
+      _userGeminiApiKeySecondary = null;
+      _isAuthenticated = false;
+      _isLoading = false;
+      notifyListeners();
+      return true;
     } catch (e) {
-      _errorMessage = 'Exception during account deletion: $e';
+      _errorMessage = 'Account deletion failed: $e';
       _isLoading = false;
       notifyListeners();
       return false;
     }
   }
 
-  // 8. Forgot Password - Send OTP Email
+  // ──────────────────────────────────────────────────────
+  // 8. FORGOT PASSWORD (Supabase sends reset link/OTP)
+  // ──────────────────────────────────────────────────────
   Future<bool> sendForgotPasswordOtp(String email) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final result = await _apiService.forgotPassword(email);
+      await _supabase.resetPasswordForEmail(email);
       _isLoading = false;
-      if (result['success'] == true) {
-        notifyListeners();
-        return true;
-      } else {
-        _errorMessage = result['error'];
-        notifyListeners();
-        return false;
-      }
+      notifyListeners();
+      return true;
+    } on AuthException catch (e) {
+      _errorMessage = _getFriendlyErrorMessage(e);
+      _isLoading = false;
+      notifyListeners();
+      return false;
     } catch (e) {
-      _errorMessage = 'System forgot password exception: $e';
+      _errorMessage = 'Error sending reset email: $e';
       _isLoading = false;
       notifyListeners();
       return false;
     }
   }
 
-  // 9. Verify OTP code
+  // ──────────────────────────────────────────────────────
+  // 9. VERIFY OTP (for password reset)
+  // ──────────────────────────────────────────────────────
   Future<bool> verifyForgotPasswordOtp(String email, String otp) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final result = await _apiService.verifyOtp(email, otp);
+      await _supabase.verifyOtp(
+        email: email,
+        token: otp,
+        type: OtpType.recovery,
+      );
       _isLoading = false;
-      if (result['success'] == true) {
-        notifyListeners();
-        return true;
-      } else {
-        _errorMessage = result['error'];
-        notifyListeners();
-        return false;
-      }
+      notifyListeners();
+      return true;
+    } on AuthException catch (e) {
+      _errorMessage = _getFriendlyErrorMessage(e);
+      _isLoading = false;
+      notifyListeners();
+      return false;
     } catch (e) {
-      _errorMessage = 'System OTP verification exception: $e';
+      _errorMessage = 'OTP verification error: $e';
       _isLoading = false;
       notifyListeners();
       return false;
     }
   }
 
-  // 10. Reset Password
+  // ──────────────────────────────────────────────────────
+  // 10. RESET PASSWORD
+  // ──────────────────────────────────────────────────────
   Future<bool> resetUserPassword(String email, String otp, String newPassword) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final result = await _apiService.resetPassword(email, otp, newPassword);
+      // The OTP was already verified in Step 2 (verifyForgotPasswordOtp) to establish the session.
+      // So we can directly update the password now.
+      await _supabase.updatePassword(newPassword);
       _isLoading = false;
-      if (result['success'] == true) {
-        notifyListeners();
-        return true;
-      } else {
-        _errorMessage = result['error'];
-        notifyListeners();
-        return false;
-      }
+      notifyListeners();
+      return true;
+    } on AuthException catch (e) {
+      _errorMessage = _getFriendlyErrorMessage(e);
+      _isLoading = false;
+      notifyListeners();
+      return false;
     } catch (e) {
-      _errorMessage = 'System password reset exception: $e';
+      _errorMessage = 'Password reset error: $e';
       _isLoading = false;
       notifyListeners();
       return false;
     }
   }
 
-  // 11. Verify Signup Email OTP
+  // ──────────────────────────────────────────────────────
+  // 11. VERIFY SIGNUP OTP
+  // ──────────────────────────────────────────────────────
   Future<bool> verifyUserSignup(String email, String otp) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final result = await _apiService.verifySignup(email, otp);
-      _isLoading = false;
-      if (result['success'] == true) {
-        _userProfile = result['user'];
+      final response = await _supabase.verifyOtp(
+        email: email,
+        token: otp,
+        type: OtpType.signup,
+      );
+      if (response.user != null) {
         _isAuthenticated = true;
         _needsVerification = false;
         _unverifiedEmail = null;
-
-        final fetchedApiKey = _userProfile?['gemini_api_key'];
-        if (fetchedApiKey != null && fetchedApiKey.toString().trim().isNotEmpty) {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('user_gemini_api_key', fetchedApiKey.toString().trim());
-          _userGeminiApiKey = fetchedApiKey.toString().trim();
-        }
-
-        final fetchedApiKeySec = _userProfile?['gemini_api_key_secondary'];
-        if (fetchedApiKeySec != null && fetchedApiKeySec.toString().trim().isNotEmpty) {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('user_gemini_api_key_secondary', fetchedApiKeySec.toString().trim());
-          _userGeminiApiKeySecondary = fetchedApiKeySec.toString().trim();
-        }
-
+        await _fetchProfileQuietly();
         _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
-        await _saveProfileLocally();
+        _isLoading = false;
         notifyListeners();
         return true;
-      } else {
-        _errorMessage = result['error'];
-        notifyListeners();
-        return false;
       }
+      _errorMessage = 'Verification failed.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } on AuthException catch (e) {
+      _errorMessage = _getFriendlyErrorMessage(e);
+      _isLoading = false;
+      notifyListeners();
+      return false;
     } catch (e) {
-      _errorMessage = 'System signup verification exception: $e';
+      _errorMessage = 'Verification error: $e';
       _isLoading = false;
       notifyListeners();
       return false;
     }
   }
 
-  // 12. Resend Signup Verification OTP
+  // ──────────────────────────────────────────────────────
+  // 12. RESEND SIGNUP OTP
+  // ──────────────────────────────────────────────────────
   Future<bool> resendSignupVerificationOtp(String email) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final result = await _apiService.resendSignupVerification(email);
+      await _supabase.resendSignupOtp(email);
       _isLoading = false;
-      if (result['success'] == true) {
-        notifyListeners();
-        return true;
-      } else {
-        _errorMessage = result['error'];
-        notifyListeners();
-        return false;
-      }
+      notifyListeners();
+      return true;
+    } on AuthException catch (e) {
+      _errorMessage = _getFriendlyErrorMessage(e);
+      _isLoading = false;
+      notifyListeners();
+      return false;
     } catch (e) {
-      _errorMessage = 'System resend exception: $e';
+      _errorMessage = 'Resend error: $e';
       _isLoading = false;
       notifyListeners();
       return false;
     }
+  }
+
+  // ──────────────────────────────────────────────────────
+  // GUEST MODE
+  // ──────────────────────────────────────────────────────
+  void enterAsGuest() async {
+    _userProfile = {
+      'id': 'guest-user-uuid',
+      'email': 'guest@growexpense.local',
+      'name': 'Guest Member',
+      'photo_url': null,
+    };
+    _isAuthenticated = true;
+    _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
+    await _saveProfileLocally();
+    notifyListeners();
+  }
+
+  // Helper for friendly error messages
+  String _getFriendlyErrorMessage(AuthException e) {
+    final msg = e.message.toLowerCase();
+    if (msg.contains('rate limit') || msg.contains('too many requests')) {
+      return 'Server is busy. Please try again after some time.';
+    }
+    if (msg.contains('invalid login credentials') || msg.contains('invalid credentials')) {
+      return 'Invalid email or password.';
+    }
+    return e.message;
   }
 }

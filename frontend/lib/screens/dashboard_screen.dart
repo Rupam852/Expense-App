@@ -12,7 +12,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/expense_provider.dart';
 import '../services/user_provider.dart';
-import '../services/api_service.dart';
+import '../services/supabase_service.dart';
 import '../models/expense.dart';
 import 'expense_entry_screen.dart';
 import 'package:file_picker/file_picker.dart';
@@ -423,7 +423,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return StatefulBuilder(
           builder: (statefulCtx, setDialogState) {
             Future.delayed(const Duration(milliseconds: 100), () {
-              if (!statefulCtx.mounted) return;
+              if (!statefulCtx.mounted || popped) return;
               if (progress < 0.9) {
                 setDialogState(() {
                   progress += 0.08;
@@ -433,7 +433,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     statusText = 'Compiling total expenses...';
                   }
                 });
-              } else if (apiFinished && !popped) {
+              } else if (apiFinished) {
                 popped = true;
                 setDialogState(() {
                   progress = 1.0;
@@ -444,6 +444,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Navigator.of(statefulCtx).pop();
                   }
                 });
+              } else {
+                // Creep up slowly towards 98% to show progress is alive
+                if (progress < 0.98) {
+                  setDialogState(() {
+                    progress += 0.01;
+                  });
+                } else {
+                  setDialogState(() {});
+                }
               }
             });
 
@@ -1469,7 +1478,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         // 2. Try to save to public Downloads on Android, or trigger picker on desktop/iOS
         if (Platform.isAndroid) {
-          savedSuccessfully = await ApiService.saveFileToDownloads(
+          savedSuccessfully = await SupabaseService.saveFileToDownloads(
             fileName: fileName,
             bytes: bytes,
             mimeType: 'text/csv',
@@ -2227,171 +2236,179 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _showSettingsDrawer(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return Consumer2<UserProvider, ExpenseProvider>(
           builder: (context, userProvider, expenseProvider, _) {
             final profile = userProvider.userProfile;
             return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Profile Header
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 28,
-                          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
-                          backgroundImage: profile?['photo_url'] != null
-                              ? NetworkImage(profile!['photo_url'])
-                              : null,
-                          child: profile?['photo_url'] == null
-                              ? Text(
-                                  (profile?['name'] ?? 'U')[0].toUpperCase(),
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-                                )
-                              : null,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                profile?['name'] ?? 'User Member',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                profile?['email'] ?? 'N/A',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                            ],
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: 24.0,
+                    right: 24.0,
+                    top: 24.0,
+                    bottom: 24.0 + MediaQuery.of(context).padding.bottom,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Profile Header
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 28,
+                            backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
+                            backgroundImage: profile?['photo_url'] != null
+                                ? NetworkImage(profile!['photo_url'])
+                                : null,
+                            child: profile?['photo_url'] == null
+                                ? Text(
+                                    (profile?['name'] ?? 'U')[0].toUpperCase(),
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                                  )
+                                : null,
                           ),
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.edit_outlined, color: Theme.of(context).primaryColor, size: 22),
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            _showEditProfileDialog(context, userProvider);
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    const Divider(),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  profile?['name'] ?? 'User Member',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  profile?['email'] ?? 'N/A',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.edit_outlined, color: Theme.of(context).primaryColor, size: 22),
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              _showEditProfileDialog(context, userProvider);
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      const Divider(),
 
-                    // Toggle Biometrics
-                    SwitchListTile(
-                      activeColor: Theme.of(context).primaryColor,
-                      title: const Text('Biometric / Device Lock'),
-                      subtitle: const Text('Lock expense ledger with fingerprint / password'),
-                      value: userProvider.biometricsEnabled,
-                      onChanged: (val) async {
-                        final success = await userProvider.toggleBiometrics(val);
-                        if (!success && context.mounted) {
-                          CustomToast.show(
-                            context,
-                            userProvider.errorMessage ?? 'Failed to enable biometrics.',
-                            isError: true,
+                      // Toggle Biometrics
+                      SwitchListTile(
+                        activeColor: Theme.of(context).primaryColor,
+                        title: const Text('Biometric / Device Lock'),
+                        subtitle: const Text('Lock expense ledger with fingerprint / password'),
+                        value: userProvider.biometricsEnabled,
+                        onChanged: (val) async {
+                          final success = await userProvider.toggleBiometrics(val);
+                          if (!success && context.mounted) {
+                            CustomToast.show(
+                              context,
+                              userProvider.errorMessage ?? 'Failed to enable biometrics.',
+                              isError: true,
+                            );
+                          }
+                        },
+                      ),
+                      
+                      // Custom Gemini API Key Setting Row
+                      ListTile(
+                        leading: Icon(Icons.vpn_key_outlined, color: Theme.of(context).primaryColor),
+                        title: const Text('Google AI Studio API Key'),
+                        subtitle: Text(
+                          userProvider.userGeminiApiKey != null && userProvider.userGeminiApiKey!.isNotEmpty
+                              ? 'Custom Gemini API Key active'
+                              : 'Using shared server keys',
+                          style: GoogleFonts.inter(fontSize: 12),
+                        ),
+                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          _showGeminiKeyDialog(context, userProvider);
+                        },
+                      ),
+                      
+                      const Divider(),
+                      const SizedBox(height: 8),
+
+                      // History Button
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).primaryColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(Icons.history_edu_outlined, color: Theme.of(context).primaryColor, size: 22),
+                        ),
+                        title: Text(
+                          'Invoice History',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                        ),
+                        subtitle: Text(
+                          'View & manage saved month-end invoices',
+                          style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                        ),
+                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const InvoiceHistoryScreen()),
                           );
-                        }
-                      },
-                    ),
-                    
-                    // Custom Gemini API Key Setting Row
-                    ListTile(
-                      leading: Icon(Icons.vpn_key_outlined, color: Theme.of(context).primaryColor),
-                      title: const Text('Google AI Studio API Key'),
-                      subtitle: Text(
-                        userProvider.userGeminiApiKey != null && userProvider.userGeminiApiKey!.isNotEmpty
-                            ? 'Custom Gemini API Key active'
-                            : 'Using shared server keys',
-                        style: GoogleFonts.inter(fontSize: 12),
+                        },
                       ),
-                      trailing: const Icon(Icons.chevron_right, size: 20),
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        _showGeminiKeyDialog(context, userProvider);
-                      },
-                    ),
-                    
-                    const Divider(),
-                    const SizedBox(height: 8),
 
-                    // History Button
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).primaryColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
+                      const SizedBox(height: 8),
+                      const Divider(),
+                      const SizedBox(height: 8),
+
+                      // Logout Button
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          Navigator.of(context).pop();
+                          await expenseProvider.clearAllDataOnSignout();
+                          await userProvider.logout();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.withOpacity(0.1),
+                          foregroundColor: Colors.red,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        child: Icon(Icons.history_edu_outlined, color: Theme.of(context).primaryColor, size: 22),
+                        icon: const Icon(Icons.logout),
+                        label: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
-                      title: Text(
-                        'Invoice History',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                      const SizedBox(height: 12),
+                      // Delete Account Button
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _showDeleteAccountDialog(context, userProvider, expenseProvider);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.redAccent),
+                          foregroundColor: Colors.redAccent,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        icon: const Icon(Icons.delete_forever_outlined),
+                        label: const Text('Delete Account', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
-                      subtitle: Text(
-                        'View & manage saved month-end invoices',
-                        style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
-                      ),
-                      trailing: const Icon(Icons.chevron_right, size: 20),
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const InvoiceHistoryScreen()),
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 8),
-                    const Divider(),
-                    const SizedBox(height: 8),
-
-                    // Logout Button
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        Navigator.of(context).pop();
-                        await expenseProvider.clearAllDataOnSignout();
-                        await userProvider.logout();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red.withOpacity(0.1),
-                        foregroundColor: Colors.red,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      icon: const Icon(Icons.logout),
-                      label: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                    const SizedBox(height: 12),
-                    // Delete Account Button
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        _showDeleteAccountDialog(context, userProvider, expenseProvider);
-                      },
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.redAccent),
-                        foregroundColor: Colors.redAccent,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      icon: const Icon(Icons.delete_forever_outlined),
-                      label: const Text('Delete Account', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );
@@ -2593,6 +2610,272 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  void _showSyncOptionsBottomSheet(BuildContext context, ExpenseProvider expenseProvider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF181B22) : Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+            border: Border.all(
+              color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Cloud Sync Options',
+                style: GoogleFonts.outfit(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Apne offline data ko cloud par backup karein ya fir cloud backup ko phone mein restore karein.',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: Colors.grey,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              
+              // Option 1: Backup to Cloud (Upload Sync)
+              InkWell(
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  final success = await expenseProvider.triggerManualSync();
+                  if (context.mounted) {
+                    CustomToast.show(
+                      context,
+                      success
+                          ? 'Backup successful!'
+                          : expenseProvider.syncErrorMessage ?? 'Sync failed.',
+                      isError: !success,
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFF00D09C).withOpacity(0.2),
+                    ),
+                    color: const Color(0xFF00D09C).withOpacity(0.05),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00D09C).withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.cloud_upload_outlined,
+                          color: Color(0xFF00D09C),
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Backup to Cloud',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Local phone data ko cloud backup ke sath secure merge karein.',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: Colors.grey),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              
+              // Option 2: Restore from Cloud (Download Import)
+              InkWell(
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _showRestoreConfirmation(context, expenseProvider);
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.blue.withOpacity(0.2),
+                    ),
+                    color: Colors.blue.withOpacity(0.05),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.cloud_download_outlined,
+                          color: Colors.blue,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Restore from Cloud',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Phone ka local data clear karke cloud backup restore karein.',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: Colors.grey),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showRestoreConfirmation(BuildContext context, ExpenseProvider expenseProvider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF181B22) : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
+            ),
+          ),
+          title: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 28),
+              const SizedBox(width: 12),
+              Text(
+                'Restore Cloud Backup?',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ],
+          ),
+          content: Text(
+            'Kya aap sure hain? Cloud backup download karne se aapka local phone data delete ho jayega aur cloud wala data overwrite ho jayega.',
+            style: GoogleFonts.inter(fontSize: 13, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                // Show loading indicator
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+                
+                final success = await expenseProvider.restoreFromCloud();
+                
+                if (context.mounted) {
+                  Navigator.of(context).pop(); // Dismiss loading
+                  CustomToast.show(
+                    context,
+                    success 
+                        ? 'Backup restored successfully!' 
+                        : expenseProvider.syncErrorMessage ?? 'Restore failed.',
+                    isError: !success,
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text(
+                'Restore',
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
@@ -2646,16 +2929,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           IconButton(
             onPressed: expenseProvider.isSyncing 
                 ? null 
-                : () async {
-                    final success = await expenseProvider.triggerManualSync();
-                      CustomToast.show(
-                        context,
-                        success 
-                            ? 'Cloud recovery sync completed!' 
-                            : expenseProvider.syncErrorMessage ?? 'Sync failed.',
-                        isError: !success,
-                      );
-                  },
+                : () => _showSyncOptionsBottomSheet(context, expenseProvider),
             icon: expenseProvider.isSyncing
                 ? const SizedBox(
                     height: 20,
@@ -3219,11 +3493,13 @@ class _PremiumProgressDialogState extends State<PremiumProgressDialog> with Sing
     setState(() {
       _isCompleted = true;
       _progress = 1.0;
-      _statusText = result == 'success' ? 'Import complete!' : 'Error parsing file.';
+      _statusText = (result != null && (result == 'success' || result.startsWith('Parsed')))
+          ? result
+          : 'Error parsing file.';
     });
 
     // Wait a brief moment for the user to see the 100% completion
-    await Future.delayed(const Duration(milliseconds: 600));
+    await Future.delayed(const Duration(milliseconds: 1000));
     if (mounted && !_isCancelled) {
       Navigator.of(context).pop(result);
     }

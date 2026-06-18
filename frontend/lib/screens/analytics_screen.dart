@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../services/expense_provider.dart';
-import '../services/api_service.dart';
 import '../widgets/app_logo.dart';
 
 class AnalyticsScreen extends StatefulWidget {
@@ -16,7 +15,6 @@ class AnalyticsScreen extends StatefulWidget {
 
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
   bool _isLoading = false;
-  Map<String, dynamic>? _serverSummary;
   bool _isOffline = false;
 
   @override
@@ -27,30 +25,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
   Future<void> _fetchSummary() async {
     setState(() {
-      _isLoading = true;
+      _isLoading = false;
+      _isOffline = false;
     });
-
-    try {
-      final res = await ApiService.instance.fetchAnalyticsSummary();
-      if (res['success'] == true) {
-        setState(() {
-          _serverSummary = res['data'];
-          _isOffline = false;
-        });
-      } else {
-        setState(() {
-          _isOffline = true;
-        });
-      }
-    } catch (_) {
-      setState(() {
-        _isOffline = true;
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
   }
 
   Color _getCategoryColor(String category) {
