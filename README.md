@@ -82,12 +82,17 @@ flutter pub get
 # Run the app in development mode on a connected Android/iOS device
 flutter run
 
-# Compile the final optimized Release APK for Android distribution
+# Compile split optimized Release APKs for Android distribution (Recommended, reduces size to ~24MB)
+flutter build apk --release --split-per-abi
+
+# Or compile the full "fat" Release APK (Contains all target architectures in one large 70MB file)
 flutter build apk --release
 ```
 
-The compiled release package will be located at:
-`build/app/outputs/flutter-apk/app-release.apk`
+The compiled release packages will be located at:
+* **ARM 64-bit (Recommended for modern devices):** `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk` (~24.5 MB)
+* **ARM 32-bit (For older devices):** `build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk` (~23.0 MB)
+* **Full FAT APK (All architectures):** `build/app/outputs/flutter-apk/app-release.apk` (~69.5 MB)
 
 ---
 

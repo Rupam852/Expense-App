@@ -81,7 +81,7 @@
             </div>
             <div class="panel-item">
               <span class="item-label">Package Size</span>
-              <span class="item-value">60.4 MB</span>
+              <span class="item-value">24.5 MB (Optimized)</span>
             </div>
             <div class="panel-item">
               <span class="item-label">SHA-256 Signature</span>
@@ -221,7 +221,7 @@
         </div>
         <div class="bento-content">
           <h3>Month Rollover Clean-up</h3>
-          <p>When a new month starts, the app compiles the previous month's total ledger. It lets you compile a detailed expense PDF statement directly to your Downloads folder before clearing the local database to start fresh.</p>
+          <p>When a new month starts, the app compiles the previous month's total ledger. It lets you compile a detailed expense PDF statement formatted in standard <strong>DD/MM/YYYY</strong> directly to your Downloads folder before clearing the local database to start fresh.</p>
         </div>
       </div>
 
@@ -413,6 +413,15 @@
         </div>
         <div class="faq-answer">
           <p>At the end of each month, the app prompts you with a Rollover window. It summarizes your total monthly expenses and allows you to compile all transactions into a structured PDF statement directly inside your device's Downloads directory. Once compiled, you can clean up the local database to keep the app fast and clutter-free for the new month.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">
+          <h3>Does local deletion sync automatically, and can I recover data?</h3>
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-answer">
+          <p>To preserve local performance and privacy, deleting a transaction locally does not immediately auto-sync to the cloud. However, when you perform a manual sync (Backup to Cloud) or a pull-down refresh on the home screen, your local database merges with the cloud database, and any local deletions are propagated, permanently removing them from the cloud as well. If you delete a transaction accidentally, you can recover it by tapping "Restore from Cloud" <strong>before</strong> you perform a manual sync or refresh.</p>
         </div>
       </div>
     </div>
