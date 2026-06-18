@@ -673,13 +673,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     HapticFeedback.vibrate();
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
     final prefs = await SharedPreferences.getInstance();
+    final navigator = Navigator.of(context);
 
+    bool operationCompleted = false;
     BuildContext? progressDialogContext;
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (progressCtx) {
         progressDialogContext = progressCtx;
+        if (operationCompleted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (progressCtx.mounted) {
+              Navigator.of(progressCtx).pop();
+            }
+          });
+        }
         return const Center(
           child: CircularProgressIndicator(),
         );
@@ -687,9 +696,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
 
     final success = await expenseProvider.deleteOldExpenses();
+    operationCompleted = true;
 
-    if (progressDialogContext != null && Navigator.canPop(progressDialogContext!)) {
-      Navigator.pop(progressDialogContext!);
+    // Small delay to ensure the dialog builder has had a chance to build
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    if (progressDialogContext != null && progressDialogContext!.mounted) {
+      Navigator.of(progressDialogContext!).pop();
+    } else {
+      if (navigator.mounted) {
+        navigator.pop();
+      }
     }
 
     if (success) {
@@ -2876,12 +2893,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 navigator.pop(); // Dismiss confirmation dialog using outer context navigator
                 
                 // Show loading indicator
+                bool operationCompleted = false;
                 BuildContext? loadingDialogContext;
                 showDialog(
                   context: context,
                   barrierDismissible: false,
                   builder: (loadingCtx) {
                     loadingDialogContext = loadingCtx;
+                    if (operationCompleted) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (loadingCtx.mounted) {
+                          Navigator.of(loadingCtx).pop();
+                        }
+                      });
+                    }
                     return const Center(
                       child: CircularProgressIndicator(),
                     );
@@ -2889,12 +2914,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 );
                 
                 final success = await expenseProvider.restoreFromCloud();
+                operationCompleted = true;
                 
                 // Small delay to ensure dialog push transition finishes before popping
-                await Future.delayed(const Duration(milliseconds: 200));
+                await Future.delayed(const Duration(milliseconds: 100));
 
                 if (loadingDialogContext != null && loadingDialogContext!.mounted) {
                   Navigator.of(loadingDialogContext!).pop(); // Dismiss loading spinner
+                } else {
+                  if (navigator.mounted) {
+                    navigator.pop();
+                  }
                 }
 
                 if (context.mounted) {
