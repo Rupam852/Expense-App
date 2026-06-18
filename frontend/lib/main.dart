@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -43,6 +44,16 @@ class GrowExpenseApp extends StatelessWidget {
       theme: GrowwTheme.lightTheme,
       darkTheme: GrowwTheme.darkTheme,
       themeMode: ThemeMode.system, // Harmonizes with system dark/light settings
+      locale: const Locale('en', 'IN'), // Forces DD/MM/YYYY date inputs in date picker
+      supportedLocales: const [
+        Locale('en', 'IN'),
+        Locale('en', 'US'),
+      ],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       home: const AuthWrapper(),
     );
   }

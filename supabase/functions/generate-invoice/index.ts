@@ -128,7 +128,7 @@ serve(async (req) => {
     // User details section
     page.drawText(`Issued By: ${name}`, { x: 50, y: 725, size: 10, font: helveticaBold, color: textColor })
     page.drawText(`Email: ${email}`, { x: 50, y: 710, size: 10, font: helvetica, color: textColor })
-    page.drawText(`Date of Issue: ${new Date().toLocaleDateString()}`, { x: 50, y: 695, size: 10, font: helvetica, color: textColor })
+    page.drawText(`Date of Issue: ${formatDateDDMMYYYY(new Date())}`, { x: 50, y: 695, size: 10, font: helvetica, color: textColor })
     page.drawText(`UPI ID for Repayment: ${upiId}`, { x: 350, y: 725, size: 10, font: helveticaBold, color: textColor })
 
     // Table Header
@@ -167,7 +167,7 @@ serve(async (req) => {
         currentY = newTableTop - 25
       }
 
-      const dateStr = new Date(exp.transaction_date || exp.transactionDate).toLocaleDateString()
+      const dateStr = formatDateDDMMYYYY(exp.transaction_date || exp.transactionDate)
       const amountNum = parseFloat(exp.amount) || 0.0
       const amountStr = `${amountNum.toFixed(2)} ${exp.currency}`
       
@@ -261,4 +261,13 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
     binary += String.fromCharCode(bytes[i])
   }
   return btoa(binary)
+}
+
+function formatDateDDMMYYYY(dateInput: any): string {
+  const d = new Date(dateInput)
+  if (isNaN(d.getTime())) return 'N/A'
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = d.getFullYear()
+  return `${dd}/${mm}/${yyyy}`
 }
