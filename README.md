@@ -52,7 +52,7 @@ Unlike traditional accounting software that stores your sensitive financial logs
 
 ## 🛠️ Repository Structure
 
-The workspace is organized into two main parts:
+The workspace is organized into three main parts:
 
 ```
 ├── frontend/             # Flutter mobile application codebase (Dart)
@@ -62,11 +62,38 @@ The workspace is organized into two main parts:
 │   │   ├── widgets/      # Shared custom components (custom toasts, etc.)
 │   └── pubspec.yaml      # Flutter package configuration
 │
+├── backend/              # Optional Node.js Express server backend (PostgreSQL helper)
+│   ├── routes/           # Auth, analytics, statement parsing, and invoice generation routes
+│   ├── db.js             # PostgreSQL connection pool and migration scripts
+│   └── server.js         # Server entry point with keep-alive cron scheduling
+│
 ├── index.html            # Premium marketing landing page
 ├── index.css             # Glassmorphic dark styling & responsive query rules
 ├── index.js              # GPU-accelerated interactive spotlight & canvas animations
 └── logo.png              # App branding asset
 ```
+
+---
+
+## 🖥️ Backend & Database Hosting Options
+
+This project is built to support two flexible backend architectures depending on your deployment preferences:
+
+### Option A: Direct Client-to-Supabase Sync (Current & Active Production Flow)
+The application is currently configured to communicate directly with **Supabase**, eliminating the need for an intermediate application server.
+* **Database & Auth:** Uses Supabase PostgreSQL and Supabase GoTrue Auth (Google login and Email OTP) natively.
+* **Setup:** Credentials are configured in the client configuration inside the `frontend/` codebase.
+* **Configuration Example (Client-side):**
+  * Supabase Project URL: `https://your-project-ref.supabase.co`
+  * Supabase Anon Key: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your-anon-key-example`
+
+### Option B: Dedicated Express Server (Legacy/Optional - Hosted on Render)
+If you prefer routing client requests through a dedicated custom server instead of direct cloud integration, you can utilize the `backend/` folder.
+* **Legacy Flow:** The app was previously hosted on **Render** (using Express, pg-pool, and Node.js) to bridge parsing APIs, manage PostgreSQL tables, and run scheduled keep-alive ticks.
+* **Hosting on Render:** You can deploy the `backend/` directory to a platform like Render using the following configuration environment variables:
+  * `DATABASE_URL`: `postgresql://postgres:your-db-password-example@db.your-project-ref.supabase.co:5432/postgres` (or any custom PostgreSQL instance)
+  * `SELF_URL`: `https://your-backend-app.onrender.com/` (used by the internal node-cron worker to ping the server every 14 minutes to keep the Render free tier warm)
+  * `PORT`: `5000`
 
 ---
 
