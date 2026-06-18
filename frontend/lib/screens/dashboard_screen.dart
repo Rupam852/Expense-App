@@ -543,22 +543,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Category Icon Mapper
   IconData _getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
-      case 'food & drinks':
-        return Icons.fastfood_outlined;
       case 'shopping':
         return Icons.shopping_bag_outlined;
+      case 'groceries':
+        return Icons.local_grocery_store_outlined;
+      case 'food & dining':
+      case 'food & drinks':
+        return Icons.restaurant_outlined;
+      case 'transport':
+        return Icons.directions_car_outlined;
+      case 'bills & recharges':
       case 'recharges & bills':
         return Icons.receipt_long_outlined;
-      case 'travel & fuel':
-        return Icons.local_gas_station_outlined;
+      case 'transfers':
+      case 'money transfers':
+        return Icons.swap_horiz_outlined;
+      case 'medical':
       case 'medical & health':
         return Icons.medical_services_outlined;
+      case 'travel':
+      case 'travel & fuel':
+        return Icons.flight_takeoff_outlined;
+      case 'repayments':
+        return Icons.keyboard_return_outlined;
+      case 'personal':
+        return Icons.person_outline;
+      case 'services':
+        return Icons.work_outline;
+      case 'insurance':
+        return Icons.shield_outlined;
       case 'entertainment':
-        return Icons.movie_filter_outlined;
-      case 'money transfers':
-        return Icons.swap_horiz;
+        return Icons.movie_outlined;
+      case 'gaming':
+        return Icons.sports_esports_outlined;
+      case 'small shops':
+        return Icons.storefront_outlined;
+      case 'rent':
+        return Icons.home_outlined;
+      case 'logistics':
+        return Icons.local_shipping_outlined;
+      case 'subscription':
+        return Icons.subscriptions_outlined;
+      case 'investment':
       case 'investments & fees':
-        return Icons.trending_up;
+        return Icons.trending_up_outlined;
+      case 'fitness':
+        return Icons.fitness_center_outlined;
+      case 'pet':
+        return Icons.pets_outlined;
+      case 'miscellaneous':
+      case 'others':
+        return Icons.miscellaneous_services_outlined;
       default:
         return Icons.help_outline;
     }
@@ -567,22 +602,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Category Color Mapper
   Color _getCategoryColor(String category) {
     switch (category.toLowerCase()) {
-      case 'food & drinks':
-        return const Color(0xFFFF5A5F);
       case 'shopping':
-        return const Color(0xFFF2C94C);
+        return const Color(0xFFEC407A); // Pinkish-Red
+      case 'groceries':
+        return const Color(0xFF66BB6A); // Green
+      case 'food & dining':
+      case 'food & drinks':
+        return const Color(0xFFFF7043); // Orange-red
+      case 'transport':
+        return const Color(0xFF42A5F5); // Blue
+      case 'bills & recharges':
       case 'recharges & bills':
-        return const Color(0xFF00D09C);
-      case 'travel & fuel':
-        return const Color(0xFFF2994A);
-      case 'medical & health':
-        return const Color(0xFFEB5757);
-      case 'entertainment':
-        return const Color(0xFF27AE60);
+        return const Color(0xFF26A69A); // Teal
+      case 'transfers':
       case 'money transfers':
-        return const Color(0xFF56CCF2);
+        return const Color(0xFF78909C); // Blue-grey
+      case 'medical':
+      case 'medical & health':
+        return const Color(0xFFEF5350); // Red
+      case 'travel':
+      case 'travel & fuel':
+        return const Color(0xFF29B6F6); // Light Blue
+      case 'repayments':
+        return const Color(0xFFAB47BC); // Purple
+      case 'personal':
+        return const Color(0xFFFFCA28); // Amber
+      case 'services':
+        return const Color(0xFF5C6BC0); // Indigo
+      case 'insurance':
+        return const Color(0xFF8D6E63); // Brown
+      case 'entertainment':
+        return const Color(0xFFFF5252); // Bright Red
+      case 'gaming':
+        return const Color(0xFF7E57C2); // Deep Purple
+      case 'small shops':
+        return const Color(0xFF26C6DA); // Cyan
+      case 'rent':
+        return const Color(0xFF9CCC65); // Light Green
+      case 'logistics':
+        return const Color(0xFFFFA726); // Orange
+      case 'subscription':
+        return const Color(0xFFE57373); // Soft Red
+      case 'investment':
       case 'investments & fees':
-        return const Color(0xFF9B51E0);
+        return const Color(0xFF26A69A); // Teal
+      case 'fitness':
+        return const Color(0xFF81C784); // Soft Green
+      case 'pet':
+        return const Color(0xFFA1887F); // Soft Brown
+      case 'miscellaneous':
+      case 'others':
+        return const Color(0xFF90A4AE); // Blue-grey secondary
       default:
         return Colors.grey;
     }

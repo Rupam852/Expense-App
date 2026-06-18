@@ -32,7 +32,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
   
-  String _selectedCategory = 'Food & Drinks';
+  String _selectedCategory = 'Food & dining';
   String _selectedCurrency = 'INR';
   DateTime _selectedDate = DateTime.now();
   
@@ -44,7 +44,28 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   bool _isSaving = false;
 
   final List<String> _categories = [
-    'Food & Drinks', 'Shopping', 'Recharges & Bills', 'Travel & Fuel', 'Medical & Health', 'Entertainment', 'Money Transfers', 'Investments & Fees', 'Others'
+    'Shopping',
+    'Groceries',
+    'Food & dining',
+    'Transport',
+    'Bills & recharges',
+    'Transfers',
+    'Medical',
+    'Travel',
+    'Repayments',
+    'Personal',
+    'Services',
+    'Insurance',
+    'Entertainment',
+    'Gaming',
+    'Small shops',
+    'Rent',
+    'Logistics',
+    'Subscription',
+    'Investment',
+    'Fitness',
+    'Pet',
+    'Miscellaneous',
   ];
 
   final List<String> _currencies = ['INR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD'];
