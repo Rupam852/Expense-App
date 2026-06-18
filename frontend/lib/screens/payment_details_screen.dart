@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:qr_code_tools/qr_code_tools.dart';
 import '../services/expense_provider.dart';
 import '../services/user_provider.dart';
 import '../widgets/app_logo.dart';
@@ -46,26 +47,62 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
     super.dispose();
   }
 
-  // Pick custom payment QR image from Gallery
+  // Pick custom payment QR image from Gallery, decode QR data, and auto-fill UPI ID
   void _pickCustomQr() async {
     final picker = ImagePicker();
     final image = await picker.pickImage(source: ImageSource.gallery);
     
     if (image != null) {
+      String savedPath = image.path;
+
       try {
         final appDir = await getApplicationDocumentsDirectory();
         final fileName = 'payment_qr_${DateTime.now().millisecondsSinceEpoch}.jpg';
         final savedFile = await File(image.path).copy('${appDir.path}/$fileName');
-        
-        setState(() {
-          _cachedQrPath = savedFile.path;
-        });
-        CustomToast.show(context, 'Custom payment QR code saved permanently.');
+        savedPath = savedFile.path;
+      } catch (_) {
+        // Fallback to temp path if copy fails
+      }
+
+      setState(() {
+        _cachedQrPath = savedPath;
+      });
+
+      // Attempt to decode QR data from image and auto-fill UPI ID
+      try {
+        final qrData = await QrCodeToolsPlugin.decodeFrom(savedPath);
+        if (qrData != null && qrData.isNotEmpty) {
+          String? extractedUpiId;
+
+          // Parse UPI deep-link format: upi://pay?pa=upiid@bank&pn=Name&...
+          if (qrData.toLowerCase().startsWith('upi://')) {
+            final uri = Uri.tryParse(qrData);
+            extractedUpiId = uri?.queryParameters['pa'];
+          } else if (qrData.contains('@')) {
+            // Sometimes QR directly contains just the UPI ID
+            extractedUpiId = qrData.trim();
+          }
+
+          if (extractedUpiId != null && extractedUpiId.isNotEmpty) {
+            _upiController.text = extractedUpiId;
+            if (mounted) {
+              CustomToast.show(context, '✅ QR scanned! UPI ID auto-filled.');
+            }
+          } else {
+            if (mounted) {
+              CustomToast.show(context, 'QR saved. Please enter UPI ID manually.');
+            }
+          }
+        } else {
+          if (mounted) {
+            CustomToast.show(context, 'QR saved. Please enter UPI ID manually.');
+          }
+        }
       } catch (e) {
-        setState(() {
-          _cachedQrPath = image.path;
-        });
-        CustomToast.show(context, 'Custom payment QR code attached.');
+        // Decoding failed (e.g., non-QR image or unreadable QR)
+        if (mounted) {
+          CustomToast.show(context, 'QR saved. Please verify or enter UPI ID.');
+        }
       }
     }
   }
