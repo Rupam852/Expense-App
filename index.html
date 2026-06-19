@@ -118,58 +118,122 @@
         </div>
       </div>
 
-      <!-- Overlapping Isometric Floating Dashboard Elements -->
+      <!-- Interactive Mobile Phone Mockup & App Simulator -->
       <div class="hero-visual">
-        <div class="isometric-canvas">
+        <div class="phone-wrapper">
+          <div class="phone-mockup">
+            <div class="phone-speaker"></div>
+            <div class="phone-camera"></div>
+            <div class="phone-screen">
+              
+              <!-- App Interface Inside Simulator -->
+              <div class="simulator-app">
+                <div class="sim-header">
+                  <div class="sim-header-title">
+                    <img src="logo.png" alt="Mini Logo" class="sim-logo">
+                    <span>Grow Expense</span>
+                  </div>
+                  <div class="sim-sync-status" id="sim-sync-status">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="sim-cloud-icon" id="sim-cloud-icon" style="width:14px;height:14px;">
+                      <path d="M17.5 19A3.5 3.5 0 0 0 21 15.5c0-2.79-2.54-4.5-5-4.5-.47 0-.89.09-1.3.27A7 7 0 1 0 2 12h2a5 5 0 0 1 9.8-1.5 1 1 0 0 0 .8.8c2.22 0 4 1.8 4 4a3.5 3.5 0 0 0 3.5 3.7h-4.6"/>
+                    </svg>
+                    <span id="sim-sync-text">Synced</span>
+                  </div>
+                </div>
+                
+                <div class="sim-body">
+                  <!-- Wallet Card -->
+                  <div class="sim-wallet">
+                    <span class="sim-wallet-label">Total Cash Balance</span>
+                    <h2 class="sim-wallet-balance" id="sim-balance">₹24,500.00</h2>
+                    <div class="sim-wallet-meta">
+                      <span>Monthly Limit: ₹30,000</span>
+                      <span id="sim-spent-percent">58.5%</span>
+                    </div>
+                    <div class="sim-progress-bar">
+                      <div class="sim-progress-fill" id="sim-progress-fill" style="width: 58.5%;"></div>
+                    </div>
+                  </div>
+
+                  <!-- Quick Stats Grid -->
+                  <div class="sim-stats-grid">
+                    <div class="sim-stat-card">
+                      <span class="stat-num text-green" id="sim-income">₹45,000</span>
+                      <span class="stat-label">Income</span>
+                    </div>
+                    <div class="sim-stat-card">
+                      <span class="stat-num text-red" id="sim-expense">₹20,500</span>
+                      <span class="stat-label">Expenses</span>
+                    </div>
+                  </div>
+
+                  <!-- Transactions Ledger -->
+                  <div class="sim-ledger">
+                    <div class="sim-ledger-header">
+                      <span>Recent Outflows</span>
+                      <span class="text-green font-600">Active Month</span>
+                    </div>
+                    <div class="sim-tx-list" id="sim-tx-list">
+                      <!-- Start Items -->
+                      <div class="sim-tx-item" data-id="1">
+                        <span class="sim-tx-avatar bg-red-dim">🍔</span>
+                        <div class="sim-tx-details">
+                          <h4 class="sim-tx-merchant">Burger King India</h4>
+                          <span class="sim-tx-date">Today, 01:15 PM</span>
+                        </div>
+                        <span class="sim-tx-value negative">-₹350.00</span>
+                      </div>
+                      <div class="sim-tx-item" data-id="2">
+                        <span class="sim-tx-avatar bg-blue-dim">🛒</span>
+                        <div class="sim-tx-details">
+                          <h4 class="sim-tx-merchant">Reliance Smart</h4>
+                          <span class="sim-tx-date">Yesterday, 06:45 PM</span>
+                        </div>
+                        <span class="sim-tx-value negative">-₹1,200.00</span>
+                      </div>
+                      <div class="sim-tx-item" data-id="3">
+                        <span class="sim-tx-avatar bg-purple-dim">🚕</span>
+                        <div class="sim-tx-details">
+                          <h4 class="sim-tx-merchant">Uber India Ride</h4>
+                          <span class="sim-tx-date">17 Jun, 09:30 AM</span>
+                        </div>
+                        <span class="sim-tx-value negative">-₹480.00</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Laser Scanning Overlay -->
+                <div class="sim-scan-overlay" id="sim-scan-overlay">
+                  <div class="sim-laser"></div>
+                  <div class="sim-scan-text">Scanning Receipt via AI OCR...</div>
+                </div>
+
+                <!-- Sync Success Alert Overlay -->
+                <div class="sim-sync-overlay" id="sim-sync-overlay">
+                  <div class="sim-sync-loader"></div>
+                  <div class="sim-sync-text-overlay" id="sim-sync-text-overlay">Securing Sync Stream...</div>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
           
-          <!-- Back Grid Card (Chart Overview) -->
-          <div class="iso-card card-back">
-            <div class="iso-card-header">
-              <span class="iso-card-dot red"></span>
-              <span class="iso-card-dot orange"></span>
-              <span class="iso-card-dot green"></span>
-              <span class="iso-card-title">Analytics Tracker</span>
-            </div>
-            <div class="iso-chart">
-              <div class="chart-bar" style="height: 40%;"></div>
-              <div class="chart-bar" style="height: 65%;"></div>
-              <div class="chart-bar" style="height: 85%;"></div>
-              <div class="chart-bar" style="height: 50%;"></div>
-              <div class="chart-bar" style="height: 90%;"></div>
-            </div>
-          </div>
-
-          <!-- Middle Card (Monthly Budget limit) -->
-          <div class="iso-card card-middle">
-            <span class="iso-card-label">Active Month Budget</span>
-            <span class="iso-card-amount">₹30,000.00</span>
-            <div class="iso-progress-bg">
-              <div class="iso-progress-fill" style="width: 58.5%;"></div>
-            </div>
-            <div class="iso-card-footer">
-              <span>Spent: ₹17,550.00</span>
-              <span>Left: ₹12,450.00</span>
-            </div>
-          </div>
-
-          <!-- Front Card (Recent Transactions List) -->
-          <div class="iso-card card-front">
-            <div class="iso-tx-row">
-              <span class="iso-tx-emoji">🍔</span>
-              <div class="iso-tx-info">
-                <span class="iso-tx-title">Food & Dining</span>
-                <span class="iso-tx-desc">Lunch at restaurant</span>
-              </div>
-              <span class="iso-tx-amount negative">- ₹350.00</span>
-            </div>
-            <div class="iso-tx-row">
-              <span class="iso-tx-emoji">🛒</span>
-              <div class="iso-tx-info">
-                <span class="iso-tx-title">Shopping</span>
-                <span class="iso-tx-desc">Supermarket supplies</span>
-              </div>
-              <span class="iso-tx-amount negative">- ₹1,200.00</span>
-            </div>
+          <!-- Simulator Interactive Controller Panel underneath -->
+          <div class="sim-controls">
+            <button class="sim-btn btn-scan" id="sim-action-scan" aria-label="Simulate Receipt OCR Scan">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              Simulate Scan
+            </button>
+            <button class="sim-btn btn-add" id="sim-action-add" aria-label="Simulate Adding Manual Transaction">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Expense
+            </button>
+            <button class="sim-btn btn-sync" id="sim-action-sync" aria-label="Simulate Cloud Database Synchronization">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M17.5 19A3.5 3.5 0 0 0 21 15.5c0-2.79-2.54-4.5-5-4.5-.47 0-.89.09-1.3.27A7 7 0 1 0 2 12h2a5 5 0 0 1 9.8-1.5 1 1 0 0 0 .8.8c2.22 0 4 1.8 4 4a3.5 3.5 0 0 0 3.5 3.7h-4.6"/></svg>
+              Backup Sync
+            </button>
           </div>
 
         </div>
@@ -307,6 +371,80 @@
         <div class="timeline-number">3</div>
         <h3>Export Reports</h3>
         <p>Export all columns to CSV spreadsheets, or compile entries into structured PDF statements for reimbursement.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Savings Projection Calculator Section -->
+  <section id="savings-calc" class="savings-calc">
+    <div class="section-header">
+      <h2>Project Your Financial Growth</h2>
+      <p>Estimate how much you can save and accumulate over time by tracking expenses and optimising your budget.</p>
+    </div>
+    
+    <div class="calc-container">
+      <div class="calc-card">
+        <!-- Input controls -->
+        <div class="calc-inputs">
+          <div class="input-group">
+            <div class="slider-header">
+              <label for="income-slider">Monthly Net Income</label>
+              <span class="slider-value" id="income-val">₹50,000</span>
+            </div>
+            <input type="range" id="income-slider" class="range-slider" min="10000" max="500000" step="5000" value="50000">
+            <div class="slider-bounds">
+              <span>₹10K</span>
+              <span>₹5.0L</span>
+            </div>
+          </div>
+          
+          <div class="input-group">
+            <div class="slider-header">
+              <label for="expense-slider">Target Monthly Outflows</label>
+              <span class="slider-value" id="expense-val">₹30,000</span>
+            </div>
+            <input type="range" id="expense-slider" class="range-slider" min="5000" max="300000" step="2500" value="30000">
+            <div class="slider-bounds">
+              <span>₹5K</span>
+              <span>₹3.0L</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Output display -->
+        <div class="calc-outputs">
+          <div class="projection-row">
+            <div class="proj-label-area">
+              <span class="proj-sub">Monthly Safe Savings</span>
+              <span class="proj-main" id="monthly-savings-val">₹20,000</span>
+            </div>
+            <div class="proj-percent" id="savings-ratio-badge">40% Saved</div>
+          </div>
+          
+          <div class="projection-grid">
+            <div class="proj-box">
+              <span class="box-label">1-Year Accumulated</span>
+              <span class="box-val text-green" id="year-1-val">₹2,40,000</span>
+            </div>
+            <div class="proj-box">
+              <span class="box-label">3-Year Grow Projection*</span>
+              <span class="box-val text-gradient" id="year-3-val">₹7,95,000</span>
+              <span class="box-note">*Assumes 12% compounding returns</span>
+            </div>
+          </div>
+
+          <!-- Visual Bar representation -->
+          <div class="progress-ratio-container">
+            <div class="progress-ratio-labels">
+              <span id="spending-ratio-label">Spending (60%)</span>
+              <span id="savings-ratio-label">Savings (40%)</span>
+            </div>
+            <div class="ratio-progress-bar">
+              <div class="ratio-spending-fill" id="ratio-spending-fill" style="width: 60%;"></div>
+              <div class="ratio-savings-fill" id="ratio-savings-fill" style="width: 40%;"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
