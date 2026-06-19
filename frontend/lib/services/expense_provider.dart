@@ -199,6 +199,7 @@ class ExpenseProvider with ChangeNotifier {
   }
 
   Future<void> restoreExpense(Expense expense) async {
+    await _dbHelper.clearSyncedDeletions([expense.id]);
     await _dbHelper.insertExpense(expense);
     _expenses.insert(0, expense);
     _expenses.sort((a, b) => b.transactionDate.compareTo(a.transactionDate));

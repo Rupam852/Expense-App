@@ -3436,10 +3436,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       onDismissed: (direction) {
                         expenseProvider.deleteExpense(exp.id);
                         ScaffoldMessenger.of(context).clearSnackBars();
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        final controller = ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             backgroundColor: isDark ? const Color(0xFF1E2230) : Colors.white,
                             behavior: SnackBarBehavior.floating,
+                            margin: const EdgeInsets.only(
+                              bottom: 125.0,
+                              left: 16.0,
+                              right: 16.0,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                               side: BorderSide(
@@ -3481,6 +3486,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             duration: const Duration(seconds: 5),
                           ),
                         );
+
+                        // Enforce dismissal after exactly 5 seconds to bypass accessibility service overrides
+                        Future.delayed(const Duration(seconds: 5), () {
+                          if (mounted) {
+                            try {
+                              controller.close();
+                            } catch (_) {}
+                          }
+                        });
                       },
                       child: GestureDetector(
                         onTap: () {
