@@ -12,6 +12,30 @@
 </head>
 <body>
 
+  <!-- In-App Browser Warning Banner -->
+  <div id="in-app-banner" class="in-app-banner">
+    ⚠️ <strong>Download Notice:</strong> If your download gets stuck, tap the <strong>three dots (⋮)</strong> at the top right and select <strong>"Open in Chrome"</strong> or <strong>"Open in Browser"</strong>.
+  </div>
+
+  <script>
+    (function() {
+      var ua = navigator.userAgent || navigator.vendor || window.opera;
+      var isInApp = (
+        ua.indexOf('FBAN') > -1 || 
+        ua.indexOf('FBAV') > -1 || 
+        ua.indexOf('Instagram') > -1 || 
+        ua.indexOf('Twitter') > -1 || 
+        ua.indexOf('Telegram') > -1 || 
+        ua.indexOf('Messenger') > -1 ||
+        ua.indexOf('WhatsApp') > -1 ||
+        (ua.indexOf('Android') > -1 && ua.indexOf('wv') > -1)
+      );
+      if (isInApp) {
+        document.getElementById('in-app-banner').style.display = 'block';
+      }
+    })();
+  </script>
+
   <!-- Top Scroll Progress bar -->
   <div class="scroll-progress"></div>
 

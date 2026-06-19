@@ -1955,3 +1955,24 @@ section[id] {
   transform: rotate(15deg) scale(1.1);
 }
 
+/* In-App Browser Warning Banner styling */
+.in-app-banner {
+  display: none; /* Hidden by default, shown via JS */
+  background: rgba(245, 158, 11, 0.15); /* Amber warning */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fff;
+  padding: 12px 16px;
+  text-align: center;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  position: sticky;
+  top: 0;
+  z-index: 99999;
+}
+.in-app-banner strong {
+  color: #fbbf24;
+}
+
