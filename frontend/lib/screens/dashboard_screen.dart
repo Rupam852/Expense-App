@@ -2628,21 +2628,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onPressed: () async {
                 Navigator.of(context).pop();
                 
-                // Show deleting feedback SnackBar
-                CustomToast.show(
-                  context,
-                  'Deleting all ${expensesToDelete.length} records for $monthLabel...',
-                  duration: const Duration(seconds: 2),
-                );
-
-                // Run fast bulk delete
+                final deletedExpenses = List<Expense>.from(expensesToDelete);
                 final ids = expensesToDelete.map((e) => e.id).toList();
                 await provider.deleteMultipleExpenses(ids);
 
                 if (context.mounted) {
-                  CustomToast.show(
-                    context,
-                    '$monthLabel history cleared successfully!',
+                  DeleteNotification.show(
+                    context: context,
+                    message: '${deletedExpenses.length} transactions deleted',
+                    onUndo: () {
+                      provider.restoreMultipleExpenses(deletedExpenses);
+                    },
+                    onPermanentDelete: () {
+                      provider.triggerQuietSync();
+                    },
                   );
                 }
               },
@@ -3051,7 +3050,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           IconButton(
             onPressed: expenseProvider.isSyncing 
                 ? null 
-                : () {
+                : () async {
                     if (userProvider.userProfile?['id'] == 'guest-user-uuid') {
                       CustomToast.show(
                         context,
@@ -3059,7 +3058,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         isError: true,
                       );
                     } else {
-                      _showSyncOptionsBottomSheet(context, expenseProvider);
+                      CustomToast.show(context, 'Syncing with cloud...');
+                      final success = await expenseProvider.triggerManualSync();
+                      if (context.mounted) {
+                        if (success) {
+                          CustomToast.show(context, 'Database sync completed successfully!');
+                        } else {
+                          CustomToast.show(
+                            context,
+                            expenseProvider.syncErrorMessage ?? 'Sync failed. Operating in offline mode.',
+                            isError: true,
+                          );
+                        }
+                      }
                     }
                   },
             icon: expenseProvider.isSyncing
@@ -3447,6 +3458,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           message: 'Transaction deleted',
                           onUndo: () {
                             expenseProvider.restoreExpense(exp);
+                          },
+                          onPermanentDelete: () {
+                            expenseProvider.triggerQuietSync();
                           },
                         );
                       },
@@ -3853,9 +3867,10 @@ class DeleteNotification {
     required BuildContext context,
     required String message,
     required VoidCallback onUndo,
+    required VoidCallback onPermanentDelete,
     Duration duration = const Duration(seconds: 5),
   }) {
-    dismiss();
+    dismiss(triggerDelete: false);
 
     final overlayState = Overlay.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -3867,9 +3882,12 @@ class DeleteNotification {
           message: message,
           onUndo: () {
             onUndo();
-            dismiss();
+            dismiss(triggerDelete: false);
           },
-          onClose: dismiss,
+          onPermanentDelete: () {
+            onPermanentDelete();
+            dismiss(triggerDelete: false);
+          },
           isDark: isDark,
           onStateCreated: (state) {
             _currentState = state;
@@ -3882,9 +3900,9 @@ class DeleteNotification {
     overlayState.insert(entry);
   }
 
-  static void dismiss() {
+  static void dismiss({bool triggerDelete = false}) {
     if (_currentState != null && _currentState!.mounted) {
-      _currentState!._dismiss();
+      _currentState!._dismiss(triggerDelete: triggerDelete);
       _currentState = null;
     } else if (_currentEntry != null) {
       try {
@@ -3898,14 +3916,14 @@ class DeleteNotification {
 class _DeleteNotificationWidget extends StatefulWidget {
   final String message;
   final VoidCallback onUndo;
-  final VoidCallback onClose;
+  final VoidCallback onPermanentDelete;
   final bool isDark;
   final ValueChanged<_DeleteNotificationWidgetState> onStateCreated;
 
   const _DeleteNotificationWidget({
     required this.message,
     required this.onUndo,
-    required this.onClose,
+    required this.onPermanentDelete,
     required this.isDark,
     required this.onStateCreated,
   });
@@ -3940,11 +3958,11 @@ class _DeleteNotificationWidgetState extends State<_DeleteNotificationWidget> wi
 
     // Auto dismiss after 5 seconds
     _autoDismissTimer = Timer(const Duration(seconds: 5), () {
-      _dismiss();
+      _dismiss(triggerDelete: true);
     });
   }
 
-  Future<void> _dismiss() async {
+  Future<void> _dismiss({bool triggerDelete = false}) async {
     if (_isDismissing) return;
     _autoDismissTimer?.cancel();
     
@@ -3953,7 +3971,16 @@ class _DeleteNotificationWidgetState extends State<_DeleteNotificationWidget> wi
         _isDismissing = true;
       });
       await _controller.reverse();
-      widget.onClose();
+      
+      try {
+        DeleteNotification._currentEntry?.remove();
+      } catch (_) {}
+      DeleteNotification._currentEntry = null;
+      DeleteNotification._currentState = null;
+
+      if (triggerDelete) {
+        widget.onPermanentDelete();
+      }
     }
   }
 
@@ -4036,7 +4063,7 @@ class _DeleteNotificationWidgetState extends State<_DeleteNotificationWidget> wi
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(
-                    onTap: _dismiss,
+                    onTap: () => _dismiss(triggerDelete: true),
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
