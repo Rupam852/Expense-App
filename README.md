@@ -143,10 +143,25 @@ PORT=5000
 DATABASE_URL=postgresql://neondb_owner:password@ep-host-pooler.aws.neon.tech/neondb?sslmode=require
 JWT_SECRET=your_custom_jwt_secret_signing_key
 SELF_URL=https://your-backend-app.onrender.com/
+
+# Custom Email SMTP Configuration (Used to dispatch signup & reset verification OTP codes)
+EMAIL_USER=your-email-address@gmail.com
+EMAIL_PASS=your-16-character-google-app-password
+EMAIL_API_URL=https://script.google.com/macros/s/your-google-script-id/exec # (Optional fallback Web App URL)
 ```
+
+> [!NOTE]
+> **How to generate a Google App Password (`EMAIL_PASS`):**
+> 1. Open your [Google Account Dashboard](https://myaccount.google.com/).
+> 2. Navigate to **Security** on the left menu.
+> 3. Under *How you sign in to Google*, make sure **2-Step Verification** is turned on.
+> 4. Click into **2-Step Verification**, scroll to the bottom of the page, and select **App passwords**.
+> 5. Choose a custom name (e.g., `Grow Expense Server`) and click **Generate**.
+> 6. Copy the displayed **16-character passcode** (do not include the spaces) and assign it to `EMAIL_PASS` in your environment.
 
 > [!TIP]
 > The server includes an internal `node-cron` scheduler inside `backend/server.js` that automatically sends a HTTP ping to `SELF_URL` every 14 minutes. This prevents the server from entering sleep mode on Render's free tier, maintaining fast API response times.
+
 
 ---
 
