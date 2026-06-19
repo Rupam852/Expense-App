@@ -315,6 +315,9 @@ a {
 }
 
 .download-btn-small {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: var(--gradient-primary);
   color: #000 !important;
   font-weight: 600 !important;
@@ -1529,7 +1532,10 @@ a {
 }
 
 .download-btn-large {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   background: var(--gradient-primary);
   color: #000;
   padding: 16px 36px;
