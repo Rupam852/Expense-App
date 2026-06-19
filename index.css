@@ -2076,7 +2076,7 @@ section[id] {
   background: radial-gradient(circle, #fcd34d 0%, #d97706 100%); /* Warm profile avatar representation */
   color: #000;
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 600;
   font-size: 0.82rem;
   display: flex;
   align-items: center;
@@ -2087,7 +2087,7 @@ section[id] {
 
 .sim-username {
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #fff;
 }
 
@@ -2151,7 +2151,7 @@ section[id] {
 
 .sim-spent-title {
   font-size: 0.58rem;
-  font-weight: 800;
+  font-weight: 500;
   color: rgba(0, 0, 0, 0.55);
   letter-spacing: 0.05em;
 }
@@ -2159,7 +2159,7 @@ section[id] {
 .sim-spent-value {
   font-family: var(--font-display);
   font-size: 1.95rem;
-  font-weight: 800;
+  font-weight: 600;
   color: #000;
   margin: 4px 0 10px 0;
   line-height: 1.1;
@@ -2178,7 +2178,7 @@ section[id] {
   background-color: rgba(255, 255, 255, 0.25);
   color: #000;
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 3px 8px;
   border-radius: 8px;
   backdrop-filter: blur(4px);
@@ -2243,7 +2243,7 @@ section[id] {
 .sim-action-title {
   color: #fff;
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 600;
   margin-bottom: 1px;
 }
 
@@ -2271,7 +2271,7 @@ section[id] {
 
 .sim-section-title {
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-muted);
   letter-spacing: 0.04em;
 }
@@ -2345,7 +2345,7 @@ section[id] {
 .sim-tx-merchant {
   color: #fff;
   font-size: 0.72rem;
-  font-weight: 500;
+  font-weight: 400;
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -2361,9 +2361,17 @@ section[id] {
 .sim-tx-value {
   font-family: var(--font-display);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #ef4444; /* Matches red/orange in the screenshots */
 }
+
+/* Category Subtitle Colors */
+.sim-tx-category {
+  font-weight: 500;
+}
+.sim-tx-category.text-blue { color: #3b82f6; }
+.sim-tx-category.text-orange { color: #f97316; }
+.sim-tx-category.text-purple { color: #a78bfa; }
 
 /* Floating Action Button (FAB) */
 .sim-fab {
@@ -2412,7 +2420,7 @@ section[id] {
   gap: 2px;
   color: var(--text-muted);
   font-size: 0.52rem;
-  font-weight: 600;
+  font-weight: 400;
   cursor: pointer;
   transition: var(--transition-smooth);
 }

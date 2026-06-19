@@ -359,8 +359,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 13. Mobile App Simulator Interactive Logic
-  let simSpentTotal = 893.26;
-  let simRecordsCount = 12;
+  let simSpentTotal = 1914.00;
+  let simRecordsCount = 15;
 
   const simSpentTotalEl = document.getElementById('sim-spent-total');
   const simRecordsCountEl = document.getElementById('sim-records-count');
@@ -437,13 +437,17 @@ document.addEventListener('DOMContentLoaded', () => {
       iconHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #a78bfa;"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="12" y1="4" x2="12" y2="20"/></svg>`;
     }
     
+    let catClass = 'text-purple';
+    if (iconType === 'services') catClass = 'text-blue';
+    else if (iconType === 'food') catClass = 'text-orange';
+
     newTx.innerHTML = `
       <span class="sim-tx-category-icon ${bgClass}">
         ${iconHTML}
       </span>
       <div class="sim-tx-details">
         <h4 class="sim-tx-merchant">${merchant}</h4>
-        <span class="sim-tx-date">${category} • Today</span>
+        <span class="sim-tx-date"><span class="sim-tx-category ${catClass}">${category}</span> • Today</span>
       </div>
       <span class="sim-tx-value">₹${amount.toFixed(2)}</span>
     `;
