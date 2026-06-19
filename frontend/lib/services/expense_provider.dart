@@ -198,6 +198,14 @@ class ExpenseProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> restoreExpense(Expense expense) async {
+    await _dbHelper.insertExpense(expense);
+    _expenses.insert(0, expense);
+    _expenses.sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
+    notifyListeners();
+    triggerQuietSync();
+  }
+
   Future<void> deleteMultipleExpenses(List<String> ids) async {
     for (final id in ids) {
       await _dbHelper.deleteExpense(id);

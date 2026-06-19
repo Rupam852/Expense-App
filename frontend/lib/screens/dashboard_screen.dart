@@ -3421,6 +3421,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     return Dismissible(
                       key: Key(exp.id),
                       direction: DismissDirection.endToStart,
+                      dismissThresholds: const {
+                        DismissDirection.endToStart: 0.6,
+                      },
                       background: Container(
                         padding: const EdgeInsets.only(right: 20),
                         decoration: BoxDecoration(
@@ -3432,7 +3435,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       onDismissed: (direction) {
                         expenseProvider.deleteExpense(exp.id);
-                        CustomToast.show(context, 'Transaction deleted.');
+                        ScaffoldMessenger.of(context).clearSnackBars();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: isDark ? const Color(0xFF1E2230) : Colors.white,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: BorderSide(
+                                color: const Color(0xFF00D09C).withOpacity(0.3),
+                                width: 1.5,
+                              ),
+                            ),
+                            elevation: 8,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            content: Row(
+                              children: [
+                                const Icon(
+                                  Icons.check_circle_outline_rounded,
+                                  color: Color(0xFF00D09C),
+                                  size: 22,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'Transaction deleted',
+                                    style: GoogleFonts.inter(
+                                      color: isDark ? Colors.white : Colors.black87,
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            action: SnackBarAction(
+                              label: 'UNDO',
+                              textColor: const Color(0xFF00D09C),
+                              onPressed: () {
+                                expenseProvider.restoreExpense(exp);
+                              },
+                            ),
+                            duration: const Duration(seconds: 4),
+                          ),
+                        );
                       },
                       child: GestureDetector(
                         onTap: () {
