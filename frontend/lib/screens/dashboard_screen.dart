@@ -3449,6 +3449,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                             elevation: 8,
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            showCloseIcon: true,
+                            closeIconColor: isDark ? Colors.white70 : Colors.black54,
                             content: Row(
                               children: [
                                 const Icon(
@@ -3476,7 +3478,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 expenseProvider.restoreExpense(exp);
                               },
                             ),
-                            duration: const Duration(seconds: 4),
+                            duration: const Duration(seconds: 5),
                           ),
                         );
                       },
