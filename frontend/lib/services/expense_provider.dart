@@ -659,12 +659,30 @@ class ExpenseProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> _checkIfGuest() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedProfileStr = prefs.getString('cached_user_profile');
+      if (cachedProfileStr != null) {
+        final cachedProfile = json.decode(cachedProfileStr);
+        return cachedProfile['id'] == 'guest-user-uuid';
+      }
+    } catch (_) {}
+    return false;
+  }
+
   Future<bool> triggerManualSync() async {
     _isSyncing = true;
     _syncErrorMessage = null;
     notifyListeners();
 
     try {
+      if (await _checkIfGuest()) {
+        _syncErrorMessage = 'Cloud Sync is only available for registered accounts. Please log in.';
+        _isSyncing = false;
+        notifyListeners();
+        return false;
+      }
       final success = await triggerQuietSync();
       _isSyncing = false;
       if (!success) {
@@ -686,6 +704,12 @@ class ExpenseProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      if (await _checkIfGuest()) {
+        _syncErrorMessage = 'Restore is only available for registered accounts. Please log in.';
+        _isSyncing = false;
+        notifyListeners();
+        return false;
+      }
       // 1. Clear local SQLite cached database
       await _dbHelper.clearAllData();
       
