@@ -158,6 +158,35 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
     );
   }
 
+  // ─── Preview ─────────────────────────────────────────────────────────────────
+  Future<void> _previewInvoice(Map<String, dynamic> invoice) async {
+    CustomToast.show(context, 'Loading preview...');
+    try {
+      final bytes = await _supabase.downloadInvoiceBytes(invoice['storage_path'] as String);
+      if (!mounted) return;
+      if (bytes == null) {
+        CustomToast.show(context, 'Failed to load preview. Check connection.', isError: true);
+        return;
+      }
+      final fileName = invoice['file_name'] as String? ?? 'Invoice.pdf';
+      final safeFileName = fileName.endsWith('.pdf') ? fileName : '$fileName.pdf';
+
+      final dir = await getTemporaryDirectory();
+      final tempFile = File('${dir.path}/$safeFileName');
+      await tempFile.writeAsBytes(bytes);
+
+      if (!mounted) return;
+      final result = await OpenFile.open(tempFile.path);
+      if (result.type != ResultType.done && mounted) {
+        CustomToast.show(context, 'No PDF reader found to open preview.', isError: true);
+      }
+    } catch (e) {
+      if (mounted) {
+        CustomToast.show(context, 'Preview error: $e', isError: true);
+      }
+    }
+  }
+
   // ─── Delete ──────────────────────────────────────────────────────────────────
   Future<void> _showDeleteDialog(Map<String, dynamic> invoice) async {
     final monthYear = invoice['month_year'] as String? ?? '';
@@ -428,85 +457,89 @@ class _InvoiceHistoryScreenState extends State<InvoiceHistoryScreen> {
             ],
             border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.05)),
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              children: [
-                Container(
-                  width: 48, height: 48,
-                  decoration: BoxDecoration(
-                    color: primaryColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            onTap: () => _previewInvoice(inv),
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48, height: 48,
+                    decoration: BoxDecoration(
+                      color: primaryColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.picture_as_pdf_rounded, color: primaryColor, size: 26),
                   ),
-                  child: Icon(Icons.picture_as_pdf_rounded, color: primaryColor, size: 26),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(monthLabel, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15)),
-                      const SizedBox(height: 2),
-                      Text(fileName, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]), maxLines: 1, overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.calendar_today_outlined, size: 11, color: Colors.grey[400]),
-                          const SizedBox(width: 4),
-                          Text(createdAt, style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[400])),
-                          const SizedBox(width: 10),
-                          Icon(Icons.insert_drive_file_outlined, size: 11, color: Colors.grey[400]),
-                          const SizedBox(width: 4),
-                          Text(fileSize, style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[400])),
-                          if (createdTime.isNotEmpty) ...[
-                            const SizedBox(width: 10),
-                            Icon(Icons.access_time_outlined, size: 11, color: Colors.grey[400]),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(monthLabel, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15)),
+                        const SizedBox(height: 2),
+                        Text(fileName, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.calendar_today_outlined, size: 11, color: Colors.grey[400]),
                             const SizedBox(width: 4),
-                            Text(createdTime, style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[400])),
+                            Text(createdAt, style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[400])),
+                            const SizedBox(width: 10),
+                            Icon(Icons.insert_drive_file_outlined, size: 11, color: Colors.grey[400]),
+                            const SizedBox(width: 4),
+                            Text(fileSize, style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[400])),
+                            if (createdTime.isNotEmpty) ...[
+                              const SizedBox(width: 10),
+                              Icon(Icons.access_time_outlined, size: 11, color: Colors.grey[400]),
+                              const SizedBox(width: 4),
+                              Text(createdTime, style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[400])),
+                            ],
                           ],
-                        ],
-                      ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert_rounded, size: 22),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    color: isDark ? const Color(0xFF242936) : Colors.white,
+                    elevation: 8,
+                    onSelected: (action) async {
+                      switch (action) {
+                        case 'rename': await _showRenameDialog(inv); break;
+                        case 'download': await _downloadInvoice(inv); break;
+                        case 'share': await _shareInvoice(inv); break;
+                        case 'delete': await _showDeleteDialog(inv); break;
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      PopupMenuItem(value: 'rename', child: Row(children: [
+                        Icon(Icons.drive_file_rename_outline_rounded, size: 18, color: primaryColor),
+                        const SizedBox(width: 12),
+                        Text('Rename File', style: GoogleFonts.inter(fontSize: 13)),
+                      ])),
+                      PopupMenuItem(value: 'download', child: Row(children: [
+                        Icon(Icons.download_rounded, size: 18, color: primaryColor),
+                        const SizedBox(width: 12),
+                        Text('Download', style: GoogleFonts.inter(fontSize: 13)),
+                      ])),
+                      PopupMenuItem(value: 'share', child: Row(children: [
+                        Icon(Icons.share_outlined, size: 18, color: primaryColor),
+                        const SizedBox(width: 12),
+                        Text('Share', style: GoogleFonts.inter(fontSize: 13)),
+                      ])),
+                      const PopupMenuDivider(),
+                      PopupMenuItem(value: 'delete', child: Row(children: [
+                        const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red),
+                        const SizedBox(width: 12),
+                        Text('Delete', style: GoogleFonts.inter(fontSize: 13, color: Colors.red)),
+                      ])),
                     ],
                   ),
-                ),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert_rounded, size: 22),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  color: isDark ? const Color(0xFF242936) : Colors.white,
-                  elevation: 8,
-                  onSelected: (action) async {
-                    switch (action) {
-                      case 'rename': await _showRenameDialog(inv); break;
-                      case 'download': await _downloadInvoice(inv); break;
-                      case 'share': await _shareInvoice(inv); break;
-                      case 'delete': await _showDeleteDialog(inv); break;
-                    }
-                  },
-                  itemBuilder: (_) => [
-                    PopupMenuItem(value: 'rename', child: Row(children: [
-                      Icon(Icons.drive_file_rename_outline_rounded, size: 18, color: primaryColor),
-                      const SizedBox(width: 12),
-                      Text('Rename File', style: GoogleFonts.inter(fontSize: 13)),
-                    ])),
-                    PopupMenuItem(value: 'download', child: Row(children: [
-                      Icon(Icons.download_rounded, size: 18, color: primaryColor),
-                      const SizedBox(width: 12),
-                      Text('Download', style: GoogleFonts.inter(fontSize: 13)),
-                    ])),
-                    PopupMenuItem(value: 'share', child: Row(children: [
-                      Icon(Icons.share_outlined, size: 18, color: primaryColor),
-                      const SizedBox(width: 12),
-                      Text('Share', style: GoogleFonts.inter(fontSize: 13)),
-                    ])),
-                    const PopupMenuDivider(),
-                    PopupMenuItem(value: 'delete', child: Row(children: [
-                      const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red),
-                      const SizedBox(width: 12),
-                      Text('Delete', style: GoogleFonts.inter(fontSize: 13, color: Colors.red)),
-                    ])),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
