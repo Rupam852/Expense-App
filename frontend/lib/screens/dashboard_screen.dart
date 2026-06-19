@@ -3044,7 +3044,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           IconButton(
             onPressed: expenseProvider.isSyncing 
                 ? null 
-                : () => _showSyncOptionsBottomSheet(context, expenseProvider),
+                : () {
+                    if (userProvider.userProfile?['id'] == 'guest-user-uuid') {
+                      CustomToast.show(
+                        context,
+                        'Cloud Sync is only available for registered accounts. Please log in.',
+                        isError: true,
+                      );
+                    } else {
+                      _showSyncOptionsBottomSheet(context, expenseProvider);
+                    }
+                  },
             icon: expenseProvider.isSyncing
                 ? const SizedBox(
                     height: 20,
@@ -3067,7 +3077,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () => expenseProvider.triggerManualSync(),
+        onRefresh: () async {
+          if (userProvider.userProfile?['id'] == 'guest-user-uuid') {
+            await expenseProvider.loadLocalData();
+          } else {
+            await expenseProvider.triggerManualSync();
+          }
+        },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(20.0),
