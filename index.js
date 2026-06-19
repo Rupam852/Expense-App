@@ -1,6 +1,20 @@
 // Grow Expense App - Rebuilt Custom Interactive Logic
 
 document.addEventListener('DOMContentLoaded', () => {
+
+  // 0. APK Direct Download Handler (bypasses Google Drive warning page)
+  const APK_URL = 'https://drive.google.com/uc?export=download&id=1l7KuzW72Bir3q0DrdJUtcAQUqZaDbwkA&confirm=t';
+
+  function triggerAPKDownload(e) {
+    e.preventDefault();
+    // Use same-tab location change — browser treats file response as download, no warning page
+    window.location.href = APK_URL;
+  }
+
+  document.querySelectorAll('.download-btn, .download-btn-small, .download-btn-large').forEach(btn => {
+    btn.addEventListener('click', triggerAPKDownload);
+  });
+
   // 1. Navigation Scroll Effect
   const navbar = document.querySelector('.navbar');
   
