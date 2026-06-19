@@ -128,78 +128,149 @@
               
               <!-- App Interface Inside Simulator -->
               <div class="simulator-app">
+                <!-- App Header -->
                 <div class="sim-header">
-                  <div class="sim-header-title">
-                    <img src="logo.png" alt="Mini Logo" class="sim-logo">
-                    <span>Grow Expense</span>
+                  <div class="sim-header-user">
+                    <img src="rupam_face.png" class="sim-avatar" alt="R" style="object-fit: cover;">
+                    <span class="sim-username">Hello, Rupam</span>
                   </div>
-                  <div class="sim-sync-status" id="sim-sync-status">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="sim-cloud-icon" id="sim-cloud-icon" style="width:14px;height:14px;">
-                      <path d="M17.5 19A3.5 3.5 0 0 0 21 15.5c0-2.79-2.54-4.5-5-4.5-.47 0-.89.09-1.3.27A7 7 0 1 0 2 12h2a5 5 0 0 1 9.8-1.5 1 1 0 0 0 .8.8c2.22 0 4 1.8 4 4a3.5 3.5 0 0 0 3.5 3.7h-4.6"/>
+                  <div class="sim-header-actions">
+                    <div class="sim-sync-trigger" id="sim-sync-trigger">
+                      <svg class="sim-cloud-icon" id="sim-cloud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17.5 19A3.5 3.5 0 0 0 21 15.5c0-2.79-2.54-4.5-5-4.5-.47 0-.89.09-1.3.27A7 7 0 1 0 2 12h2a5 5 0 0 1 9.8-1.5 1 1 0 0 0 .8.8c2.22 0 4 1.8 4 4a3.5 3.5 0 0 0 3.5 3.7h-4.6"/>
+                      </svg>
+                    </div>
+                    <svg class="sim-settings-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="3"/>
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                     </svg>
-                    <span id="sim-sync-text">Synced</span>
                   </div>
                 </div>
-                
+
                 <div class="sim-body">
-                  <!-- Wallet Card -->
-                  <div class="sim-wallet">
-                    <span class="sim-wallet-label">Total Cash Balance</span>
-                    <h2 class="sim-wallet-balance" id="sim-balance">₹24,500.00</h2>
-                    <div class="sim-wallet-meta">
-                      <span>Monthly Limit: ₹30,000</span>
-                      <span id="sim-spent-percent">58.5%</span>
-                    </div>
-                    <div class="sim-progress-bar">
-                      <div class="sim-progress-fill" id="sim-progress-fill" style="width: 58.5%;"></div>
-                    </div>
-                  </div>
-
-                  <!-- Quick Stats Grid -->
-                  <div class="sim-stats-grid">
-                    <div class="sim-stat-card">
-                      <span class="stat-num text-green" id="sim-income">₹45,000</span>
-                      <span class="stat-label">Income</span>
-                    </div>
-                    <div class="sim-stat-card">
-                      <span class="stat-num text-red" id="sim-expense">₹20,500</span>
-                      <span class="stat-label">Expenses</span>
+                  <!-- Spent Month Card -->
+                  <div class="sim-spent-card">
+                    <span class="sim-spent-title">TOTAL SPENT THIS MONTH</span>
+                    <h2 class="sim-spent-value" id="sim-spent-total">₹893.26</h2>
+                    <div class="sim-spent-pills">
+                      <span class="sim-spent-pill">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-pill-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span id="sim-records-count">12 Records</span>
+                      </span>
+                      <span class="sim-spent-pill">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-pill-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        <span id="sim-current-date">19 June 2026</span>
+                      </span>
                     </div>
                   </div>
 
-                  <!-- Transactions Ledger -->
+                  <!-- Quick Action Grid -->
+                  <div class="sim-quick-actions">
+                    <div class="sim-action-card">
+                      <div class="sim-action-icon blue">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                      </div>
+                      <span class="sim-action-title">Smart OCR</span>
+                      <span class="sim-action-subtitle">Read receipts</span>
+                    </div>
+                    <div class="sim-action-card">
+                      <div class="sim-action-icon green">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                      </div>
+                      <span class="sim-action-title">Import File</span>
+                      <span class="sim-action-subtitle">XLSX / PDF Bank</span>
+                    </div>
+                    <div class="sim-action-card">
+                      <div class="sim-action-icon purple">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
+                      </div>
+                      <span class="sim-action-title">Export CSV</span>
+                      <span class="sim-action-subtitle">Excel statement</span>
+                    </div>
+                  </div>
+
+                  <!-- Ledger Section -->
                   <div class="sim-ledger">
-                    <div class="sim-ledger-header">
-                      <span>Recent Outflows</span>
-                      <span class="text-green font-600">Active Month</span>
+                    <div class="sim-section-title-row">
+                      <span class="sim-section-title">RECENT TRANSACTIONS</span>
+                      <div class="sim-swipe-delete">
+                        <span>Swipe left to delete</span>
+                        <svg class="sim-trash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                      </div>
                     </div>
+                    
                     <div class="sim-tx-list" id="sim-tx-list">
-                      <!-- Start Items -->
+                      <!-- Transactions matching the screenshots -->
                       <div class="sim-tx-item" data-id="1">
-                        <span class="sim-tx-avatar bg-red-dim">🍔</span>
+                        <span class="sim-tx-category-icon bg-blue-dim">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #3b82f6;"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                        </span>
                         <div class="sim-tx-details">
-                          <h4 class="sim-tx-merchant">Burger King India</h4>
-                          <span class="sim-tx-date">Today, 01:15 PM</span>
+                          <h4 class="sim-tx-merchant">SBI debit card annual Fees</h4>
+                          <span class="sim-tx-date">Services • 17 Jun</span>
                         </div>
-                        <span class="sim-tx-value negative">-₹350.00</span>
+                        <span class="sim-tx-value">₹237.00</span>
                       </div>
                       <div class="sim-tx-item" data-id="2">
-                        <span class="sim-tx-avatar bg-blue-dim">🛒</span>
+                        <span class="sim-tx-category-icon bg-orange-dim">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #f97316;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        </span>
                         <div class="sim-tx-details">
-                          <h4 class="sim-tx-merchant">Reliance Smart</h4>
-                          <span class="sim-tx-date">Yesterday, 06:45 PM</span>
+                          <h4 class="sim-tx-merchant">1 dem er chop 10 rupees an...</h4>
+                          <span class="sim-tx-date">Food & dining • 14 Jun</span>
                         </div>
-                        <span class="sim-tx-value negative">-₹1,200.00</span>
+                        <span class="sim-tx-value">₹16.00</span>
                       </div>
                       <div class="sim-tx-item" data-id="3">
-                        <span class="sim-tx-avatar bg-purple-dim">🚕</span>
+                        <span class="sim-tx-category-icon bg-orange-dim">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #f97316;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        </span>
                         <div class="sim-tx-details">
-                          <h4 class="sim-tx-merchant">Uber India Ride</h4>
-                          <span class="sim-tx-date">17 Jun, 09:30 AM</span>
+                          <h4 class="sim-tx-merchant">Momo</h4>
+                          <span class="sim-tx-date">Food & dining • 13 Jun</span>
                         </div>
-                        <span class="sim-tx-value negative">-₹480.00</span>
+                        <span class="sim-tx-value">₹60.00</span>
+                      </div>
+                      <div class="sim-tx-item" data-id="4">
+                        <span class="sim-tx-category-icon bg-orange-dim">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #f97316;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        </span>
+                        <div class="sim-tx-details">
+                          <h4 class="sim-tx-merchant">Chicken biryani</h4>
+                          <span class="sim-tx-date">Food & dining • 12 Jun</span>
+                        </div>
+                        <span class="sim-tx-value">₹160.00</span>
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                <!-- Floating Action Button -->
+                <div class="sim-fab" id="sim-fab-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width: 20px; height: 20px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </div>
+
+                <!-- In-app Bottom Navigation Bar -->
+                <div class="sim-bottom-nav">
+                  <div class="sim-nav-item active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-nav-icon"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+                    <span>Home</span>
+                  </div>
+                  <div class="sim-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-nav-icon"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                    <span>Budgets</span>
+                  </div>
+                  <div class="sim-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-nav-icon"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    <span>Analytics</span>
+                  </div>
+                  <div class="sim-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-nav-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    <span>Invoices</span>
+                  </div>
+                  <div class="sim-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-nav-icon"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+                    <span>Payments</span>
                   </div>
                 </div>
 

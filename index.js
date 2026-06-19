@@ -352,55 +352,44 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('click', initAudio, { once: true });
   document.addEventListener('touchstart', initAudio, { once: true });
 
-  const interactableButtons = document.querySelectorAll('.download-btn, .download-btn-small, .download-btn-large, .learn-more-btn, .sim-btn, .control-btn');
+  const interactableButtons = document.querySelectorAll('.download-btn, .download-btn-small, .download-btn-large, .learn-more-btn, .sim-btn, .control-btn, #sim-fab-btn');
   interactableButtons.forEach(btn => {
     btn.addEventListener('mouseenter', () => playHaptic('click'));
     btn.addEventListener('click', () => playHaptic('double'));
   });
 
   // 13. Mobile App Simulator Interactive Logic
-  let simBalance = 24500.00;
-  let simSpentLimit = 30000.00;
-  let simSpentAmount = 17550.00;
-  let simIncomeVal = 45000.00;
-  let simExpenseVal = 20500.00;
+  let simSpentTotal = 893.26;
+  let simRecordsCount = 12;
 
-  const simBalanceEl = document.getElementById('sim-balance');
-  const simSpentPercentEl = document.getElementById('sim-spent-percent');
-  const simProgressFillEl = document.getElementById('sim-progress-fill');
-  const simIncomeEl = document.getElementById('sim-income');
-  const simExpenseEl = document.getElementById('sim-expense');
+  const simSpentTotalEl = document.getElementById('sim-spent-total');
+  const simRecordsCountEl = document.getElementById('sim-records-count');
   const simTxListEl = document.getElementById('sim-tx-list');
   const simScanOverlay = document.getElementById('sim-scan-overlay');
   const simSyncOverlay = document.getElementById('sim-sync-overlay');
   const simSyncTextOverlay = document.getElementById('sim-sync-text-overlay');
-  const simSyncStatus = document.getElementById('sim-sync-status');
-  const simSyncText = document.getElementById('sim-sync-text');
+  const simCloudIcon = document.getElementById('sim-cloud-icon');
+  const simSyncTrigger = document.getElementById('sim-sync-trigger');
 
   const formatCurrency = (val) => {
     return '₹' + val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
   const updateSimUI = () => {
-    if (simBalanceEl) simBalanceEl.textContent = formatCurrency(simBalance);
-    if (simIncomeEl) simIncomeEl.textContent = '₹' + Math.round(simIncomeVal).toLocaleString('en-IN');
-    if (simExpenseEl) simExpenseEl.textContent = '₹' + Math.round(simExpenseVal).toLocaleString('en-IN');
-    
-    const spentPercent = (simSpentAmount / simSpentLimit) * 100;
-    if (simSpentPercentEl) simSpentPercentEl.textContent = spentPercent.toFixed(1) + '%';
-    if (simProgressFillEl) simProgressFillEl.style.width = Math.min(spentPercent, 100) + '%';
+    if (simSpentTotalEl) simSpentTotalEl.textContent = formatCurrency(simSpentTotal);
+    if (simRecordsCountEl) simRecordsCountEl.textContent = simRecordsCount + ' Records';
   };
 
   const addManualExpense = () => {
     const manualExpenses = [
-      { emoji: '🛒', merchant: 'Big Bazaar Store', amount: 940 },
-      { emoji: '🍿', merchant: 'PVR Multiplex Cinema', amount: 480 },
-      { emoji: '💡', merchant: 'Adani Electricity Bill', amount: 1650 },
-      { emoji: '☕', merchant: 'Starbucks Coffee', amount: 280 }
+      { merchant: 'Tea Stall Chai', category: 'Food & dining', amount: 10.00, emoji: '🍕', iconType: 'food' },
+      { merchant: 'Lunch Thali Meal', category: 'Food & dining', amount: 120.00, emoji: '🍕', iconType: 'food' },
+      { merchant: 'Mobile Recharge', category: 'Services', amount: 399.00, emoji: '💼', iconType: 'services' },
+      { merchant: 'Stationery Notebooks', category: 'Others', amount: 85.00, emoji: '🛒', iconType: 'other' }
     ];
     
     const randomItem = manualExpenses[Math.floor(Math.random() * manualExpenses.length)];
-    addSimTransaction(randomItem.emoji, randomItem.merchant, randomItem.amount);
+    addSimTransaction(randomItem.merchant, randomItem.amount, randomItem.category, randomItem.iconType);
   };
 
   const addScanExpense = () => {
@@ -414,39 +403,49 @@ document.addEventListener('DOMContentLoaded', () => {
       simScanOverlay.classList.remove('active');
       
       const scanExpenses = [
-        { emoji: '🛍️', merchant: 'Zudio Fashion Retail', amount: 1450 },
-        { emoji: '🍔', merchant: 'McDonalds India Drive', amount: 620 },
-        { emoji: '🚗', merchant: 'Ola Cabs Transit', amount: 380 },
-        { emoji: '💊', merchant: 'Apollo Pharmacy Meds', amount: 890 }
+        { merchant: 'McDonalds Burger Deal', category: 'Food & dining', amount: 320.00, iconType: 'food' },
+        { merchant: 'Zudio T-Shirt', category: 'Shopping', amount: 499.00, iconType: 'other' },
+        { merchant: 'Auto Fare Ride', category: 'Services', amount: 90.00, iconType: 'services' },
+        { merchant: 'Medicines Apollo', category: 'Services', amount: 180.00, iconType: 'services' }
       ];
       
       const randomItem = scanExpenses[Math.floor(Math.random() * scanExpenses.length)];
-      addSimTransaction(randomItem.emoji, randomItem.merchant, randomItem.amount);
+      addSimTransaction(randomItem.merchant, randomItem.amount, randomItem.category, randomItem.iconType);
       playHaptic('success');
     }, 2500);
   };
 
-  const addSimTransaction = (emoji, merchant, amount) => {
+  const addSimTransaction = (merchant, amount, category, iconType) => {
     if (!simTxListEl) return;
-    simBalance -= amount;
-    simSpentAmount += amount;
-    simExpenseVal += amount;
+    simSpentTotal += amount;
+    simRecordsCount += 1;
     
     const newTx = document.createElement('div');
     newTx.className = 'sim-tx-item';
     
-    let avatarBgClass = 'bg-green-dim';
-    if (emoji === '🍿' || emoji === '💡') avatarBgClass = 'bg-purple-dim';
-    if (emoji === '🛒' || emoji === '🛍️') avatarBgClass = 'bg-blue-dim';
-    if (emoji === '🍔' || emoji === '☕') avatarBgClass = 'bg-red-dim';
+    let iconHTML = '';
+    let bgClass = 'bg-orange-dim';
+    
+    if (iconType === 'services') {
+      bgClass = 'bg-blue-dim';
+      iconHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #3b82f6;"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`;
+    } else if (iconType === 'food') {
+      bgClass = 'bg-orange-dim';
+      iconHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #f97316;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`;
+    } else {
+      bgClass = 'bg-purple-dim';
+      iconHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #a78bfa;"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="12" y1="4" x2="12" y2="20"/></svg>`;
+    }
     
     newTx.innerHTML = `
-      <span class="sim-tx-avatar ${avatarBgClass}">${emoji}</span>
+      <span class="sim-tx-category-icon ${bgClass}">
+        ${iconHTML}
+      </span>
       <div class="sim-tx-details">
         <h4 class="sim-tx-merchant">${merchant}</h4>
-        <span class="sim-tx-date">Just Now, Live Sync</span>
+        <span class="sim-tx-date">${category} • Today</span>
       </div>
-      <span class="sim-tx-value negative">-₹${amount.toLocaleString('en-IN')}</span>
+      <span class="sim-tx-value">₹${amount.toFixed(2)}</span>
     `;
     
     if (simTxListEl.children.length >= 4) {
@@ -454,12 +453,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     simTxListEl.insertBefore(newTx, simTxListEl.firstChild);
     
-    if (simSyncStatus && simSyncText) {
-      simSyncStatus.classList.add('syncing');
-      simSyncStatus.style.borderColor = 'rgba(239, 68, 68, 0.2)';
-      simSyncStatus.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
-      simSyncStatus.style.color = '#ef4444';
-      simSyncText.textContent = 'Unsynced';
+    if (simCloudIcon && simSyncTrigger) {
+      simSyncTrigger.classList.add('syncing');
+      simCloudIcon.style.color = '#ef4444'; // Red/orange alert color for unsynced changes
     }
     
     updateSimUI();
@@ -468,9 +464,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const syncSimDatabase = () => {
     if (!simSyncOverlay) return;
     simSyncOverlay.classList.add('active');
-    if (simSyncStatus && simSyncText) {
-      simSyncStatus.classList.add('syncing');
-      simSyncText.textContent = 'Syncing...';
+    if (simSyncTrigger && simCloudIcon) {
+      simSyncTrigger.classList.add('syncing');
+      simCloudIcon.style.color = '#fbbf24'; // Yellow for syncing
     }
     
     const steps = [
@@ -490,12 +486,9 @@ document.addEventListener('DOMContentLoaded', () => {
         clearInterval(interval);
         simSyncOverlay.classList.remove('active');
         
-        if (simSyncStatus && simSyncText) {
-          simSyncStatus.classList.remove('syncing');
-          simSyncStatus.style.borderColor = '';
-          simSyncStatus.style.backgroundColor = '';
-          simSyncStatus.style.color = '';
-          simSyncText.textContent = 'Synced';
+        if (simSyncTrigger && simCloudIcon) {
+          simSyncTrigger.classList.remove('syncing');
+          simCloudIcon.style.color = ''; // Reset to green
         }
         playHaptic('success');
       }
@@ -505,10 +498,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnScan = document.getElementById('sim-action-scan');
   const btnAdd = document.getElementById('sim-action-add');
   const btnSync = document.getElementById('sim-action-sync');
+  const simFabBtn = document.getElementById('sim-fab-btn');
 
   if (btnScan) btnScan.addEventListener('click', addScanExpense);
   if (btnAdd) btnAdd.addEventListener('click', addManualExpense);
   if (btnSync) btnSync.addEventListener('click', syncSimDatabase);
+  if (simSyncTrigger) simSyncTrigger.addEventListener('click', syncSimDatabase);
+  if (simFabBtn) simFabBtn.addEventListener('click', addManualExpense);
 
   // 14. 3D Card Hover Tilt Micro-Interactions
   const bentoCards = document.querySelectorAll('.bento-card');
