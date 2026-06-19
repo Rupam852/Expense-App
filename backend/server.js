@@ -91,7 +91,7 @@ const startServer = async () => {
 // =====================================================
 // KEEP-ALIVE CRON JOB (Prevents Render free tier sleep)
 // =====================================================
-const SELF_URL = process.env.SELF_URL || 'https://expense-tracker-backend-5pc1.onrender.com/';
+const SELF_URL = process.env.SELF_URL || 'https://your-app-backend.onrender.com/';
 
 const pingSelf = async () => {
   try {
