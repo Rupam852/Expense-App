@@ -641,7 +641,7 @@ a {
     transform-origin: center center;
   }
   .hero-visual {
-    min-height: 330px;
+    min-height: 620px;
   }
 }
 
@@ -752,7 +752,7 @@ a {
   justify-content: center;
   align-items: center;
   position: relative;
-  min-height: 480px;
+  min-height: 700px;
 }
 
 .isometric-canvas {
@@ -2576,6 +2576,7 @@ section[id] {
   color: var(--text-main);
   background-color: var(--bg-secondary);
   border: 1px solid var(--glass-border);
+  white-space: nowrap;
 }
 
 .sim-btn:hover {
