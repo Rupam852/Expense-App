@@ -3441,7 +3441,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             backgroundColor: isDark ? const Color(0xFF1E2230) : Colors.white,
                             behavior: SnackBarBehavior.floating,
                             margin: const EdgeInsets.only(
-                              bottom: 125.0,
+                              bottom: 72.0,
                               left: 16.0,
                               right: 16.0,
                             ),
