@@ -22,6 +22,11 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   void initState() {
     super.initState();
+    // Auto-sync in background when session resumes (covers reinstall + cold start)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+      expenseProvider.triggerQuietSync();
+    });
   }
 
   final List<Widget> _screens = [

@@ -62,7 +62,12 @@ class _LoginScreenState extends State<LoginScreen> {
     } else if (success && mounted) {
       // Load offline database caches once successfully authenticated
       await expenseProvider.loadLocalData();
-      await expenseProvider.triggerQuietSync();
+      // Fresh install / new device: local DB will be empty, so pull ALL data from cloud
+      if (expenseProvider.expenses.isEmpty) {
+        await expenseProvider.restoreFromCloud();
+      } else {
+        await expenseProvider.triggerQuietSync();
+      }
     } else if (mounted) {
       CustomToast.show(
         context,
@@ -79,7 +84,12 @@ class _LoginScreenState extends State<LoginScreen> {
     final success = await userProvider.loginWithGoogle();
     if (success && mounted) {
       await expenseProvider.loadLocalData();
-      await expenseProvider.triggerQuietSync();
+      // Fresh install / new device: local DB will be empty, so pull ALL data from cloud
+      if (expenseProvider.expenses.isEmpty) {
+        await expenseProvider.restoreFromCloud();
+      } else {
+        await expenseProvider.triggerQuietSync();
+      }
     } else if (mounted) {
       CustomToast.show(
         context,
