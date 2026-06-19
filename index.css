@@ -1990,7 +1990,7 @@ section[id] {
   flex-direction: column;
   align-items: center;
   width: 100%;
-  max-width: 380px;
+  max-width: 320px;
   margin: 0 auto;
   position: relative;
   z-index: 10;
@@ -2616,6 +2616,9 @@ section[id] {
 }
 
 @media (max-width: 480px) {
+  .phone-wrapper {
+    max-width: 280px;
+  }
   .phone-mockup {
     width: 280px;
     height: 560px;
@@ -2624,7 +2627,11 @@ section[id] {
     font-size: 1.65rem;
   }
   .phone-speaker { width: 40px; }
-  .sim-btn { font-size: 0.65rem; }
+  .sim-btn { 
+    font-size: 0.62rem;
+    padding: 8px 3px;
+    gap: 3px;
+  }
   .sim-tx-merchant { max-width: 100px; }
 }
 
