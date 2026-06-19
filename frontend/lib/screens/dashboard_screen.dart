@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -56,6 +57,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkInitialPrompts();
     });
+  }
+
+  @override
+  void dispose() {
+    DeleteNotification.dismiss();
+    super.dispose();
   }
 
   Future<bool> _checkMonthRolloverAndPrompt() async {
@@ -3435,66 +3442,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       onDismissed: (direction) {
                         expenseProvider.deleteExpense(exp.id);
-                        ScaffoldMessenger.of(context).clearSnackBars();
-                        final controller = ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            backgroundColor: isDark ? const Color(0xFF1E2230) : Colors.white,
-                            behavior: SnackBarBehavior.floating,
-                            margin: const EdgeInsets.only(
-                              bottom: 72.0,
-                              left: 16.0,
-                              right: 16.0,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              side: BorderSide(
-                                color: const Color(0xFF00D09C).withOpacity(0.3),
-                                width: 1.5,
-                              ),
-                            ),
-                            elevation: 8,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                            showCloseIcon: true,
-                            closeIconColor: isDark ? Colors.white70 : Colors.black54,
-                            content: Row(
-                              children: [
-                                const Icon(
-                                  Icons.check_circle_outline_rounded,
-                                  color: Color(0xFF00D09C),
-                                  size: 22,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    'Transaction deleted',
-                                    style: GoogleFonts.inter(
-                                      color: isDark ? Colors.white : Colors.black87,
-                                      fontSize: 13.5,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            action: SnackBarAction(
-                              label: 'UNDO',
-                              textColor: const Color(0xFF00D09C),
-                              onPressed: () {
-                                expenseProvider.restoreExpense(exp);
-                              },
-                            ),
-                            duration: const Duration(seconds: 5),
-                          ),
+                        DeleteNotification.show(
+                          context: context,
+                          message: 'Transaction deleted',
+                          onUndo: () {
+                            expenseProvider.restoreExpense(exp);
+                          },
                         );
-
-                        // Enforce dismissal after exactly 5 seconds to bypass accessibility service overrides
-                        Future.delayed(const Duration(seconds: 5), () {
-                          if (mounted) {
-                            try {
-                              controller.close();
-                            } catch (_) {}
-                          }
-                        });
                       },
                       child: GestureDetector(
                         onTap: () {
@@ -3881,6 +3835,224 @@ class _PremiumProgressDialogState extends State<PremiumProgressDialog> with Sing
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────
+// CUSTOM OVERLAY DELETION NOTIFICATION (Bypasses accessibility duration overrides)
+// ──────────────────────────────────────────────────────
+class DeleteNotification {
+  static OverlayEntry? _currentEntry;
+  static _DeleteNotificationWidgetState? _currentState;
+
+  static void show({
+    required BuildContext context,
+    required String message,
+    required VoidCallback onUndo,
+    Duration duration = const Duration(seconds: 5),
+  }) {
+    dismiss();
+
+    final overlayState = Overlay.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (context) {
+        return _DeleteNotificationWidget(
+          message: message,
+          onUndo: () {
+            onUndo();
+            dismiss();
+          },
+          onClose: dismiss,
+          isDark: isDark,
+          onStateCreated: (state) {
+            _currentState = state;
+          },
+        );
+      },
+    );
+
+    _currentEntry = entry;
+    overlayState.insert(entry);
+  }
+
+  static void dismiss() {
+    if (_currentState != null && _currentState!.mounted) {
+      _currentState!._dismiss();
+      _currentState = null;
+    } else if (_currentEntry != null) {
+      try {
+        _currentEntry!.remove();
+      } catch (_) {}
+      _currentEntry = null;
+    }
+  }
+}
+
+class _DeleteNotificationWidget extends StatefulWidget {
+  final String message;
+  final VoidCallback onUndo;
+  final VoidCallback onClose;
+  final bool isDark;
+  final ValueChanged<_DeleteNotificationWidgetState> onStateCreated;
+
+  const _DeleteNotificationWidget({
+    required this.message,
+    required this.onUndo,
+    required this.onClose,
+    required this.isDark,
+    required this.onStateCreated,
+  });
+
+  @override
+  State<_DeleteNotificationWidget> createState() => _DeleteNotificationWidgetState();
+}
+
+class _DeleteNotificationWidgetState extends State<_DeleteNotificationWidget> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+  Timer? _autoDismissTimer;
+  bool _isDismissing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.onStateCreated(this);
+    
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+
+    _controller.forward();
+
+    // Auto dismiss after 5 seconds
+    _autoDismissTimer = Timer(const Duration(seconds: 5), () {
+      _dismiss();
+    });
+  }
+
+  Future<void> _dismiss() async {
+    if (_isDismissing) return;
+    _autoDismissTimer?.cancel();
+    
+    if (mounted) {
+      setState(() {
+        _isDismissing = true;
+      });
+      await _controller.reverse();
+      widget.onClose();
+    }
+  }
+
+  @override
+  void dispose() {
+    _autoDismissTimer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Dynamic bottom offset calculation to center above BottomNavigationBar & FAB on all device models
+    final double bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+    final double bottomNavHeight = 60.0;
+    final double fabHeightWithMargin = 72.0; // 56 (FAB) + 16 (margin)
+    final double bottomOffset = bottomPadding + bottomNavHeight + fabHeightWithMargin + 12.0;
+
+    return Positioned(
+      bottom: bottomOffset,
+      left: 16.0,
+      right: 16.0,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: widget.isDark ? const Color(0xFF1E2230) : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color(0xFF00D09C).withOpacity(0.3),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(widget.isDark ? 0.4 : 0.08),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.check_circle_outline_rounded,
+                    color: Color(0xFF00D09C),
+                    size: 22,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      widget.message,
+                      style: GoogleFonts.inter(
+                        color: widget.isDark ? Colors.white : Colors.black87,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: widget.onUndo,
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      'UNDO',
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF00D09C),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: _dismiss,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: widget.isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.close_rounded,
+                        size: 16,
+                        color: widget.isDark ? Colors.white60 : Colors.black54,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
