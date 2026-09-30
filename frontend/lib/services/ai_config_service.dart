@@ -736,24 +736,34 @@ JSON structure:
   }) async {
     final now = DateTime.now();
     final currentDateIso = now.toIso8601String();
-    final promptText = '''You are an expert AI Financial Expense Voice Parser for English, Hindi, Hinglish, and mixed Indian multilingual speech.
+    final promptText = '''You are an expert Universal Multilingual Financial Expense Voice Parser and Translator.
+The user speaks their expense in ANY language or mixture of languages (such as Bengali, Hindi, Hinglish, Marathi, Tamil, Telugu, Gujarati, Kannada, Malayalam, Punjabi, Urdu, English, etc.).
+Your job is to deeply understand their intent, extract all expense parameters, and ALWAYS TRANSLATE & STANDARDIZE the description and merchant to clean, concise, natural ENGLISH.
+
 Current Timestamp: $currentDateIso
 
 USER SPOKEN TEXT:
 "$naturalSpeechText"
 
-### MANDATORY EXTRACTION RULES:
-1. AMOUNT (Float Number):
-   - Identify the exact expense amount mentioned (e.g., 500, 250.50, 1200, 80).
-   - If numbers are spoken in words (e.g., "panch sau", "five hundred", "two thousand", "assi rupay", "dedh sau"), accurately convert to numeric float.
-   - Return ONLY a numeric float (e.g. 500.0).
+### MANDATORY EXTRACTION & TRANSLATION RULES:
+1. UNIVERSAL LANGUAGE COMPREHENSION & ENGLISH TRANSLATION:
+   - Understand the input regardless of the spoken language, regional dialect, or phonetic spelling.
+   - ALWAYS TRANSLATE the final "description" and "vendor" into concise, professional ENGLISH.
+   - Examples:
+     * Bengali: "Ami 150 takar mach kinechi" -> description: "Bought fish", vendor: "Fish Market", category: "Groceries", amount: 150.0
+     * Bengali: "Dada ke 500 taka pathiyechi gpay te" -> description: "Money sent to brother via GPay", category: "Transfers", amount: 500.0
+     * Hindi/Hinglish: "Dost ke sath dhabe pe 450 ka khana khaya" -> description: "Dinner with friends at Dhaba", category: "Food & dining", amount: 450.0
+     * Marathi: "300 rupaye cha petrol bharla Indian Oil var" -> description: "Petrol fuel at Indian Oil", category: "Transport", amount: 300.0
+     * English: "Bought groceries at DMart for 1250" -> description: "Groceries at DMart", category: "Groceries", amount: 1250.0
 
-2. CURRENCY (ISO 3-Letter Code):
-   - Default to "INR" unless another currency (USD, EUR, GBP, AED) is explicitly stated.
+2. AMOUNT & NUMBER RECOGNITION (Float Number):
+   - Identify the exact expense amount mentioned.
+   - Accurately convert spoken numbers from any language into numeric float:
+     (e.g., "eksho ponchash" -> 150, "dedh sau" -> 150, "dhai hazaar" -> 2500, "paanch sau" -> 500, "duto" -> 2, "saath" -> 60, "panjaas" -> 50, "tin hajar" -> 3000, "two thousand five hundred" -> 2500.0).
+   - Return ONLY a numeric float (e.g. 150.0).
 
-3. DESCRIPTION & VENDOR:
-   - Extract a clean, concise description (e.g., "Petrol at Indian Oil", "Lunch with friends", "DMart Groceries", "Auto fare").
-   - Extract merchant/vendor name if mentioned (e.g., "Swiggy", "Zomato", "Indian Oil", "DMart", "Uber", "Ola", "Starbucks").
+3. CURRENCY (ISO 3-Letter Code):
+   - Default to "INR" (Indian Rupee) unless another currency (USD, EUR, GBP, AED, etc.) is explicitly stated. If spoken "taka" or "rupaye" or "rupees" or "bucks", use "INR".
 
 4. CATEGORY (Strict Classification):
    - MUST match EXACTLY ONE of the following 22 valid categories:
@@ -761,10 +771,11 @@ USER SPOKEN TEXT:
 
 5. PAYMENT METHOD:
    - Identify payment method: "UPI", "Cash", "Credit Card", "Debit Card", "Net Banking", "Wallet".
-   - If user mentioned "GPay", "PhonePe", "Paytm", "UPI", "online", classify as "UPI". If user mentioned "cash" / "nagad", classify as "Cash". Default is "UPI".
+   - If user mentioned "GPay", "Google Pay", "PhonePe", "Paytm", "UPI", "scanner", "online transfer", classify as "UPI".
+   - If user mentioned "cash", "nagad", "rokh", classify as "Cash". Default is "UPI".
 
 6. TRANSACTION DATE (ISO 8601):
-   - If user mentions "yesterday" / "kal" / "aaj subah" / "last night" / "2 days ago", compute relative timestamp based on Current Timestamp ($currentDateIso).
+   - If user mentions "yesterday" / "kal" / "gatokal" / "last night" / "2 days ago" / specific day, calculate the relative date from $currentDateIso.
    - Otherwise, use $currentDateIso.
 
 ### OUTPUT FORMAT:
@@ -772,11 +783,11 @@ Return ONLY a valid, single JSON object without markdown fences, backticks, or c
 
 JSON format:
 {
-  "amount": 500.0,
+  "amount": 150.0,
   "currency": "INR",
   "category": "Food & dining",
-  "description": "Lunch with friends",
-  "vendor": "Burger King",
+  "description": "Bought snacks and tea with friends",
+  "vendor": "Tea Stall",
   "payment_method": "UPI",
   "transaction_date": "$currentDateIso"
 }''';

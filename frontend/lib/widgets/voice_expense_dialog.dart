@@ -37,8 +37,9 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
   bool _isListening = false;
   bool _isProcessing = false;
   String _transcribedText = '';
-  String? _statusMessage = 'Tap mic and speak your expense';
+  String? _statusMessage = 'Tap mic and speak your expense in any language';
   Map<String, dynamic>? _extractedData;
+  Timer? _silenceTimer;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -63,27 +64,41 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
 
   @override
   void dispose() {
+    _silenceTimer?.cancel();
     _pulseController.dispose();
     _speech.stop();
     super.dispose();
   }
 
+  void _resetSilenceTimer() {
+    _silenceTimer?.cancel();
+    _silenceTimer = Timer(const Duration(milliseconds: 2200), () {
+      if (mounted && _isListening && _transcribedText.trim().isNotEmpty) {
+        debugPrint('[VoiceExpense] Silence detected after speech. Auto-processing: $_transcribedText');
+        _stopListeningAndProcess();
+      }
+    });
+  }
+
   Future<void> _startListening() async {
+    _silenceTimer?.cancel();
     try {
       bool available = await _speech.initialize(
         onStatus: (status) {
+          debugPrint('[VoiceExpense] STT Status: $status');
           if (status == 'done' || status == 'notListening') {
             if (mounted && _isListening) {
               setState(() {
                 _isListening = false;
               });
-              if (_transcribedText.trim().isNotEmpty && _extractedData == null) {
+              if (_transcribedText.trim().isNotEmpty && _extractedData == null && !_isProcessing) {
                 _processVoiceInput(_transcribedText);
               }
             }
           }
         },
         onError: (errorNotification) {
+          debugPrint('[VoiceExpense] STT Error: ${errorNotification.errorMsg}');
           if (mounted) {
             setState(() {
               _isListening = false;
@@ -96,7 +111,7 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
       if (available) {
         setState(() {
           _isListening = true;
-          _statusMessage = 'Listening... Speak naturally (Hindi/English)';
+          _statusMessage = 'Listening... Speak in any language (English, Hindi, Bengali, etc.)';
           _transcribedText = '';
           _extractedData = null;
         });
@@ -108,14 +123,22 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
               setState(() {
                 _transcribedText = result.recognizedWords;
               });
+
+              if (result.finalResult && _transcribedText.trim().isNotEmpty) {
+                _stopListeningAndProcess();
+              } else if (_transcribedText.trim().isNotEmpty) {
+                // Smart auto-detection: Wait for 2.2s of silence before auto-analyzing
+                _resetSilenceTimer();
+              }
             }
           },
-          listenFor: const Duration(seconds: 25),
-          pauseFor: const Duration(seconds: 3),
-          localeId: 'en_IN',
           listenOptions: stt.SpeechListenOptions(
+            listenMode: stt.ListenMode.dictation,
             cancelOnError: true,
             partialResults: true,
+            listenFor: const Duration(seconds: 40),
+            pauseFor: const Duration(seconds: 4),
+            localeId: 'en_IN',
           ),
         );
       } else {
@@ -131,10 +154,13 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
   }
 
   Future<void> _stopListeningAndProcess() async {
+    _silenceTimer?.cancel();
     await _speech.stop();
-    setState(() {
-      _isListening = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isListening = false;
+      });
+    }
 
     if (_transcribedText.trim().isNotEmpty) {
       _processVoiceInput(_transcribedText);
@@ -148,9 +174,10 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
   Future<void> _processVoiceInput(String text) async {
     if (text.trim().isEmpty) return;
 
+    _silenceTimer?.cancel();
     setState(() {
       _isProcessing = true;
-      _statusMessage = 'AI is analyzing your expense...';
+      _statusMessage = 'AI is analyzing & standardizing to English...';
     });
 
     final aiService = AiConfigService.instance;
@@ -166,7 +193,7 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
       final data = result['data'] as Map<String, dynamic>;
       setState(() {
         _extractedData = data;
-        _statusMessage = 'Expense parsed successfully!';
+        _statusMessage = 'Expense parsed & translated to English!';
       });
       HapticFeedback.lightImpact();
     } else {
@@ -440,6 +467,36 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
                       ),
                     ),
                   ],
+                  if (_isListening && _transcribedText.isNotEmpty && !_isProcessing) ...[
+                    const SizedBox(height: 14),
+                    InkWell(
+                      onTap: _stopListeningAndProcess,
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: primaryColor.withValues(alpha: 0.4)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle_outline_rounded, size: 16, color: primaryColor),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Finish & Analyze Now ⚡',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: primaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -449,7 +506,7 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Try saying:',
+                'Try speaking in any language:',
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -462,10 +519,10 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
               spacing: 8,
               runSpacing: 8,
               children: [
-                _buildExampleChip('“Paid ₹500 for groceries”', isDark),
+                _buildExampleChip('“Ami 150 takar mach kinechi”', isDark),
+                _buildExampleChip('“Dost ke sath khana khaya 450 rupay”', isDark),
+                _buildExampleChip('“Petrol ₹500 Indian Oil”', isDark),
                 _buildExampleChip('“Auto fare 80 rupees yesterday”', isDark),
-                _buildExampleChip('“Didi ko 300 diye snacks ke liye”', isDark),
-                _buildExampleChip('“Petrol ₹1200 Indian Oil”', isDark),
               ],
             ),
           ] else ...[
