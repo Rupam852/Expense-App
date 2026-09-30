@@ -251,7 +251,7 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
                               context: context,
                               isDark: isDark,
                               label: 'AI Voice Entry',
-                              subtitle: 'Speak in Hindi / English',
+                              subtitle: 'Speak in any language',
                               icon: Icons.mic_rounded,
                               iconColor: Colors.white,
                               gradientColors: const [Color(0xFF7C3AED), Color(0xFF6366F1)],
