@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../services/app_update_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/custom_toast.dart';
 
 class AppUpdateScreen extends StatefulWidget {
@@ -356,7 +357,10 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
                           if (!mounted) return;
                           if (res != null) {
                             if (res.hasUpdate) {
-                              CustomToast.show(context, 'New version ${res.latestVersion} found!');
+                              await NotificationService.instance.showUpdateNotification(res);
+                              if (mounted) {
+                                CustomToast.show(context, 'New version ${res.latestVersion} found!');
+                              }
                             } else {
                               CustomToast.show(context, 'You are using the latest version.');
                             }

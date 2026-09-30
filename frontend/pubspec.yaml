@@ -42,6 +42,8 @@ dependencies:
   image_picker: ^1.0.7
   file_picker: ^8.0.0
   local_auth: ^2.2.0
+  permission_handler: ^11.3.1
+  flutter_local_notifications: ^17.2.2
 
   # Sharing & File Operations
   share_plus: ^9.0.0

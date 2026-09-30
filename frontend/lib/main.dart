@@ -11,9 +11,13 @@ import 'screens/main_navigation.dart';
 import 'widgets/app_logo.dart';
 import 'widgets/custom_toast.dart';
 import 'services/supabase_service.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Local Notifications
+  await NotificationService.instance.initialize();
 
   // Initialize Supabase (replaces Firebase)
   await Supabase.initialize(

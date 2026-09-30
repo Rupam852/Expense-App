@@ -26,6 +26,7 @@ import 'ai_config_screen.dart';
 import '../services/ai_config_service.dart';
 import '../services/app_update_service.dart';
 import 'app_update_screen.dart';
+import '../services/notification_service.dart';
 
 String getCurrencySymbol(String currencyCode) {
   switch (currencyCode.toUpperCase()) {
@@ -314,6 +315,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _checkInitialPrompts() async {
+    // Request notification permission once on app launch for Android 13+
+    await NotificationService.instance.requestNotificationPermission();
+
     // Wait for the home screen slide/fade entry transitions to fully complete (1.5s delay)
     await Future.delayed(const Duration(milliseconds: 1500));
     if (!mounted) return;
@@ -343,7 +347,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         if (updateService.autoCheckEnabled) {
           final updateInfo = await updateService.checkForUpdates();
           if (mounted && updateInfo != null && updateInfo.hasUpdate) {
-            showAppUpdatePromptDialog(context, updateInfo);
+            // 1. Show phone status bar notification with App Logo
+            await NotificationService.instance.showUpdateNotification(updateInfo);
+            // 2. Show in-app update prompt dialog
+            if (mounted) {
+              showAppUpdatePromptDialog(context, updateInfo);
+            }
           }
         }
       }
