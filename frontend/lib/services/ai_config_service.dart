@@ -30,15 +30,19 @@ class AiConfigService with ChangeNotifier {
 
   factory AiConfigService() => instance;
 
-  // Supported Gemini Models (Latest 2.5 / 2.0 / 1.5 Vision & Multimodal)
+  // Supported Gemini Models (Latest Gemini 3.x / 2.5 / Flash Vision series)
   static const List<String> availableGeminiModels = [
-    'gemini-2.0-flash',
     'gemini-2.5-flash',
-    'gemini-2.0-flash-lite',
+    'gemini-3.5-flash-lite',
+    'gemini-3-flash-preview',
+    'gemini-3.8-flash',
+    'gemini-3.5-flash',
+    'gemini-3.1-pro-preview',
+    'gemini-3.1-flash-lite',
     'gemini-2.5-pro',
-    'gemini-1.5-flash',
-    'gemini-1.5-pro',
+    'gemini-flash-latest',
     'gemini-pro-latest',
+    'gemini-2.0-flash',
   ];
 
   // Supported NVIDIA NIM Vision Models (Best Free Multimodal OCR on build.nvidia.com)
@@ -49,7 +53,7 @@ class AiConfigService with ChangeNotifier {
   ];
 
   // Configuration Fields
-  String _geminiModel = 'gemini-2.0-flash';
+  String _geminiModel = 'gemini-2.5-flash';
   String _geminiApiKey = '';
   String _nvidiaModel = 'meta/llama-3.2-11b-vision-instruct';
   String _nvidiaApiKey = '';
