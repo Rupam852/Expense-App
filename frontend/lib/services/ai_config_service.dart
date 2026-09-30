@@ -30,24 +30,21 @@ class AiConfigService with ChangeNotifier {
 
   factory AiConfigService() => instance;
 
-  // Supported Gemini Models
+  // Supported Gemini Models (Latest 2.5 / 2.0 / 1.5 Vision & Multimodal)
   static const List<String> availableGeminiModels = [
     'gemini-2.0-flash',
+    'gemini-2.5-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-2.5-pro',
     'gemini-1.5-flash',
     'gemini-1.5-pro',
-    'gemini-2.0-flash-lite',
-    'gemini-2.5-flash',
     'gemini-pro-latest',
   ];
 
-  // Supported NVIDIA NIM Models
+  // Supported NVIDIA NIM Vision Models (Best Free Multimodal OCR on build.nvidia.com)
   static const List<String> availableNvidiaModels = [
     'meta/llama-3.2-11b-vision-instruct',
     'meta/llama-3.2-90b-vision-instruct',
-    'meta/llama-3.1-70b-instruct',
-    'meta/llama-3.1-8b-instruct',
-    'mistralai/mistral-large-2-instruct',
-    'google/gemma-2-27b-it',
     'nvidia/neva-22b',
   ];
 
@@ -446,16 +443,38 @@ class AiConfigService with ChangeNotifier {
     required String base64Image,
     required String mimeType,
   }) async {
-    const promptText = '''Analyze this image (which could be a store receipt, utility bill, restaurant invoice, or a screenshot of a UPI transaction like GPay, PhonePe, Paytm).
-Extract the following financial details accurately:
-1. amount (numeric float value)
-2. currency (3-letter ISO code, e.g. INR, USD, EUR. Default to INR if it seems Indian, like UPI screenshots)
-3. category (Categorize into precisely one of these values: Shopping, Groceries, Food & dining, Transport, Bills & recharges, Transfers, Medical, Travel, Repayments, Personal, Services, Insurance, Entertainment, Gaming, Small shops, Rent, Logistics, Subscription, Investment, Fitness, Pet, Miscellaneous)
-4. description (Brief summary of what was purchased or description of the transaction)
-5. transaction_date (ISO 8601 string, e.g., '2026-06-01T20:00:00Z'. Extract transaction timestamp, or estimate/use current date if not visible)
-6. vendor (Name of the shop, store, merchant, or individual who received the money. For UPI, extract the receiver's name)
+    const promptText = '''You are an expert AI Smart Financial Receipt & OCR Extraction Engine.
+Analyze the provided image (which could be a store invoice, printed/handwritten restaurant receipt, grocery bill, utility bill, fuel invoice, or an Indian UPI transaction screenshot from Google Pay, PhonePe, Paytm, CRED, BHIM, Amazon Pay).
 
-Ensure the response is ONLY a single, clean JSON object without markdown code fences or conversational text.
+### MANDATORY EXTRACTION RULES:
+1. AMOUNT (Float Number):
+   - Identify the FINAL GRAND TOTAL or NET PAID AMOUNT (the actual money paid).
+   - Do NOT pick up tax amounts (CGST, SGST, GST), discounts, sub-totals, or tip amounts if grand total is visible.
+   - Return ONLY a numeric float value (e.g. 249.50, not "Rs. 249.50").
+
+2. CURRENCY (ISO 3-Letter Code):
+   - Extract 3-letter currency code (e.g. INR, USD, EUR, GBP).
+   - If Indian Rupee symbol (₹, Rs, INR) is visible or if it's an Indian UPI payment, strictly use "INR".
+
+3. VENDOR / MERCHANT / PAYEE:
+   - Extract the business name, shop name, merchant, or individual who received the money.
+   - For UPI screenshots, extract the recipient's name from "Paid to [Name]", "To: [Name]", "Transfer to [Name]".
+   - If business logos or invoice headers (e.g. Starbucks, D-Mart, Reliance Fresh, Swiggy, Zomato, Blinkit, Zepto) are present, use that merchant name.
+
+4. CATEGORY (Strict Classification):
+   - MUST match EXACTLY ONE of the following valid categories:
+     Shopping, Groceries, Food & dining, Transport, Bills & recharges, Transfers, Medical, Travel, Repayments, Personal, Services, Insurance, Entertainment, Gaming, Small shops, Rent, Logistics, Subscription, Investment, Fitness, Pet, Miscellaneous
+
+5. TRANSACTION DATE (ISO 8601):
+   - Extract the timestamp of the transaction in ISO 8601 string format (e.g. "2026-06-01T14:30:00.000Z").
+   - If time is missing, use "T12:00:00.000Z". If year is missing, assume current year.
+
+6. DESCRIPTION:
+   - Provide a concise summary of the transaction (e.g. "Grocery items from D-Mart", "Lunch at Burger King", "UPI transfer to Ramesh", "Electricity bill").
+
+### OUTPUT FORMAT:
+Return ONLY a valid, single JSON object without markdown code blocks, backticks, or extra text.
+
 JSON structure:
 {
   "amount": 150.00,
