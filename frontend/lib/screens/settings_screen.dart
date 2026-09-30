@@ -9,6 +9,7 @@ import 'ai_config_screen.dart';
 import 'invoice_history_screen.dart';
 import 'payment_details_screen.dart';
 import '../services/app_update_service.dart';
+import '../services/notification_service.dart';
 import 'app_update_screen.dart';
 import 'about_screen.dart';
 
@@ -873,6 +874,48 @@ class SettingsScreen extends StatelessWidget {
                             Navigator.of(context).push(
                               MaterialPageRoute(builder: (_) => const AboutScreen()),
                             );
+                          },
+                        ),
+                        Divider(height: 1, color: borderColor),
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF00D09C).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.notifications_active_outlined,
+                              color: Color(0xFF00D09C),
+                              size: 22,
+                            ),
+                          ),
+                          title: Text(
+                            'Test Notification System',
+                            style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                          ),
+                          subtitle: Text(
+                            'Send a test alert with sound & vibration to phone tray',
+                            style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                          ),
+                          trailing: const Icon(Icons.send_rounded, size: 20, color: Color(0xFF00D09C)),
+                          onTap: () async {
+                            final ok = await NotificationService.instance.sendTestNotification(
+                              title: '🔔 Test Notification: Grow Expense',
+                              body: 'Notification system is working properly! You will receive subscription & update alerts.',
+                            );
+                            if (context.mounted) {
+                              if (ok) {
+                                CustomToast.show(context, '🔔 Test notification sent to your status bar!');
+                              } else {
+                                CustomToast.show(
+                                  context,
+                                  '⚠️ Please enable notification permission in phone settings',
+                                  isError: true,
+                                );
+                              }
+                            }
                           },
                         ),
                       ],

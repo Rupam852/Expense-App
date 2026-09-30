@@ -233,4 +233,58 @@ class NotificationService {
       debugPrint('[NotificationService] Error checking due subscriptions: $e');
     }
   }
+
+  /// Sends an instant Test Notification to verify sound, vibration & status bar alerts
+  Future<bool> sendTestNotification({
+    String title = '🔔 Test Notification: Grow Expense',
+    String body = 'Notifications are working perfectly! You will receive subscription & update alerts.',
+  }) async {
+    try {
+      if (!_isInitialized) {
+        await initialize();
+      }
+
+      final hasPermission = await requestNotificationPermission();
+      if (!hasPermission) {
+        debugPrint('[NotificationService] Notification permission not granted');
+        return false;
+      }
+
+      final bigTextStyleInformation = BigTextStyleInformation(
+        body,
+        htmlFormatBigText: false,
+        contentTitle: title,
+        htmlFormatContentTitle: false,
+        summaryText: 'Test Notification',
+        htmlFormatSummaryText: false,
+      );
+
+      final androidDetails = AndroidNotificationDetails(
+        _subChannelId,
+        _subChannelName,
+        channelDescription: _subChannelDescription,
+        importance: Importance.max,
+        priority: Priority.high,
+        showWhen: true,
+        icon: '@mipmap/ic_launcher',
+        styleInformation: bigTextStyleInformation,
+        color: const Color(0xFF00D09C),
+      );
+
+      final notificationDetails = NotificationDetails(android: androidDetails);
+
+      await _notificationsPlugin.show(
+        9999,
+        title,
+        body,
+        notificationDetails,
+        payload: 'test_notification',
+      );
+      debugPrint('[NotificationService] Test notification fired successfully!');
+      return true;
+    } catch (e) {
+      debugPrint('[NotificationService] Error firing test notification: $e');
+      return false;
+    }
+  }
 }
