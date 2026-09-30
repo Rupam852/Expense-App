@@ -499,13 +499,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 600);
   };
 
+  const addKhataUdharEntry = () => {
+    const khataItems = [
+      { merchant: 'Lent to Aman (Lunch Split)', category: 'Khata • WhatsApp Remind', amount: 350.00, iconType: 'services' },
+      { merchant: 'Netflix 4K Subscription', category: 'Subscription • 3 Days Left', amount: 649.00, iconType: 'food' },
+      { merchant: 'Goa Trip Cafe (Split with 4)', category: 'Split Bill • Active', amount: 480.00, iconType: 'other' }
+    ];
+    const item = khataItems[Math.floor(Math.random() * khataItems.length)];
+    addSimTransaction(item.merchant, item.amount, item.category, item.iconType);
+    playHaptic('success');
+  };
+
   const btnScan = document.getElementById('sim-action-scan');
   const btnAdd = document.getElementById('sim-action-add');
+  const btnKhata = document.getElementById('sim-action-khata');
   const btnSync = document.getElementById('sim-action-sync');
   const simFabBtn = document.getElementById('sim-fab-btn');
 
   if (btnScan) btnScan.addEventListener('click', addScanExpense);
   if (btnAdd) btnAdd.addEventListener('click', addManualExpense);
+  if (btnKhata) btnKhata.addEventListener('click', addKhataUdharEntry);
   if (btnSync) btnSync.addEventListener('click', syncSimDatabase);
   if (simSyncTrigger) simSyncTrigger.addEventListener('click', syncSimDatabase);
   if (simFabBtn) simFabBtn.addEventListener('click', addManualExpense);

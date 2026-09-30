@@ -1053,6 +1053,21 @@ a {
   z-index: 2;
 }
 
+.feature-tag-badge {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--primary-green);
+  background: rgba(0, 208, 156, 0.1);
+  border: 1px solid rgba(0, 208, 156, 0.25);
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
 .bento-content h3 {
   font-size: 1.3rem;
   color: #fff;
@@ -1566,7 +1581,7 @@ a {
 .footer {
   background-color: var(--bg-primary);
   border-top: 1px solid var(--glass-border);
-  padding: 40px 0;
+  padding: 48px 0 36px 0;
 }
 
 .footer-container {
@@ -1574,15 +1589,74 @@ a {
   margin: 0 auto;
   padding: 0 24px;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 20px;
+  gap: 24px;
+  text-align: center;
 }
 
-.footer p {
+.footer-dev-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.footer-dev-title {
+  font-size: 0.95rem;
+  color: #fff;
+  font-family: var(--font-display);
+}
+
+.footer-dev-title strong {
+  color: var(--primary-green);
+}
+
+.footer-social-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.footer-social-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: var(--transition-bounce);
+}
+
+.footer-social-pill:hover {
+  color: #fff;
+  border-color: var(--primary-green);
+  background: rgba(0, 208, 156, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 208, 156, 0.15);
+}
+
+.footer-social-pill.donate {
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+}
+
+.footer-social-pill.donate:hover {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+.footer-copy {
   color: var(--text-muted);
   font-size: 0.85rem;
+  margin: 0;
 }
 
 .footer-links {
@@ -1613,6 +1687,7 @@ a {
 
 @media (max-width: 576px) {
   .footer-container {
+    gap: 18px;
     flex-direction: column;
     text-align: center;
   }
