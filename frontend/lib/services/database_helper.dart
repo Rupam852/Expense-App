@@ -6,6 +6,7 @@ import '../models/expense.dart';
 import '../models/budget.dart';
 import '../models/payment_detail.dart';
 import '../models/khata_entry.dart';
+import '../models/split_bill.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -124,6 +125,23 @@ class DatabaseHelper {
     }).toList();
   }
 
+  static List<Map<String, dynamic>> decryptSplitBillMaps(List<Map<String, dynamic>> result) {
+    return result.map((row) {
+      final decryptedRow = Map<String, dynamic>.from(row);
+      decryptedRow['title'] = decryptVal(row['title']?.toString() ?? '');
+      decryptedRow['total_amount'] = decryptVal(row['total_amount']?.toString() ?? '0.0');
+      decryptedRow['paid_by'] = decryptVal(row['paid_by']?.toString() ?? 'You');
+      if (row['payer_upi_id'] != null) {
+        decryptedRow['payer_upi_id'] = decryptVal(row['payer_upi_id'].toString());
+      }
+      if (row['note'] != null) {
+        decryptedRow['note'] = decryptVal(row['note'].toString());
+      }
+      decryptedRow['participants_json'] = decryptVal(row['participants_json']?.toString() ?? '[]');
+      return decryptedRow;
+    }).toList();
+  }
+
   DatabaseHelper._init();
 
   static Future<void> _migrateDatabaseIfNecessary(Database db) async {
@@ -234,7 +252,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -292,6 +310,29 @@ class DatabaseHelper {
         ''');
       } catch (e) {
         print('Khata entries migration error: $e');
+      }
+    }
+    if (oldVersion < 6) {
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS split_bills (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            total_amount REAL NOT NULL,
+            paid_by TEXT NOT NULL,
+            payer_upi_id TEXT,
+            bill_date TEXT NOT NULL,
+            split_type TEXT NOT NULL,
+            participants_json TEXT NOT NULL,
+            note TEXT,
+            is_deleted INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            is_synced INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+      } catch (e) {
+        print('Split bills migration error: $e');
       }
     }
   }
@@ -364,6 +405,25 @@ class DatabaseHelper {
         note TEXT,
         is_settled INTEGER NOT NULL DEFAULT 0,
         settled_at TEXT,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        is_synced INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    // 6. Split Bills SQLite Table
+    await db.execute('''
+      CREATE TABLE split_bills (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        total_amount REAL NOT NULL,
+        paid_by TEXT NOT NULL,
+        payer_upi_id TEXT,
+        bill_date TEXT NOT NULL,
+        split_type TEXT NOT NULL,
+        participants_json TEXT NOT NULL,
+        note TEXT,
         is_deleted INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
@@ -653,6 +713,88 @@ class DatabaseHelper {
     );
     return await db.update(
       'khata_entries',
+      {
+        'is_deleted': 1,
+        'updated_at': DateTime.now().toIso8601String(),
+        'is_synced': 0,
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // ================= SPLIT BILLS CRUD =================
+
+  Future<int> insertSplitBill(SplitBill bill) async {
+    final db = await instance.database;
+    final map = bill.toMap();
+    map['title'] = encryptVal(bill.title);
+    map['total_amount'] = encryptVal(bill.totalAmount.toString());
+    map['paid_by'] = encryptVal(bill.paidBy);
+    if (bill.payerUpiId != null) {
+      map['payer_upi_id'] = encryptVal(bill.payerUpiId!);
+    }
+    if (bill.note != null) {
+      map['note'] = encryptVal(bill.note!);
+    }
+    map['participants_json'] = encryptVal(map['participants_json'].toString());
+    map['is_synced'] = 0;
+
+    return await db.insert(
+      'split_bills',
+      map,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<SplitBill>> getSplitBills() async {
+    final db = await instance.database;
+    final result = await db.query(
+      'split_bills',
+      where: 'is_deleted = 0',
+      orderBy: 'bill_date DESC',
+    );
+    final decrypted = decryptSplitBillMaps(result);
+    return decrypted.map((json) => SplitBill.fromMap(json)).toList();
+  }
+
+  Future<int> updateSplitBill(SplitBill bill) async {
+    final db = await instance.database;
+    final map = bill.toMap();
+    map['title'] = encryptVal(bill.title);
+    map['total_amount'] = encryptVal(bill.totalAmount.toString());
+    map['paid_by'] = encryptVal(bill.paidBy);
+    if (bill.payerUpiId != null) {
+      map['payer_upi_id'] = encryptVal(bill.payerUpiId!);
+    }
+    if (bill.note != null) {
+      map['note'] = encryptVal(bill.note!);
+    }
+    map['participants_json'] = encryptVal(map['participants_json'].toString());
+    map['is_synced'] = 0;
+    map['updated_at'] = DateTime.now().toIso8601String();
+
+    return await db.update(
+      'split_bills',
+      map,
+      where: 'id = ?',
+      whereArgs: [bill.id],
+    );
+  }
+
+  Future<int> deleteSplitBill(String id) async {
+    final db = await instance.database;
+    await db.insert(
+      'deleted_records',
+      {
+        'id': id,
+        'table_name': 'split_bills',
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    return await db.update(
+      'split_bills',
       {
         'is_deleted': 1,
         'updated_at': DateTime.now().toIso8601String(),

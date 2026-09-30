@@ -33,6 +33,7 @@ import 'ai_advisor_screen.dart';
 import '../models/spending_prediction.dart';
 import '../widgets/spending_prediction_card.dart';
 import 'khata_screen.dart';
+import 'split_bill_screen.dart';
 
 String getCurrencySymbol(String currencyCode) {
   switch (currencyCode.toUpperCase()) {
@@ -2323,6 +2324,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Navigator.of(context).pop();
                           Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const KhataScreen()),
+                          );
+                        },
+                      ),
+
+                      // Split Bills with Friends
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF6C63FF).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.call_split_rounded, color: Color(0xFF6C63FF), size: 22),
+                        ),
+                        title: Text(
+                          'Split Bills with Friends',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                        ),
+                        subtitle: Text(
+                          'Group splits, UPI QR settlement & WhatsApp share',
+                          style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (expenseProvider.splitBills.where((b) => !b.isDeleted && !b.isFullySettled).isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF6C63FF).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '${expenseProvider.splitBills.where((b) => !b.isDeleted && !b.isFullySettled).length} Active',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF6C63FF),
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.chevron_right, size: 20),
+                          ],
+                        ),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const SplitBillScreen()),
                           );
                         },
                       ),

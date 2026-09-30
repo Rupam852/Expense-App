@@ -12,6 +12,7 @@ import '../models/budget.dart';
 import 'package:csv/csv.dart';
 import '../models/payment_detail.dart';
 import '../models/khata_entry.dart';
+import '../models/split_bill.dart';
 import 'ai_config_service.dart';
 
 
@@ -23,6 +24,7 @@ class ExpenseProvider with ChangeNotifier {
   List<Budget> _budgets = [];
   List<PaymentDetail> _paymentDetails = [];
   List<KhataEntry> _khataEntries = [];
+  List<SplitBill> _splitBills = [];
 
   final List<String> _categories = [
     'Shopping',
@@ -122,6 +124,7 @@ class ExpenseProvider with ChangeNotifier {
   List<Budget> get budgets => _budgets;
   List<PaymentDetail> get paymentDetails => _paymentDetails;
   List<KhataEntry> get khataEntries => _khataEntries;
+  List<SplitBill> get splitBills => _splitBills;
   
   double get totalYouWillGet => _khataEntries
       .where((k) => !k.isDeleted && !k.isSettled && k.isLent)
@@ -132,6 +135,14 @@ class ExpenseProvider with ChangeNotifier {
       .fold<double>(0.0, (sum, k) => sum + k.amount);
 
   double get netKhataBalance => totalYouWillGet - totalYouWillGive;
+
+  double get totalSplitReceivable => _splitBills
+      .where((b) => !b.isDeleted)
+      .fold<double>(0.0, (sum, b) => sum + b.pendingCollection);
+
+  double get totalSplitPayable => _splitBills
+      .where((b) => !b.isDeleted)
+      .fold<double>(0.0, (sum, b) => sum + b.myPendingToPay);
 
   bool get isLoading => _isLoading;
   bool get isSyncing => _isSyncing;
@@ -157,6 +168,7 @@ class ExpenseProvider with ChangeNotifier {
       _budgets = await _dbHelper.getBudgets();
       _paymentDetails = await _dbHelper.getPaymentDetails();
       _khataEntries = await _dbHelper.getKhataEntries();
+      _splitBills = await _dbHelper.getSplitBills();
       _syncErrorMessage = null;
 
       // Auto-deduplicate local cached expenses on startup
@@ -350,6 +362,77 @@ class ExpenseProvider with ChangeNotifier {
   Future<void> deleteKhataEntry(String id) async {
     await _dbHelper.deleteKhataEntry(id);
     _khataEntries.removeWhere((k) => k.id == id);
+    notifyListeners();
+  }
+
+  // ──────────────────────────────────────────────────────
+  // SPLIT BILLS (Group / Shared Expense Ledger)
+  // ──────────────────────────────────────────────────────
+  Future<void> fetchSplitBills() async {
+    _splitBills = await _dbHelper.getSplitBills();
+    notifyListeners();
+  }
+
+  Future<void> addSplitBill({
+    required String title,
+    required double totalAmount,
+    required String paidBy,
+    String? payerUpiId,
+    required DateTime billDate,
+    String splitType = 'equal',
+    required List<SplitParticipant> participants,
+    String? note,
+  }) async {
+    final bill = SplitBill(
+      id: cryptoUuid(),
+      title: title.trim(),
+      totalAmount: totalAmount,
+      paidBy: paidBy.trim(),
+      payerUpiId: payerUpiId?.trim().isEmpty == true ? null : payerUpiId?.trim(),
+      billDate: billDate,
+      splitType: splitType,
+      participants: participants,
+      note: note?.trim().isEmpty == true ? null : note?.trim(),
+    );
+
+    await _dbHelper.insertSplitBill(bill);
+    _splitBills.insert(0, bill);
+    notifyListeners();
+  }
+
+  Future<void> updateSplitBill(SplitBill bill) async {
+    await _dbHelper.updateSplitBill(bill);
+    final index = _splitBills.indexWhere((b) => b.id == bill.id);
+    if (index != -1) {
+      _splitBills[index] = bill;
+      notifyListeners();
+    }
+  }
+
+  Future<void> toggleParticipantSettled(String billId, String participantName, bool isSettled) async {
+    final index = _splitBills.indexWhere((b) => b.id == billId);
+    if (index != -1) {
+      final bill = _splitBills[index];
+      final updatedParts = bill.participants.map((p) {
+        if (p.name.trim().toLowerCase() == participantName.trim().toLowerCase()) {
+          return p.copyWith(
+            isSettled: isSettled,
+            settledAt: isSettled ? DateTime.now() : null,
+          );
+        }
+        return p;
+      }).toList();
+
+      final updatedBill = bill.copyWith(participants: updatedParts);
+      await _dbHelper.updateSplitBill(updatedBill);
+      _splitBills[index] = updatedBill;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteSplitBill(String id) async {
+    await _dbHelper.deleteSplitBill(id);
+    _splitBills.removeWhere((b) => b.id == id);
     notifyListeners();
   }
 

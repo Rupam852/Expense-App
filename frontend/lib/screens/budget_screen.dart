@@ -329,7 +329,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 final predictions = SpendingPrediction.analyze(
                   expenses: expProvider.expenses,
                   budgets: expProvider.budgets,
-                  referenceDate: _selectedMonthYear,
+                  referenceDate: expProvider.selectedMonthYear,
                 );
                 if (predictions.isEmpty) return const SizedBox.shrink();
                 return Padding(
