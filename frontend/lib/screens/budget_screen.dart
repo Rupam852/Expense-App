@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import '../services/expense_provider.dart';
 import '../models/budget.dart';
 import '../widgets/app_logo.dart';
+import '../models/spending_prediction.dart';
+import '../widgets/spending_prediction_card.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -319,7 +321,26 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+
+            // AI Burn Velocity & Predictions in Budget Screen
+            Consumer<ExpenseProvider>(
+              builder: (context, expProvider, _) {
+                final predictions = SpendingPrediction.analyze(
+                  expenses: expProvider.expenses,
+                  budgets: expProvider.budgets,
+                  referenceDate: _selectedMonthYear,
+                );
+                if (predictions.isEmpty) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: SpendingPredictionCard(
+                    predictions: predictions,
+                    onAdjustBudgetTap: () => _openSetBudgetSheet(),
+                  ),
+                );
+              },
+            ),
 
             // 2. Budget limits lists
             Text(
