@@ -3148,11 +3148,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
           ),
           IconButton(
-            onPressed: () => VoiceExpenseDialog.show(context),
-            icon: const Icon(Icons.mic_none_rounded, color: Color(0xFF00D09C)),
-            tooltip: 'AI Voice Expense Logger',
-          ),
-          IconButton(
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const KhataScreen()),
             ),
@@ -3438,7 +3433,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: InkWell(
-                      onTap: () => VoiceExpenseDialog.show(context),
+                      onTap: () => SmsExpenseParserDialog.show(context),
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
@@ -3454,18 +3449,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             CircleAvatar(
                               radius: 17,
                               backgroundColor: const Color(0xFF6C63FF).withOpacity(0.12),
-                              child: const Icon(Icons.mic_none_rounded, color: Color(0xFF6C63FF), size: 18),
+                              child: const Icon(Icons.sms_outlined, color: Color(0xFF6C63FF), size: 18),
                             ),
                             const SizedBox(height: 7),
                             Text(
-                              'AI Voice',
+                              'SMS Parser',
                               style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF6C63FF)),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Speak expense',
+                              'Bank alerts',
                               style: GoogleFonts.inter(fontSize: 8.5, color: Colors.grey),
                               textAlign: TextAlign.center,
                             ),
