@@ -12,17 +12,22 @@ import '../widgets/custom_toast.dart';
 import 'ai_config_screen.dart';
 import '../widgets/ai_config_required_dialog.dart';
 import '../widgets/voice_expense_dialog.dart';
+import '../widgets/sms_expense_parser_dialog.dart';
 
 class ExpenseEntryScreen extends StatefulWidget {
   final bool openCameraScanner;
   final bool openGalleryScanner;
   final Expense? editExpense; // If passed, we are in Edit Mode
+  final String? initialDescription;
+  final String? initialCategory;
 
   const ExpenseEntryScreen({
     super.key,
     this.openCameraScanner = false,
     this.openGalleryScanner = false,
     this.editExpense,
+    this.initialDescription,
+    this.initialCategory,
   });
 
   @override
@@ -89,6 +94,13 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
       _isRecurring = exp.isRecurring;
       _recurrencePeriod = exp.recurrencePeriod == 'none' ? 'monthly' : exp.recurrencePeriod;
       _receiptLocalPath = exp.receiptUrl;
+    } else {
+      if (widget.initialDescription != null) {
+        _descriptionController.text = widget.initialDescription!;
+      }
+      if (widget.initialCategory != null) {
+        _selectedCategory = widget.initialCategory;
+      }
     }
 
     // Auto-trigger camera scan if passed from FAB/Dashboard action
@@ -404,6 +416,11 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
         title: Text(widget.editExpense != null ? 'Edit Transaction' : 'Add Transaction'),
         actions: [
           IconButton(
+            onPressed: () => SmsExpenseParserDialog.show(context),
+            icon: const Icon(Icons.sms_outlined, color: Color(0xFF00D09C)),
+            tooltip: 'Bank SMS Parser',
+          ),
+          IconButton(
             onPressed: () => VoiceExpenseDialog.show(context),
             icon: const Icon(Icons.mic_none_rounded, color: Color(0xFF00D09C)),
             tooltip: 'AI Voice Expense Logger',
@@ -588,6 +605,57 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                         }
                         return null;
                       },
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Quick Trip / Event Hashtag chips
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        '#GoaTrip2026',
+                        '#Diwali',
+                        '#Party',
+                        '#Office',
+                        '#Wedding',
+                        '#Medical',
+                        '#Shopping',
+                        '#Vacation',
+                      ].map((tag) {
+                        final hasThisTag = _descriptionController.text.contains(tag);
+                        return InkWell(
+                          onTap: () {
+                            setState(() {
+                              if (hasThisTag) {
+                                _descriptionController.text = _descriptionController.text.replaceAll(tag, '').replaceAll(RegExp(r'\s+'), ' ').trim();
+                              } else {
+                                _descriptionController.text = '${_descriptionController.text} $tag'.replaceAll(RegExp(r'\s+'), ' ').trim();
+                              }
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: hasThisTag
+                                  ? const Color(0xFF00D09C).withOpacity(0.2)
+                                  : (isDark ? const Color(0xFF222836) : const Color(0xFFF0F4F8)),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: hasThisTag ? const Color(0xFF00D09C) : Colors.transparent,
+                              ),
+                            ),
+                            child: Text(
+                              tag,
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: hasThisTag ? const Color(0xFF00D09C) : (isDark ? Colors.white70 : Colors.black87),
+                                fontWeight: hasThisTag ? FontWeight.bold : FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
                     const SizedBox(height: 16),
 

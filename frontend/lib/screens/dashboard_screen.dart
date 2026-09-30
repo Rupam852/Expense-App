@@ -35,6 +35,8 @@ import '../widgets/spending_prediction_card.dart';
 import 'khata_screen.dart';
 import 'split_bill_screen.dart';
 import 'subscription_screen.dart';
+import 'trip_tag_screen.dart';
+import '../widgets/sms_expense_parser_dialog.dart';
 
 String getCurrencySymbol(String currencyCode) {
   switch (currencyCode.toUpperCase()) {
@@ -2429,6 +2431,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         },
                       ),
 
+                      // Bank SMS Auto-Expense Parser
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF00D09C).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.sms_outlined, color: Color(0xFF00D09C), size: 22),
+                        ),
+                        title: Text(
+                          'Bank SMS Parser',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                        ),
+                        subtitle: Text(
+                          'Auto-detect ₹ debit & vendor from SMS text (Offline)',
+                          style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                        ),
+                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          SmsExpenseParserDialog.show(context);
+                        },
+                      ),
+
+                      // Trips & Event Tags
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE040FB).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.tag_rounded, color: Color(0xFFE040FB), size: 22),
+                        ),
+                        title: Text(
+                          'Trips & Event Tags',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                        ),
+                        subtitle: Text(
+                          'Track vacation & festival budgets (#GoaTrip, #Diwali)',
+                          style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                        ),
+                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const TripTagScreen()),
+                          );
+                        },
+                      ),
+
                       const SizedBox(height: 8),
                       const Divider(),
                       const SizedBox(height: 8),
@@ -3493,6 +3549,174 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             const SizedBox(height: 2),
                             Text(
                               'CSV Ledger',
+                              style: GoogleFonts.inter(fontSize: 8.5, color: Colors.grey),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // 2.2 Smart Tools Row (Bank SMS, Trips & Tags, Khata Book, Split Bills)
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => SmsExpenseParserDialog.show(context),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF181B22) : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(0xFF00D09C).withOpacity(0.3),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 17,
+                              backgroundColor: const Color(0xFF00D09C).withOpacity(0.12),
+                              child: const Icon(Icons.sms_outlined, color: Color(0xFF00D09C), size: 17),
+                            ),
+                            const SizedBox(height: 7),
+                            Text(
+                              'Bank SMS',
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF00D09C)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Auto-log ₹',
+                              style: GoogleFonts.inter(fontSize: 8.5, color: Colors.grey),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const TripTagScreen()),
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF181B22) : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 17,
+                              backgroundColor: const Color(0xFFE040FB).withOpacity(0.1),
+                              child: const Icon(Icons.tag_rounded, color: Color(0xFFE040FB), size: 17),
+                            ),
+                            const SizedBox(height: 7),
+                            Text(
+                              'Trip Tags',
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '#Goa #Diwali',
+                              style: GoogleFonts.inter(fontSize: 8.5, color: Colors.grey),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const KhataScreen()),
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF181B22) : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 17,
+                              backgroundColor: Colors.amber.withOpacity(0.12),
+                              child: const Icon(Icons.menu_book_rounded, color: Colors.amber, size: 17),
+                            ),
+                            const SizedBox(height: 7),
+                            Text(
+                              'Khata Book',
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Udhar Ledger',
+                              style: GoogleFonts.inter(fontSize: 8.5, color: Colors.grey),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const SplitBillScreen()),
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF181B22) : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 17,
+                              backgroundColor: const Color(0xFF6C63FF).withOpacity(0.12),
+                              child: const Icon(Icons.call_split_rounded, color: Color(0xFF6C63FF), size: 17),
+                            ),
+                            const SizedBox(height: 7),
+                            Text(
+                              'Split Bills',
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'UPI QR Split',
                               style: GoogleFonts.inter(fontSize: 8.5, color: Colors.grey),
                               textAlign: TextAlign.center,
                             ),

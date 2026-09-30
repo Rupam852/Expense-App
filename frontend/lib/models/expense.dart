@@ -109,4 +109,18 @@ class Expense {
 
   // Deserialize from JSON String
   factory Expense.fromJson(String source) => Expense.fromMap(json.decode(source));
+
+  /// Extract all hashtag tokens from description (e.g., ['GoaTrip', 'Diwali'])
+  List<String> get tags {
+    if (description.isEmpty) return const [];
+    final matches = RegExp(r'#([a-zA-Z0-9_\-]+)').allMatches(description);
+    return matches.map((m) => m.group(1)!).toSet().toList();
+  }
+
+  /// Check if this expense has a specific tag (case-insensitive)
+  bool hasTag(String tag) {
+    final clean = tag.replaceAll('#', '').toLowerCase();
+    return tags.any((t) => t.toLowerCase() == clean);
+  }
 }
+
