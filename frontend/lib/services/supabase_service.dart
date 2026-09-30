@@ -456,6 +456,159 @@ class SupabaseService {
   }
 
   // ══════════════════════════════════════════════════════
+  // KHATA / UDHAR (Cloud Backup)
+  // ══════════════════════════════════════════════════════
+
+  Future<List<Map<String, dynamic>>> fetchKhataEntries() async {
+    final uid = currentUser?.id;
+    if (uid == null) return [];
+    final data = await _client
+        .from('khata_entries')
+        .select()
+        .eq('user_id', uid)
+        .eq('is_deleted', false)
+        .order('entry_date', ascending: false);
+    return List<Map<String, dynamic>>.from(data);
+  }
+
+  Future<List<Map<String, dynamic>>> fetchKhataEntriesSince(String? lastSyncTime) async {
+    final uid = currentUser?.id;
+    if (uid == null) return [];
+    var query = _client.from('khata_entries').select().eq('user_id', uid);
+    if (lastSyncTime != null) {
+      query = query.gte('updated_at', lastSyncTime);
+    }
+    final data = await query.order('updated_at');
+    return List<Map<String, dynamic>>.from(data);
+  }
+
+  Future<void> upsertKhataEntries(List<Map<String, dynamic>> entries) async {
+    if (entries.isEmpty) return;
+    final uid = currentUser?.id;
+    if (uid == null) return;
+    final rows = entries.map((e) {
+      final copy = Map<String, dynamic>.from(e);
+      copy['user_id'] = uid;
+      copy['updated_at'] = e['updated_at'] ?? DateTime.now().toIso8601String();
+      if (copy['is_settled'] != null) {
+        copy['is_settled'] = copy['is_settled'] == 1 || copy['is_settled'] == true;
+      }
+      if (copy['is_deleted'] != null) {
+        copy['is_deleted'] = copy['is_deleted'] == 1 || copy['is_deleted'] == true;
+      }
+      copy.remove('is_synced');
+      return copy;
+    }).toList();
+    await _client.from('khata_entries').upsert(rows);
+  }
+
+  Future<void> softDeleteKhataEntry(String id) async {
+    await _client.from('khata_entries').delete().eq('id', id);
+  }
+
+  // ══════════════════════════════════════════════════════
+  // SUBSCRIPTIONS & RECURRING BILLS (Cloud Backup)
+  // ══════════════════════════════════════════════════════
+
+  Future<List<Map<String, dynamic>>> fetchSubscriptions() async {
+    final uid = currentUser?.id;
+    if (uid == null) return [];
+    final data = await _client
+        .from('subscriptions')
+        .select()
+        .eq('user_id', uid)
+        .eq('is_deleted', false)
+        .order('next_renewal_date', ascending: true);
+    return List<Map<String, dynamic>>.from(data);
+  }
+
+  Future<List<Map<String, dynamic>>> fetchSubscriptionsSince(String? lastSyncTime) async {
+    final uid = currentUser?.id;
+    if (uid == null) return [];
+    var query = _client.from('subscriptions').select().eq('user_id', uid);
+    if (lastSyncTime != null) {
+      query = query.gte('updated_at', lastSyncTime);
+    }
+    final data = await query.order('updated_at');
+    return List<Map<String, dynamic>>.from(data);
+  }
+
+  Future<void> upsertSubscriptions(List<Map<String, dynamic>> subscriptions) async {
+    if (subscriptions.isEmpty) return;
+    final uid = currentUser?.id;
+    if (uid == null) return;
+    final rows = subscriptions.map((s) {
+      final copy = Map<String, dynamic>.from(s);
+      copy['user_id'] = uid;
+      copy['updated_at'] = s['updated_at'] ?? DateTime.now().toIso8601String();
+      if (copy['auto_renewal'] != null) {
+        copy['auto_renewal'] = copy['auto_renewal'] == 1 || copy['auto_renewal'] == true;
+      }
+      if (copy['is_active'] != null) {
+        copy['is_active'] = copy['is_active'] == 1 || copy['is_active'] == true;
+      }
+      if (copy['is_deleted'] != null) {
+        copy['is_deleted'] = copy['is_deleted'] == 1 || copy['is_deleted'] == true;
+      }
+      copy.remove('is_synced');
+      return copy;
+    }).toList();
+    await _client.from('subscriptions').upsert(rows);
+  }
+
+  Future<void> softDeleteSubscription(String id) async {
+    await _client.from('subscriptions').delete().eq('id', id);
+  }
+
+  // ══════════════════════════════════════════════════════
+  // SPLIT BILLS (Cloud Backup)
+  // ══════════════════════════════════════════════════════
+
+  Future<List<Map<String, dynamic>>> fetchSplitBills() async {
+    final uid = currentUser?.id;
+    if (uid == null) return [];
+    final data = await _client
+        .from('split_bills')
+        .select()
+        .eq('user_id', uid)
+        .eq('is_deleted', false)
+        .order('bill_date', ascending: false);
+    return List<Map<String, dynamic>>.from(data);
+  }
+
+  Future<List<Map<String, dynamic>>> fetchSplitBillsSince(String? lastSyncTime) async {
+    final uid = currentUser?.id;
+    if (uid == null) return [];
+    var query = _client.from('split_bills').select().eq('user_id', uid);
+    if (lastSyncTime != null) {
+      query = query.gte('updated_at', lastSyncTime);
+    }
+    final data = await query.order('updated_at');
+    return List<Map<String, dynamic>>.from(data);
+  }
+
+  Future<void> upsertSplitBills(List<Map<String, dynamic>> splitBills) async {
+    if (splitBills.isEmpty) return;
+    final uid = currentUser?.id;
+    if (uid == null) return;
+    final rows = splitBills.map((b) {
+      final copy = Map<String, dynamic>.from(b);
+      copy['user_id'] = uid;
+      copy['updated_at'] = b['updated_at'] ?? DateTime.now().toIso8601String();
+      if (copy['is_deleted'] != null) {
+        copy['is_deleted'] = copy['is_deleted'] == 1 || copy['is_deleted'] == true;
+      }
+      copy.remove('is_synced');
+      return copy;
+    }).toList();
+    await _client.from('split_bills').upsert(rows);
+  }
+
+  Future<void> softDeleteSplitBill(String id) async {
+    await _client.from('split_bills').delete().eq('id', id);
+  }
+
+  // ══════════════════════════════════════════════════════
   // SYNC (Pull + Push with local SQLite)
   // ══════════════════════════════════════════════════════
 
@@ -464,8 +617,14 @@ class SupabaseService {
     required List<Map<String, dynamic>> unsyncedExpenses,
     required List<Map<String, dynamic>> unsyncedBudgets,
     required List<Map<String, dynamic>> unsyncedPaymentDetails,
+    List<Map<String, dynamic>> unsyncedKhataEntries = const [],
+    List<Map<String, dynamic>> unsyncedSubscriptions = const [],
+    List<Map<String, dynamic>> unsyncedSplitBills = const [],
     required List<String> deletedExpenseIds,
     required List<String> deletedBudgetIds,
+    List<String> deletedKhataIds = const [],
+    List<String> deletedSubscriptionIds = const [],
+    List<String> deletedSplitBillIds = const [],
     String? lastSyncTime,
   }) async {
     try {
@@ -475,6 +634,21 @@ class SupabaseService {
       for (final pd in unsyncedPaymentDetails) {
         await upsertPaymentDetail(pd);
       }
+      try {
+        await upsertKhataEntries(unsyncedKhataEntries);
+      } catch (e) {
+        print('[Sync] Khata upsert warning: $e');
+      }
+      try {
+        await upsertSubscriptions(unsyncedSubscriptions);
+      } catch (e) {
+        print('[Sync] Subscriptions upsert warning: $e');
+      }
+      try {
+        await upsertSplitBills(unsyncedSplitBills);
+      } catch (e) {
+        print('[Sync] SplitBills upsert warning: $e');
+      }
 
       // PUSH: apply server-side soft deletes
       for (final id in deletedExpenseIds) {
@@ -483,11 +657,41 @@ class SupabaseService {
       for (final id in deletedBudgetIds) {
         await softDeleteBudget(id);
       }
+      for (final id in deletedKhataIds) {
+        await softDeleteKhataEntry(id);
+      }
+      for (final id in deletedSubscriptionIds) {
+        await softDeleteSubscription(id);
+      }
+      for (final id in deletedSplitBillIds) {
+        await softDeleteSplitBill(id);
+      }
 
       // PULL: fetch server data since last sync
       final serverExpenses = await fetchExpensesSince(lastSyncTime);
       final serverBudgets = await fetchBudgets();
       final serverPayments = await fetchPaymentDetails();
+
+      List<Map<String, dynamic>> serverKhata = [];
+      try {
+        serverKhata = await fetchKhataEntriesSince(lastSyncTime);
+      } catch (e) {
+        print('[Sync] Khata fetch warning: $e');
+      }
+
+      List<Map<String, dynamic>> serverSubs = [];
+      try {
+        serverSubs = await fetchSubscriptionsSince(lastSyncTime);
+      } catch (e) {
+        print('[Sync] Subscriptions fetch warning: $e');
+      }
+
+      List<Map<String, dynamic>> serverSplits = [];
+      try {
+        serverSplits = await fetchSplitBillsSince(lastSyncTime);
+      } catch (e) {
+        print('[Sync] SplitBills fetch warning: $e');
+      }
 
       // Store new server time
       final prefs = await SharedPreferences.getInstance();
@@ -497,6 +701,9 @@ class SupabaseService {
         'expenses': serverExpenses,
         'budgets': serverBudgets,
         'paymentDetails': serverPayments,
+        'khataEntries': serverKhata,
+        'subscriptions': serverSubs,
+        'splitBills': serverSplits,
       };
     } catch (e) {
       print('[Sync] Error: $e');

@@ -896,6 +896,9 @@ class ExpenseProvider with ChangeNotifier {
       final unsyncedExps = await _dbHelper.getUnsyncedExpenses();
       final unsyncedBuds = await _dbHelper.getUnsyncedBudgets();
       final unsyncedPays = await _dbHelper.getUnsyncedPaymentDetails();
+      final unsyncedKhata = await _dbHelper.getUnsyncedKhataEntries();
+      final unsyncedSubs = await _dbHelper.getUnsyncedSubscriptions();
+      final unsyncedSplits = await _dbHelper.getUnsyncedSplitBills();
       final unsyncedDeletes = await _dbHelper.getUnsyncedDeletions();
       final prefs = await SharedPreferences.getInstance();
       final lastSync = prefs.getString('last_sync_time');
@@ -908,13 +911,31 @@ class ExpenseProvider with ChangeNotifier {
           .where((d) => d['table_name'] == 'budgets')
           .map((d) => d['id'] as String)
           .toList();
+      final deletedKhataIds = unsyncedDeletes
+          .where((d) => d['table_name'] == 'khata_entries')
+          .map((d) => d['id'] as String)
+          .toList();
+      final deletedSubIds = unsyncedDeletes
+          .where((d) => d['table_name'] == 'subscriptions')
+          .map((d) => d['id'] as String)
+          .toList();
+      final deletedSplitIds = unsyncedDeletes
+          .where((d) => d['table_name'] == 'split_bills')
+          .map((d) => d['id'] as String)
+          .toList();
 
       final syncResult = await _supabase.sync(
         unsyncedExpenses: unsyncedExps,
         unsyncedBudgets: unsyncedBuds,
         unsyncedPaymentDetails: unsyncedPays,
+        unsyncedKhataEntries: unsyncedKhata,
+        unsyncedSubscriptions: unsyncedSubs,
+        unsyncedSplitBills: unsyncedSplits,
         deletedExpenseIds: deletedExpIds,
         deletedBudgetIds: deletedBudIds,
+        deletedKhataIds: deletedKhataIds,
+        deletedSubscriptionIds: deletedSubIds,
+        deletedSplitBillIds: deletedSplitIds,
         lastSyncTime: lastSync,
       );
 
@@ -923,16 +944,25 @@ class ExpenseProvider with ChangeNotifier {
         await _dbHelper.markExpensesSynced(unsyncedExps.map((e) => e['id'] as String).toList());
         await _dbHelper.markBudgetsSynced(unsyncedBuds.map((b) => b['id'] as String).toList());
         await _dbHelper.markPaymentDetailsSynced(unsyncedPays.map((p) => p['id'] as String).toList());
+        await _dbHelper.markKhataEntriesSynced(unsyncedKhata.map((k) => k['id'] as String).toList());
+        await _dbHelper.markSubscriptionsSynced(unsyncedSubs.map((s) => s['id'] as String).toList());
+        await _dbHelper.markSplitBillsSynced(unsyncedSplits.map((sb) => sb['id'] as String).toList());
         await _dbHelper.clearSyncedDeletions(unsyncedDeletes.map((d) => d['id'] as String).toList());
 
         // Extract server data returned from the sync payload
         final List<dynamic> serverExpenses = syncResult['expenses'] ?? [];
         final List<dynamic> serverBudgets = syncResult['budgets'] ?? [];
         final List<dynamic> serverPayments = syncResult['paymentDetails'] ?? [];
+        final List<dynamic> serverKhata = syncResult['khataEntries'] ?? [];
+        final List<dynamic> serverSubs = syncResult['subscriptions'] ?? [];
+        final List<dynamic> serverSplits = syncResult['splitBills'] ?? [];
 
         await _dbHelper.syncDownExpenses(serverExpenses.map((e) => Expense.fromMap(Map<String, dynamic>.from(e))).toList());
         await _dbHelper.syncDownBudgets(serverBudgets.map((b) => Budget.fromMap(Map<String, dynamic>.from(b))).toList());
         await _dbHelper.syncDownPaymentDetails(serverPayments.map((p) => PaymentDetail.fromMap(Map<String, dynamic>.from(p))).toList());
+        await _dbHelper.syncDownKhataEntries(serverKhata.map((k) => KhataEntry.fromMap(Map<String, dynamic>.from(k))).toList());
+        await _dbHelper.syncDownSubscriptions(serverSubs.map((s) => SubscriptionItem.fromMap(Map<String, dynamic>.from(s))).toList());
+        await _dbHelper.syncDownSplitBills(serverSplits.map((sb) => SplitBill.fromMap(Map<String, dynamic>.from(sb))).toList());
 
         // Deduplicate local cached expenses after pulling from Supabase
         await deduplicateExpenses(triggerSync: false);
@@ -941,6 +971,9 @@ class ExpenseProvider with ChangeNotifier {
       _expenses = await _dbHelper.getExpenses();
       _budgets = await _dbHelper.getBudgets();
       _paymentDetails = await _dbHelper.getPaymentDetails();
+      _khataEntries = await _dbHelper.getKhataEntries();
+      _subscriptions = await _dbHelper.getSubscriptions();
+      _splitBills = await _dbHelper.getSplitBills();
       notifyListeners();
       return syncResult != null;
     } catch (e) {
@@ -1012,8 +1045,14 @@ class ExpenseProvider with ChangeNotifier {
         unsyncedExpenses: [],
         unsyncedBudgets: [],
         unsyncedPaymentDetails: [],
+        unsyncedKhataEntries: [],
+        unsyncedSubscriptions: [],
+        unsyncedSplitBills: [],
         deletedExpenseIds: [],
         deletedBudgetIds: [],
+        deletedKhataIds: [],
+        deletedSubscriptionIds: [],
+        deletedSplitBillIds: [],
         lastSyncTime: null,
       );
 
@@ -1021,19 +1060,31 @@ class ExpenseProvider with ChangeNotifier {
         final List<dynamic> serverExpenses = syncResult['expenses'] ?? [];
         final List<dynamic> serverBudgets = syncResult['budgets'] ?? [];
         final List<dynamic> serverPayments = syncResult['paymentDetails'] ?? [];
+        final List<dynamic> serverKhata = syncResult['khataEntries'] ?? [];
+        final List<dynamic> serverSubs = syncResult['subscriptions'] ?? [];
+        final List<dynamic> serverSplits = syncResult['splitBills'] ?? [];
 
         // Insert fetched items into local database
         await _dbHelper.syncDownExpenses(serverExpenses.map((e) => Expense.fromMap(Map<String, dynamic>.from(e))).toList());
         await _dbHelper.syncDownBudgets(serverBudgets.map((b) => Budget.fromMap(Map<String, dynamic>.from(b))).toList());
         await _dbHelper.syncDownPaymentDetails(serverPayments.map((p) => PaymentDetail.fromMap(Map<String, dynamic>.from(p))).toList());
+        await _dbHelper.syncDownKhataEntries(serverKhata.map((k) => KhataEntry.fromMap(Map<String, dynamic>.from(k))).toList());
+        await _dbHelper.syncDownSubscriptions(serverSubs.map((s) => SubscriptionItem.fromMap(Map<String, dynamic>.from(s))).toList());
+        await _dbHelper.syncDownSplitBills(serverSplits.map((sb) => SplitBill.fromMap(Map<String, dynamic>.from(sb))).toList());
 
         // Mark all restored items as synced in SQLite
         final expenseIds = serverExpenses.map((e) => e['id'] as String).toList();
         final budgetIds = serverBudgets.map((b) => b['id'] as String).toList();
         final paymentIds = serverPayments.map((p) => p['id'] as String).toList();
+        final khataIds = serverKhata.map((k) => k['id'] as String).toList();
+        final subIds = serverSubs.map((s) => s['id'] as String).toList();
+        final splitIds = serverSplits.map((sb) => sb['id'] as String).toList();
         await _dbHelper.markExpensesSynced(expenseIds);
         await _dbHelper.markBudgetsSynced(budgetIds);
         await _dbHelper.markPaymentDetailsSynced(paymentIds);
+        await _dbHelper.markKhataEntriesSynced(khataIds);
+        await _dbHelper.markSubscriptionsSynced(subIds);
+        await _dbHelper.markSplitBillsSynced(splitIds);
       } else {
         throw Exception('Cloud restoration returned empty database payload.');
       }
@@ -1042,6 +1093,9 @@ class ExpenseProvider with ChangeNotifier {
       _expenses = await _dbHelper.getExpenses();
       _budgets = await _dbHelper.getBudgets();
       _paymentDetails = await _dbHelper.getPaymentDetails();
+      _khataEntries = await _dbHelper.getKhataEntries();
+      _subscriptions = await _dbHelper.getSubscriptions();
+      _splitBills = await _dbHelper.getSplitBills();
       
       _isSyncing = false;
       notifyListeners();
@@ -1054,6 +1108,9 @@ class ExpenseProvider with ChangeNotifier {
       _expenses = await _dbHelper.getExpenses();
       _budgets = await _dbHelper.getBudgets();
       _paymentDetails = await _dbHelper.getPaymentDetails();
+      _khataEntries = await _dbHelper.getKhataEntries();
+      _subscriptions = await _dbHelper.getSubscriptions();
+      _splitBills = await _dbHelper.getSplitBills();
       notifyListeners();
       return false;
     }

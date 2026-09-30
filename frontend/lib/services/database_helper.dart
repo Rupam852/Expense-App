@@ -985,7 +985,12 @@ class DatabaseHelper {
       for (final del in deletions) {
         final id = del['id'] as String;
         final tableName = del['table_name'] as String;
-        if (tableName == 'expenses' || tableName == 'budgets' || tableName == 'payment_details') {
+        if (tableName == 'expenses' ||
+            tableName == 'budgets' ||
+            tableName == 'payment_details' ||
+            tableName == 'khata_entries' ||
+            tableName == 'subscriptions' ||
+            tableName == 'split_bills') {
           await txn.delete(tableName, where: 'id = ?', whereArgs: [id]);
         }
       }
@@ -1057,6 +1062,162 @@ class DatabaseHelper {
       where: 'id IN (${ids.map((_) => '?').join(', ')})',
       whereArgs: ids,
     );
+  }
+
+  Future<List<Map<String, dynamic>>> getUnsyncedKhataEntries() async {
+    final db = await instance.database;
+    final result = await db.query('khata_entries', where: 'is_synced = 0');
+    final decrypted = decryptKhataMaps(result);
+    return decrypted.map((row) {
+      final newRow = Map<String, dynamic>.from(row);
+      newRow['amount'] = double.tryParse(row['amount']?.toString() ?? '') ?? 0.0;
+      newRow['is_settled'] = row['is_settled'] == 1 || row['is_settled'] == true;
+      newRow['is_deleted'] = row['is_deleted'] == 1 || row['is_deleted'] == true;
+      return newRow;
+    }).toList();
+  }
+
+  Future<void> markKhataEntriesSynced(List<String> ids) async {
+    final db = await instance.database;
+    if (ids.isEmpty) return;
+    await db.update(
+      'khata_entries',
+      {'is_synced': 1},
+      where: 'id IN (${ids.map((_) => '?').join(', ')})',
+      whereArgs: ids,
+    );
+  }
+
+  Future<void> syncDownKhataEntries(List<KhataEntry> entries) async {
+    final db = await instance.database;
+    await db.transaction((txn) async {
+      for (final entry in entries) {
+        if (entry.isDeleted) {
+          await txn.delete('khata_entries', where: 'id = ?', whereArgs: [entry.id]);
+        } else {
+          final map = entry.toMap();
+          map['is_synced'] = 1;
+          map['person_name'] = encryptVal(map['person_name'].toString());
+          if (map['phone_number'] != null) {
+            map['phone_number'] = encryptVal(map['phone_number'].toString());
+          }
+          map['amount'] = encryptVal(map['amount'].toString());
+          if (map['note'] != null) {
+            map['note'] = encryptVal(map['note'].toString());
+          }
+          await txn.insert(
+            'khata_entries',
+            map,
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+      }
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getUnsyncedSubscriptions() async {
+    final db = await instance.database;
+    final result = await db.query('subscriptions', where: 'is_synced = 0');
+    final decrypted = decryptSubscriptionMaps(result);
+    return decrypted.map((row) {
+      final newRow = Map<String, dynamic>.from(row);
+      newRow['amount'] = double.tryParse(row['amount']?.toString() ?? '') ?? 0.0;
+      newRow['auto_renewal'] = row['auto_renewal'] == 1 || row['auto_renewal'] == true;
+      newRow['is_active'] = row['is_active'] == 1 || row['is_active'] == true;
+      newRow['is_deleted'] = row['is_deleted'] == 1 || row['is_deleted'] == true;
+      return newRow;
+    }).toList();
+  }
+
+  Future<void> markSubscriptionsSynced(List<String> ids) async {
+    final db = await instance.database;
+    if (ids.isEmpty) return;
+    await db.update(
+      'subscriptions',
+      {'is_synced': 1},
+      where: 'id IN (${ids.map((_) => '?').join(', ')})',
+      whereArgs: ids,
+    );
+  }
+
+  Future<void> syncDownSubscriptions(List<SubscriptionItem> items) async {
+    final db = await instance.database;
+    await db.transaction((txn) async {
+      for (final item in items) {
+        if (item.isDeleted) {
+          await txn.delete('subscriptions', where: 'id = ?', whereArgs: [item.id]);
+        } else {
+          final map = item.toMap();
+          map['is_synced'] = 1;
+          map['name'] = encryptVal(map['name'].toString());
+          map['amount'] = encryptVal(map['amount'].toString());
+          map['category'] = encryptVal(map['category'].toString());
+          if (map['payment_method'] != null) {
+            map['payment_method'] = encryptVal(map['payment_method'].toString());
+          }
+          if (map['note'] != null) {
+            map['note'] = encryptVal(map['note'].toString());
+          }
+          await txn.insert(
+            'subscriptions',
+            map,
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+      }
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getUnsyncedSplitBills() async {
+    final db = await instance.database;
+    final result = await db.query('split_bills', where: 'is_synced = 0');
+    final decrypted = decryptSplitBillMaps(result);
+    return decrypted.map((row) {
+      final newRow = Map<String, dynamic>.from(row);
+      newRow['total_amount'] = double.tryParse(row['total_amount']?.toString() ?? '') ?? 0.0;
+      newRow['is_deleted'] = row['is_deleted'] == 1 || row['is_deleted'] == true;
+      return newRow;
+    }).toList();
+  }
+
+  Future<void> markSplitBillsSynced(List<String> ids) async {
+    final db = await instance.database;
+    if (ids.isEmpty) return;
+    await db.update(
+      'split_bills',
+      {'is_synced': 1},
+      where: 'id IN (${ids.map((_) => '?').join(', ')})',
+      whereArgs: ids,
+    );
+  }
+
+  Future<void> syncDownSplitBills(List<SplitBill> bills) async {
+    final db = await instance.database;
+    await db.transaction((txn) async {
+      for (final bill in bills) {
+        if (bill.isDeleted) {
+          await txn.delete('split_bills', where: 'id = ?', whereArgs: [bill.id]);
+        } else {
+          final map = bill.toMap();
+          map['is_synced'] = 1;
+          map['title'] = encryptVal(map['title'].toString());
+          map['total_amount'] = encryptVal(map['total_amount'].toString());
+          map['paid_by'] = encryptVal(map['paid_by'].toString());
+          if (map['payer_upi_id'] != null) {
+            map['payer_upi_id'] = encryptVal(map['payer_upi_id'].toString());
+          }
+          if (map['note'] != null) {
+            map['note'] = encryptVal(map['note'].toString());
+          }
+          map['participants_json'] = encryptVal(map['participants_json'].toString());
+          await txn.insert(
+            'split_bills',
+            map,
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+      }
+    });
   }
 
   // Bulk upsert backend-delivered items on successful synchronization

@@ -354,7 +354,7 @@ class _TripTagScreenState extends State<TripTagScreen> {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              alignment: WrapCrossAlignment.center,
+              alignment: WrapAlignment.center,
               children: _popularTagSuggestions.map((tag) {
                 return ActionChip(
                   avatar: const Icon(Icons.add, size: 14, color: Color(0xFF00D09C)),
