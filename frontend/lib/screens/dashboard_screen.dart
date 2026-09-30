@@ -29,6 +29,7 @@ import 'app_update_screen.dart';
 import '../services/notification_service.dart';
 import '../widgets/ai_config_required_dialog.dart';
 import '../widgets/voice_expense_dialog.dart';
+import 'ai_advisor_screen.dart';
 
 String getCurrencySymbol(String currencyCode) {
   switch (currencyCode.toUpperCase()) {
@@ -3091,7 +3092,94 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+
+              // AI Financial Advisor Banner
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isDark
+                        ? [const Color(0xFF1F2438), const Color(0xFF151928)]
+                        : [const Color(0xFFF3F0FF), const Color(0xFFEBE5FF)],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFF6C63FF).withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const AiAdvisorScreen()),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF6C63FF).withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.psychology_alt_rounded,
+                              color: Color(0xFF6C63FF),
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      'Chat with GrowwAI Advisor',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.white : Colors.black87,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF6C63FF),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'AI',
+                                        style: TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Ask questions & get smart saving tips',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF6C63FF)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
 
               // 2. Rapid Actions Hub (Imports, OCR Scans, AI Voice, and CSV Statement Export)
               Row(

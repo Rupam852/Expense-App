@@ -870,6 +870,259 @@ JSON format:
     return {'success': false, 'error': 'Unknown provider: $provider'};
   }
 
+  // ══════════════════════════════════════════════════════════════════════
+  // AI FINANCIAL ADVISOR CHATBOT (Conversational Intelligence)
+  // ══════════════════════════════════════════════════════════════════════
+
+  Future<Map<String, dynamic>> askFinancialAdvisor({
+    required String userQuestion,
+    required String financialContextSummary,
+    required List<Map<String, String>> chatHistory,
+  }) async {
+    if (userQuestion.trim().isEmpty) {
+      return {'success': false, 'error': 'Please enter a question.'};
+    }
+
+    if (!hasAnyApiKey) {
+      return {
+        'success': false,
+        'error': 'No API Key configured. Please add your Gemini or NVIDIA NIM API key in Settings → AI Configuration.',
+        'needsConfig': true,
+      };
+    }
+
+    final primary = _primaryProvider;
+    final secondary = _secondaryProvider;
+
+    final primaryKey = primary == 'gemini' ? _geminiApiKey : _nvidiaApiKey;
+    final secondaryKey = secondary == 'gemini' ? _geminiApiKey : _nvidiaApiKey;
+
+    Map<String, dynamic>? primaryResult;
+    if (primaryKey.trim().isNotEmpty) {
+      debugPrint('[AiConfigService] Attempting Financial Advisor Chat with Primary Engine: $primary');
+      primaryResult = await _invokeProviderForFinancialAdvisor(
+        provider: primary,
+        userQuestion: userQuestion,
+        financialContextSummary: financialContextSummary,
+        chatHistory: chatHistory,
+      );
+
+      if (primaryResult['success'] == true) {
+        return primaryResult;
+      }
+      debugPrint('[AiConfigService] Primary Engine ($primary) failed for Advisor: ${primaryResult['error']}. Checking Secondary Engine...');
+    }
+
+    // Attempt Secondary Engine Failover
+    if (secondaryKey.trim().isNotEmpty) {
+      debugPrint('[AiConfigService] Failing over to Secondary Engine for Advisor: $secondary...');
+      var secondaryResult = await _invokeProviderForFinancialAdvisor(
+        provider: secondary,
+        userQuestion: userQuestion,
+        financialContextSummary: financialContextSummary,
+        chatHistory: chatHistory,
+      );
+
+      if (secondaryResult['success'] == true) {
+        return secondaryResult;
+      }
+
+      return {
+        'success': false,
+        'error': 'Both Primary ($primary) and Backup ($secondary) AI engines failed.\nPrimary: ${primaryResult?['error'] ?? 'No key'}\nBackup: ${secondaryResult['error']}',
+      };
+    }
+
+    return {
+      'success': false,
+      'error': primaryResult?['error'] ?? 'Configured AI provider failed. Please check your API Key in Settings.',
+    };
+  }
+
+  Future<Map<String, dynamic>> _invokeProviderForFinancialAdvisor({
+    required String provider,
+    required String userQuestion,
+    required String financialContextSummary,
+    required List<Map<String, String>> chatHistory,
+  }) async {
+    final systemPrompt = '''You are GrowwAI — a smart, friendly, empathetic, and data-driven Personal Financial Advisor & Expense Specialist.
+Your job is to answer the user's questions about their expenses, provide actionable saving tips, analyze category spending, identify overspending risks, and help them achieve their financial goals.
+
+### USER'S LIVE FINANCIAL LEDGER CONTEXT:
+$financialContextSummary
+
+### GUIDELINES:
+1. Always reference the user's ACTUAL expense numbers and categories from the provided context when answering.
+2. If the user asks in Hindi/Hinglish, reply in natural, supportive Hinglish. If in English, reply in English.
+3. Be concise, punchy, and use bullet points or bold figures (e.g. **₹4,500**) for clarity.
+4. Give concrete, realistic money-saving advice based on their highest spending categories.
+5. If the user asks something outside personal finance or their expenses, politely steer the conversation back to their money management.''';
+
+    if (provider == 'gemini') {
+      if (_geminiApiKey.isEmpty) {
+        return {'success': false, 'error': 'Gemini API Key is missing. Please add it in Settings → AI Configuration.'};
+      }
+
+      final candidateModels = <String>[_geminiModel];
+      for (final m in availableGeminiModels) {
+        if (!candidateModels.contains(m)) {
+          candidateModels.add(m);
+        }
+      }
+
+      // Build Gemini multi-turn contents list
+      final contents = <Map<String, dynamic>>[];
+      
+      // First turn: system instruction & ledger context
+      contents.add({
+        'role': 'user',
+        'parts': [{'text': '$systemPrompt\n\nInitial query: Hi GrowwAI, please be ready to analyze my expenses.'}],
+      });
+      contents.add({
+        'role': 'model',
+        'parts': [{'text': 'Hello! I have reviewed your expense ledger. How can I help you manage your money, analyze your spending, or save more today?'}],
+      });
+
+      // Add recent chat history (last 8 turns max to stay light)
+      final recentHistory = chatHistory.length > 8 ? chatHistory.sublist(chatHistory.length - 8) : chatHistory;
+      for (final turn in recentHistory) {
+        final role = turn['role'] == 'user' ? 'user' : 'model';
+        final text = turn['content'] ?? '';
+        if (text.isNotEmpty) {
+          contents.add({
+            'role': role,
+            'parts': [{'text': text}],
+          });
+        }
+      }
+
+      // Add current user question
+      contents.add({
+        'role': 'user',
+        'parts': [{'text': userQuestion}],
+      });
+
+      String? lastGeminiError;
+      for (final model in candidateModels) {
+        debugPrint('[AiConfigService] Attempting Gemini Financial Advisor with model: $model');
+        try {
+          final url = Uri.parse(
+            'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$_geminiApiKey',
+          );
+          final payload = {
+            'contents': contents,
+            'generationConfig': {
+              'temperature': 0.4,
+              'maxOutputTokens': 1024,
+            },
+          };
+
+          final response = await http.post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode(payload),
+          ).timeout(const Duration(seconds: 30));
+
+          if (response.statusCode == 200) {
+            final resJson = json.decode(response.body);
+            final candidates = resJson['candidates'] as List?;
+            if (candidates != null && candidates.isNotEmpty) {
+              final content = candidates[0]['content'];
+              final parts = content?['parts'] as List?;
+              if (parts != null && parts.isNotEmpty) {
+                final replyText = parts[0]['text']?.toString() ?? '';
+                if (replyText.trim().isNotEmpty) {
+                  debugPrint('[AiConfigService] Gemini Financial Advisor model $model succeeded!');
+                  return {'success': true, 'reply': replyText.trim(), 'modelUsed': model};
+                }
+              }
+            }
+            lastGeminiError = 'Model $model returned empty reply';
+          } else {
+            lastGeminiError = 'Model $model: HTTP ${response.statusCode}';
+            debugPrint('[AiConfigService] Gemini Advisor model $model failed (${response.statusCode}). Failing over to next Gemini model...');
+          }
+        } catch (e) {
+          lastGeminiError = 'Model $model: $e';
+          debugPrint('[AiConfigService] Gemini Advisor model $model error: $e. Failing over to next Gemini model...');
+        }
+      }
+
+      return {'success': false, 'error': 'All Gemini models failed ($lastGeminiError).'};
+    }
+
+    if (provider == 'nvidia') {
+      if (_nvidiaApiKey.isEmpty) {
+        return {'success': false, 'error': 'NVIDIA NIM API Key is missing. Please add it in Settings → AI Configuration.'};
+      }
+
+      final candidateModels = <String>[_nvidiaModel];
+      for (final m in availableNvidiaModels) {
+        if (!candidateModels.contains(m)) {
+          candidateModels.add(m);
+        }
+      }
+
+      final messages = <Map<String, String>>[
+        {'role': 'system', 'content': systemPrompt},
+      ];
+
+      final recentHistory = chatHistory.length > 8 ? chatHistory.sublist(chatHistory.length - 8) : chatHistory;
+      for (final turn in recentHistory) {
+        final role = turn['role'] == 'user' ? 'user' : 'assistant';
+        final text = turn['content'] ?? '';
+        if (text.isNotEmpty) {
+          messages.add({'role': role, 'content': text});
+        }
+      }
+
+      messages.add({'role': 'user', 'content': userQuestion});
+
+      String? lastNvidiaError;
+      for (final model in candidateModels) {
+        debugPrint('[AiConfigService] Attempting NVIDIA NIM Advisor with model: $model');
+        try {
+          final url = Uri.parse('https://integrate.api.nvidia.com/v1/chat/completions');
+          final payload = {
+            'model': model,
+            'messages': messages,
+            'max_tokens': 1024,
+            'temperature': 0.4,
+          };
+
+          final response = await http.post(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $_nvidiaApiKey',
+            },
+            body: json.encode(payload),
+          ).timeout(const Duration(seconds: 30));
+
+          if (response.statusCode == 200) {
+            final resJson = json.decode(response.body);
+            final replyText = resJson['choices']?[0]?['message']?['content']?.toString() ?? '';
+            if (replyText.trim().isNotEmpty) {
+              debugPrint('[AiConfigService] NVIDIA Advisor model $model succeeded!');
+              return {'success': true, 'reply': replyText.trim(), 'modelUsed': model};
+            }
+            lastNvidiaError = 'Model $model returned empty reply';
+          } else {
+            lastNvidiaError = 'Model $model: HTTP ${response.statusCode}';
+            debugPrint('[AiConfigService] NVIDIA Advisor model $model failed (${response.statusCode}). Failing over to next model...');
+          }
+        } catch (e) {
+          lastNvidiaError = 'Model $model: $e';
+          debugPrint('[AiConfigService] NVIDIA Advisor model $model error: $e. Failing over to next model...');
+        }
+      }
+
+      return {'success': false, 'error': 'All NVIDIA NIM models failed ($lastNvidiaError).'};
+    }
+
+    return {'success': false, 'error': 'Unknown provider: $provider'};
+  }
+
   Map<String, dynamic>? _extractJsonFromText(String raw) {
     var clean = raw.trim();
     final firstCurly = clean.indexOf('{');
