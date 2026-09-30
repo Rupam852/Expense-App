@@ -19,8 +19,10 @@ import 'expense_entry_screen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_file/open_file.dart';
 import '../widgets/app_logo.dart';
-import '../widgets/custom_toast.dart';
 import 'invoice_history_screen.dart';
+import 'settings_screen.dart';
+import 'ai_config_screen.dart';
+import '../services/ai_config_service.dart';
 
 String getCurrencySymbol(String currencyCode) {
   switch (currencyCode.toUpperCase()) {
@@ -1867,185 +1869,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _showGeminiKeyDialog(BuildContext context, UserProvider userProvider) {
-    final keyController = TextEditingController(text: userProvider.userGeminiApiKey ?? '');
-    final secondaryKeyController = TextEditingController(text: userProvider.userGeminiApiKeySecondary ?? '');
-    bool isObscured = true;
-    bool isSecondaryObscured = true;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            final hasKeys = (userProvider.userGeminiApiKey != null && userProvider.userGeminiApiKey!.isNotEmpty) ||
-                (userProvider.userGeminiApiKeySecondary != null && userProvider.userGeminiApiKeySecondary!.isNotEmpty);
-            return AlertDialog(
-              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: BorderSide(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
-                ),
-              ),
-              title: Row(
-                children: [
-                  Icon(Icons.psychology_outlined, color: Theme.of(context).primaryColor, size: 28),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'AI API Key Settings',
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Apna Google AI Studio (Gemini) API keys enter karein. Agar primary key fail hoti hai to optional backup key automatically use hogi.',
-                      style: GoogleFonts.inter(fontSize: 13, height: 1.4),
-                    ),
-                    const SizedBox(height: 10),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor.withOpacity(0.07),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('🔵 Google Gemini  (AIzaSy...)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
-                          Text('   aistudio.google.com — free, fast', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Primary Key Field
-                    TextFormField(
-                      controller: keyController,
-                      obscureText: isObscured,
-                      style: GoogleFonts.inter(fontSize: 14),
-                      decoration: InputDecoration(
-                        labelText: 'Primary API Key',
-                        labelStyle: TextStyle(color: Theme.of(context).primaryColor),
-                        hintText: 'AIzaSy...',
-                        filled: true,
-                        fillColor: Theme.of(context).primaryColor.withOpacity(0.03),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            isObscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                            size: 20,
-                          ),
-                          onPressed: () => setState(() => isObscured = !isObscured),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Secondary Key Field
-                    TextFormField(
-                      controller: secondaryKeyController,
-                      obscureText: isSecondaryObscured,
-                      style: GoogleFonts.inter(fontSize: 14),
-                      decoration: InputDecoration(
-                        labelText: 'Secondary API Key (Optional)',
-                        labelStyle: TextStyle(color: Theme.of(context).primaryColor),
-                        hintText: 'AIzaSy... (Backup key)',
-                        filled: true,
-                        fillColor: Theme.of(context).primaryColor.withOpacity(0.03),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            isSecondaryObscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                            size: 20,
-                          ),
-                          onPressed: () => setState(() => isSecondaryObscured = !isSecondaryObscured),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SelectableText(
-                      'Free keys generate karein:\naistudio.google.com',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        color: Theme.of(context).primaryColor,
-                        fontWeight: FontWeight.w600,
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actionsPadding: const EdgeInsets.all(16),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(
-                    'Cancel',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                  ),
-                ),
-                if (hasKeys)
-                  TextButton(
-                    onPressed: () async {
-                      await userProvider.saveUserGeminiApiKeys(primary: null, secondary: null);
-                      if (context.mounted) {
-                        CustomToast.show(context, 'Custom API Keys cleared successfully!');
-                        Navigator.of(context).pop();
-                      }
-                    },
-                    style: TextButton.styleFrom(foregroundColor: Colors.red),
-                    child: Text(
-                      'Clear Keys',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ElevatedButton(
-                  onPressed: () async {
-                    final keyVal = keyController.text.trim();
-                    final secondaryVal = secondaryKeyController.text.trim();
-                    await userProvider.saveUserGeminiApiKeys(
-                      primary: keyVal.isEmpty ? null : keyVal,
-                      secondary: secondaryVal.isEmpty ? null : secondaryVal,
-                    );
-                    if (context.mounted) {
-                      CustomToast.show(
-                        context,
-                        (keyVal.isEmpty && secondaryVal.isEmpty)
-                            ? 'Switched back to shared server key!'
-                            : 'API Keys saved successfully!',
-                      );
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: Text(
-                    'Save Keys',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const AiConfigScreen()),
     );
   }
 
@@ -3023,7 +2848,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: Row(
           children: [
             GestureDetector(
-              onTap: () => _showSettingsDrawer(context),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              ),
               child: CircleAvatar(
                 radius: 16,
                 backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
@@ -3089,7 +2916,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
           ),
           IconButton(
-            onPressed: () => _showSettingsDrawer(context),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            ),
             icon: const Icon(Icons.settings_outlined),
           ),
         ],

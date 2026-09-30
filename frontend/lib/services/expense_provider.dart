@@ -11,6 +11,7 @@ import '../models/expense.dart';
 import '../models/budget.dart';
 import 'package:csv/csv.dart';
 import '../models/payment_detail.dart';
+import 'ai_config_service.dart';
 
 
 class ExpenseProvider with ChangeNotifier {
@@ -299,6 +300,19 @@ class ExpenseProvider with ChangeNotifier {
         }
       } catch (_) {
         imageBytes = await File(imagePath).readAsBytes();
+      }
+
+      // Check if Custom AI Configuration is active
+      final aiService = AiConfigService.instance;
+      if (aiService.isCustomMode) {
+        final customResult = await aiService.parseReceiptWithConfig(imageBytes);
+        if (customResult['success'] == true) {
+          return customResult['data'] as Map<String, dynamic>?;
+        }
+        if (customResult['useDefaultBackend'] != true) {
+          _syncErrorMessage = customResult['error']?.toString();
+          return null;
+        }
       }
 
       final result = await _supabase.scanReceipt(imageBytes);
