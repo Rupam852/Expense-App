@@ -77,7 +77,12 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
         '$upiPart\n\nPlease settle whenever convenient. Thank you! 🙏';
 
     if (entry.phoneNumber != null && entry.phoneNumber!.trim().isNotEmpty) {
-      final cleanPhone = entry.phoneNumber!.replaceAll(RegExp(r'[^0-9+]'), '');
+      String cleanPhone = entry.phoneNumber!.replaceAll(RegExp(r'[^0-9+]'), '');
+      if (cleanPhone.startsWith('+')) {
+        cleanPhone = cleanPhone.substring(1);
+      } else if (cleanPhone.length == 10) {
+        cleanPhone = '91$cleanPhone'; // Default Indian country code
+      }
       final whatsappUrl = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(message)}');
       try {
         if (await canLaunchUrl(whatsappUrl)) {

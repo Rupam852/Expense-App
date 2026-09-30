@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/expense.dart';
 import '../services/expense_provider.dart';
@@ -137,18 +138,22 @@ class _TripTagScreenState extends State<TripTagScreen> {
       buffer.writeln('• ${DateFormat('dd MMM').format(e.transactionDate)}: ${e.category} - ${currencyFormat.format(e.amount)} ${e.description.isNotEmpty ? "(${e.description})" : ""}');
     }
     buffer.writeln('');
-    buffer.writeln('_Generated via AI Expense App_');
-
-    final uri = Uri.parse('whatsapp://send?text=${Uri.encodeComponent(buffer.toString())}');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open WhatsApp. Please check if it is installed.')),
-        );
+    final textContent = buffer.toString();
+    final uri = Uri.parse('whatsapp://send?text=${Uri.encodeComponent(textContent)}');
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        return;
       }
-    }
+    } catch (_) {}
+
+    // Fallback: System share sheet (Telegram, SMS, Notes, etc.)
+    await SharePlus.instance.share(
+      ShareParams(
+        text: textContent,
+        subject: 'Expense Summary for #${trip.tag}',
+      ),
+    );
   }
 
   void _showNewTagDialog(BuildContext context) {

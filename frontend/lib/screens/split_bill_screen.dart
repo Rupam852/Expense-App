@@ -151,7 +151,12 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
         '$upiInfo\n\nPlease settle whenever possible. Thanks! 🙏';
 
     if (participant.phoneNumber != null && participant.phoneNumber!.trim().isNotEmpty) {
-      final cleanPhone = participant.phoneNumber!.replaceAll(RegExp(r'[^0-9+]'), '');
+      String cleanPhone = participant.phoneNumber!.replaceAll(RegExp(r'[^0-9+]'), '');
+      if (cleanPhone.startsWith('+')) {
+        cleanPhone = cleanPhone.substring(1);
+      } else if (cleanPhone.length == 10) {
+        cleanPhone = '91$cleanPhone'; // Default Indian country code
+      }
       final whatsappUrl = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(message)}');
       try {
         if (await canLaunchUrl(whatsappUrl)) {
