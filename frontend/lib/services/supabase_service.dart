@@ -294,6 +294,10 @@ class SupabaseService {
 
   /// Call Edge Function to generate PDF invoice — returns PDF bytes
   Future<Uint8List?> generateInvoicePdf(List<Expense> expenses, {String? monthYear}) async {
+    if (expenses.isEmpty) {
+      print('[Invoice] No expenses provided. Aborting PDF generation.');
+      return null;
+    }
     try {
       final response = await _client.functions.invoke(
         'generate-invoice',
@@ -350,7 +354,7 @@ class SupabaseService {
           .eq('user_id', uid)
           .order('created_at', ascending: true); // Oldest first
 
-      if (existing != null && existing.length >= 15) {
+      if (existing.length >= 15) {
         final deleteCount = existing.length - 14; // Bring count down to 14 so we can add 1 to make it 15
         for (int i = 0; i < deleteCount; i++) {
           final oldInvoice = existing[i];
@@ -556,6 +560,10 @@ class SupabaseService {
 
   // Generate invoice locally and save to history
   Future<String?> generateAndSaveInvoice(List<Expense> expenses, {String? monthYear}) async {
+    if (expenses.isEmpty) {
+      print('[Invoice] No expenses to save statement.');
+      return null;
+    }
     final now = DateTime.now();
     final myMonthYear = monthYear ?? '${now.year}-${now.month.toString().padLeft(2, '0')}';
     final monthLabel = _monthLabel(myMonthYear);

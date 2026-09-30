@@ -610,10 +610,13 @@ class ExpenseProvider with ChangeNotifier {
   // INVOICE GENERATION (via Supabase Edge Function)
   // ──────────────────────────────────────────────────────
   Future<String?> downloadInvoice(List<String> expenseIds, {String? monthYear}) async {
+    final matchingExpenses = _expenses.where((e) => expenseIds.contains(e.id)).toList();
+    if (matchingExpenses.isEmpty) {
+      return null;
+    }
     _isSyncing = true;
     notifyListeners();
     try {
-      final matchingExpenses = _expenses.where((e) => expenseIds.contains(e.id)).toList();
       final path = await _supabase.generateAndSaveInvoice(matchingExpenses, monthYear: monthYear);
       return path;
     } catch (e) {
