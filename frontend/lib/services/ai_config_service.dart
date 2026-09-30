@@ -52,7 +52,6 @@ class AiConfigService with ChangeNotifier {
   ];
 
   // Configuration Fields
-  String _mode = 'default'; // 'default' | 'custom'
   String _geminiModel = 'gemini-2.0-flash';
   String _geminiApiKey = '';
   String _nvidiaModel = 'meta/llama-3.2-11b-vision-instruct';
@@ -60,15 +59,9 @@ class AiConfigService with ChangeNotifier {
   String _primaryProvider = 'gemini'; // 'gemini' | 'nvidia'
   String _secondaryProvider = 'nvidia'; // 'nvidia' | 'gemini'
 
-  // Cooldown tracker (30 seconds)
-  int _lastDefaultTestTimestamp = 0;
-  static const int testCooldownSeconds = 30;
-
   bool _isInitialized = false;
 
   // Getters
-  String get mode => _mode;
-  bool get isCustomMode => _mode == 'custom';
   String get geminiModel => _geminiModel;
   String get geminiApiKey => _geminiApiKey;
   String get nvidiaModel => _nvidiaModel;
@@ -77,36 +70,28 @@ class AiConfigService with ChangeNotifier {
   String get secondaryProvider => _secondaryProvider;
   bool get isInitialized => _isInitialized;
 
-  int get remainingCooldownSeconds {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final elapsed = (now - _lastDefaultTestTimestamp) ~/ 1000;
-    final remaining = testCooldownSeconds - elapsed;
-    return remaining > 0 ? remaining : 0;
-  }
-
-  bool get canTestDefaultModels => remainingCooldownSeconds == 0;
+  bool get hasAnyApiKey => _geminiApiKey.trim().isNotEmpty || _nvidiaApiKey.trim().isNotEmpty;
+  bool get hasPrimaryApiKey => _primaryProvider == 'gemini' 
+      ? _geminiApiKey.trim().isNotEmpty 
+      : _nvidiaApiKey.trim().isNotEmpty;
 
   // SharedPreferences Keys (Strictly local phone storage)
-  static const String _keyAiMode = 'local_ai_mode';
   static const String _keyGeminiModel = 'local_ai_gemini_model';
   static const String _keyGeminiApiKey = 'local_ai_gemini_api_key';
   static const String _keyNvidiaModel = 'local_ai_nvidia_model';
   static const String _keyNvidiaApiKey = 'local_ai_nvidia_api_key';
   static const String _keyPrimaryProvider = 'local_ai_primary_provider';
   static const String _keySecondaryProvider = 'local_ai_secondary_provider';
-  static const String _keyLastDefaultTest = 'local_ai_last_default_test';
 
   Future<void> _loadConfig() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _mode = prefs.getString(_keyAiMode) ?? 'default';
       _geminiModel = prefs.getString(_keyGeminiModel) ?? 'gemini-2.0-flash';
       _geminiApiKey = prefs.getString(_keyGeminiApiKey) ?? '';
       _nvidiaModel = prefs.getString(_keyNvidiaModel) ?? 'meta/llama-3.2-11b-vision-instruct';
       _nvidiaApiKey = prefs.getString(_keyNvidiaApiKey) ?? '';
       _primaryProvider = prefs.getString(_keyPrimaryProvider) ?? 'gemini';
       _secondaryProvider = prefs.getString(_keySecondaryProvider) ?? 'nvidia';
-      _lastDefaultTestTimestamp = prefs.getInt(_keyLastDefaultTest) ?? 0;
 
       // Ensure valid primary/secondary pairing
       if (_primaryProvider == _secondaryProvider) {
@@ -123,18 +108,6 @@ class AiConfigService with ChangeNotifier {
       debugPrint('[AiConfigService] Error loading local config: $e');
       _isInitialized = true;
       notifyListeners();
-    }
-  }
-
-  // Set mode (Default vs Custom) and persist locally
-  Future<void> setMode(String newMode) async {
-    _mode = newMode == 'custom' ? 'custom' : 'default';
-    notifyListeners();
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_keyAiMode, _mode);
-    } catch (e) {
-      debugPrint('[AiConfigService] Error saving mode: $e');
     }
   }
 
@@ -164,7 +137,6 @@ class AiConfigService with ChangeNotifier {
 
   // Save all custom settings to Phone Storage
   Future<bool> saveCustomConfiguration({
-    required String mode,
     required String geminiModel,
     required String geminiApiKey,
     required String nvidiaModel,
@@ -173,7 +145,6 @@ class AiConfigService with ChangeNotifier {
     required String secondaryProvider,
   }) async {
     try {
-      _mode = mode;
       _geminiModel = geminiModel.trim().isNotEmpty ? geminiModel.trim() : 'gemini-2.0-flash';
       _geminiApiKey = geminiApiKey.trim();
       _nvidiaModel = nvidiaModel.trim().isNotEmpty ? nvidiaModel.trim() : 'meta/llama-3.2-11b-vision-instruct';
@@ -188,7 +159,6 @@ class AiConfigService with ChangeNotifier {
       }
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_keyAiMode, _mode);
       await prefs.setString(_keyGeminiModel, _geminiModel);
       await prefs.setString(_keyGeminiApiKey, _geminiApiKey);
       await prefs.setString(_keyNvidiaModel, _nvidiaModel);
@@ -202,92 +172,6 @@ class AiConfigService with ChangeNotifier {
       debugPrint('[AiConfigService] Error saving custom config: $e');
       return false;
     }
-  }
-
-  // ─────────────────────────────────────────────────────────
-  // TEST DEFAULT AI MODELS (With 30-sec Rate Limiter)
-  // ─────────────────────────────────────────────────────────
-  Future<List<ModelCheckResult>> checkDefaultModels({
-    Function(int current, int total, String currentModel)? onProgress,
-  }) async {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final remaining = remainingCooldownSeconds;
-    if (remaining > 0) {
-      throw Exception('Rate limited. Please wait $remaining seconds before running another check.');
-    }
-
-    _lastDefaultTestTimestamp = now;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_keyLastDefaultTest, now);
-    notifyListeners();
-
-    final results = <ModelCheckResult>[];
-    final modelsToTest = [
-      'gemini-2.0-flash',
-      'gemini-1.5-flash',
-      'gemini-1.5-pro',
-      'gemini-2.0-flash-lite',
-      'gemini-pro-latest',
-    ];
-
-    for (int i = 0; i < modelsToTest.length; i++) {
-      final model = modelsToTest[i];
-      if (onProgress != null) {
-        onProgress(i + 1, modelsToTest.length, model);
-      }
-
-      final stopwatch = Stopwatch()..start();
-      try {
-        // Ping Google Gemini public discovery or test endpoint
-        final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/$model');
-        final response = await http.get(url).timeout(const Duration(seconds: 8));
-        stopwatch.stop();
-
-        if (response.statusCode == 200 || response.statusCode == 400 || response.statusCode == 403) {
-          // 200 means public metadata exists; 400/403 means endpoint is active and requires API key auth
-          results.add(ModelCheckResult(
-            provider: 'Google Gemini',
-            modelName: model,
-            isWorking: true,
-            latencyMs: stopwatch.elapsedMilliseconds,
-            message: 'Model is active & reachable on Google servers',
-          ));
-        } else if (response.statusCode == 404) {
-          results.add(ModelCheckResult(
-            provider: 'Google Gemini',
-            modelName: model,
-            isWorking: false,
-            latencyMs: stopwatch.elapsedMilliseconds,
-            message: 'Model not found on server (404)',
-            errorDetails: 'HTTP 404',
-          ));
-        } else {
-          results.add(ModelCheckResult(
-            provider: 'Google Gemini',
-            modelName: model,
-            isWorking: false,
-            latencyMs: stopwatch.elapsedMilliseconds,
-            message: 'Server returned HTTP ${response.statusCode}',
-            errorDetails: response.body,
-          ));
-        }
-      } catch (e) {
-        stopwatch.stop();
-        results.add(ModelCheckResult(
-          provider: 'Google Gemini',
-          modelName: model,
-          isWorking: false,
-          latencyMs: stopwatch.elapsedMilliseconds,
-          message: 'Connection failed: ${e.toString()}',
-          errorDetails: e.toString(),
-        ));
-      }
-
-      // Small pause between probes for smooth UI animation
-      await Future.delayed(const Duration(milliseconds: 250));
-    }
-
-    return results;
   }
 
   // ─────────────────────────────────────────────────────────
@@ -498,18 +382,29 @@ class AiConfigService with ChangeNotifier {
   }
 
   // ─────────────────────────────────────────────────────────
-  // DIRECT SCAN & PARSE VIA CONFIGURED AI ENGINES
+  // DIRECT SCAN & PARSE VIA USER'S CONFIGURED AI ENGINES
   // ─────────────────────────────────────────────────────────
   Future<Map<String, dynamic>> parseReceiptWithConfig(Uint8List imageBytes, {String mimeType = 'image/jpeg'}) async {
     final base64Image = base64Encode(imageBytes);
 
-    if (_mode == 'custom') {
-      // Execute with Primary Provider first
-      final primary = _primaryProvider;
-      final secondary = _secondaryProvider;
+    if (!hasAnyApiKey) {
+      return {
+        'success': false,
+        'error': 'No AI API Key found. Please add your Gemini or NVIDIA API Key in Settings → AI Configuration to use AI Receipt Scanning.',
+      };
+    }
 
+    // Execute with Primary Provider first
+    final primary = _primaryProvider;
+    final secondary = _secondaryProvider;
+
+    final primaryKey = primary == 'gemini' ? _geminiApiKey : _nvidiaApiKey;
+    final secondaryKey = secondary == 'gemini' ? _geminiApiKey : _nvidiaApiKey;
+
+    Map<String, dynamic>? primaryResult;
+    if (primaryKey.trim().isNotEmpty) {
       debugPrint('[AiConfigService] Attempting OCR with Primary Engine: $primary');
-      var primaryResult = await _invokeProviderForOcr(
+      primaryResult = await _invokeProviderForOcr(
         provider: primary,
         base64Image: base64Image,
         mimeType: mimeType,
@@ -518,8 +413,12 @@ class AiConfigService with ChangeNotifier {
       if (primaryResult['success'] == true) {
         return primaryResult;
       }
+      debugPrint('[AiConfigService] Primary Engine ($primary) failed: ${primaryResult['error']}. Checking Secondary Engine...');
+    }
 
-      debugPrint('[AiConfigService] Primary Engine ($primary) failed: ${primaryResult['error']}. Failing over to Secondary Engine: $secondary...');
+    // Attempt Secondary Engine Failover
+    if (secondaryKey.trim().isNotEmpty) {
+      debugPrint('[AiConfigService] Failing over to Secondary Engine: $secondary...');
       var secondaryResult = await _invokeProviderForOcr(
         provider: secondary,
         base64Image: base64Image,
@@ -532,12 +431,14 @@ class AiConfigService with ChangeNotifier {
 
       return {
         'success': false,
-        'error': 'Primary ($primary) and Secondary ($secondary) engines both failed.\nPrimary: ${primaryResult['error']}\nSecondary: ${secondaryResult['error']}',
+        'error': 'Both Primary ($primary) and Backup ($secondary) AI engines failed.\nPrimary: ${primaryResult?['error'] ?? 'No key'}\nBackup: ${secondaryResult['error']}',
       };
     }
 
-    // Default Mode: Return signal to use default backend Edge Function
-    return {'success': false, 'useDefaultBackend': true};
+    return {
+      'success': false,
+      'error': primaryResult?['error'] ?? 'Configured AI provider failed. Please check your API Key in Settings.',
+    };
   }
 
   Future<Map<String, dynamic>> _invokeProviderForOcr({
@@ -567,7 +468,7 @@ JSON structure:
 
     if (provider == 'gemini') {
       if (_geminiApiKey.isEmpty) {
-        return {'success': false, 'error': 'Gemini API Key is missing in Custom Settings.'};
+        return {'success': false, 'error': 'Gemini API Key is missing. Please add it in Settings → AI Configuration.'};
       }
       try {
         final url = Uri.parse(
@@ -615,7 +516,7 @@ JSON structure:
       }
     } else if (provider == 'nvidia') {
       if (_nvidiaApiKey.isEmpty) {
-        return {'success': false, 'error': 'NVIDIA API Key is missing in Custom Settings.'};
+        return {'success': false, 'error': 'NVIDIA API Key is missing. Please add it in Settings → AI Configuration.'};
       }
       try {
         final url = Uri.parse('https://integrate.api.nvidia.com/v1/chat/completions');

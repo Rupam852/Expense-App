@@ -299,25 +299,32 @@ class SettingsScreen extends StatelessWidget {
                 ListenableBuilder(
                   listenable: aiService,
                   builder: (context, _) {
-                    final isCustom = aiService.isCustomMode;
-                    final subtitle = isCustom
-                        ? 'Custom: ${aiService.primaryProvider == 'gemini' ? 'Gemini ➔ NVIDIA' : 'NVIDIA ➔ Gemini'}'
-                        : 'Default: Auto-Managed Cloud Models';
+                    final hasKey = aiService.hasAnyApiKey;
+                    final isPrimaryGemini = aiService.primaryProvider == 'gemini';
+                    final primaryModel = isPrimaryGemini ? aiService.geminiModel : aiService.nvidiaModel;
+                    final providerLabel = isPrimaryGemini ? 'Gemini' : 'NVIDIA NIM';
+                    final subtitle = hasKey
+                        ? 'Primary: $providerLabel ($primaryModel)'
+                        : 'API keys not configured (Tap to setup)';
 
                     return _buildSettingsCard(
                       isDark: isDark,
                       cardBg: cardBg,
-                      borderColor: isCustom ? primaryColor.withOpacity(0.4) : borderColor,
+                      borderColor: hasKey ? primaryColor.withOpacity(0.4) : Colors.amber.withOpacity(0.3),
                       children: [
                         ListTile(
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                           leading: Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: primaryColor.withOpacity(0.12),
+                              color: (hasKey ? primaryColor : Colors.amber).withOpacity(0.12),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Icon(Icons.psychology_outlined, color: primaryColor, size: 24),
+                            child: Icon(
+                              Icons.psychology_outlined,
+                              color: hasKey ? primaryColor : Colors.amber,
+                              size: 24,
+                            ),
                           ),
                           title: Row(
                             children: [
@@ -333,17 +340,15 @@ class SettingsScreen extends StatelessWidget {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: isCustom
-                                      ? const Color(0xFF6366F1).withOpacity(0.15)
-                                      : primaryColor.withOpacity(0.15),
+                                  color: (hasKey ? primaryColor : Colors.amber).withOpacity(0.15),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  isCustom ? 'CUSTOM' : 'DEFAULT',
+                                  hasKey ? 'CONFIGURED' : 'SETUP REQUIRED',
                                   style: GoogleFonts.inter(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
-                                    color: isCustom ? const Color(0xFF818CF8) : primaryColor,
+                                    color: hasKey ? primaryColor : Colors.amber,
                                   ),
                                 ),
                               ),
@@ -351,7 +356,10 @@ class SettingsScreen extends StatelessWidget {
                           ),
                           subtitle: Text(
                             subtitle,
-                            style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: hasKey ? Colors.grey : Colors.amber[700],
+                            ),
                           ),
                           trailing: const Icon(Icons.chevron_right, size: 22, color: Colors.grey),
                           onTap: () {

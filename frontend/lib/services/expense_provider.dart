@@ -302,24 +302,15 @@ class ExpenseProvider with ChangeNotifier {
         imageBytes = await File(imagePath).readAsBytes();
       }
 
-      // Check if Custom AI Configuration is active
+      // Scan receipt using User-Configured AI API Keys (Gemini / NVIDIA)
       final aiService = AiConfigService.instance;
-      if (aiService.isCustomMode) {
-        final customResult = await aiService.parseReceiptWithConfig(imageBytes);
-        if (customResult['success'] == true) {
-          return customResult['data'] as Map<String, dynamic>?;
-        }
-        if (customResult['useDefaultBackend'] != true) {
-          _syncErrorMessage = customResult['error']?.toString();
-          return null;
-        }
-      }
+      final result = await aiService.parseReceiptWithConfig(imageBytes);
 
-      final result = await _supabase.scanReceipt(imageBytes);
       if (result['success'] == true) {
         return result['data'] as Map<String, dynamic>?;
       }
-      _syncErrorMessage = result['error']?.toString();
+
+      _syncErrorMessage = result['error']?.toString() ?? 'OCR scanning failed. Please verify your API Key in Settings → AI Configuration.';
       return null;
     } catch (e) {
       _syncErrorMessage = 'OCR scanning failed: $e';
