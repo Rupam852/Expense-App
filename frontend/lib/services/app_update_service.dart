@@ -165,17 +165,36 @@ class AppUpdateService with ChangeNotifier {
 
   /// Opens the download link in the browser
   Future<bool> openDownloadLink() async {
-    final targetUrl = _latestUpdateInfo?.webUrl.isNotEmpty == true
+    final rawUrl = _latestUpdateInfo?.webUrl.isNotEmpty == true
         ? _latestUpdateInfo!.webUrl
         : (_latestUpdateInfo?.downloadUrl.isNotEmpty == true
             ? _latestUpdateInfo!.downloadUrl
             : defaultDownloadWebUrl);
 
+    final targetUrl = rawUrl.trim();
+    debugPrint('[AppUpdateService] Attempting to launch URL: $targetUrl');
+
     try {
       final uri = Uri.parse(targetUrl);
-      if (await canLaunchUrl(uri)) {
-        return await launchUrl(uri, mode: LaunchMode.externalApplication);
+      
+      // Attempt 1: Launch in External Application (Chrome / default browser)
+      try {
+        final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+        if (launched) return true;
+      } catch (e) {
+        debugPrint('[AppUpdateService] External launch failed: $e');
       }
+
+      // Attempt 2: Platform default
+      try {
+        final launched = await launchUrl(uri, mode: LaunchMode.platformDefault);
+        if (launched) return true;
+      } catch (e) {
+        debugPrint('[AppUpdateService] Platform default launch failed: $e');
+      }
+
+      // Attempt 3: In-App Browser View
+      return await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
     } catch (e) {
       debugPrint('[AppUpdateService] Failed to launch update URL: $e');
     }
