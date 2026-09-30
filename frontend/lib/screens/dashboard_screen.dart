@@ -27,6 +27,7 @@ import '../services/ai_config_service.dart';
 import '../services/app_update_service.dart';
 import 'app_update_screen.dart';
 import '../services/notification_service.dart';
+import '../widgets/ai_config_required_dialog.dart';
 
 String getCurrencySymbol(String currencyCode) {
   switch (currencyCode.toUpperCase()) {
@@ -1896,6 +1897,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _showOcrSourceDialog(BuildContext context) {
+    if (!checkAndPromptAiConfig(context)) {
+      return;
+    }
     showDialog(
       context: context,
       builder: (context) {

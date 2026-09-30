@@ -10,6 +10,7 @@ import '../services/user_provider.dart';
 import '../models/expense.dart';
 import '../widgets/custom_toast.dart';
 import 'ai_config_screen.dart';
+import '../widgets/ai_config_required_dialog.dart';
 
 class ExpenseEntryScreen extends StatefulWidget {
   final bool openCameraScanner;
@@ -207,6 +208,9 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
 
   // Trigger camera or gallery scanner
   void _triggerScanner(ImageSource source) async {
+    if (!checkAndPromptAiConfig(context)) {
+      return;
+    }
     HapticFeedback.mediumImpact();
     final userProvider = Provider.of<UserProvider>(context, listen: false);
 
