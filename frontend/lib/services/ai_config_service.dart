@@ -495,97 +495,134 @@ JSON structure:
       if (_geminiApiKey.isEmpty) {
         return {'success': false, 'error': 'Gemini API Key is missing. Please add it in Settings → AI Configuration.'};
       }
-      try {
-        final url = Uri.parse(
-          'https://generativelanguage.googleapis.com/v1beta/models/$_geminiModel:generateContent?key=$_geminiApiKey',
-        );
-        final payload = {
-          'contents': [
-            {
-              'parts': [
-                {'text': promptText},
-                {
-                  'inlineData': {
-                    'mimeType': mimeType,
-                    'data': base64Image,
-                  }
-                }
-              ]
-            }
-          ],
-          'generationConfig': {
-            'maxOutputTokens': 1024,
-            'temperature': 0.1,
-          }
-        };
 
-        final response = await http.post(
-          url,
-          headers: {'Content-Type': 'application/json'},
-          body: json.encode(payload),
-        ).timeout(const Duration(seconds: 25));
-
-        if (response.statusCode == 200) {
-          final resJson = json.decode(response.body);
-          final rawText = resJson['candidates']?[0]?['content']?['parts']?[0]?['text']?.toString() ?? '';
-          final parsed = _extractJsonFromText(rawText);
-          if (parsed != null) {
-            return {'success': true, 'data': parsed};
-          }
-          return {'success': false, 'error': 'Failed to parse JSON response from Gemini.'};
-        } else {
-          return {'success': false, 'error': 'Gemini HTTP ${response.statusCode}: ${response.body}'};
+      // Build model candidate list: user-selected model first, then all available Gemini models
+      final candidateModels = <String>[_geminiModel];
+      for (final m in availableGeminiModels) {
+        if (!candidateModels.contains(m)) {
+          candidateModels.add(m);
         }
-      } catch (e) {
-        return {'success': false, 'error': 'Gemini request error: $e'};
       }
+
+      String? lastGeminiError;
+      for (final model in candidateModels) {
+        debugPrint('[AiConfigService] Attempting Gemini OCR with model: $model');
+        try {
+          final url = Uri.parse(
+            'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$_geminiApiKey',
+          );
+          final payload = {
+            'contents': [
+              {
+                'parts': [
+                  {'text': promptText},
+                  {
+                    'inlineData': {
+                      'mimeType': mimeType,
+                      'data': base64Image,
+                    }
+                  }
+                ]
+              }
+            ],
+            'generationConfig': {
+              'maxOutputTokens': 1024,
+              'temperature': 0.1,
+            }
+          };
+
+          final response = await http.post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode(payload),
+          ).timeout(const Duration(seconds: 25));
+
+          if (response.statusCode == 200) {
+            final resJson = json.decode(response.body);
+            final rawText = resJson['candidates']?[0]?['content']?[parts]?[0]?['text']?.toString() ??
+                resJson['candidates']?[0]?['content']?['parts']?[0]?['text']?.toString() ?? '';
+            final parsed = _extractJsonFromText(rawText);
+            if (parsed != null) {
+              debugPrint('[AiConfigService] Gemini model $model succeeded!');
+              return {'success': true, 'data': parsed, 'modelUsed': model};
+            }
+            lastGeminiError = 'Model $model: JSON parsing failed';
+          } else {
+            lastGeminiError = 'Model $model: HTTP ${response.statusCode}';
+            debugPrint('[AiConfigService] Gemini model $model failed (${response.statusCode}). Failing over to next Gemini model...');
+          }
+        } catch (e) {
+          lastGeminiError = 'Model $model: $e';
+          debugPrint('[AiConfigService] Gemini model $model error: $e. Failing over to next Gemini model...');
+        }
+      }
+
+      return {'success': false, 'error': 'All Gemini models failed ($lastGeminiError).'};
     } else if (provider == 'nvidia') {
       if (_nvidiaApiKey.isEmpty) {
         return {'success': false, 'error': 'NVIDIA API Key is missing. Please add it in Settings → AI Configuration.'};
       }
-      try {
-        final url = Uri.parse('https://integrate.api.nvidia.com/v1/chat/completions');
-        final payload = {
-          'model': _nvidiaModel,
-          'messages': [
-            {
-              'role': 'user',
-              'content': [
-                {'type': 'text', 'text': promptText},
-                {
-                  'type': 'image_url',
-                  'image_url': {'url': 'data:$mimeType;base64,$base64Image'}
-                }
-              ]
-            }
-          ],
-          'max_tokens': 1024,
-          'temperature': 0.1,
-        };
 
-        final response = await http.post(
-          url,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $_nvidiaApiKey',
-          },
-          body: json.encode(payload),
-        ).timeout(const Duration(seconds: 30));
-
-        if (response.statusCode == 200) {
-          final resJson = json.decode(response.body);
-          final rawText = resJson['choices']?[0]?['message']?['content']?.toString() ?? '';
-          final parsed = _extractJsonFromText(rawText);
-          if (parsed != null) {
-            return {'success': true, 'data': parsed};
-          }
-          return {'success': false, 'error': 'Failed to parse JSON response from NVIDIA NIM.'};
-        } else {
-          return {'success': false, 'error': 'NVIDIA HTTP ${response.statusCode}: ${response.body}'};
+      // Build model candidate list: user-selected model first, then all available NVIDIA models
+      final candidateModels = <String>[_nvidiaModel];
+      for (final m in availableNvidiaModels) {
+        if (!candidateModels.contains(m)) {
+          candidateModels.add(m);
         }
-      } catch (e) {
-        return {'success': false, 'error': 'NVIDIA request error: $e'};
       }
+
+      String? lastNvidiaError;
+      for (final model in candidateModels) {
+        debugPrint('[AiConfigService] Attempting NVIDIA OCR with model: $model');
+        try {
+          final url = Uri.parse('https://integrate.api.nvidia.com/v1/chat/completions');
+          final payload = {
+            'model': model,
+            'messages': [
+              {
+                'role': 'user',
+                'content': [
+                  {'type': 'text', 'text': promptText},
+                  {
+                    'type': 'image_url',
+                    'image_url': {'url': 'data:$mimeType;base64,$base64Image'}
+                  }
+                ]
+              }
+            ],
+            'max_tokens': 1024,
+            'temperature': 0.1,
+          };
+
+          final response = await http.post(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $_nvidiaApiKey',
+            },
+            body: json.encode(payload),
+          ).timeout(const Duration(seconds: 30));
+
+          if (response.statusCode == 200) {
+            final resJson = json.decode(response.body);
+            final rawText = resJson['choices']?[0]?['message']?['content']?.toString() ?? '';
+            final parsed = _extractJsonFromText(rawText);
+            if (parsed != null) {
+              debugPrint('[AiConfigService] NVIDIA model $model succeeded!');
+              return {'success': true, 'data': parsed, 'modelUsed': model};
+            }
+            lastNvidiaError = 'Model $model: JSON parsing failed';
+          } else {
+            lastNvidiaError = 'Model $model: HTTP ${response.statusCode}';
+            debugPrint('[AiConfigService] NVIDIA model $model failed (${response.statusCode}). Failing over to next NVIDIA model...');
+          }
+        } catch (e) {
+          lastNvidiaError = 'Model $model: $e';
+          debugPrint('[AiConfigService] NVIDIA model $model error: $e. Failing over to next NVIDIA model...');
+        }
+      }
+
+      return {'success': false, 'error': 'All NVIDIA NIM models failed ($lastNvidiaError).'};
     }
 
     return {'success': false, 'error': 'Unknown provider: $provider'};
