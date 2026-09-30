@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/notification_service.dart';
+import '../models/subscription_item.dart';
+import '../services/app_update_service.dart';
 import '../widgets/custom_toast.dart';
 
 class NotificationSettingsScreen extends StatelessWidget {
@@ -305,8 +307,8 @@ class NotificationSettingsScreen extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // 3. GRANULAR FEATURE NOTIFICATIONS
-                _buildSectionHeader('FEATURE ALERTS & REMINDERS', isDark),
+                // 3. GRANULAR FEATURE NOTIFICATIONS WITH INDIVIDUAL TEST BUTTONS
+                _buildSectionHeader('FEATURE ALERTS & SEPARATE TEST', isDark),
                 const SizedBox(height: 8),
                 _buildSettingsCard(
                   isDark: isDark,
@@ -314,220 +316,181 @@ class NotificationSettingsScreen extends StatelessWidget {
                   borderColor: borderColor,
                   children: [
                     // A. Budget & Spending Limits
-                    SwitchListTile(
-                      activeColor: primaryColor,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      secondary: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEF4444).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.pie_chart_outline_rounded, color: Color(0xFFEF4444), size: 22),
-                      ),
-                      title: Text(
-                        'Budget & Spending Limits',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        'Alerts when spending hits 90% or 100% of limits',
-                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
-                      ),
-                      value: isMasterOn && service.budgetAlertsEnabled,
-                      onChanged: isMasterOn ? (val) => service.setBudgetAlertsEnabled(val) : null,
+                    _buildFeatureTileWithTest(
+                      context: context,
+                      isDark: isDark,
+                      primaryColor: primaryColor,
+                      icon: Icons.pie_chart_outline_rounded,
+                      iconColor: const Color(0xFFEF4444),
+                      title: 'Budget & Spending Limits',
+                      subtitle: 'Alerts when spending hits 90% or 100% of limits',
+                      isEnabled: isMasterOn && service.budgetAlertsEnabled,
+                      isMasterOn: isMasterOn,
+                      onToggle: (val) => service.setBudgetAlertsEnabled(val),
+                      onTestTap: () async {
+                        await service.showBudgetLimitNotification(
+                          category: 'Shopping',
+                          spent: 5500,
+                          limit: 5000,
+                          percentage: 110,
+                        );
+                        if (context.mounted) {
+                          CustomToast.show(context, '🚨 Test Budget Exceeded Alert sent to status bar!');
+                        }
+                      },
                     ),
                     Divider(height: 1, color: borderColor),
 
                     // B. Subscriptions & Bills
-                    SwitchListTile(
-                      activeColor: primaryColor,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      secondary: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.repeat_rounded, color: Color(0xFFF59E0B), size: 22),
-                      ),
-                      title: Text(
-                        'Subscriptions & Bills',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        'Alerts for due dates, overdue bills & renewals',
-                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
-                      ),
-                      value: isMasterOn && service.subscriptionAlertsEnabled,
-                      onChanged: isMasterOn ? (val) => service.setSubscriptionAlertsEnabled(val) : null,
+                    _buildFeatureTileWithTest(
+                      context: context,
+                      isDark: isDark,
+                      primaryColor: primaryColor,
+                      icon: Icons.repeat_rounded,
+                      iconColor: const Color(0xFFF59E0B),
+                      title: 'Subscriptions & Bills',
+                      subtitle: 'Alerts for due dates, overdue bills & renewals',
+                      isEnabled: isMasterOn && service.subscriptionAlertsEnabled,
+                      isMasterOn: isMasterOn,
+                      onToggle: (val) => service.setSubscriptionAlertsEnabled(val),
+                      onTestTap: () async {
+                        final sampleSub = SubscriptionItem(
+                          id: 'sample-netflix',
+                          name: 'Netflix Premium',
+                          amount: 649,
+                          billingCycle: 'monthly',
+                          nextRenewalDate: DateTime.now(),
+                          category: 'Subscription',
+                        );
+                        await service.showSubscriptionDueNotification(sampleSub);
+                        if (context.mounted) {
+                          CustomToast.show(context, '🔔 Test Subscription Due Alert sent to status bar!');
+                        }
+                      },
                     ),
                     Divider(height: 1, color: borderColor),
 
                     // C. Khata & Udhar Reminders
-                    SwitchListTile(
-                      activeColor: primaryColor,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      secondary: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.handshake_outlined, color: Color(0xFF10B981), size: 22),
-                      ),
-                      title: Text(
-                        'Khata & Udhar Reminders',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        'Reminders for pending lend & borrow settlements',
-                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
-                      ),
-                      value: isMasterOn && service.khataAlertsEnabled,
-                      onChanged: isMasterOn ? (val) => service.setKhataAlertsEnabled(val) : null,
+                    _buildFeatureTileWithTest(
+                      context: context,
+                      isDark: isDark,
+                      primaryColor: primaryColor,
+                      icon: Icons.handshake_outlined,
+                      iconColor: const Color(0xFF10B981),
+                      title: 'Khata & Udhar Reminders',
+                      subtitle: 'Reminders for pending lend & borrow settlements',
+                      isEnabled: isMasterOn && service.khataAlertsEnabled,
+                      isMasterOn: isMasterOn,
+                      onToggle: (val) => service.setKhataAlertsEnabled(val),
+                      onTestTap: () async {
+                        await service.showKhataReminderNotification(
+                          personName: 'Rahul Sharma',
+                          amount: 1500,
+                          isLent: true,
+                          dueDate: DateTime.now(),
+                        );
+                        if (context.mounted) {
+                          CustomToast.show(context, '💸 Test Khata Reminder sent to status bar!');
+                        }
+                      },
                     ),
                     Divider(height: 1, color: borderColor),
 
                     // D. Daily Evening Expense Log Reminder
-                    SwitchListTile(
-                      activeColor: primaryColor,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      secondary: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.nightlight_round, color: Color(0xFF8B5CF6), size: 22),
-                      ),
-                      title: Text(
-                        'Daily Expense Logging Reminder',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        'Evening nudge (9:00 PM) to record today\'s expenses',
-                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
-                      ),
-                      value: isMasterOn && service.dailyReminderEnabled,
-                      onChanged: isMasterOn ? (val) => service.setDailyReminderEnabled(val) : null,
+                    _buildFeatureTileWithTest(
+                      context: context,
+                      isDark: isDark,
+                      primaryColor: primaryColor,
+                      icon: Icons.nightlight_round,
+                      iconColor: const Color(0xFF8B5CF6),
+                      title: 'Daily Expense Logging Reminder',
+                      subtitle: 'Evening nudge (9:00 PM) to record today\'s expenses',
+                      isEnabled: isMasterOn && service.dailyReminderEnabled,
+                      isMasterOn: isMasterOn,
+                      onToggle: (val) => service.setDailyReminderEnabled(val),
+                      onTestTap: () async {
+                        await service.showDailyEveningReminder();
+                        if (context.mounted) {
+                          CustomToast.show(context, '🌙 Test Daily Evening Reminder sent to status bar!');
+                        }
+                      },
                     ),
                     Divider(height: 1, color: borderColor),
 
                     // E. Split Bill Pending Alerts
-                    SwitchListTile(
-                      activeColor: primaryColor,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      secondary: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF6366F1).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.call_split_rounded, color: Color(0xFF6366F1), size: 22),
-                      ),
-                      title: Text(
-                        'Split Bill Pending Alerts',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        'Alerts when group members have pending shares',
-                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
-                      ),
-                      value: isMasterOn && service.splitBillAlertsEnabled,
-                      onChanged: isMasterOn ? (val) => service.setSplitBillAlertsEnabled(val) : null,
+                    _buildFeatureTileWithTest(
+                      context: context,
+                      isDark: isDark,
+                      primaryColor: primaryColor,
+                      icon: Icons.call_split_rounded,
+                      iconColor: const Color(0xFF6366F1),
+                      title: 'Split Bill Pending Alerts',
+                      subtitle: 'Alerts when group members have pending shares',
+                      isEnabled: isMasterOn && service.splitBillAlertsEnabled,
+                      isMasterOn: isMasterOn,
+                      onToggle: (val) => service.setSplitBillAlertsEnabled(val),
+                      onTestTap: () async {
+                        await service.showSplitBillPendingNotification(
+                          titleText: 'Goa Trip Dinner',
+                          pendingAmount: 1850,
+                          pendingPeopleCount: 3,
+                        );
+                        if (context.mounted) {
+                          CustomToast.show(context, '👥 Test Split Bill Alert sent to status bar!');
+                        }
+                      },
                     ),
                     Divider(height: 1, color: borderColor),
 
                     // F. Monthly Savings & Financial Summary
-                    SwitchListTile(
-                      activeColor: primaryColor,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      secondary: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF00D09C).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.insights_rounded, color: Color(0xFF00D09C), size: 22),
-                      ),
-                      title: Text(
-                        'Monthly Savings & Report',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        'Month-end savings analysis & category breakdowns',
-                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
-                      ),
-                      value: isMasterOn && service.monthlyReportEnabled,
-                      onChanged: isMasterOn ? (val) => service.setMonthlyReportEnabled(val) : null,
+                    _buildFeatureTileWithTest(
+                      context: context,
+                      isDark: isDark,
+                      primaryColor: primaryColor,
+                      icon: Icons.insights_rounded,
+                      iconColor: const Color(0xFF00D09C),
+                      title: 'Monthly Savings & Report',
+                      subtitle: 'Month-end savings analysis & category breakdowns',
+                      isEnabled: isMasterOn && service.monthlyReportEnabled,
+                      isMasterOn: isMasterOn,
+                      onToggle: (val) => service.setMonthlyReportEnabled(val),
+                      onTestTap: () async {
+                        await service.showMonthlySavingsReportNotification(
+                          totalSpent: 16500,
+                          totalSaved: 4200,
+                          monthName: 'September',
+                        );
+                        if (context.mounted) {
+                          CustomToast.show(context, '🎉 Test Monthly Report sent to status bar!');
+                        }
+                      },
                     ),
                     Divider(height: 1, color: borderColor),
 
                     // G. App Updates
-                    SwitchListTile(
-                      activeColor: primaryColor,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      secondary: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF06B6D4).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.system_update_rounded, color: Color(0xFF06B6D4), size: 22),
-                      ),
-                      title: Text(
-                        'App Version Updates',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        'Alerts when new features & release APKs arrive',
-                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
-                      ),
-                      value: isMasterOn && service.appUpdatesEnabled,
-                      onChanged: isMasterOn ? (val) => service.setAppUpdatesEnabled(val) : null,
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-
-                // 4. TEST BUTTON CARD
-                _buildSettingsCard(
-                  isDark: isDark,
-                  cardBg: cardBg,
-                  borderColor: borderColor,
-                  children: [
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: primaryColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(Icons.send_rounded, color: primaryColor, size: 22),
-                      ),
-                      title: Text(
-                        'Send Test Push Notification',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        'Sends test alert in ${service.languageDisplayName}',
-                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
-                      ),
-                      trailing: Icon(Icons.play_arrow_rounded, color: primaryColor, size: 24),
-                      onTap: () async {
-                        final ok = await service.sendTestNotification();
+                    _buildFeatureTileWithTest(
+                      context: context,
+                      isDark: isDark,
+                      primaryColor: primaryColor,
+                      icon: Icons.system_update_rounded,
+                      iconColor: const Color(0xFF06B6D4),
+                      title: 'App Version Updates',
+                      subtitle: 'Alerts when new features & release APKs arrive',
+                      isEnabled: isMasterOn && service.appUpdatesEnabled,
+                      isMasterOn: isMasterOn,
+                      onToggle: (val) => service.setAppUpdatesEnabled(val),
+                      onTestTap: () async {
+                        final sampleUpdate = AppUpdateInfo(
+                          hasUpdate: true,
+                          latestVersion: '2.1.0',
+                          downloadUrl: 'https://github.com/Rupam852/Expense-App/releases',
+                          description: '• Brand new multi-language notifications\n• Granular alert toggles',
+                          fileSizeBytes: 26948403,
+                          releaseDate: DateTime.now().toIso8601String(),
+                        );
+                        await service.showUpdateNotification(sampleUpdate);
                         if (context.mounted) {
-                          if (ok) {
-                            CustomToast.show(context, '🔔 Test notification sent to status bar!');
-                          } else {
-                            CustomToast.show(
-                              context,
-                              '⚠️ Please allow notification permission in Android Settings',
-                              isError: true,
-                            );
-                          }
+                          CustomToast.show(context, '🚀 Test Update Alert sent to status bar!');
                         }
                       },
                     ),
@@ -539,6 +502,92 @@ class NotificationSettingsScreen extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildFeatureTileWithTest({
+    required BuildContext context,
+    required bool isDark,
+    required Color primaryColor,
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required bool isEnabled,
+    required bool isMasterOn,
+    required ValueChanged<bool> onToggle,
+    required VoidCallback onTestTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: iconColor, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13.5),
+                ),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 6),
+          // SEPARATE TEST BUTTON FOR THIS FEATURE
+          InkWell(
+            onTap: onTestTap,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: primaryColor.withValues(alpha: isDark ? 0.15 : 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: primaryColor.withValues(alpha: 0.35)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.play_arrow_rounded, color: primaryColor, size: 14),
+                  const SizedBox(width: 2),
+                  Text(
+                    'Test',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: primaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          // ON / OFF TOGGLE SWITCH
+          Switch(
+            activeColor: primaryColor,
+            value: isEnabled,
+            onChanged: isMasterOn ? onToggle : null,
+          ),
+        ],
       ),
     );
   }
