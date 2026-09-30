@@ -46,6 +46,7 @@ dependencies:
   # Sharing & File Operations
   share_plus: ^9.0.0
   open_file: ^3.5.4
+  url_launcher: ^6.3.0
 
   # Authentication
   google_sign_in: ^6.2.1

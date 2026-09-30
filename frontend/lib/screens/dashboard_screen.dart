@@ -23,6 +23,8 @@ import 'invoice_history_screen.dart';
 import 'settings_screen.dart';
 import 'ai_config_screen.dart';
 import '../services/ai_config_service.dart';
+import '../services/app_update_service.dart';
+import 'app_update_screen.dart';
 
 String getCurrencySymbol(String currencyCode) {
   switch (currencyCode.toUpperCase()) {
@@ -334,6 +336,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (userProvider.showApiKeyPrompt) {
         userProvider.dismissApiKeyPrompt();
         _showGeminiKeyDialog(context, userProvider);
+      } else {
+        // Auto-check for updates on launch if enabled
+        final updateService = AppUpdateService.instance;
+        if (updateService.autoCheckEnabled) {
+          final updateInfo = await updateService.checkForUpdates();
+          if (mounted && updateInfo != null && updateInfo.hasUpdate) {
+            showAppUpdatePromptDialog(context, updateInfo);
+          }
+        }
       }
     }
   }

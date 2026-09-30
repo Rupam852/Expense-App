@@ -8,6 +8,8 @@ import '../widgets/custom_toast.dart';
 import 'ai_config_screen.dart';
 import 'invoice_history_screen.dart';
 import 'payment_details_screen.dart';
+import '../services/app_update_service.dart';
+import 'app_update_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -471,9 +473,83 @@ class SettingsScreen extends StatelessWidget {
                   ],
                 ),
 
+                const SizedBox(height: 24),
+
+                // 5. APP UPDATES & SYSTEM
+                _buildSectionHeader('UPDATES & SYSTEM', isDark),
+                const SizedBox(height: 8),
+                ListenableBuilder(
+                  listenable: AppUpdateService.instance,
+                  builder: (context, _) {
+                    final updateService = AppUpdateService.instance;
+                    final hasUpdate = updateService.latestUpdateInfo?.hasUpdate ?? false;
+                    return _buildSettingsCard(
+                      isDark: isDark,
+                      cardBg: cardBg,
+                      borderColor: hasUpdate ? primaryColor.withOpacity(0.4) : borderColor,
+                      children: [
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: hasUpdate
+                                  ? primaryColor.withOpacity(0.15)
+                                  : Colors.teal.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              hasUpdate ? Icons.system_update_rounded : Icons.sync_rounded,
+                              color: hasUpdate ? primaryColor : Colors.teal,
+                              size: 22,
+                            ),
+                          ),
+                          title: Row(
+                            children: [
+                              Text(
+                                'App Updates',
+                                style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                              ),
+                              const SizedBox(width: 8),
+                              if (hasUpdate)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: primaryColor.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'UPDATE',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: primaryColor,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          subtitle: Text(
+                            hasUpdate
+                                ? 'Version ${updateService.latestUpdateInfo?.latestVersion} available'
+                                : 'Current version: ${AppUpdateService.currentAppVersion}',
+                            style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                          ),
+                          trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const AppUpdateScreen()),
+                            );
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                ),
+
                 const SizedBox(height: 32),
 
-                // 5. ACCOUNT ACTIONS (Sign out & Delete Account)
+                // 6. ACCOUNT ACTIONS (Sign out & Delete Account)
                 ElevatedButton.icon(
                   onPressed: () async {
                     final confirm = await showDialog<bool>(
