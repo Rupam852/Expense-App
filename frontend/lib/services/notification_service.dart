@@ -4,6 +4,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/subscription_item.dart';
+import '../models/budget.dart';
+import '../models/expense.dart';
 import 'app_update_service.dart';
 
 class NotificationService {
@@ -22,6 +24,10 @@ class NotificationService {
   static const String _subChannelId = 'subscription_reminders_channel';
   static const String _subChannelName = 'Subscription & Bill Reminders';
   static const String _subChannelDescription = 'Alerts for expiring and upcoming subscription and bill renewals';
+
+  static const String _budgetChannelId = 'budget_alerts_channel';
+  static const String _budgetChannelName = 'Budget & Spending Limits';
+  static const String _budgetChannelDescription = 'Urgent alerts when your monthly budget limit is reached or exceeded';
 
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -69,6 +75,16 @@ class NotificationService {
               _subChannelName,
               description: _subChannelDescription,
               importance: Importance.max,
+              playSound: true,
+              enableVibration: true,
+            ),
+          );
+          await androidPlugin.createNotificationChannel(
+            const AndroidNotificationChannel(
+              _budgetChannelId,
+              _budgetChannelName,
+              description: _budgetChannelDescription,
+              importance: Importance.high,
               playSound: true,
               enableVibration: true,
             ),
@@ -231,6 +247,126 @@ class NotificationService {
       }
     } catch (e) {
       debugPrint('[NotificationService] Error checking due subscriptions: $e');
+    }
+  }
+
+  /// Show rich system notification for budget limit reached / exceeded
+  Future<void> showBudgetLimitNotification({
+    required String category,
+    required double spent,
+    required double limit,
+    required double percentage,
+  }) async {
+    try {
+      if (!_isInitialized) {
+        await initialize();
+      }
+
+      final isExceeded = percentage >= 100.0;
+      final title = isExceeded
+          ? '🚨 Budget Exceeded: $category'
+          : '⚠️ Budget Alert: $category (${percentage.toStringAsFixed(0)}%)';
+      final body = isExceeded
+          ? 'You spent ₹${spent.toStringAsFixed(0)} which exceeds your ₹${limit.toStringAsFixed(0)} limit (${percentage.toStringAsFixed(0)}%). Tap to manage budgets.'
+          : 'You have used ${percentage.toStringAsFixed(0)}% of your ₹${limit.toStringAsFixed(0)} limit (₹${spent.toStringAsFixed(0)} spent).';
+
+      final bigTextStyleInformation = BigTextStyleInformation(
+        body,
+        htmlFormatBigText: false,
+        contentTitle: title,
+        htmlFormatContentTitle: false,
+        summaryText: isExceeded ? 'Budget Exceeded' : 'Budget Warning',
+        htmlFormatSummaryText: false,
+      );
+
+      final androidDetails = AndroidNotificationDetails(
+        _budgetChannelId,
+        _budgetChannelName,
+        channelDescription: _budgetChannelDescription,
+        importance: Importance.high,
+        priority: Priority.high,
+        showWhen: true,
+        icon: '@mipmap/ic_launcher',
+        styleInformation: bigTextStyleInformation,
+        color: isExceeded ? const Color(0xFFEF4444) : const Color(0xFFF59E0B),
+      );
+
+      final notificationDetails = NotificationDetails(android: androidDetails);
+      final notificationId = (category.hashCode ^ (isExceeded ? 1 : 2)) & 0x7FFFFFFF;
+
+      await _notificationsPlugin.show(
+        notificationId,
+        title,
+        body,
+        notificationDetails,
+        payload: 'budget_$category',
+      );
+      debugPrint('[NotificationService] Fired budget notification for: $category ($percentage%)');
+    } catch (e) {
+      debugPrint('[NotificationService] Error showing budget notification: $e');
+    }
+  }
+
+  /// Automatically checks budgets against expenses for the month and alerts if >= 90% or >= 100%
+  Future<void> checkAndNotifyBudgetLimits({
+    required List<Budget> budgets,
+    required List<Expense> expenses,
+    required DateTime currentMonth,
+  }) async {
+    try {
+      if (budgets.isEmpty) return;
+
+      final monthStr = '${currentMonth.year}-${currentMonth.month.toString().padLeft(2, '0')}';
+      final monthExpenses = expenses.where((e) {
+        if (e.isDeleted) return false;
+        final d = e.transactionDate;
+        return d.year == currentMonth.year && d.month == currentMonth.month;
+      }).toList();
+
+      final prefs = await SharedPreferences.getInstance();
+
+      for (final budget in budgets) {
+        if (budget.isDeleted || budget.monthYear != monthStr || budget.amountLimit <= 0) continue;
+
+        double spent = 0.0;
+        if (budget.category == 'Total Budget') {
+          spent = monthExpenses.fold<double>(0.0, (sum, e) => sum + e.amount);
+        } else {
+          spent = monthExpenses
+              .where((e) => e.category.toLowerCase() == budget.category.toLowerCase())
+              .fold<double>(0.0, (sum, e) => sum + e.amount);
+        }
+
+        final percentage = (spent / budget.amountLimit) * 100.0;
+
+        if (percentage >= 100.0) {
+          final notifyKey = 'budget_notified_100_${budget.id}_$monthStr';
+          final alreadyNotified = prefs.getBool(notifyKey) ?? false;
+          if (!alreadyNotified) {
+            await showBudgetLimitNotification(
+              category: budget.category,
+              spent: spent,
+              limit: budget.amountLimit,
+              percentage: percentage,
+            );
+            await prefs.setBool(notifyKey, true);
+          }
+        } else if (percentage >= 90.0) {
+          final notifyKey = 'budget_notified_90_${budget.id}_$monthStr';
+          final alreadyNotified = prefs.getBool(notifyKey) ?? false;
+          if (!alreadyNotified) {
+            await showBudgetLimitNotification(
+              category: budget.category,
+              spent: spent,
+              limit: budget.amountLimit,
+              percentage: percentage,
+            );
+            await prefs.setBool(notifyKey, true);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[NotificationService] Error checking budget limits: $e');
     }
   }
 

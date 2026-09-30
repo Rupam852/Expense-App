@@ -188,6 +188,14 @@ class ExpenseProvider with ChangeNotifier {
 
       // Auto-deduplicate local cached expenses on startup
       await deduplicateExpenses(triggerSync: true);
+
+      // Check subscriptions and budgets on app load
+      NotificationService.instance.checkAndNotifyDueSubscriptions(_subscriptions);
+      NotificationService.instance.checkAndNotifyBudgetLimits(
+        budgets: _budgets,
+        expenses: _expenses,
+        currentMonth: _selectedMonthYear,
+      );
     } catch (_) {}
     _isLoading = false;
     notifyListeners();
@@ -220,6 +228,12 @@ class ExpenseProvider with ChangeNotifier {
     await _dbHelper.insertExpense(expense);
     _expenses.insert(0, expense);
     notifyListeners();
+    // Check and push budget alert notification if threshold reached
+    NotificationService.instance.checkAndNotifyBudgetLimits(
+      budgets: _budgets,
+      expenses: _expenses,
+      currentMonth: _selectedMonthYear,
+    );
     // Silent background sync after adding
     triggerQuietSync();
   }
@@ -230,6 +244,11 @@ class ExpenseProvider with ChangeNotifier {
     if (idx != -1) {
       _expenses[idx] = updatedExpense;
       notifyListeners();
+      NotificationService.instance.checkAndNotifyBudgetLimits(
+        budgets: _budgets,
+        expenses: _expenses,
+        currentMonth: _selectedMonthYear,
+      );
     }
     // Silent background sync after editing
     triggerQuietSync();
@@ -290,6 +309,11 @@ class ExpenseProvider with ChangeNotifier {
       _budgets.add(budget);
     }
     notifyListeners();
+    NotificationService.instance.checkAndNotifyBudgetLimits(
+      budgets: _budgets,
+      expenses: _expenses,
+      currentMonth: _selectedMonthYear,
+    );
     // Silent background sync after budget set
     triggerQuietSync();
   }
