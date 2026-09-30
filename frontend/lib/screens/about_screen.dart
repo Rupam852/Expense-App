@@ -33,21 +33,35 @@ class AboutScreen extends StatelessWidget {
   }
 
   Future<void> _launchUpiPayment(BuildContext context) async {
-    const upiUrl = 'upi://pay?pa=$upiId&pn=Expense%20Tracker%20Support&cu=INR&tn=Support%20Developer';
+    final upiUri = Uri.parse('upi://pay?pa=$upiId&pn=${Uri.encodeComponent('Expense App Support')}&cu=INR&tn=${Uri.encodeComponent('Support Developer')}');
+    bool opened = false;
     try {
-      final uri = Uri.parse(upiUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        Clipboard.setData(const ClipboardData(text: upiId));
-        if (context.mounted) {
-          CustomToast.show(context, 'UPI ID copied: $upiId');
-        }
+      // Direct intent launch without canLaunchUrl check to trigger system UPI app chooser
+      opened = await launchUrl(
+        upiUri,
+        mode: LaunchMode.externalNonBrowserApplication,
+      );
+      if (!opened) {
+        opened = await launchUrl(
+          upiUri,
+          mode: LaunchMode.externalApplication,
+        );
       }
     } catch (_) {
+      try {
+        opened = await launchUrl(
+          upiUri,
+          mode: LaunchMode.externalApplication,
+        );
+      } catch (_) {
+        opened = false;
+      }
+    }
+
+    if (!opened) {
       Clipboard.setData(const ClipboardData(text: upiId));
       if (context.mounted) {
-        CustomToast.show(context, 'UPI ID copied: $upiId');
+        CustomToast.show(context, 'No UPI app found. UPI ID copied: $upiId');
       }
     }
   }
