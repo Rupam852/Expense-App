@@ -2275,7 +2275,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         },
                       ),
 
-                      // Udhar / Khata Book
+                      // Khata Book
                       ListTile(
                         contentPadding: const EdgeInsets.symmetric(horizontal: 4),
                         leading: Container(
@@ -2287,11 +2287,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: const Icon(Icons.menu_book_rounded, color: Color(0xFF00D09C), size: 22),
                         ),
                         title: Text(
-                          'Udhar / Khata Book',
+                          'Khata Book',
                           style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
                         ),
                         subtitle: Text(
-                          'Track money lent, borrowed & WhatsApp reminders',
+                          'Track money lent, borrowed & send reminders',
                           style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
                         ),
                         trailing: Row(
@@ -3152,7 +3152,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               MaterialPageRoute(builder: (_) => const KhataScreen()),
             ),
             icon: const Icon(Icons.menu_book_rounded, color: Color(0xFF00D09C)),
-            tooltip: 'Udhar / Khata Book',
+            tooltip: 'Khata Book',
           ),
           ListenableBuilder(
             listenable: AppUpdateService.instance,
@@ -3665,7 +3665,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Udhar Ledger',
+                              'Credit & Debt',
                               style: GoogleFonts.inter(fontSize: 8.5, color: Colors.grey),
                               textAlign: TextAlign.center,
                             ),

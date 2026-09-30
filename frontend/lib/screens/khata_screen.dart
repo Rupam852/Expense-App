@@ -108,7 +108,7 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Udhar / Khata Book',
+          'Khata Book',
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 19),
         ),
         elevation: 0,
@@ -735,7 +735,7 @@ class _KhataEntrySheetState extends State<_KhataEntrySheet> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  widget.existingEntry == null ? 'Add Khata / Udhar' : 'Edit Khata Entry',
+                  widget.existingEntry == null ? 'Add Khata Entry' : 'Edit Khata Entry',
                   style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 IconButton(
@@ -775,7 +775,7 @@ class _KhataEntrySheetState extends State<_KhataEntrySheet> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Maine Diye\n(You will Get)',
+                            'You Lent\n(You\'ll Get)',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.inter(
                               fontSize: 11.5,
@@ -815,7 +815,7 @@ class _KhataEntrySheetState extends State<_KhataEntrySheet> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Maine Liye\n(You will Give)',
+                            'You Borrowed\n(You\'ll Give)',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.inter(
                               fontSize: 11.5,
