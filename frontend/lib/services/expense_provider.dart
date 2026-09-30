@@ -11,6 +11,7 @@ import '../models/expense.dart';
 import '../models/budget.dart';
 import 'package:csv/csv.dart';
 import '../models/payment_detail.dart';
+import '../models/khata_entry.dart';
 import 'ai_config_service.dart';
 
 
@@ -21,6 +22,7 @@ class ExpenseProvider with ChangeNotifier {
   List<Expense> _expenses = [];
   List<Budget> _budgets = [];
   List<PaymentDetail> _paymentDetails = [];
+  List<KhataEntry> _khataEntries = [];
 
   final List<String> _categories = [
     'Shopping',
@@ -119,6 +121,18 @@ class ExpenseProvider with ChangeNotifier {
   List<Expense> get expenses => _expenses;
   List<Budget> get budgets => _budgets;
   List<PaymentDetail> get paymentDetails => _paymentDetails;
+  List<KhataEntry> get khataEntries => _khataEntries;
+  
+  double get totalYouWillGet => _khataEntries
+      .where((k) => !k.isDeleted && !k.isSettled && k.isLent)
+      .fold<double>(0.0, (sum, k) => sum + k.amount);
+
+  double get totalYouWillGive => _khataEntries
+      .where((k) => !k.isDeleted && !k.isSettled && k.isBorrowed)
+      .fold<double>(0.0, (sum, k) => sum + k.amount);
+
+  double get netKhataBalance => totalYouWillGet - totalYouWillGive;
+
   bool get isLoading => _isLoading;
   bool get isSyncing => _isSyncing;
   String? get syncErrorMessage => _syncErrorMessage;
@@ -142,6 +156,7 @@ class ExpenseProvider with ChangeNotifier {
       _expenses = await _dbHelper.getExpenses();
       _budgets = await _dbHelper.getBudgets();
       _paymentDetails = await _dbHelper.getPaymentDetails();
+      _khataEntries = await _dbHelper.getKhataEntries();
       _syncErrorMessage = null;
 
       // Auto-deduplicate local cached expenses on startup
@@ -275,6 +290,66 @@ class ExpenseProvider with ChangeNotifier {
     );
     await _dbHelper.insertPaymentDetail(detail);
     _paymentDetails = [detail];
+    notifyListeners();
+  }
+
+  // ──────────────────────────────────────────────────────
+  // KHATA / UDHAR (Borrow & Lend Ledger)
+  // ──────────────────────────────────────────────────────
+  Future<void> fetchKhataEntries() async {
+    _khataEntries = await _dbHelper.getKhataEntries();
+    notifyListeners();
+  }
+
+  Future<void> addKhataEntry({
+    required String personName,
+    String? phoneNumber,
+    required double amount,
+    required String type,
+    required DateTime entryDate,
+    DateTime? dueDate,
+    String? note,
+  }) async {
+    final entry = KhataEntry(
+      id: cryptoUuid(),
+      personName: personName.trim(),
+      phoneNumber: phoneNumber?.trim().isEmpty == true ? null : phoneNumber?.trim(),
+      amount: amount,
+      type: type,
+      entryDate: entryDate,
+      dueDate: dueDate,
+      note: note?.trim().isEmpty == true ? null : note?.trim(),
+    );
+
+    await _dbHelper.insertKhataEntry(entry);
+    _khataEntries.insert(0, entry);
+    notifyListeners();
+  }
+
+  Future<void> updateKhataEntry(KhataEntry entry) async {
+    await _dbHelper.updateKhataEntry(entry);
+    final index = _khataEntries.indexWhere((k) => k.id == entry.id);
+    if (index != -1) {
+      _khataEntries[index] = entry;
+      notifyListeners();
+    }
+  }
+
+  Future<void> toggleSettleKhata(String id, bool isSettled) async {
+    await _dbHelper.toggleSettleKhataEntry(id, isSettled);
+    final index = _khataEntries.indexWhere((k) => k.id == id);
+    if (index != -1) {
+      _khataEntries[index] = _khataEntries[index].copyWith(
+        isSettled: isSettled,
+        settledAt: isSettled ? DateTime.now() : null,
+      );
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteKhataEntry(String id) async {
+    await _dbHelper.deleteKhataEntry(id);
+    _khataEntries.removeWhere((k) => k.id == id);
     notifyListeners();
   }
 

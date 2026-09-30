@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/expense.dart';
 import '../models/budget.dart';
 import '../models/payment_detail.dart';
+import '../models/khata_entry.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -108,6 +109,17 @@ class DatabaseHelper {
       final decryptedRow = Map<String, dynamic>.from(row);
       decryptedRow['category'] = decryptVal(row['category']?.toString() ?? 'Others');
       decryptedRow['amount_limit'] = decryptVal(row['amount_limit']?.toString() ?? '0.0');
+      return decryptedRow;
+    }).toList();
+  }
+
+  static List<Map<String, dynamic>> decryptKhataMaps(List<Map<String, dynamic>> result) {
+    return result.map((row) {
+      final decryptedRow = Map<String, dynamic>.from(row);
+      decryptedRow['person_name'] = decryptVal(row['person_name']?.toString() ?? '');
+      decryptedRow['phone_number'] = row['phone_number'] != null ? decryptVal(row['phone_number'].toString()) : null;
+      decryptedRow['amount'] = decryptVal(row['amount']?.toString() ?? '0.0');
+      decryptedRow['note'] = row['note'] != null ? decryptVal(row['note'].toString()) : null;
       return decryptedRow;
     }).toList();
   }
@@ -222,7 +234,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -256,6 +268,30 @@ class DatabaseHelper {
         print('[Migration] Marked all local expenses/budgets as unsynced to trigger database reconciliation.');
       } catch (e) {
         print('Force sync migration error: $e');
+      }
+    }
+    if (oldVersion < 5) {
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS khata_entries (
+            id TEXT PRIMARY KEY,
+            person_name TEXT NOT NULL,
+            phone_number TEXT,
+            amount REAL NOT NULL,
+            type TEXT NOT NULL,
+            entry_date TEXT NOT NULL,
+            due_date TEXT,
+            note TEXT,
+            is_settled INTEGER NOT NULL DEFAULT 0,
+            settled_at TEXT,
+            is_deleted INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            is_synced INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+      } catch (e) {
+        print('Khata entries migration error: $e');
       }
     }
   }
@@ -312,6 +348,26 @@ class DatabaseHelper {
         id TEXT PRIMARY KEY,
         table_name TEXT NOT NULL,
         created_at TEXT NOT NULL
+      )
+    ''');
+
+    // 5. Khata Entries (Udhar / Borrow & Lend) SQLite Table
+    await db.execute('''
+      CREATE TABLE khata_entries (
+        id TEXT PRIMARY KEY,
+        person_name TEXT NOT NULL,
+        phone_number TEXT,
+        amount REAL NOT NULL,
+        type TEXT NOT NULL,
+        entry_date TEXT NOT NULL,
+        due_date TEXT,
+        note TEXT,
+        is_settled INTEGER NOT NULL DEFAULT 0,
+        settled_at TEXT,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        is_synced INTEGER NOT NULL DEFAULT 0
       )
     ''');
   }
@@ -513,6 +569,98 @@ class DatabaseHelper {
     final db = await instance.database;
     final result = await db.query('payment_details');
     return result.map((json) => PaymentDetail.fromMap(json)).toList();
+  }
+
+  // ================= KHATA / UDHAR CRUD =================
+
+  Future<int> insertKhataEntry(KhataEntry entry) async {
+    final db = await instance.database;
+    final map = entry.toMap();
+    map['person_name'] = encryptVal(entry.personName);
+    if (entry.phoneNumber != null) {
+      map['phone_number'] = encryptVal(entry.phoneNumber!);
+    }
+    map['amount'] = encryptVal(entry.amount.toString());
+    if (entry.note != null) {
+      map['note'] = encryptVal(entry.note!);
+    }
+    map['is_synced'] = 0;
+    return await db.insert(
+      'khata_entries',
+      map,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<KhataEntry>> getKhataEntries() async {
+    final db = await instance.database;
+    final result = await db.query(
+      'khata_entries',
+      where: 'is_deleted = 0',
+      orderBy: 'entry_date DESC',
+    );
+    final decrypted = decryptKhataMaps(result);
+    return decrypted.map((json) => KhataEntry.fromMap(json)).toList();
+  }
+
+  Future<int> updateKhataEntry(KhataEntry entry) async {
+    final db = await instance.database;
+    final map = entry.toMap();
+    map['person_name'] = encryptVal(entry.personName);
+    if (entry.phoneNumber != null) {
+      map['phone_number'] = encryptVal(entry.phoneNumber!);
+    }
+    map['amount'] = encryptVal(entry.amount.toString());
+    if (entry.note != null) {
+      map['note'] = encryptVal(entry.note!);
+    }
+    map['is_synced'] = 0;
+    map['updated_at'] = DateTime.now().toIso8601String();
+
+    return await db.update(
+      'khata_entries',
+      map,
+      where: 'id = ?',
+      whereArgs: [entry.id],
+    );
+  }
+
+  Future<int> toggleSettleKhataEntry(String id, bool isSettled) async {
+    final db = await instance.database;
+    return await db.update(
+      'khata_entries',
+      {
+        'is_settled': isSettled ? 1 : 0,
+        'settled_at': isSettled ? DateTime.now().toIso8601String() : null,
+        'updated_at': DateTime.now().toIso8601String(),
+        'is_synced': 0,
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> deleteKhataEntry(String id) async {
+    final db = await instance.database;
+    await db.insert(
+      'deleted_records',
+      {
+        'id': id,
+        'table_name': 'khata_entries',
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    return await db.update(
+      'khata_entries',
+      {
+        'is_deleted': 1,
+        'updated_at': DateTime.now().toIso8601String(),
+        'is_synced': 0,
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   // ================= DELETIONS QUEUE UTILITIES =================
