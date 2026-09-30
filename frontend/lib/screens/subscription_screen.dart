@@ -166,6 +166,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> with SingleTick
               // 3. Tab Bar
               TabBar(
                 controller: _tabController,
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                labelPadding: const EdgeInsets.symmetric(horizontal: 14),
                 indicatorColor: const Color(0xFF00D09C),
                 indicatorWeight: 3,
                 labelColor: const Color(0xFF00D09C),

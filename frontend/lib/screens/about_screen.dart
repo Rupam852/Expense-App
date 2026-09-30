@@ -13,7 +13,7 @@ class AboutScreen extends StatelessWidget {
   static const String devGitHub = 'https://github.com/Rupam852';
   static const String devInstagram = 'https://instagram.com/_rupambairagya_';
   static const String devLinkedIn = 'https://linkedin.com/in/rupam-bairagya';
-  static const String supportEmail = 'rupambairagya852@gmail.com';
+  static const String supportEmail = 'rupambairagya08@gmail.com';
   static const String upiId = 'expensetracker@ybl';
 
   Future<void> _launchUrlHelper(BuildContext context, String urlString) async {
