@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/subscription_item.dart';
 import '../services/expense_provider.dart';
+import '../services/notification_service.dart';
 import '../widgets/custom_toast.dart';
 
 class SubscriptionScreen extends StatefulWidget {
@@ -24,6 +25,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> with SingleTick
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await NotificationService.instance.requestNotificationPermission();
+      if (!mounted) return;
+      final provider = Provider.of<ExpenseProvider>(context, listen: false);
+      await NotificationService.instance.checkAndNotifyDueSubscriptions(provider.subscriptions);
+    });
   }
 
   @override

@@ -15,6 +15,7 @@ import '../models/khata_entry.dart';
 import '../models/split_bill.dart';
 import '../models/subscription_item.dart';
 import 'ai_config_service.dart';
+import 'notification_service.dart';
 
 
 class ExpenseProvider with ChangeNotifier {
@@ -456,6 +457,7 @@ class ExpenseProvider with ChangeNotifier {
   Future<void> fetchSubscriptions() async {
     _subscriptions = await _dbHelper.getSubscriptions();
     notifyListeners();
+    NotificationService.instance.checkAndNotifyDueSubscriptions(_subscriptions);
   }
 
   Future<void> addSubscription({
@@ -486,6 +488,7 @@ class ExpenseProvider with ChangeNotifier {
     _subscriptions.add(item);
     _subscriptions.sort((a, b) => a.nextRenewalDate.compareTo(b.nextRenewalDate));
     notifyListeners();
+    NotificationService.instance.checkAndNotifyDueSubscriptions(_subscriptions);
   }
 
   Future<void> updateSubscription(SubscriptionItem item) async {
@@ -495,6 +498,7 @@ class ExpenseProvider with ChangeNotifier {
       _subscriptions[index] = item;
       _subscriptions.sort((a, b) => a.nextRenewalDate.compareTo(b.nextRenewalDate));
       notifyListeners();
+      NotificationService.instance.checkAndNotifyDueSubscriptions(_subscriptions);
     }
   }
 

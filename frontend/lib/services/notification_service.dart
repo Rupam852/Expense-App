@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../models/subscription_item.dart';
 import 'app_update_service.dart';
 
 class NotificationService {
@@ -16,6 +18,10 @@ class NotificationService {
   static const String _channelId = 'app_updates_channel';
   static const String _channelName = 'App Updates';
   static const String _channelDescription = 'Notifications for new app version updates and releases';
+
+  static const String _subChannelId = 'subscription_reminders_channel';
+  static const String _subChannelName = 'Subscription & Bill Reminders';
+  static const String _subChannelDescription = 'Alerts for expiring and upcoming subscription and bill renewals';
 
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -42,7 +48,7 @@ class NotificationService {
         },
       );
 
-      // Create Android Notification Channel
+      // Create Android Notification Channels
       if (Platform.isAndroid) {
         final androidPlugin = _notificationsPlugin
             .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
@@ -53,6 +59,16 @@ class NotificationService {
               _channelName,
               description: _channelDescription,
               importance: Importance.high,
+              playSound: true,
+              enableVibration: true,
+            ),
+          );
+          await androidPlugin.createNotificationChannel(
+            const AndroidNotificationChannel(
+              _subChannelId,
+              _subChannelName,
+              description: _subChannelDescription,
+              importance: Importance.max,
               playSound: true,
               enableVibration: true,
             ),
@@ -123,6 +139,98 @@ class NotificationService {
       );
     } catch (e) {
       debugPrint('[NotificationService] Error showing update notification: $e');
+    }
+  }
+
+  /// Show rich system notification for subscription renewal / due reminder
+  Future<void> showSubscriptionDueNotification(SubscriptionItem item) async {
+    try {
+      if (!_isInitialized) {
+        await initialize();
+      }
+
+      final days = item.daysUntilRenewal;
+      String title;
+      String body;
+
+      if (days < 0) {
+        title = '🚨 Overdue: ${item.name} Bill';
+        body = '${item.name} renewal of ₹${item.amount.toStringAsFixed(2)} was due ${days.abs()} day(s) ago. Tap to view or mark renewed.';
+      } else if (days == 0) {
+        title = '⚠️ Due Today: ${item.name} Renewal';
+        body = '${item.name} subscription of ₹${item.amount.toStringAsFixed(2)} is due today (${item.billingCycle.toUpperCase()}). Tap to manage.';
+      } else if (days == 1) {
+        title = '🔔 Due Tomorrow: ${item.name}';
+        body = '${item.name} renewal of ₹${item.amount.toStringAsFixed(2)} is due tomorrow. Keep payment account ready!';
+      } else {
+        title = '📅 Upcoming Renewal: ${item.name}';
+        body = '${item.name} renewal of ₹${item.amount.toStringAsFixed(2)} is scheduled in $days days.';
+      }
+
+      final bigTextStyleInformation = BigTextStyleInformation(
+        body,
+        htmlFormatBigText: false,
+        contentTitle: title,
+        htmlFormatContentTitle: false,
+        summaryText: 'Subscription Reminder',
+        htmlFormatSummaryText: false,
+      );
+
+      final androidDetails = AndroidNotificationDetails(
+        _subChannelId,
+        _subChannelName,
+        channelDescription: _subChannelDescription,
+        importance: Importance.max,
+        priority: Priority.high,
+        showWhen: true,
+        icon: '@mipmap/ic_launcher',
+        styleInformation: bigTextStyleInformation,
+        color: const Color(0xFF00D09C),
+      );
+
+      final notificationDetails = NotificationDetails(android: androidDetails);
+      final notificationId = (item.id.hashCode & 0x7FFFFFFF);
+
+      await _notificationsPlugin.show(
+        notificationId,
+        title,
+        body,
+        notificationDetails,
+        payload: 'subscription_${item.id}',
+      );
+      debugPrint('[NotificationService] Fired subscription reminder notification for: ${item.name}');
+    } catch (e) {
+      debugPrint('[NotificationService] Error showing subscription notification: $e');
+    }
+  }
+
+  /// Automatically checks all active subscriptions and notifies if due today or due soon
+  Future<void> checkAndNotifyDueSubscriptions(List<SubscriptionItem> subscriptions) async {
+    try {
+      if (subscriptions.isEmpty) return;
+
+      final todayStr = DateTime.now().toIso8601String().substring(0, 10);
+      final prefs = await SharedPreferences.getInstance();
+
+      for (final sub in subscriptions) {
+        if (!sub.isActive || sub.isDeleted) continue;
+
+        // Condition: Due today, overdue, or within reminder days
+        final days = sub.daysUntilRenewal;
+        final shouldNotify = (days <= 0) || (days <= sub.reminderDaysBefore);
+
+        if (shouldNotify) {
+          final notifyKey = 'sub_notified_${sub.id}_$todayStr';
+          final alreadyNotifiedToday = prefs.getBool(notifyKey) ?? false;
+
+          if (!alreadyNotifiedToday) {
+            await showSubscriptionDueNotification(sub);
+            await prefs.setBool(notifyKey, true);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[NotificationService] Error checking due subscriptions: $e');
     }
   }
 }
