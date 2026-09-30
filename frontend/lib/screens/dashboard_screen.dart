@@ -2936,11 +2936,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         : const Color(0xFF00D09C),
                   ),
           ),
-          IconButton(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            ),
-            icon: const Icon(Icons.settings_outlined),
+          ListenableBuilder(
+            listenable: AppUpdateService.instance,
+            builder: (context, _) {
+              final hasUpdate = AppUpdateService.instance.latestUpdateInfo?.hasUpdate ?? false;
+              return IconButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                ),
+                icon: Badge(
+                  isLabelVisible: hasUpdate,
+                  backgroundColor: const Color(0xFFEF4444),
+                  smallSize: 9,
+                  child: const Icon(Icons.settings_outlined),
+                ),
+              );
+            },
           ),
         ],
       ),

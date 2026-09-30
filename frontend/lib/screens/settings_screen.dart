@@ -486,22 +486,27 @@ class SettingsScreen extends StatelessWidget {
                     return _buildSettingsCard(
                       isDark: isDark,
                       cardBg: cardBg,
-                      borderColor: hasUpdate ? primaryColor.withOpacity(0.4) : borderColor,
+                      borderColor: hasUpdate ? const Color(0xFFEF4444).withOpacity(0.4) : borderColor,
                       children: [
                         ListTile(
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                          leading: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: hasUpdate
-                                  ? primaryColor.withOpacity(0.15)
-                                  : Colors.teal.withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(
-                              hasUpdate ? Icons.system_update_rounded : Icons.sync_rounded,
-                              color: hasUpdate ? primaryColor : Colors.teal,
-                              size: 22,
+                          leading: Badge(
+                            isLabelVisible: hasUpdate,
+                            backgroundColor: const Color(0xFFEF4444),
+                            smallSize: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: hasUpdate
+                                    ? const Color(0xFFEF4444).withOpacity(0.12)
+                                    : Colors.teal.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                hasUpdate ? Icons.system_update_rounded : Icons.sync_rounded,
+                                color: hasUpdate ? const Color(0xFFEF4444) : Colors.teal,
+                                size: 22,
+                              ),
                             ),
                           ),
                           title: Row(
@@ -511,29 +516,45 @@ class SettingsScreen extends StatelessWidget {
                                 style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
                               ),
                               const SizedBox(width: 8),
-                              if (hasUpdate)
+                              if (hasUpdate) ...[
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFEF4444),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: primaryColor.withOpacity(0.2),
+                                    color: const Color(0xFFEF4444).withOpacity(0.15),
                                     borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: const Color(0xFFEF4444).withOpacity(0.3),
+                                    ),
                                   ),
                                   child: Text(
                                     'UPDATE',
                                     style: GoogleFonts.inter(
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
-                                      color: primaryColor,
+                                      color: const Color(0xFFEF4444),
                                     ),
                                   ),
                                 ),
+                              ],
                             ],
                           ),
                           subtitle: Text(
                             hasUpdate
                                 ? 'Version ${updateService.latestUpdateInfo?.latestVersion} available'
                                 : 'Current version: ${AppUpdateService.currentAppVersion}',
-                            style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: hasUpdate ? const Color(0xFFEF4444) : Colors.grey,
+                            ),
                           ),
                           trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
                           onTap: () {
