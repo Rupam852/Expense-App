@@ -61,6 +61,7 @@ class AiConfigService with ChangeNotifier {
   String _nvidiaApiKey = '';
   String _primaryProvider = 'gemini'; // 'gemini' | 'nvidia'
   String _secondaryProvider = 'nvidia'; // 'nvidia' | 'gemini'
+  String _responseLanguage = 'English'; // Default English
 
   bool _isInitialized = false;
 
@@ -71,6 +72,7 @@ class AiConfigService with ChangeNotifier {
   String get nvidiaApiKey => _nvidiaApiKey;
   String get primaryProvider => _primaryProvider;
   String get secondaryProvider => _secondaryProvider;
+  String get responseLanguage => _responseLanguage;
   bool get isInitialized => _isInitialized;
 
   bool get hasAnyApiKey => _geminiApiKey.trim().isNotEmpty || _nvidiaApiKey.trim().isNotEmpty;
@@ -85,6 +87,7 @@ class AiConfigService with ChangeNotifier {
   static const String _keyNvidiaApiKey = 'local_ai_nvidia_api_key';
   static const String _keyPrimaryProvider = 'local_ai_primary_provider';
   static const String _keySecondaryProvider = 'local_ai_secondary_provider';
+  static const String _keyResponseLanguage = 'local_ai_response_language';
 
   Future<void> _loadConfig() async {
     try {
@@ -95,6 +98,7 @@ class AiConfigService with ChangeNotifier {
       _nvidiaApiKey = prefs.getString(_keyNvidiaApiKey) ?? '';
       _primaryProvider = prefs.getString(_keyPrimaryProvider) ?? 'gemini';
       _secondaryProvider = prefs.getString(_keySecondaryProvider) ?? 'nvidia';
+      _responseLanguage = prefs.getString(_keyResponseLanguage) ?? 'English';
 
       // Ensure valid primary/secondary pairing
       if (_primaryProvider == _secondaryProvider) {
@@ -112,6 +116,18 @@ class AiConfigService with ChangeNotifier {
       _isInitialized = true;
       notifyListeners();
     }
+  }
+
+  // Set AI response language
+  Future<void> setResponseLanguage(String language) async {
+    _responseLanguage = language;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyResponseLanguage, language);
+    } catch (e) {
+      debugPrint('[AiConfigService] Error saving response language: $e');
+    }
+    notifyListeners();
   }
 
   // Update Primary Provider with mutual auto-switch
@@ -187,6 +203,7 @@ class AiConfigService with ChangeNotifier {
       await prefs.remove(_keyNvidiaApiKey);
       await prefs.remove(_keyPrimaryProvider);
       await prefs.remove(_keySecondaryProvider);
+      await prefs.remove(_keyResponseLanguage);
 
       _geminiModel = 'gemini-2.5-flash';
       _geminiApiKey = '';
@@ -194,6 +211,7 @@ class AiConfigService with ChangeNotifier {
       _nvidiaApiKey = '';
       _primaryProvider = 'gemini';
       _secondaryProvider = 'nvidia';
+      _responseLanguage = 'English';
 
       notifyListeners();
     } catch (e) {
@@ -972,15 +990,28 @@ JSON format:
     final systemPrompt = '''You are GrowwAI — a smart, friendly, empathetic, and data-driven Personal Financial Advisor & Expense Specialist.
 Your job is to answer the user's questions about their expenses, provide actionable saving tips, analyze category spending, identify overspending risks, and help them achieve their financial goals.
 
+### STRICT RESPONSE LANGUAGE MANDATE:
+The user has configured their preferred response language to: "$_responseLanguage".
+You MUST generate your entire conversational reply strictly in $_responseLanguage.
+${_responseLanguage == 'Hinglish' ? '- Use conversational, natural Hinglish (Hindi written in Latin/English alphabet, e.g. "Aapka sabse zyada kharcha food par hua hai ₹2,500.").' : ''}
+${_responseLanguage == 'Hindi' ? '- Use standard Hindi in Devanagari script (e.g. "आपका इस महीने का कुल खर्च ₹12,450 है।").' : ''}
+${_responseLanguage == 'Bengali' ? '- Use Bengali language in Bengali script (বাংলা).' : ''}
+${_responseLanguage == 'Marathi' ? '- Use Marathi language in Devanagari script (मराठी).' : ''}
+${_responseLanguage == 'Gujarati' ? '- Use Gujarati language in Gujarati script (ગુજરાતી).' : ''}
+${_responseLanguage == 'Tamil' ? '- Use Tamil language in Tamil script (தமிழ்).' : ''}
+${_responseLanguage == 'Telugu' ? '- Use Telugu language in Telugu script (తెలుగు).' : ''}
+${_responseLanguage == 'Kannada' ? '- Use Kannada language in Kannada script (ಕನ್ನಡ).' : ''}
+${_responseLanguage == 'Malayalam' ? '- Use Malayalam language in Malayalam script (മലയാളം).' : ''}
+${_responseLanguage == 'Punjabi' ? '- Use Punjabi language in Gurmukhi script (ਪੰਜਾਬੀ).' : ''}
+
 ### USER'S LIVE FINANCIAL LEDGER CONTEXT:
 $financialContextSummary
 
 ### GUIDELINES:
 1. Always reference the user's ACTUAL expense numbers and categories from the provided context when answering.
-2. If the user asks in Hindi/Hinglish, reply in natural, supportive Hinglish. If in English, reply in English.
-3. Be concise, punchy, and use bullet points or bold figures (e.g. **₹4,500**) for clarity.
-4. Give concrete, realistic money-saving advice based on their highest spending categories.
-5. If the user asks something outside personal finance or their expenses, politely steer the conversation back to their money management.''';
+2. Be concise, punchy, and use structured bullets and bold figures (e.g. **₹4,500**) for clarity.
+3. Give concrete, realistic money-saving advice based on their highest spending categories.
+4. If the user asks something outside personal finance or their expenses, politely steer the conversation back to their money management.''';
 
     if (provider == 'gemini') {
       if (_geminiApiKey.isEmpty) {

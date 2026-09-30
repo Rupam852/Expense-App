@@ -269,7 +269,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 7,
+      version: 8,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -375,6 +375,22 @@ class DatabaseHelper {
         ''');
       } catch (e) {
         print('Subscriptions migration error: $e');
+      }
+    }
+    if (oldVersion < 8) {
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS ai_chat_messages (
+            id TEXT PRIMARY KEY,
+            text TEXT NOT NULL,
+            is_user INTEGER NOT NULL,
+            timestamp TEXT NOT NULL,
+            model_used TEXT,
+            created_at TEXT NOT NULL
+          )
+        ''');
+      } catch (e) {
+        print('Ai chat messages migration error: $e');
       }
     }
   }
@@ -491,6 +507,18 @@ class DatabaseHelper {
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         is_synced INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    // 8. AI Chat Messages SQLite Table
+    await db.execute('''
+      CREATE TABLE ai_chat_messages (
+        id TEXT PRIMARY KEY,
+        text TEXT NOT NULL,
+        is_user INTEGER NOT NULL,
+        timestamp TEXT NOT NULL,
+        model_used TEXT,
+        created_at TEXT NOT NULL
       )
     ''');
   }
@@ -1328,6 +1356,50 @@ class DatabaseHelper {
     try { await db.delete('khata_entries'); } catch (_) {}
     try { await db.delete('split_bills'); } catch (_) {}
     try { await db.delete('subscriptions'); } catch (_) {}
+    try { await db.delete('ai_chat_messages'); } catch (_) {}
+  }
+
+  // ================= AI CHAT MESSAGES CRUD =================
+
+  Future<int> insertAiChatMessage({
+    required String id,
+    required String text,
+    required bool isUser,
+    required DateTime timestamp,
+    String? modelUsed,
+  }) async {
+    final db = await instance.database;
+    final encText = encryptVal(text);
+    return await db.insert(
+      'ai_chat_messages',
+      {
+        'id': id,
+        'text': encText,
+        'is_user': isUser ? 1 : 0,
+        'timestamp': timestamp.toIso8601String(),
+        'model_used': modelUsed,
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getAiChatMessages() async {
+    final db = await instance.database;
+    final result = await db.query(
+      'ai_chat_messages',
+      orderBy: 'timestamp ASC',
+    );
+    return result.map((row) {
+      final decryptedRow = Map<String, dynamic>.from(row);
+      decryptedRow['text'] = decryptVal(row['text']?.toString() ?? '');
+      return decryptedRow;
+    }).toList();
+  }
+
+  Future<int> clearAiChatMessages() async {
+    final db = await instance.database;
+    return await db.delete('ai_chat_messages');
   }
 
   Future<void> close() async {
