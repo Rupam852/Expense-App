@@ -91,7 +91,7 @@ class SettingsScreen extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(
-                  color: Colors.redAccent.withOpacity(0.2),
+                  color: Colors.redAccent.withValues(alpha: 0.2),
                 ),
               ),
               title: Row(
@@ -191,15 +191,191 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  void _showThemeSelectionBottomSheet(BuildContext context, UserProvider userProvider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = const Color(0xFF00D09C);
+    final currentMode = userProvider.themeMode;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E232E) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 20,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.grey[700] : Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Choose App Theme',
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Select your preferred visual style or sync with device',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildThemeOptionTile(
+                context: ctx,
+                title: 'Device Default (System)',
+                subtitle: 'Automatically matches your phone’s dark/light mode',
+                icon: Icons.smartphone_rounded,
+                iconColor: Colors.blueAccent,
+                isSelected: currentMode == ThemeMode.system,
+                onTap: () {
+                  userProvider.setThemeMode(ThemeMode.system);
+                  Navigator.of(ctx).pop();
+                },
+                isDark: isDark,
+                primaryColor: primaryColor,
+              ),
+              const SizedBox(height: 8),
+              _buildThemeOptionTile(
+                context: ctx,
+                title: 'Dark Mode',
+                subtitle: 'Sleek OLED deep slate background for low eye strain',
+                icon: Icons.dark_mode_rounded,
+                iconColor: const Color(0xFF8B5CF6),
+                isSelected: currentMode == ThemeMode.dark,
+                onTap: () {
+                  userProvider.setThemeMode(ThemeMode.dark);
+                  Navigator.of(ctx).pop();
+                },
+                isDark: isDark,
+                primaryColor: primaryColor,
+              ),
+              const SizedBox(height: 8),
+              _buildThemeOptionTile(
+                context: ctx,
+                title: 'Light Mode',
+                subtitle: 'Clean soft-white background with high contrast elements',
+                icon: Icons.light_mode_rounded,
+                iconColor: Colors.amber,
+                isSelected: currentMode == ThemeMode.light,
+                onTap: () {
+                  userProvider.setThemeMode(ThemeMode.light);
+                  Navigator.of(ctx).pop();
+                },
+                isDark: isDark,
+                primaryColor: primaryColor,
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildThemeOptionTile({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color iconColor,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required bool isDark,
+    required Color primaryColor,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? primaryColor.withValues(alpha: isDark ? 0.12 : 0.08)
+              : (isDark ? const Color(0xFF14171E) : const Color(0xFFF8FAFC)),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? primaryColor : (isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0)),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                      color: isSelected ? primaryColor : (isDark ? Colors.white : Colors.black87),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Icon(Icons.check_circle_rounded, color: primaryColor, size: 20)
+            else
+              Icon(Icons.radio_button_unchecked, color: isDark ? Colors.grey[600] : Colors.grey[400], size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = const Color(0xFF00D09C);
     final cardBg = isDark ? const Color(0xFF1E232E) : Colors.white;
-    final borderColor = isDark ? const Color(0xFF2C3242) : const Color(0xFFE5E9F0);
+    final borderColor = isDark ? const Color(0xFF2C3242) : const Color(0xFFE2E8F0);
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF12141A) : const Color(0xFFF7F9FC),
+      backgroundColor: isDark ? const Color(0xFF12141A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: isDark ? const Color(0xFF181B22) : Colors.white,
         elevation: 0,
@@ -220,6 +396,20 @@ class SettingsScreen extends StatelessWidget {
         builder: (context, userProvider, expenseProvider, _) {
           final profile = userProvider.userProfile;
           final aiService = AiConfigService.instance;
+          final currentThemeMode = userProvider.themeMode;
+
+          String themeLabel = 'Device Default (System)';
+          IconData themeIcon = Icons.smartphone_rounded;
+          Color themeIconColor = Colors.blueAccent;
+          if (currentThemeMode == ThemeMode.dark) {
+            themeLabel = 'Dark Mode';
+            themeIcon = Icons.dark_mode_rounded;
+            themeIconColor = const Color(0xFF8B5CF6);
+          } else if (currentThemeMode == ThemeMode.light) {
+            themeLabel = 'Light Mode';
+            themeIcon = Icons.light_mode_rounded;
+            themeIconColor = Colors.amber;
+          }
 
           return SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -235,7 +425,7 @@ class SettingsScreen extends StatelessWidget {
                     border: Border.all(color: borderColor),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
+                        color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -245,7 +435,7 @@ class SettingsScreen extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 30,
-                        backgroundColor: primaryColor.withOpacity(0.2),
+                        backgroundColor: primaryColor.withValues(alpha: 0.2),
                         backgroundImage: profile?['photo_url'] != null
                             ? NetworkImage(profile!['photo_url'])
                             : null,
@@ -278,7 +468,7 @@ class SettingsScreen extends StatelessWidget {
                               profile?['email'] ?? 'N/A',
                               style: GoogleFonts.inter(
                                 fontSize: 12,
-                                color: Colors.grey,
+                                color: isDark ? Colors.grey[400] : Colors.grey[600],
                               ),
                             ),
                           ],
@@ -311,14 +501,14 @@ class SettingsScreen extends StatelessWidget {
                     return _buildSettingsCard(
                       isDark: isDark,
                       cardBg: cardBg,
-                      borderColor: hasKey ? primaryColor.withOpacity(0.4) : Colors.amber.withOpacity(0.3),
+                      borderColor: hasKey ? primaryColor.withValues(alpha: 0.4) : Colors.amber.withValues(alpha: 0.3),
                       children: [
                         ListTile(
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                           leading: Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: (hasKey ? primaryColor : Colors.amber).withOpacity(0.12),
+                              color: (hasKey ? primaryColor : Colors.amber).withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
@@ -341,7 +531,7 @@ class SettingsScreen extends StatelessWidget {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: (hasKey ? primaryColor : Colors.amber).withOpacity(0.15),
+                                  color: (hasKey ? primaryColor : Colors.amber).withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
@@ -359,7 +549,7 @@ class SettingsScreen extends StatelessWidget {
                             subtitle,
                             style: GoogleFonts.inter(
                               fontSize: 12,
-                              color: hasKey ? Colors.grey : Colors.amber[700],
+                              color: hasKey ? (isDark ? Colors.grey[400] : Colors.grey[600]) : Colors.amber[700],
                             ),
                           ),
                           trailing: const Icon(Icons.chevron_right, size: 22, color: Colors.grey),
@@ -376,7 +566,67 @@ class SettingsScreen extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // 3. SECURITY & PREFERENCES SECTION
+                // 3. APPEARANCE & THEME SECTION
+                _buildSectionHeader('APPEARANCE & THEME', isDark),
+                const SizedBox(height: 8),
+                _buildSettingsCard(
+                  isDark: isDark,
+                  cardBg: cardBg,
+                  borderColor: borderColor,
+                  children: [
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: themeIconColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(themeIcon, color: themeIconColor, size: 22),
+                      ),
+                      title: Text(
+                        'App Theme',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        themeLabel,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: primaryColor,
+                        ),
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: primaryColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
+                            ),
+                            child: Text(
+                              'Change',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: primaryColor,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+                        ],
+                      ),
+                      onTap: () => _showThemeSelectionBottomSheet(context, userProvider),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // 4. SECURITY & PREFERENCES SECTION
                 _buildSectionHeader('SECURITY & PREFERENCES', isDark),
                 const SizedBox(height: 8),
                 _buildSettingsCard(
@@ -390,7 +640,7 @@ class SettingsScreen extends StatelessWidget {
                       secondary: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.12),
+                          color: Colors.blue.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(Icons.fingerprint, color: Colors.blue, size: 22),
@@ -401,7 +651,7 @@ class SettingsScreen extends StatelessWidget {
                       ),
                       subtitle: Text(
                         'Lock app access with fingerprint / screen lock',
-                        style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
                       ),
                       value: userProvider.biometricsEnabled,
                       onChanged: (val) async {
@@ -420,7 +670,7 @@ class SettingsScreen extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // 4. FINANCIAL RECORDS & EXPORTS
+                // 5. FINANCIAL RECORDS & EXPORTS
                 _buildSectionHeader('FINANCIAL RECORDS', isDark),
                 const SizedBox(height: 8),
                 _buildSettingsCard(
@@ -433,7 +683,7 @@ class SettingsScreen extends StatelessWidget {
                       leading: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF59E0B).withOpacity(0.12),
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(Icons.history_edu_outlined, color: Color(0xFFF59E0B), size: 22),
@@ -444,7 +694,7 @@ class SettingsScreen extends StatelessWidget {
                       ),
                       subtitle: Text(
                         'View & download saved monthly invoices',
-                        style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
                       ),
                       trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
                       onTap: () {
@@ -459,7 +709,7 @@ class SettingsScreen extends StatelessWidget {
                       leading: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF8B5CF6).withOpacity(0.12),
+                          color: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(Icons.account_balance_wallet_outlined, color: Color(0xFF8B5CF6), size: 22),
@@ -470,7 +720,7 @@ class SettingsScreen extends StatelessWidget {
                       ),
                       subtitle: Text(
                         'Manage linked bank and UPI accounts',
-                        style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
                       ),
                       trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
                       onTap: () {
@@ -484,7 +734,7 @@ class SettingsScreen extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // 5. APP UPDATES & SYSTEM
+                // 6. APP UPDATES & SYSTEM
                 _buildSectionHeader('UPDATES & SYSTEM', isDark),
                 const SizedBox(height: 8),
                 ListenableBuilder(
@@ -495,7 +745,7 @@ class SettingsScreen extends StatelessWidget {
                     return _buildSettingsCard(
                       isDark: isDark,
                       cardBg: cardBg,
-                      borderColor: hasUpdate ? const Color(0xFFEF4444).withOpacity(0.4) : borderColor,
+                      borderColor: hasUpdate ? const Color(0xFFEF4444).withValues(alpha: 0.4) : borderColor,
                       children: [
                         ListTile(
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -507,8 +757,8 @@ class SettingsScreen extends StatelessWidget {
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
                                 color: hasUpdate
-                                    ? const Color(0xFFEF4444).withOpacity(0.12)
-                                    : Colors.teal.withOpacity(0.12),
+                                    ? const Color(0xFFEF4444).withValues(alpha: 0.12)
+                                    : Colors.teal.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(
@@ -538,10 +788,10 @@ class SettingsScreen extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFEF4444).withOpacity(0.15),
+                                    color: const Color(0xFFEF4444).withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(6),
                                     border: Border.all(
-                                      color: const Color(0xFFEF4444).withOpacity(0.3),
+                                      color: const Color(0xFFEF4444).withValues(alpha: 0.3),
                                     ),
                                   ),
                                   child: Text(
@@ -562,7 +812,7 @@ class SettingsScreen extends StatelessWidget {
                                 : 'Current version: ${AppUpdateService.currentAppVersion}',
                             style: GoogleFonts.inter(
                               fontSize: 11,
-                              color: hasUpdate ? const Color(0xFFEF4444) : Colors.grey,
+                              color: hasUpdate ? const Color(0xFFEF4444) : (isDark ? Colors.grey[400] : Colors.grey[600]),
                             ),
                           ),
                           trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
@@ -578,7 +828,7 @@ class SettingsScreen extends StatelessWidget {
                           leading: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF38BDF8).withOpacity(0.12),
+                              color: const Color(0xFF38BDF8).withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Icon(
@@ -593,7 +843,7 @@ class SettingsScreen extends StatelessWidget {
                           ),
                           subtitle: Text(
                             'Developer social handles, project repo & support',
-                            style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                            style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
                           ),
                           trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
                           onTap: () {
@@ -609,7 +859,7 @@ class SettingsScreen extends StatelessWidget {
 
                 const SizedBox(height: 32),
 
-                // 6. ACCOUNT ACTIONS (Sign out & Delete Account)
+                // 7. ACCOUNT ACTIONS (Sign out & Delete Account)
                 ElevatedButton.icon(
                   onPressed: () async {
                     final confirm = await showDialog<bool>(
@@ -638,7 +888,7 @@ class SettingsScreen extends StatelessWidget {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.withOpacity(0.1),
+                    backgroundColor: Colors.red.withValues(alpha: 0.1),
                     foregroundColor: Colors.redAccent,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -701,7 +951,7 @@ class SettingsScreen extends StatelessWidget {
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),

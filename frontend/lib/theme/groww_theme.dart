@@ -8,18 +8,18 @@ class GrowwTheme {
   static const Color warningOrange = Color(0xFFF2C94C); // Approach category warnings
   static const Color infoBlue = Color(0xFF2F80ED);   // Investment & sync indicators
 
-  // Light Mode Colors
-  static const Color lightBg = Color(0xFFF8F9FB);
+  // Light Mode Colors (Crisp, high-contrast, soft-slate aesthetics)
+  static const Color lightBg = Color(0xFFF8FAFC);
   static const Color lightCard = Color(0xFFFFFFFF);
-  static const Color lightTextPrimary = Color(0xFF1E2229);
-  static const Color lightTextSecondary = Color(0xFF5A606F);
-  static const Color lightBorder = Color(0xFFE5E9F0);
+  static const Color lightTextPrimary = Color(0xFF0F172A);
+  static const Color lightTextSecondary = Color(0xFF475569);
+  static const Color lightBorder = Color(0xFFE2E8F0);
 
-  // Dark Mode Colors
+  // Dark Mode Colors (Sleek deep slate OLED dark)
   static const Color darkBg = Color(0xFF101216);
   static const Color darkCard = Color(0xFF181B22);
-  static const Color darkTextPrimary = Color(0xFFF1F3F5);
-  static const Color darkTextSecondary = Color(0xFF8E96A4);
+  static const Color darkTextPrimary = Color(0xFFF8FAFC);
+  static const Color darkTextSecondary = Color(0xFF94A3B8);
   static const Color darkBorder = Color(0xFF242936);
 
   // 1. Sleek Groww Light Theme
@@ -35,8 +35,9 @@ class GrowwTheme {
         primary: jadeGreen,
         secondary: jadeGreen,
         surface: lightCard,
-        background: lightBg,
         error: alertRed,
+        onSurface: lightTextPrimary,
+        onPrimary: Colors.white,
       ),
       textTheme: TextTheme(
         headlineLarge: GoogleFonts.outfit(
@@ -94,7 +95,7 @@ class GrowwTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: jadeGreen, width: 2),
         ),
-        hintStyle: GoogleFonts.inter(color: lightTextSecondary.withOpacity(0.7)),
+        hintStyle: GoogleFonts.inter(color: lightTextSecondary.withValues(alpha: 0.7)),
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: lightBg,
@@ -136,8 +137,9 @@ class GrowwTheme {
         primary: jadeGreen,
         secondary: jadeGreen,
         surface: darkCard,
-        background: darkBg,
         error: alertRed,
+        onSurface: darkTextPrimary,
+        onPrimary: Colors.white,
       ),
       textTheme: TextTheme(
         headlineLarge: GoogleFonts.outfit(
@@ -195,7 +197,7 @@ class GrowwTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: jadeGreen, width: 2),
         ),
-        hintStyle: GoogleFonts.inter(color: darkTextSecondary.withOpacity(0.7)),
+        hintStyle: GoogleFonts.inter(color: darkTextSecondary.withValues(alpha: 0.7)),
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: darkBg,

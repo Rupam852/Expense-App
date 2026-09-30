@@ -25,6 +25,7 @@ class UserProvider with ChangeNotifier {
   bool _showApiKeyPrompt = false;
   bool _needsVerification = false;
   String? _unverifiedEmail;
+  ThemeMode _themeMode = ThemeMode.system;
 
   Map<String, dynamic>? get userProfile => _userProfile;
   bool get isAuthenticated => _isAuthenticated;
@@ -36,6 +37,26 @@ class UserProvider with ChangeNotifier {
   bool get showApiKeyPrompt => _showApiKeyPrompt;
   bool get needsVerification => _needsVerification;
   String? get unverifiedEmail => _unverifiedEmail;
+  ThemeMode get themeMode => _themeMode;
+  String get themeModeString {
+    switch (_themeMode) {
+      case ThemeMode.light:
+        return 'light';
+      case ThemeMode.dark:
+        return 'dark';
+      case ThemeMode.system:
+        return 'system';
+    }
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    _themeMode = mode;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('app_theme_mode', themeModeString);
+    } catch (_) {}
+  }
 
   void dismissApiKeyPrompt() {
     _showApiKeyPrompt = false;
@@ -54,9 +75,18 @@ class UserProvider with ChangeNotifier {
   Future<void> _init() async {
     _biometricsEnabled = await _biometricService.isBiometricsEnabled();
 
-    // Load locally cached profile for instant boot
+    // Load locally cached profile & theme preference for instant boot
     try {
       final prefs = await SharedPreferences.getInstance();
+      final savedTheme = prefs.getString('app_theme_mode');
+      if (savedTheme == 'light') {
+        _themeMode = ThemeMode.light;
+      } else if (savedTheme == 'dark') {
+        _themeMode = ThemeMode.dark;
+      } else {
+        _themeMode = ThemeMode.system;
+      }
+
       _userGeminiApiKey = prefs.getString('user_gemini_api_key');
       _userGeminiApiKeySecondary = prefs.getString('user_gemini_api_key_secondary');
       final cachedProfileStr = prefs.getString('cached_user_profile');

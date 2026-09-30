@@ -42,23 +42,27 @@ class GrowExpenseApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Grow Expense',
-      debugShowCheckedModeBanner: false,
-      theme: GrowwTheme.lightTheme,
-      darkTheme: GrowwTheme.darkTheme,
-      themeMode: ThemeMode.system, // Harmonizes with system dark/light settings
-      locale: const Locale('en', 'IN'), // Forces DD/MM/YYYY date inputs in date picker
-      supportedLocales: const [
-        Locale('en', 'IN'),
-        Locale('en', 'US'),
-      ],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      home: const AuthWrapper(),
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, _) {
+        return MaterialApp(
+          title: 'Grow Expense',
+          debugShowCheckedModeBanner: false,
+          theme: GrowwTheme.lightTheme,
+          darkTheme: GrowwTheme.darkTheme,
+          themeMode: userProvider.themeMode, // System Default (Device Default), Dark, or Light
+          locale: const Locale('en', 'IN'), // Forces DD/MM/YYYY date inputs in date picker
+          supportedLocales: const [
+            Locale('en', 'IN'),
+            Locale('en', 'US'),
+          ],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: const AuthWrapper(),
+        );
+      },
     );
   }
 }
