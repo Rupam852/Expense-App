@@ -7,6 +7,7 @@ import '../models/budget.dart';
 import '../models/payment_detail.dart';
 import '../models/khata_entry.dart';
 import '../models/split_bill.dart';
+import '../models/subscription_item.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -142,6 +143,22 @@ class DatabaseHelper {
     }).toList();
   }
 
+  static List<Map<String, dynamic>> decryptSubscriptionMaps(List<Map<String, dynamic>> result) {
+    return result.map((row) {
+      final decryptedRow = Map<String, dynamic>.from(row);
+      decryptedRow['name'] = decryptVal(row['name']?.toString() ?? '');
+      decryptedRow['amount'] = decryptVal(row['amount']?.toString() ?? '0.0');
+      decryptedRow['category'] = decryptVal(row['category']?.toString() ?? 'Subscription');
+      if (row['payment_method'] != null) {
+        decryptedRow['payment_method'] = decryptVal(row['payment_method'].toString());
+      }
+      if (row['note'] != null) {
+        decryptedRow['note'] = decryptVal(row['note'].toString());
+      }
+      return decryptedRow;
+    }).toList();
+  }
+
   DatabaseHelper._init();
 
   static Future<void> _migrateDatabaseIfNecessary(Database db) async {
@@ -252,7 +269,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -333,6 +350,31 @@ class DatabaseHelper {
         ''');
       } catch (e) {
         print('Split bills migration error: $e');
+      }
+    }
+    if (oldVersion < 7) {
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS subscriptions (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            amount REAL NOT NULL,
+            billing_cycle TEXT NOT NULL,
+            next_renewal_date TEXT NOT NULL,
+            category TEXT NOT NULL,
+            auto_renewal INTEGER NOT NULL DEFAULT 1,
+            reminder_days_before INTEGER NOT NULL DEFAULT 2,
+            payment_method TEXT,
+            is_active INTEGER NOT NULL DEFAULT 1,
+            note TEXT,
+            is_deleted INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            is_synced INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+      } catch (e) {
+        print('Subscriptions migration error: $e');
       }
     }
   }
@@ -423,6 +465,27 @@ class DatabaseHelper {
         bill_date TEXT NOT NULL,
         split_type TEXT NOT NULL,
         participants_json TEXT NOT NULL,
+        note TEXT,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        is_synced INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    // 7. Subscriptions & Recurring Bills SQLite Table
+    await db.execute('''
+      CREATE TABLE subscriptions (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        amount REAL NOT NULL,
+        billing_cycle TEXT NOT NULL,
+        next_renewal_date TEXT NOT NULL,
+        category TEXT NOT NULL,
+        auto_renewal INTEGER NOT NULL DEFAULT 1,
+        reminder_days_before INTEGER NOT NULL DEFAULT 2,
+        payment_method TEXT,
+        is_active INTEGER NOT NULL DEFAULT 1,
         note TEXT,
         is_deleted INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
@@ -795,6 +858,100 @@ class DatabaseHelper {
     );
     return await db.update(
       'split_bills',
+      {
+        'is_deleted': 1,
+        'updated_at': DateTime.now().toIso8601String(),
+        'is_synced': 0,
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // ================= SUBSCRIPTIONS CRUD =================
+
+  Future<int> insertSubscription(SubscriptionItem item) async {
+    final db = await instance.database;
+    final map = item.toMap();
+    map['name'] = encryptVal(item.name);
+    map['amount'] = encryptVal(item.amount.toString());
+    map['category'] = encryptVal(item.category);
+    if (item.paymentMethod != null) {
+      map['payment_method'] = encryptVal(item.paymentMethod!);
+    }
+    if (item.note != null) {
+      map['note'] = encryptVal(item.note!);
+    }
+    map['is_synced'] = 0;
+
+    return await db.insert(
+      'subscriptions',
+      map,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<SubscriptionItem>> getSubscriptions() async {
+    final db = await instance.database;
+    final result = await db.query(
+      'subscriptions',
+      where: 'is_deleted = 0',
+      orderBy: 'next_renewal_date ASC',
+    );
+    final decrypted = decryptSubscriptionMaps(result);
+    return decrypted.map((json) => SubscriptionItem.fromMap(json)).toList();
+  }
+
+  Future<int> updateSubscription(SubscriptionItem item) async {
+    final db = await instance.database;
+    final map = item.toMap();
+    map['name'] = encryptVal(item.name);
+    map['amount'] = encryptVal(item.amount.toString());
+    map['category'] = encryptVal(item.category);
+    if (item.paymentMethod != null) {
+      map['payment_method'] = encryptVal(item.paymentMethod!);
+    }
+    if (item.note != null) {
+      map['note'] = encryptVal(item.note!);
+    }
+    map['is_synced'] = 0;
+    map['updated_at'] = DateTime.now().toIso8601String();
+
+    return await db.update(
+      'subscriptions',
+      map,
+      where: 'id = ?',
+      whereArgs: [item.id],
+    );
+  }
+
+  Future<int> toggleSubscriptionActive(String id, bool isActive) async {
+    final db = await instance.database;
+    return await db.update(
+      'subscriptions',
+      {
+        'is_active': isActive ? 1 : 0,
+        'updated_at': DateTime.now().toIso8601String(),
+        'is_synced': 0,
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> deleteSubscription(String id) async {
+    final db = await instance.database;
+    await db.insert(
+      'deleted_records',
+      {
+        'id': id,
+        'table_name': 'subscriptions',
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    return await db.update(
+      'subscriptions',
       {
         'is_deleted': 1,
         'updated_at': DateTime.now().toIso8601String(),

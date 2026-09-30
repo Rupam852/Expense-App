@@ -13,6 +13,7 @@ import 'package:csv/csv.dart';
 import '../models/payment_detail.dart';
 import '../models/khata_entry.dart';
 import '../models/split_bill.dart';
+import '../models/subscription_item.dart';
 import 'ai_config_service.dart';
 
 
@@ -25,6 +26,7 @@ class ExpenseProvider with ChangeNotifier {
   List<PaymentDetail> _paymentDetails = [];
   List<KhataEntry> _khataEntries = [];
   List<SplitBill> _splitBills = [];
+  List<SubscriptionItem> _subscriptions = [];
 
   final List<String> _categories = [
     'Shopping',
@@ -125,6 +127,7 @@ class ExpenseProvider with ChangeNotifier {
   List<PaymentDetail> get paymentDetails => _paymentDetails;
   List<KhataEntry> get khataEntries => _khataEntries;
   List<SplitBill> get splitBills => _splitBills;
+  List<SubscriptionItem> get subscriptions => _subscriptions;
   
   double get totalYouWillGet => _khataEntries
       .where((k) => !k.isDeleted && !k.isSettled && k.isLent)
@@ -143,6 +146,16 @@ class ExpenseProvider with ChangeNotifier {
   double get totalSplitPayable => _splitBills
       .where((b) => !b.isDeleted)
       .fold<double>(0.0, (sum, b) => sum + b.myPendingToPay);
+
+  double get totalMonthlySubscriptionCost => _subscriptions
+      .where((s) => !s.isDeleted && s.isActive)
+      .fold<double>(0.0, (sum, s) => sum + s.monthlyEquivalent);
+
+  double get totalAnnualSubscriptionCost => totalMonthlySubscriptionCost * 12.0;
+
+  int get subscriptionsDueThisWeekCount => _subscriptions
+      .where((s) => !s.isDeleted && s.isActive && s.daysUntilRenewal >= 0 && s.daysUntilRenewal <= 7)
+      .length;
 
   bool get isLoading => _isLoading;
   bool get isSyncing => _isSyncing;
@@ -169,6 +182,7 @@ class ExpenseProvider with ChangeNotifier {
       _paymentDetails = await _dbHelper.getPaymentDetails();
       _khataEntries = await _dbHelper.getKhataEntries();
       _splitBills = await _dbHelper.getSplitBills();
+      _subscriptions = await _dbHelper.getSubscriptions();
       _syncErrorMessage = null;
 
       // Auto-deduplicate local cached expenses on startup
@@ -433,6 +447,94 @@ class ExpenseProvider with ChangeNotifier {
   Future<void> deleteSplitBill(String id) async {
     await _dbHelper.deleteSplitBill(id);
     _splitBills.removeWhere((b) => b.id == id);
+    notifyListeners();
+  }
+
+  // ──────────────────────────────────────────────────────
+  // SUBSCRIPTIONS & RECURRING BILLS
+  // ──────────────────────────────────────────────────────
+  Future<void> fetchSubscriptions() async {
+    _subscriptions = await _dbHelper.getSubscriptions();
+    notifyListeners();
+  }
+
+  Future<void> addSubscription({
+    required String name,
+    required double amount,
+    String billingCycle = 'monthly',
+    required DateTime nextRenewalDate,
+    String category = 'Subscription',
+    bool autoRenewal = true,
+    int reminderDaysBefore = 2,
+    String? paymentMethod,
+    String? note,
+  }) async {
+    final item = SubscriptionItem(
+      id: cryptoUuid(),
+      name: name.trim(),
+      amount: amount,
+      billingCycle: billingCycle,
+      nextRenewalDate: nextRenewalDate,
+      category: category,
+      autoRenewal: autoRenewal,
+      reminderDaysBefore: reminderDaysBefore,
+      paymentMethod: paymentMethod?.trim().isEmpty == true ? null : paymentMethod?.trim(),
+      note: note?.trim().isEmpty == true ? null : note?.trim(),
+    );
+
+    await _dbHelper.insertSubscription(item);
+    _subscriptions.add(item);
+    _subscriptions.sort((a, b) => a.nextRenewalDate.compareTo(b.nextRenewalDate));
+    notifyListeners();
+  }
+
+  Future<void> updateSubscription(SubscriptionItem item) async {
+    await _dbHelper.updateSubscription(item);
+    final index = _subscriptions.indexWhere((s) => s.id == item.id);
+    if (index != -1) {
+      _subscriptions[index] = item;
+      _subscriptions.sort((a, b) => a.nextRenewalDate.compareTo(b.nextRenewalDate));
+      notifyListeners();
+    }
+  }
+
+  Future<void> toggleSubscriptionActive(String id, bool isActive) async {
+    await _dbHelper.toggleSubscriptionActive(id, isActive);
+    final index = _subscriptions.indexWhere((s) => s.id == id);
+    if (index != -1) {
+      _subscriptions[index] = _subscriptions[index].copyWith(isActive: isActive);
+      notifyListeners();
+    }
+  }
+
+  Future<void> markSubscriptionRenewed(String id, {bool logExpenseRecord = true}) async {
+    final index = _subscriptions.indexWhere((s) => s.id == id);
+    if (index != -1) {
+      final item = _subscriptions[index];
+      final nextDate = item.nextCycleDate;
+      final updated = item.copyWith(nextRenewalDate: nextDate);
+
+      await _dbHelper.updateSubscription(updated);
+      _subscriptions[index] = updated;
+      _subscriptions.sort((a, b) => a.nextRenewalDate.compareTo(b.nextRenewalDate));
+
+      if (logExpenseRecord) {
+        await addExpense(
+          amount: item.amount,
+          category: item.category,
+          description: '${item.name} Renewal',
+          date: DateTime.now(),
+          isRecurring: true,
+          recurrencePeriod: item.billingCycle,
+        );
+      }
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteSubscription(String id) async {
+    await _dbHelper.deleteSubscription(id);
+    _subscriptions.removeWhere((s) => s.id == id);
     notifyListeners();
   }
 
