@@ -180,20 +180,28 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
                 ),
               ),
 
-              // 3. Tab Bar
-              TabBar(
-                controller: _tabController,
-                indicatorColor: const Color(0xFF00D09C),
-                indicatorWeight: 3,
-                labelColor: const Color(0xFF00D09C),
-                unselectedLabelColor: Colors.grey,
-                labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
-                tabs: [
-                  Tab(text: 'All (${filtered.length})'),
-                  Tab(text: 'You\'ll Get (${lentList.length})'),
-                  Tab(text: 'You\'ll Give (${borrowedList.length})'),
-                  Tab(text: 'Settled (${settledList.length})'),
-                ],
+              // 3. Tab Bar (Scrollable to prevent label truncation)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TabBar(
+                  controller: _tabController,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  labelPadding: const EdgeInsets.symmetric(horizontal: 14),
+                  indicatorColor: const Color(0xFF00D09C),
+                  indicatorWeight: 3,
+                  labelColor: const Color(0xFF00D09C),
+                  unselectedLabelColor: Colors.grey,
+                  labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
+                  unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 13),
+                  tabs: [
+                    Tab(text: 'All (${filtered.length})'),
+                    Tab(text: 'You\'ll Get (${lentList.length})'),
+                    Tab(text: 'You\'ll Give (${borrowedList.length})'),
+                    Tab(text: 'Settled (${settledList.length})'),
+                  ],
+                ),
               ),
 
               // 4. Tab Views
