@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_displaymode/flutter_displaymode.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -19,6 +21,7 @@ class UserProvider with ChangeNotifier {
   bool _isAuthenticated = false;
   bool _isLoading = false;
   bool _biometricsEnabled = false;
+  bool _highRefreshRateEnabled = true; // Default ON for smooth 90Hz/120Hz/144Hz
   String? _errorMessage;
   String? _userGeminiApiKey;
   String? _userGeminiApiKeySecondary;
@@ -31,6 +34,7 @@ class UserProvider with ChangeNotifier {
   bool get isAuthenticated => _isAuthenticated;
   bool get isLoading => _isLoading;
   bool get biometricsEnabled => _biometricsEnabled;
+  bool get highRefreshRateEnabled => _highRefreshRateEnabled;
   String? get errorMessage => _errorMessage;
   String? get userGeminiApiKey => _userGeminiApiKey;
   String? get userGeminiApiKeySecondary => _userGeminiApiKeySecondary;
@@ -58,6 +62,31 @@ class UserProvider with ChangeNotifier {
     } catch (_) {}
   }
 
+  Future<void> toggleHighRefreshRate(bool enabled) async {
+    _highRefreshRateEnabled = enabled;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('high_refresh_rate', enabled);
+      await _applyRefreshRate(enabled);
+    } catch (e) {
+      debugPrint('[UserProvider] Error toggling refresh rate: $e');
+    }
+  }
+
+  Future<void> _applyRefreshRate(bool highRate) async {
+    if (!Platform.isAndroid) return;
+    try {
+      if (highRate) {
+        await FlutterDisplayMode.setHighRefreshRate();
+      } else {
+        await FlutterDisplayMode.setLowRefreshRate();
+      }
+    } catch (e) {
+      debugPrint('[UserProvider] Could not apply display mode: $e');
+    }
+  }
+
   void dismissApiKeyPrompt() {
     _showApiKeyPrompt = false;
     notifyListeners();
@@ -75,7 +104,7 @@ class UserProvider with ChangeNotifier {
   Future<void> _init() async {
     _biometricsEnabled = await _biometricService.isBiometricsEnabled();
 
-    // Load locally cached profile & theme preference for instant boot
+    // Load locally cached profile & preferences for instant boot
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedTheme = prefs.getString('app_theme_mode');
@@ -86,6 +115,9 @@ class UserProvider with ChangeNotifier {
       } else {
         _themeMode = ThemeMode.system;
       }
+
+      _highRefreshRateEnabled = prefs.getBool('high_refresh_rate') ?? true;
+      _applyRefreshRate(_highRefreshRateEnabled);
 
       _userGeminiApiKey = prefs.getString('user_gemini_api_key');
       _userGeminiApiKeySecondary = prefs.getString('user_gemini_api_key_secondary');

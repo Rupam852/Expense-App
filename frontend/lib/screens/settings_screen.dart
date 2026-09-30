@@ -621,6 +621,29 @@ class SettingsScreen extends StatelessWidget {
                       ),
                       onTap: () => _showThemeSelectionBottomSheet(context, userProvider),
                     ),
+                    Divider(height: 1, color: borderColor),
+                    SwitchListTile(
+                      activeColor: primaryColor,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      secondary: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.speed_rounded, color: Color(0xFF10B981), size: 22),
+                      ),
+                      title: Text(
+                        'Max Refresh Rate (120Hz / 90Hz)',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        'Unlock ultra-smooth frame rate (Default ON)',
+                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                      ),
+                      value: userProvider.highRefreshRateEnabled,
+                      onChanged: (val) => userProvider.toggleHighRefreshRate(val),
+                    ),
                   ],
                 ),
 
