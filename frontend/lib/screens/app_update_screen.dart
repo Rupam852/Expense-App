@@ -221,19 +221,28 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
                           ],
                         ),
                         const SizedBox(height: 20),
-                        ElevatedButton.icon(
-                          onPressed: _handleDownload,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryColor,
-                            foregroundColor: Colors.black87,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            elevation: 0,
-                          ),
-                          icon: const Icon(Icons.download_rounded, size: 20),
-                          label: Text(
-                            'Download Update',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _handleDownload,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              foregroundColor: Colors.black87,
+                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              elevation: 1,
+                              shadowColor: primaryColor.withOpacity(0.3),
+                            ),
+                            icon: const Icon(Icons.download_rounded, size: 22, color: Colors.black87),
+                            label: Text(
+                              'Download Update',
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.black87,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
                           ),
                         ),
                       ],
