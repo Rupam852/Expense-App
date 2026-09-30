@@ -11,6 +11,7 @@ import '../models/expense.dart';
 import '../widgets/custom_toast.dart';
 import 'ai_config_screen.dart';
 import '../widgets/ai_config_required_dialog.dart';
+import '../widgets/voice_expense_dialog.dart';
 
 class ExpenseEntryScreen extends StatefulWidget {
   final bool openCameraScanner;
@@ -401,6 +402,13 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.editExpense != null ? 'Edit Transaction' : 'Add Transaction'),
+        actions: [
+          IconButton(
+            onPressed: () => VoiceExpenseDialog.show(context),
+            icon: const Icon(Icons.mic_none_rounded, color: Color(0xFF00D09C)),
+            tooltip: 'AI Voice Expense Logger',
+          ),
+        ],
       ),
       body: SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),

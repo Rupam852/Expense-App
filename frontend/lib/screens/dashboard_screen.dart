@@ -28,6 +28,7 @@ import '../services/app_update_service.dart';
 import 'app_update_screen.dart';
 import '../services/notification_service.dart';
 import '../widgets/ai_config_required_dialog.dart';
+import '../widgets/voice_expense_dialog.dart';
 
 String getCurrencySymbol(String currencyCode) {
   switch (currencyCode.toUpperCase()) {
@@ -2940,6 +2941,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         : const Color(0xFF00D09C),
                   ),
           ),
+          IconButton(
+            onPressed: () => VoiceExpenseDialog.show(context),
+            icon: const Icon(Icons.mic_none_rounded, color: Color(0xFF00D09C)),
+            tooltip: 'AI Voice Expense Logger',
+          ),
           ListenableBuilder(
             listenable: AppUpdateService.instance,
             builder: (context, _) {
@@ -3087,7 +3093,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 24),
 
-              // 2. Rapid Actions Hub (Imports, OCR Scans, and CSV Statement Export)
+              // 2. Rapid Actions Hub (Imports, OCR Scans, AI Voice, and CSV Statement Export)
               Row(
                 children: [
                   Expanded(
@@ -3095,7 +3101,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       onTap: () => _showOcrSourceDialog(context),
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
                         decoration: BoxDecoration(
                           color: isDark ? const Color(0xFF181B22) : Colors.white,
                           borderRadius: BorderRadius.circular(16),
@@ -3106,19 +3112,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: Column(
                           children: [
                             CircleAvatar(
-                              radius: 18,
+                              radius: 17,
                               backgroundColor: const Color(0xFF00D09C).withOpacity(0.1),
-                              child: const Icon(Icons.document_scanner_outlined, color: Color(0xFF00D09C), size: 18),
+                              child: const Icon(Icons.document_scanner_outlined, color: Color(0xFF00D09C), size: 17),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 7),
                             Text(
                               'Smart OCR',
-                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Read receipts',
-                              style: GoogleFonts.inter(fontSize: 9, color: Colors.grey),
+                              'Receipts',
+                              style: GoogleFonts.inter(fontSize: 8.5, color: Colors.grey),
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -3126,13 +3134,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => VoiceExpenseDialog.show(context),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF181B22) : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(0xFF6C63FF).withOpacity(0.3),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 17,
+                              backgroundColor: const Color(0xFF6C63FF).withOpacity(0.12),
+                              child: const Icon(Icons.mic_none_rounded, color: Color(0xFF6C63FF), size: 18),
+                            ),
+                            const SizedBox(height: 7),
+                            Text(
+                              'AI Voice',
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF6C63FF)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Speak expense',
+                              style: GoogleFonts.inter(fontSize: 8.5, color: Colors.grey),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: InkWell(
                       onTap: () => _triggerFileImport(context),
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
                         decoration: BoxDecoration(
                           color: isDark ? const Color(0xFF181B22) : Colors.white,
                           borderRadius: BorderRadius.circular(16),
@@ -3143,19 +3190,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: Column(
                           children: [
                             CircleAvatar(
-                              radius: 18,
+                              radius: 17,
                               backgroundColor: Colors.blue.withOpacity(0.1),
-                              child: const Icon(Icons.file_upload_outlined, color: Colors.blue, size: 18),
+                              child: const Icon(Icons.file_upload_outlined, color: Colors.blue, size: 17),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 7),
                             Text(
-                              'Import File',
-                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+                              'Import',
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'XLSX / PDF Bank',
-                              style: GoogleFonts.inter(fontSize: 9, color: Colors.grey),
+                              'XLSX / PDF',
+                              style: GoogleFonts.inter(fontSize: 8.5, color: Colors.grey),
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -3163,13 +3212,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: InkWell(
                       onTap: () => _triggerCSVExport(context),
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
                         decoration: BoxDecoration(
                           color: isDark ? const Color(0xFF181B22) : Colors.white,
                           borderRadius: BorderRadius.circular(16),
@@ -3180,19 +3229,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: Column(
                           children: [
                             CircleAvatar(
-                              radius: 18,
+                              radius: 17,
                               backgroundColor: Colors.purple.withOpacity(0.1),
-                              child: const Icon(Icons.table_view_outlined, color: Colors.purple, size: 18),
+                              child: const Icon(Icons.table_view_outlined, color: Colors.purple, size: 17),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 7),
                             Text(
-                              'Export CSV',
-                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+                              'Export',
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Excel statement',
-                              style: GoogleFonts.inter(fontSize: 9, color: Colors.grey),
+                              'CSV Ledger',
+                              style: GoogleFonts.inter(fontSize: 8.5, color: Colors.grey),
                               textAlign: TextAlign.center,
                             ),
                           ],

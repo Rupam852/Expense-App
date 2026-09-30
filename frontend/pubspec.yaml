@@ -46,7 +46,7 @@ dependencies:
   flutter_local_notifications: ^17.2.2
 
   # Sharing & File Operations
-  share_plus: ^9.0.0
+  share_plus: 11.0.0
   open_file: ^3.5.4
   url_launcher: ^6.3.0
 
@@ -54,6 +54,7 @@ dependencies:
   google_sign_in: ^6.2.1
   connectivity_plus: ^7.1.1
   supabase_flutter: ^2.14.2
+  speech_to_text: 7.5.0
 
 dev_dependencies:
   flutter_test:

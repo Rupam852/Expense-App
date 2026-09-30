@@ -627,6 +627,249 @@ JSON structure:
     return {'success': false, 'error': 'Unknown provider: $provider'};
   }
 
+  // ══════════════════════════════════════════════════════════════════════
+  // VOICE & NATURAL LANGUAGE EXPENSE PARSER (Cascaded Failover)
+  // ══════════════════════════════════════════════════════════════════════
+
+  Future<Map<String, dynamic>> parseExpenseFromNaturalText(String naturalSpeechText) async {
+    if (naturalSpeechText.trim().isEmpty) {
+      return {'success': false, 'error': 'No speech or text detected.'};
+    }
+
+    if (!hasAnyApiKey) {
+      return {
+        'success': false,
+        'error': 'No API Key configured. Please add your Gemini or NVIDIA NIM API key in Settings → AI Configuration.',
+        'needsConfig': true,
+      };
+    }
+
+    final primary = _primaryProvider;
+    final secondary = _secondaryProvider;
+
+    final primaryKey = primary == 'gemini' ? _geminiApiKey : _nvidiaApiKey;
+    final secondaryKey = secondary == 'gemini' ? _geminiApiKey : _nvidiaApiKey;
+
+    Map<String, dynamic>? primaryResult;
+    if (primaryKey.trim().isNotEmpty) {
+      debugPrint('[AiConfigService] Attempting Voice Natural Text Parse with Primary Engine: $primary');
+      primaryResult = await _invokeProviderForNaturalText(
+        provider: primary,
+        naturalSpeechText: naturalSpeechText,
+      );
+
+      if (primaryResult['success'] == true) {
+        return primaryResult;
+      }
+      debugPrint('[AiConfigService] Primary Engine ($primary) failed for Voice: ${primaryResult['error']}. Checking Secondary Engine...');
+    }
+
+    // Attempt Secondary Engine Failover
+    if (secondaryKey.trim().isNotEmpty) {
+      debugPrint('[AiConfigService] Failing over to Secondary Engine for Voice: $secondary...');
+      var secondaryResult = await _invokeProviderForNaturalText(
+        provider: secondary,
+        naturalSpeechText: naturalSpeechText,
+      );
+
+      if (secondaryResult['success'] == true) {
+        return secondaryResult;
+      }
+
+      return {
+        'success': false,
+        'error': 'Both Primary ($primary) and Backup ($secondary) AI engines failed.\nPrimary: ${primaryResult?['error'] ?? 'No key'}\nBackup: ${secondaryResult['error']}',
+      };
+    }
+
+    return {
+      'success': false,
+      'error': primaryResult?['error'] ?? 'Configured AI provider failed. Please check your API Key in Settings.',
+    };
+  }
+
+  Future<Map<String, dynamic>> _invokeProviderForNaturalText({
+    required String provider,
+    required String naturalSpeechText,
+  }) async {
+    final now = DateTime.now();
+    final currentDateIso = now.toIso8601String();
+    final promptText = '''You are an expert AI Financial Expense Voice Parser for English, Hindi, Hinglish, and mixed Indian multilingual speech.
+Current Timestamp: $currentDateIso
+
+USER SPOKEN TEXT:
+"$naturalSpeechText"
+
+### MANDATORY EXTRACTION RULES:
+1. AMOUNT (Float Number):
+   - Identify the exact expense amount mentioned (e.g., 500, 250.50, 1200, 80).
+   - If numbers are spoken in words (e.g., "panch sau", "five hundred", "two thousand", "assi rupay", "dedh sau"), accurately convert to numeric float.
+   - Return ONLY a numeric float (e.g. 500.0).
+
+2. CURRENCY (ISO 3-Letter Code):
+   - Default to "INR" unless another currency (USD, EUR, GBP, AED) is explicitly stated.
+
+3. DESCRIPTION & VENDOR:
+   - Extract a clean, concise description (e.g., "Petrol at Indian Oil", "Lunch with friends", "DMart Groceries", "Auto fare").
+   - Extract merchant/vendor name if mentioned (e.g., "Swiggy", "Zomato", "Indian Oil", "DMart", "Uber", "Ola", "Starbucks").
+
+4. CATEGORY (Strict Classification):
+   - MUST match EXACTLY ONE of the following 22 valid categories:
+     Shopping, Groceries, Food & dining, Transport, Bills & recharges, Transfers, Medical, Travel, Repayments, Personal, Services, Insurance, Entertainment, Gaming, Small shops, Rent, Logistics, Subscription, Investment, Fitness, Pet, Miscellaneous
+
+5. PAYMENT METHOD:
+   - Identify payment method: "UPI", "Cash", "Credit Card", "Debit Card", "Net Banking", "Wallet".
+   - If user mentioned "GPay", "PhonePe", "Paytm", "UPI", "online", classify as "UPI". If user mentioned "cash" / "nagad", classify as "Cash". Default is "UPI".
+
+6. TRANSACTION DATE (ISO 8601):
+   - If user mentions "yesterday" / "kal" / "aaj subah" / "last night" / "2 days ago", compute relative timestamp based on Current Timestamp ($currentDateIso).
+   - Otherwise, use $currentDateIso.
+
+### OUTPUT FORMAT:
+Return ONLY a valid, single JSON object without markdown fences, backticks, or conversational text.
+
+JSON format:
+{
+  "amount": 500.0,
+  "currency": "INR",
+  "category": "Food & dining",
+  "description": "Lunch with friends",
+  "vendor": "Burger King",
+  "payment_method": "UPI",
+  "transaction_date": "$currentDateIso"
+}''';
+
+    if (provider == 'gemini') {
+      if (_geminiApiKey.isEmpty) {
+        return {'success': false, 'error': 'Gemini API Key is missing. Please add it in Settings → AI Configuration.'};
+      }
+
+      final candidateModels = <String>[_geminiModel];
+      for (final m in availableGeminiModels) {
+        if (!candidateModels.contains(m)) {
+          candidateModels.add(m);
+        }
+      }
+
+      String? lastGeminiError;
+      for (final model in candidateModels) {
+        debugPrint('[AiConfigService] Attempting Gemini Voice parsing with model: $model');
+        try {
+          final url = Uri.parse(
+            'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$_geminiApiKey',
+          );
+          final payload = {
+            'contents': [
+              {
+                'parts': [
+                  {'text': promptText},
+                ]
+              }
+            ],
+            'generationConfig': {
+              'temperature': 0.1,
+              'responseMimeType': 'application/json',
+            }
+          };
+
+          final response = await http.post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode(payload),
+          ).timeout(const Duration(seconds: 25));
+
+          if (response.statusCode == 200) {
+            final resJson = json.decode(response.body);
+            final candidates = resJson['candidates'] as List?;
+            if (candidates != null && candidates.isNotEmpty) {
+              final content = candidates[0]['content'];
+              final parts = content?['parts'] as List?;
+              if (parts != null && parts.isNotEmpty) {
+                final rawText = parts[0]['text']?.toString() ?? '';
+                final parsed = _extractJsonFromText(rawText);
+                if (parsed != null && parsed.containsKey('amount')) {
+                  debugPrint('[AiConfigService] Gemini Voice model $model succeeded!');
+                  return {'success': true, 'data': parsed, 'modelUsed': model};
+                }
+              }
+            }
+            lastGeminiError = 'Model $model returned unparseable content';
+          } else {
+            lastGeminiError = 'Model $model: HTTP ${response.statusCode}';
+            debugPrint('[AiConfigService] Gemini Voice model $model failed (${response.statusCode}). Failing over to next Gemini model...');
+          }
+        } catch (e) {
+          lastGeminiError = 'Model $model: $e';
+          debugPrint('[AiConfigService] Gemini Voice model $model error: $e. Failing over to next Gemini model...');
+        }
+      }
+
+      return {'success': false, 'error': 'All Gemini models failed ($lastGeminiError).'};
+    }
+
+    if (provider == 'nvidia') {
+      if (_nvidiaApiKey.isEmpty) {
+        return {'success': false, 'error': 'NVIDIA NIM API Key is missing. Please add it in Settings → AI Configuration.'};
+      }
+
+      final candidateModels = <String>[_nvidiaModel];
+      for (final m in availableNvidiaModels) {
+        if (!candidateModels.contains(m)) {
+          candidateModels.add(m);
+        }
+      }
+
+      String? lastNvidiaError;
+      for (final model in candidateModels) {
+        debugPrint('[AiConfigService] Attempting NVIDIA NIM Voice parsing with model: $model');
+        try {
+          final url = Uri.parse('https://integrate.api.nvidia.com/v1/chat/completions');
+          final payload = {
+            'model': model,
+            'messages': [
+              {
+                'role': 'user',
+                'content': promptText,
+              }
+            ],
+            'max_tokens': 512,
+            'temperature': 0.1,
+          };
+
+          final response = await http.post(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $_nvidiaApiKey',
+            },
+            body: json.encode(payload),
+          ).timeout(const Duration(seconds: 25));
+
+          if (response.statusCode == 200) {
+            final resJson = json.decode(response.body);
+            final rawText = resJson['choices']?[0]?['message']?['content']?.toString() ?? '';
+            final parsed = _extractJsonFromText(rawText);
+            if (parsed != null && parsed.containsKey('amount')) {
+              debugPrint('[AiConfigService] NVIDIA Voice model $model succeeded!');
+              return {'success': true, 'data': parsed, 'modelUsed': model};
+            }
+            lastNvidiaError = 'Model $model: JSON parsing failed';
+          } else {
+            lastNvidiaError = 'Model $model: HTTP ${response.statusCode}';
+            debugPrint('[AiConfigService] NVIDIA Voice model $model failed (${response.statusCode}). Failing over to next model...');
+          }
+        } catch (e) {
+          lastNvidiaError = 'Model $model: $e';
+          debugPrint('[AiConfigService] NVIDIA Voice model $model error: $e. Failing over to next model...');
+        }
+      }
+
+      return {'success': false, 'error': 'All NVIDIA NIM models failed ($lastNvidiaError).'};
+    }
+
+    return {'success': false, 'error': 'Unknown provider: $provider'};
+  }
+
   Map<String, dynamic>? _extractJsonFromText(String raw) {
     var clean = raw.trim();
     final firstCurly = clean.indexOf('{');
