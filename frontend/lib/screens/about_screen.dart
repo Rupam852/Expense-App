@@ -9,10 +9,10 @@ import '../widgets/app_logo.dart';
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
 
-  static const String devWebsite = 'https://rupam852.github.io';
+  static const String devWebsite = 'https://link-flow-program.vercel.app/rupam-bairagya';
+  static const String devGitHub = 'https://github.com/Rupam852';
   static const String devInstagram = 'https://instagram.com/_rupambairagya_';
   static const String devLinkedIn = 'https://linkedin.com/in/rupam-bairagya';
-  static const String appGitHub = 'https://github.com/Rupam852/Expense-App';
   static const String supportEmail = 'rupambairagya852@gmail.com';
   static const String upiId = 'expensetracker@ybl';
 
@@ -33,7 +33,7 @@ class AboutScreen extends StatelessWidget {
   }
 
   Future<void> _launchUpiPayment(BuildContext context) async {
-    final upiUrl = 'upi://pay?pa=$upiId&pn=Expense%20Tracker%20Support&cu=INR&tn=Support%20Developer';
+    const upiUrl = 'upi://pay?pa=$upiId&pn=Expense%20Tracker%20Support&cu=INR&tn=Support%20Developer';
     try {
       final uri = Uri.parse(upiUrl);
       if (await canLaunchUrl(uri)) {
@@ -55,10 +55,10 @@ class AboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = const Color(0xFF00D09C);
+    const primaryColor = Color(0xFF00D09C);
     final cardBg = isDark ? const Color(0xFF1E232E) : Colors.white;
     final borderColor = isDark ? const Color(0xFF2C3242) : const Color(0xFFE5E9F0);
-    final currentVersion = AppUpdateService.currentAppVersion;
+    const currentVersion = AppUpdateService.currentAppVersion;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF12141A) : const Color(0xFFF7F9FC),
@@ -94,7 +94,7 @@ class AboutScreen extends StatelessWidget {
                 border: Border.all(color: borderColor),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(isDark ? 0.25 : 0.04),
+                    color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
                     blurRadius: 16,
                     offset: const Offset(0, 6),
                   ),
@@ -168,7 +168,7 @@ class AboutScreen extends StatelessWidget {
             const SizedBox(height: 24),
 
             // ══════════════════════════════════════════════════════
-            // 2. DEVELOPER SECTION
+            // 2. DEVELOPER SECTION (Website, GitHub, Instagram, LinkedIn)
             // ══════════════════════════════════════════════════════
             _buildSectionHeader('Developer', isDark),
             const SizedBox(height: 8),
@@ -182,8 +182,17 @@ class AboutScreen extends StatelessWidget {
                   icon: Icons.language_rounded,
                   iconColor: const Color(0xFF38BDF8),
                   title: 'Website',
-                  subtitle: 'rupam852.github.io',
+                  subtitle: 'link-flow-program.vercel.app/rupam-bairagya',
                   onTap: () => _launchUrlHelper(context, devWebsite),
+                ),
+                Divider(height: 1, color: borderColor),
+                _buildActionTile(
+                  isDark: isDark,
+                  icon: Icons.code_rounded,
+                  iconColor: isDark ? Colors.white : Colors.black87,
+                  title: 'GitHub',
+                  subtitle: 'github.com/Rupam852',
+                  onTap: () => _launchUrlHelper(context, devGitHub),
                 ),
                 Divider(height: 1, color: borderColor),
                 _buildActionTile(
@@ -209,30 +218,7 @@ class AboutScreen extends StatelessWidget {
             const SizedBox(height: 24),
 
             // ══════════════════════════════════════════════════════
-            // 3. APP / OPEN SOURCE SECTION
-            // ══════════════════════════════════════════════════════
-            _buildSectionHeader('App', isDark),
-            const SizedBox(height: 8),
-            _buildCard(
-              isDark: isDark,
-              cardBg: cardBg,
-              borderColor: borderColor,
-              children: [
-                _buildActionTile(
-                  isDark: isDark,
-                  icon: Icons.code_rounded,
-                  iconColor: isDark ? Colors.white : Colors.black87,
-                  title: 'GitHub',
-                  subtitle: 'Rupam852/Expense-App',
-                  onTap: () => _launchUrlHelper(context, appGitHub),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            // ══════════════════════════════════════════════════════
-            // 4. CONTACT & SUPPORT SECTION
+            // 3. CONTACT & SUPPORT SECTION
             // ══════════════════════════════════════════════════════
             _buildSectionHeader('Contact & Support', isDark),
             const SizedBox(height: 8),
@@ -264,7 +250,7 @@ class AboutScreen extends StatelessWidget {
             const SizedBox(height: 36),
 
             // ══════════════════════════════════════════════════════
-            // 5. FOOTER: Proudly Made in India 🇮🇳
+            // 4. FOOTER: Proudly Made in India 🇮🇳
             // ══════════════════════════════════════════════════════
             Center(
               child: Row(
@@ -320,7 +306,7 @@ class AboutScreen extends StatelessWidget {
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
