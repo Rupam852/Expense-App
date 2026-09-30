@@ -247,256 +247,269 @@ class NotificationSettingsScreen extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // 2. NOTIFICATION LANGUAGE SELECTOR
-                _buildSectionHeader('NOTIFICATION LANGUAGE', isDark),
-                const SizedBox(height: 8),
-                _buildSettingsCard(
-                  isDark: isDark,
-                  cardBg: cardBg,
-                  borderColor: borderColor,
-                  children: [
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.translate_rounded, color: Color(0xFF3B82F6), size: 22),
-                      ),
-                      title: Text(
-                        'Alerts Language',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        service.languageDisplayName,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: primaryColor,
-                        ),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: primaryColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
-                            ),
-                            child: Text(
-                              'Change',
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: primaryColor,
+                // 2 & 3. CHILD SETTINGS (Language & Granular Alerts) - Grayed out and deactivated if Master is OFF
+                AnimatedOpacity(
+                  opacity: isMasterOn ? 1.0 : 0.38,
+                  duration: const Duration(milliseconds: 250),
+                  child: IgnorePointer(
+                    ignoring: !isMasterOn,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // 2. NOTIFICATION LANGUAGE SELECTOR
+                        _buildSectionHeader('NOTIFICATION LANGUAGE', isDark),
+                        const SizedBox(height: 8),
+                        _buildSettingsCard(
+                          isDark: isDark,
+                          cardBg: cardBg,
+                          borderColor: borderColor,
+                          children: [
+                            ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                              leading: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.translate_rounded, color: Color(0xFF3B82F6), size: 22),
                               ),
+                              title: Text(
+                                'Alerts Language',
+                                style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                              ),
+                              subtitle: Text(
+                                service.languageDisplayName,
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: primaryColor,
+                                ),
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: primaryColor.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
+                                    ),
+                                    child: Text(
+                                      'Change',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: primaryColor,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+                                ],
+                              ),
+                              onTap: isMasterOn ? () => _showLanguageBottomSheet(context, service) : null,
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
-                        ],
-                      ),
-                      onTap: () => _showLanguageBottomSheet(context, service),
-                    ),
-                  ],
-                ),
+                          ],
+                        ),
 
-                const SizedBox(height: 24),
+                        const SizedBox(height: 24),
 
-                // 3. GRANULAR FEATURE NOTIFICATIONS WITH INDIVIDUAL TEST BUTTONS
-                _buildSectionHeader('FEATURE ALERTS & SEPARATE TEST', isDark),
-                const SizedBox(height: 8),
-                _buildSettingsCard(
-                  isDark: isDark,
-                  cardBg: cardBg,
-                  borderColor: borderColor,
-                  children: [
-                    // A. Budget & Spending Limits
-                    _buildFeatureTileWithTest(
-                      context: context,
-                      isDark: isDark,
-                      primaryColor: primaryColor,
-                      icon: Icons.pie_chart_outline_rounded,
-                      iconColor: const Color(0xFFEF4444),
-                      title: 'Budget & Spending Limits',
-                      subtitle: 'Alerts when spending hits 90% or 100% of limits',
-                      isEnabled: isMasterOn && service.budgetAlertsEnabled,
-                      isMasterOn: isMasterOn,
-                      onToggle: (val) => service.setBudgetAlertsEnabled(val),
-                      onTestTap: () async {
-                        await service.showBudgetLimitNotification(
-                          category: 'Shopping',
-                          spent: 5500,
-                          limit: 5000,
-                          percentage: 110,
-                        );
-                        if (context.mounted) {
-                          CustomToast.show(context, '🚨 Test Budget Exceeded Alert sent to status bar!');
-                        }
-                      },
-                    ),
-                    Divider(height: 1, color: borderColor),
+                        // 3. GRANULAR FEATURE NOTIFICATIONS WITH INDIVIDUAL TEST BUTTONS
+                        _buildSectionHeader('FEATURE ALERTS & SEPARATE TEST', isDark),
+                        const SizedBox(height: 8),
+                        _buildSettingsCard(
+                          isDark: isDark,
+                          cardBg: cardBg,
+                          borderColor: borderColor,
+                          children: [
+                            // A. Budget & Spending Limits
+                            _buildFeatureTileWithTest(
+                              context: context,
+                              isDark: isDark,
+                              primaryColor: primaryColor,
+                              icon: Icons.pie_chart_outline_rounded,
+                              iconColor: const Color(0xFFEF4444),
+                              title: 'Budget & Spending Limits',
+                              subtitle: 'Alerts when spending hits 90% or 100% of limits',
+                              isEnabled: isMasterOn && service.budgetAlertsEnabled,
+                              isMasterOn: isMasterOn,
+                              onToggle: (val) => service.setBudgetAlertsEnabled(val),
+                              onTestTap: () async {
+                                await service.showBudgetLimitNotification(
+                                  category: 'Shopping',
+                                  spent: 5500,
+                                  limit: 5000,
+                                  percentage: 110,
+                                );
+                                if (context.mounted) {
+                                  CustomToast.show(context, '🚨 Test Budget Exceeded Alert sent to status bar!');
+                                }
+                              },
+                            ),
+                            Divider(height: 1, color: borderColor),
 
-                    // B. Subscriptions & Bills
-                    _buildFeatureTileWithTest(
-                      context: context,
-                      isDark: isDark,
-                      primaryColor: primaryColor,
-                      icon: Icons.repeat_rounded,
-                      iconColor: const Color(0xFFF59E0B),
-                      title: 'Subscriptions & Bills',
-                      subtitle: 'Alerts for due dates, overdue bills & renewals',
-                      isEnabled: isMasterOn && service.subscriptionAlertsEnabled,
-                      isMasterOn: isMasterOn,
-                      onToggle: (val) => service.setSubscriptionAlertsEnabled(val),
-                      onTestTap: () async {
-                        final sampleSub = SubscriptionItem(
-                          id: 'sample-netflix',
-                          name: 'Netflix Premium',
-                          amount: 649,
-                          billingCycle: 'monthly',
-                          nextRenewalDate: DateTime.now(),
-                          category: 'Subscription',
-                        );
-                        await service.showSubscriptionDueNotification(sampleSub);
-                        if (context.mounted) {
-                          CustomToast.show(context, '🔔 Test Subscription Due Alert sent to status bar!');
-                        }
-                      },
-                    ),
-                    Divider(height: 1, color: borderColor),
+                            // B. Subscriptions & Bills
+                            _buildFeatureTileWithTest(
+                              context: context,
+                              isDark: isDark,
+                              primaryColor: primaryColor,
+                              icon: Icons.repeat_rounded,
+                              iconColor: const Color(0xFFF59E0B),
+                              title: 'Subscriptions & Bills',
+                              subtitle: 'Alerts for due dates, overdue bills & renewals',
+                              isEnabled: isMasterOn && service.subscriptionAlertsEnabled,
+                              isMasterOn: isMasterOn,
+                              onToggle: (val) => service.setSubscriptionAlertsEnabled(val),
+                              onTestTap: () async {
+                                final sampleSub = SubscriptionItem(
+                                  id: 'sample-netflix',
+                                  name: 'Netflix Premium',
+                                  amount: 649,
+                                  billingCycle: 'monthly',
+                                  nextRenewalDate: DateTime.now(),
+                                  category: 'Subscription',
+                                );
+                                await service.showSubscriptionDueNotification(sampleSub);
+                                if (context.mounted) {
+                                  CustomToast.show(context, '🔔 Test Subscription Due Alert sent to status bar!');
+                                }
+                              },
+                            ),
+                            Divider(height: 1, color: borderColor),
 
-                    // C. Khata & Udhar Reminders
-                    _buildFeatureTileWithTest(
-                      context: context,
-                      isDark: isDark,
-                      primaryColor: primaryColor,
-                      icon: Icons.handshake_outlined,
-                      iconColor: const Color(0xFF10B981),
-                      title: 'Khata & Udhar Reminders',
-                      subtitle: 'Reminders for pending lend & borrow settlements',
-                      isEnabled: isMasterOn && service.khataAlertsEnabled,
-                      isMasterOn: isMasterOn,
-                      onToggle: (val) => service.setKhataAlertsEnabled(val),
-                      onTestTap: () async {
-                        await service.showKhataReminderNotification(
-                          personName: 'Rahul Sharma',
-                          amount: 1500,
-                          isLent: true,
-                          dueDate: DateTime.now(),
-                        );
-                        if (context.mounted) {
-                          CustomToast.show(context, '💸 Test Khata Reminder sent to status bar!');
-                        }
-                      },
-                    ),
-                    Divider(height: 1, color: borderColor),
+                            // C. Khata & Udhar Reminders
+                            _buildFeatureTileWithTest(
+                              context: context,
+                              isDark: isDark,
+                              primaryColor: primaryColor,
+                              icon: Icons.handshake_outlined,
+                              iconColor: const Color(0xFF10B981),
+                              title: 'Khata & Udhar Reminders',
+                              subtitle: 'Reminders for pending lend & borrow settlements',
+                              isEnabled: isMasterOn && service.khataAlertsEnabled,
+                              isMasterOn: isMasterOn,
+                              onToggle: (val) => service.setKhataAlertsEnabled(val),
+                              onTestTap: () async {
+                                await service.showKhataReminderNotification(
+                                  personName: 'Rahul Sharma',
+                                  amount: 1500,
+                                  isLent: true,
+                                  dueDate: DateTime.now(),
+                                );
+                                if (context.mounted) {
+                                  CustomToast.show(context, '💸 Test Khata Reminder sent to status bar!');
+                                }
+                              },
+                            ),
+                            Divider(height: 1, color: borderColor),
 
-                    // D. Daily Evening Expense Log Reminder
-                    _buildFeatureTileWithTest(
-                      context: context,
-                      isDark: isDark,
-                      primaryColor: primaryColor,
-                      icon: Icons.nightlight_round,
-                      iconColor: const Color(0xFF8B5CF6),
-                      title: 'Daily Expense Logging Reminder',
-                      subtitle: 'Evening nudge (9:00 PM) to record today\'s expenses',
-                      isEnabled: isMasterOn && service.dailyReminderEnabled,
-                      isMasterOn: isMasterOn,
-                      onToggle: (val) => service.setDailyReminderEnabled(val),
-                      onTestTap: () async {
-                        await service.showDailyEveningReminder();
-                        if (context.mounted) {
-                          CustomToast.show(context, '🌙 Test Daily Evening Reminder sent to status bar!');
-                        }
-                      },
-                    ),
-                    Divider(height: 1, color: borderColor),
+                            // D. Daily Evening Expense Log Reminder
+                            _buildFeatureTileWithTest(
+                              context: context,
+                              isDark: isDark,
+                              primaryColor: primaryColor,
+                              icon: Icons.nightlight_round,
+                              iconColor: const Color(0xFF8B5CF6),
+                              title: 'Daily Expense Logging Reminder',
+                              subtitle: 'Evening nudge (9:00 PM) to record today\'s expenses',
+                              isEnabled: isMasterOn && service.dailyReminderEnabled,
+                              isMasterOn: isMasterOn,
+                              onToggle: (val) => service.setDailyReminderEnabled(val),
+                              onTestTap: () async {
+                                await service.showDailyEveningReminder();
+                                if (context.mounted) {
+                                  CustomToast.show(context, '🌙 Test Daily Evening Reminder sent to status bar!');
+                                }
+                              },
+                            ),
+                            Divider(height: 1, color: borderColor),
 
-                    // E. Split Bill Pending Alerts
-                    _buildFeatureTileWithTest(
-                      context: context,
-                      isDark: isDark,
-                      primaryColor: primaryColor,
-                      icon: Icons.call_split_rounded,
-                      iconColor: const Color(0xFF6366F1),
-                      title: 'Split Bill Pending Alerts',
-                      subtitle: 'Alerts when group members have pending shares',
-                      isEnabled: isMasterOn && service.splitBillAlertsEnabled,
-                      isMasterOn: isMasterOn,
-                      onToggle: (val) => service.setSplitBillAlertsEnabled(val),
-                      onTestTap: () async {
-                        await service.showSplitBillPendingNotification(
-                          titleText: 'Goa Trip Dinner',
-                          pendingAmount: 1850,
-                          pendingPeopleCount: 3,
-                        );
-                        if (context.mounted) {
-                          CustomToast.show(context, '👥 Test Split Bill Alert sent to status bar!');
-                        }
-                      },
-                    ),
-                    Divider(height: 1, color: borderColor),
+                            // E. Split Bill Pending Alerts
+                            _buildFeatureTileWithTest(
+                              context: context,
+                              isDark: isDark,
+                              primaryColor: primaryColor,
+                              icon: Icons.call_split_rounded,
+                              iconColor: const Color(0xFF6366F1),
+                              title: 'Split Bill Pending Alerts',
+                              subtitle: 'Alerts when group members have pending shares',
+                              isEnabled: isMasterOn && service.splitBillAlertsEnabled,
+                              isMasterOn: isMasterOn,
+                              onToggle: (val) => service.setSplitBillAlertsEnabled(val),
+                              onTestTap: () async {
+                                await service.showSplitBillPendingNotification(
+                                  titleText: 'Goa Trip Dinner',
+                                  pendingAmount: 1850,
+                                  pendingPeopleCount: 3,
+                                );
+                                if (context.mounted) {
+                                  CustomToast.show(context, '👥 Test Split Bill Alert sent to status bar!');
+                                }
+                              },
+                            ),
+                            Divider(height: 1, color: borderColor),
 
-                    // F. Monthly Savings & Financial Summary
-                    _buildFeatureTileWithTest(
-                      context: context,
-                      isDark: isDark,
-                      primaryColor: primaryColor,
-                      icon: Icons.insights_rounded,
-                      iconColor: const Color(0xFF00D09C),
-                      title: 'Monthly Savings & Report',
-                      subtitle: 'Month-end savings analysis & category breakdowns',
-                      isEnabled: isMasterOn && service.monthlyReportEnabled,
-                      isMasterOn: isMasterOn,
-                      onToggle: (val) => service.setMonthlyReportEnabled(val),
-                      onTestTap: () async {
-                        await service.showMonthlySavingsReportNotification(
-                          totalSpent: 16500,
-                          totalSaved: 4200,
-                          monthName: 'September',
-                        );
-                        if (context.mounted) {
-                          CustomToast.show(context, '🎉 Test Monthly Report sent to status bar!');
-                        }
-                      },
-                    ),
-                    Divider(height: 1, color: borderColor),
+                            // F. Monthly Savings & Financial Summary
+                            _buildFeatureTileWithTest(
+                              context: context,
+                              isDark: isDark,
+                              primaryColor: primaryColor,
+                              icon: Icons.insights_rounded,
+                              iconColor: const Color(0xFF00D09C),
+                              title: 'Monthly Savings & Report',
+                              subtitle: 'Month-end savings analysis & category breakdowns',
+                              isEnabled: isMasterOn && service.monthlyReportEnabled,
+                              isMasterOn: isMasterOn,
+                              onToggle: (val) => service.setMonthlyReportEnabled(val),
+                              onTestTap: () async {
+                                await service.showMonthlySavingsReportNotification(
+                                  totalSpent: 16500,
+                                  totalSaved: 4200,
+                                  monthName: 'September',
+                                );
+                                if (context.mounted) {
+                                  CustomToast.show(context, '🎉 Test Monthly Report sent to status bar!');
+                                }
+                              },
+                            ),
+                            Divider(height: 1, color: borderColor),
 
-                    // G. App Updates
-                    _buildFeatureTileWithTest(
-                      context: context,
-                      isDark: isDark,
-                      primaryColor: primaryColor,
-                      icon: Icons.system_update_rounded,
-                      iconColor: const Color(0xFF06B6D4),
-                      title: 'App Version Updates',
-                      subtitle: 'Alerts when new features & release APKs arrive',
-                      isEnabled: isMasterOn && service.appUpdatesEnabled,
-                      isMasterOn: isMasterOn,
-                      onToggle: (val) => service.setAppUpdatesEnabled(val),
-                      onTestTap: () async {
-                        final sampleUpdate = AppUpdateInfo(
-                          hasUpdate: true,
-                          currentVersion: 'v1.0.0',
-                          latestVersion: 'v2.1.0',
-                          fileName: 'GrowExpense-v2.1.0.apk',
-                          downloadUrl: 'https://github.com/Rupam852/Expense-App/releases',
-                          webUrl: 'https://github.com/Rupam852/Expense-App',
-                          description: '• Multi-language push notifications\n• Granular alert toggles\n• 120Hz display support',
-                          fileSizeBytes: 26948403,
-                        );
-                        await service.showUpdateNotification(sampleUpdate);
-                        if (context.mounted) {
-                          CustomToast.show(context, '🚀 Test Update Alert sent to status bar!');
-                        }
-                      },
+                            // G. App Updates
+                            _buildFeatureTileWithTest(
+                              context: context,
+                              isDark: isDark,
+                              primaryColor: primaryColor,
+                              icon: Icons.system_update_rounded,
+                              iconColor: const Color(0xFF06B6D4),
+                              title: 'App Version Updates',
+                              subtitle: 'Alerts when new features & release APKs arrive',
+                              isEnabled: isMasterOn && service.appUpdatesEnabled,
+                              isMasterOn: isMasterOn,
+                              onToggle: (val) => service.setAppUpdatesEnabled(val),
+                              onTestTap: () async {
+                                final sampleUpdate = AppUpdateInfo(
+                                  hasUpdate: true,
+                                  currentVersion: 'v1.0.0',
+                                  latestVersion: 'v2.1.0',
+                                  fileName: 'GrowExpense-v2.1.0.apk',
+                                  downloadUrl: 'https://github.com/Rupam852/Expense-App/releases',
+                                  webUrl: 'https://github.com/Rupam852/Expense-App',
+                                  description: '• Multi-language push notifications\n• Granular alert toggles\n• 120Hz display support',
+                                  fileSizeBytes: 26948403,
+                                );
+                                await service.showUpdateNotification(sampleUpdate);
+                                if (context.mounted) {
+                                  CustomToast.show(context, '🚀 Test Update Alert sent to status bar!');
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
 
                 const SizedBox(height: 32),
