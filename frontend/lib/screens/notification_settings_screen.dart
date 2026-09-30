@@ -482,11 +482,13 @@ class NotificationSettingsScreen extends StatelessWidget {
                       onTestTap: () async {
                         final sampleUpdate = AppUpdateInfo(
                           hasUpdate: true,
-                          latestVersion: '2.1.0',
+                          currentVersion: 'v1.0.0',
+                          latestVersion: 'v2.1.0',
+                          fileName: 'GrowExpense-v2.1.0.apk',
                           downloadUrl: 'https://github.com/Rupam852/Expense-App/releases',
-                          description: '• Brand new multi-language notifications\n• Granular alert toggles',
+                          webUrl: 'https://github.com/Rupam852/Expense-App',
+                          description: '• Multi-language push notifications\n• Granular alert toggles\n• 120Hz display support',
                           fileSizeBytes: 26948403,
-                          releaseDate: DateTime.now().toIso8601String(),
                         );
                         await service.showUpdateNotification(sampleUpdate);
                         if (context.mounted) {
