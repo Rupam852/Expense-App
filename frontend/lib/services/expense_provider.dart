@@ -189,13 +189,14 @@ class ExpenseProvider with ChangeNotifier {
       // Auto-deduplicate local cached expenses on startup
       await deduplicateExpenses(triggerSync: true);
 
-      // Check subscriptions and budgets on app load
+      // Check subscriptions, budgets and khata reminders on app load
       NotificationService.instance.checkAndNotifyDueSubscriptions(_subscriptions);
       NotificationService.instance.checkAndNotifyBudgetLimits(
         budgets: _budgets,
         expenses: _expenses,
         currentMonth: _selectedMonthYear,
       );
+      NotificationService.instance.checkAndNotifyKhataEntries(_khataEntries);
     } catch (_) {}
     _isLoading = false;
     notifyListeners();
