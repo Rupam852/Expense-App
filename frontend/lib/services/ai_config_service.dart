@@ -30,19 +30,21 @@ class AiConfigService with ChangeNotifier {
 
   factory AiConfigService() => instance;
 
-  // Supported Gemini Models (Latest Gemini 3.x / 2.5 / Flash Vision series)
+  // Supported Gemini Models (Organized hierarchically: 3.x Series ➔ 2.5 Series ➔ Auto Aliases)
   static const List<String> availableGeminiModels = [
-    'gemini-2.5-flash',
-    'gemini-3.5-flash-lite',
-    'gemini-3-flash-preview',
+    // 1. Gemini 3.x Generation (Flagship & Ultra Fast)
     'gemini-3.8-flash',
     'gemini-3.5-flash',
+    'gemini-3.5-flash-lite',
     'gemini-3.1-pro-preview',
     'gemini-3.1-flash-lite',
+    'gemini-3-flash-preview',
+    // 2. Gemini 2.5 Generation (Stable High Performance)
+    'gemini-2.5-flash',
     'gemini-2.5-pro',
+    // 3. Dynamic Auto-Updating Aliases
     'gemini-flash-latest',
     'gemini-pro-latest',
-    'gemini-2.0-flash',
   ];
 
   // Supported NVIDIA NIM Vision Models (Best Free Multimodal OCR on build.nvidia.com)

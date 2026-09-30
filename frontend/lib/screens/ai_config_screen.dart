@@ -508,15 +508,40 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
                 isExpanded: true,
                 dropdownColor: isDark ? const Color(0xFF1E232E) : Colors.white,
                 items: availableModels.map((m) {
+                  final tag = _getModelTag(m);
+                  final tagColor = _getModelTagColor(m);
                   return DropdownMenuItem<String>(
                     value: m,
-                    child: Text(
-                      m,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: tagColor.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            tag,
+                            style: GoogleFonts.inter(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: tagColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            m,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 }).toList(),
@@ -606,6 +631,38 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
         ],
       ),
     );
+  }
+
+  String _getModelTag(String model) {
+    if (model.contains('3.8')) return '3.8 FLASH';
+    if (model.contains('3.5-flash-lite')) return '3.5 LITE';
+    if (model.contains('3.5')) return '3.5 FLASH';
+    if (model.contains('3.1-pro')) return '3.1 PRO';
+    if (model.contains('3.1')) return '3.1 LITE';
+    if (model.contains('3-flash')) return '3.0 FLASH';
+    if (model.contains('2.5-flash')) return '2.5 FLASH';
+    if (model.contains('2.5-pro')) return '2.5 PRO';
+    if (model.contains('latest')) return 'LATEST';
+    if (model.contains('11b')) return '11B FAST';
+    if (model.contains('90b')) return '90B PRO';
+    if (model.contains('neva')) return 'NEVA 22B';
+    return 'MODEL';
+  }
+
+  Color _getModelTagColor(String model) {
+    if (model.contains('3.8') || model.contains('3.5') || model.contains('3-') || model.contains('3.1')) {
+      return const Color(0xFF3B82F6);
+    }
+    if (model.contains('2.5')) {
+      return const Color(0xFF10B981);
+    }
+    if (model.contains('pro')) {
+      return const Color(0xFF8B5CF6);
+    }
+    if (model.contains('llama') || model.contains('neva')) {
+      return const Color(0xFF10B981);
+    }
+    return Colors.teal;
   }
 }
 
