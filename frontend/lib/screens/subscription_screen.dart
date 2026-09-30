@@ -106,23 +106,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> with SingleTick
         elevation: 0,
         actions: [
           IconButton(
-            tooltip: 'Test Notification Alert',
-            icon: const Icon(Icons.notification_add_outlined, color: Color(0xFF00D09C)),
-            onPressed: () async {
-              final ok = await NotificationService.instance.sendTestNotification(
-                title: '🔔 Test Notification: Grow Expense',
-                body: 'Notification system is working! You will get alerts for due subscriptions & updates.',
-              );
-              if (context.mounted) {
-                if (ok) {
-                  CustomToast.show(context, '🔔 Test notification sent to status bar!');
-                } else {
-                  CustomToast.show(context, '⚠️ Please enable notification permission in phone settings', isError: true);
-                }
-              }
-            },
-          ),
-          IconButton(
             tooltip: 'Add Subscription',
             icon: const Icon(Icons.add_circle_outline_rounded, color: Color(0xFF00D09C)),
             onPressed: () => _openAddSubscriptionSheet(),
