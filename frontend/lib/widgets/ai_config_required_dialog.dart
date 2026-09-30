@@ -64,7 +64,7 @@ void showAiConfigRequiredDialog(BuildContext context) {
 
               // Description
               Text(
-                'Smart OCR receipt scanning and auto-categorization require your personal AI API Key (Google Gemini or NVIDIA NIM).\n\nPlease first configure your AI key in settings to start scanning receipts.',
+                'AI Features (Smart OCR Receipt Scanning, AI Voice Expense Logging, and AI Financial Advisor Chatbot) require your personal AI API Key (Google Gemini or NVIDIA NIM).\n\nPlease configure your free AI key in Settings to activate all intelligent features.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
                   fontSize: 13,

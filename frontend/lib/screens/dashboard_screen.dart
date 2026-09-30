@@ -3329,6 +3329,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: () {
+                      if (!checkAndPromptAiConfig(context)) return;
                       Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const AiAdvisorScreen()),
                       );
