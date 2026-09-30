@@ -494,8 +494,8 @@ class NotificationSettingsScreen extends StatelessWidget {
                                   currentVersion: 'v1.0.0',
                                   latestVersion: 'v2.1.0',
                                   fileName: 'GrowExpense-v2.1.0.apk',
-                                  downloadUrl: 'https://github.com/Rupam852/Expense-App/releases',
-                                  webUrl: 'https://github.com/Rupam852/Expense-App',
+                                  downloadUrl: AppUpdateService.defaultDownloadWebUrl,
+                                  webUrl: AppUpdateService.defaultDownloadWebUrl,
                                   description: '• Multi-language push notifications\n• Granular alert toggles\n• 120Hz display support',
                                   fileSizeBytes: 26948403,
                                 );
