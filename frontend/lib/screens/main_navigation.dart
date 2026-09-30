@@ -9,6 +9,7 @@ import 'analytics_screen.dart';
 import 'invoice_screen.dart';
 import 'payment_details_screen.dart';
 import 'expense_entry_screen.dart';
+import 'ai_advisor_screen.dart';
 import '../widgets/voice_expense_dialog.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -30,7 +31,7 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
     super.initState();
     _fabAnimationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 250),
+      duration: const Duration(milliseconds: 260),
     );
     _expandAnimation = CurvedAnimation(
       parent: _fabAnimationController,
@@ -101,6 +102,15 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
     VoiceExpenseDialog.show(context);
   }
 
+  void _openAiAdvisorChat() {
+    _closeFabMenu();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const AiAdvisorScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -140,7 +150,7 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
                     animation: _expandAnimation,
                     builder: (context, child) {
                       return Container(
-                        color: Colors.black.withOpacity(0.55 * _expandAnimation.value),
+                        color: Colors.black.withValues(alpha: 0.55 * _expandAnimation.value),
                       );
                     },
                   ),
@@ -148,12 +158,82 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
               ),
 
             // ══════════════════════════════════════════════════════
-            // SPEED DIAL POPUP ITEMS (Voice + Manual Entry)
+            // FLOATING GROWWAI CHAT BUTTON (Visible above + FAB when closed)
+            // ══════════════════════════════════════════════════════
+            Positioned(
+              right: 18,
+              bottom: 84, // Directly above the + FAB button
+              child: AnimatedBuilder(
+                animation: _expandAnimation,
+                builder: (context, child) {
+                  final chatScale = (1.0 - _expandAnimation.value).clamp(0.0, 1.0);
+                  if (chatScale == 0.0 || _isFabOpen) {
+                    return const SizedBox.shrink(); // Completely removed from hit testing when open
+                  }
+                  return IgnorePointer(
+                    ignoring: _isFabOpen,
+                    child: Transform.scale(
+                      scale: chatScale,
+                      alignment: Alignment.center,
+                      child: Opacity(
+                        opacity: chatScale,
+                        child: child,
+                      ),
+                    ),
+                  );
+                },
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _openAiAdvisorChat,
+                    borderRadius: BorderRadius.circular(28),
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFF00D09C).withValues(alpha: 0.75),
+                          width: 1.8,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF00D09C).withValues(alpha: 0.35),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.psychology_alt_rounded,
+                          color: Color(0xFF00D09C),
+                          size: 25,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // ══════════════════════════════════════════════════════
+            // SPEED DIAL POPUP ITEMS (Voice + Manual Entry on + click)
             // ══════════════════════════════════════════════════════
             if (_isFabOpen || _fabAnimationController.isAnimating)
               Positioned(
                 right: 16,
-                bottom: 84, // Placed right above the bottom FAB
+                bottom: 84, // Replaces chat button position and stacks upwards
                 child: AnimatedBuilder(
                   animation: _expandAnimation,
                   builder: (context, child) {
@@ -244,8 +324,8 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
           foregroundColor: _isFabOpen ? Colors.white : Colors.black,
           child: RotationTransition(
             turns: _rotateAnimation,
-            child: Icon(
-              _isFabOpen ? Icons.add : Icons.add,
+            child: const Icon(
+              Icons.add,
               size: 28,
             ),
           ),
