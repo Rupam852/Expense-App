@@ -2138,6 +2138,275 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  void _showAllToolsModalSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        final primaryColor = Theme.of(ctx).primaryColor;
+
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF14171F) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.35),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Drag Handle
+                  Center(
+                    child: Container(
+                      width: 42,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF2E384D) : const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Header
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.apps_rounded, color: primaryColor, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'All Smart Tools & Utilities',
+                              style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              'Quick shortcuts to all finance features',
+                              style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ─── 1. FINANCIAL TRACKERS ───
+                  _buildToolSectionHeader('FINANCIAL LEDGERS & TRACKERS', primaryColor),
+                  const SizedBox(height: 10),
+                  _buildToolTile(
+                    ctx: ctx,
+                    isDark: isDark,
+                    icon: Icons.menu_book_rounded,
+                    iconColor: Colors.amber,
+                    title: 'Khata Book',
+                    subtitle: 'Track money lent, borrowed & send WhatsApp reminders',
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const KhataScreen()));
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _buildToolTile(
+                    ctx: ctx,
+                    isDark: isDark,
+                    icon: Icons.call_split_rounded,
+                    iconColor: const Color(0xFF6C63FF),
+                    title: 'Split Bills',
+                    subtitle: 'Split group expenses with friends & generate UPI QR',
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SplitBillScreen()));
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _buildToolTile(
+                    ctx: ctx,
+                    isDark: isDark,
+                    icon: Icons.autorenew_rounded,
+                    iconColor: const Color(0xFFFF4081),
+                    title: 'Subscriptions & Bills',
+                    subtitle: 'Track recurring Netflix, Spotify & bill renewals',
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SubscriptionScreen()));
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _buildToolTile(
+                    ctx: ctx,
+                    isDark: isDark,
+                    icon: Icons.tag_rounded,
+                    iconColor: const Color(0xFFE040FB),
+                    title: 'Trip & Event Tags',
+                    subtitle: 'Tag and monitor budgets for #Goa, #Wedding, #Diwali',
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TripTagScreen()));
+                    },
+                  ),
+
+                  const SizedBox(height: 22),
+
+                  // ─── 2. SMART AUTOMATION & AI ───
+                  _buildToolSectionHeader('SMART AUTOMATION & AI', primaryColor),
+                  const SizedBox(height: 10),
+                  _buildToolTile(
+                    ctx: ctx,
+                    isDark: isDark,
+                    icon: Icons.sms_outlined,
+                    iconColor: const Color(0xFF00D09C),
+                    title: 'Bank SMS Auto-Logger',
+                    subtitle: 'Automatically import and categorize debit/credit SMS',
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      SmsExpenseParserDialog.show(context);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _buildToolTile(
+                    ctx: ctx,
+                    isDark: isDark,
+                    icon: Icons.psychology_alt_rounded,
+                    iconColor: const Color(0xFF6366F1),
+                    title: 'GrowwAI Financial Advisor',
+                    subtitle: 'Live expense ledger analysis & smart money-saving advice',
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      if (!checkAndPromptAiConfig(context)) return;
+                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AiAdvisorScreen()));
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _buildToolTile(
+                    ctx: ctx,
+                    isDark: isDark,
+                    icon: Icons.tune_rounded,
+                    iconColor: const Color(0xFF0284C7),
+                    title: 'AI Engine Settings',
+                    subtitle: 'Configure Google Gemini & NVIDIA NIM API keys',
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AiConfigScreen()));
+                    },
+                  ),
+
+                  const SizedBox(height: 22),
+
+                  // ─── 3. STATEMENTS & INVOICES ───
+                  _buildToolSectionHeader('STATEMENTS & INVOICES', primaryColor),
+                  const SizedBox(height: 10),
+                  _buildToolTile(
+                    ctx: ctx,
+                    isDark: isDark,
+                    icon: Icons.history_edu_outlined,
+                    iconColor: const Color(0xFF10B981),
+                    title: 'Invoice History',
+                    subtitle: 'View, share and download generated month-end invoices',
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const InvoiceHistoryScreen()));
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildToolSectionHeader(String title, Color color) {
+    return Text(
+      title,
+      style: GoogleFonts.inter(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.8,
+        color: color,
+      ),
+    );
+  }
+
+  Widget _buildToolTile({
+    required BuildContext ctx,
+    required bool isDark,
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1A1F2C) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDark ? const Color(0xFF263042) : const Color(0xFFE2E8F0),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 1.5),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, size: 13, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showSettingsDrawer(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -3301,339 +3570,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 16),
 
-              // AI Financial Advisor Banner
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: isDark
-                        ? [const Color(0xFF1F2438), const Color(0xFF151928)]
-                        : [const Color(0xFFF3F0FF), const Color(0xFFEBE5FF)],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFF6C63FF).withValues(alpha: 0.35),
-                  ),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      if (!checkAndPromptAiConfig(context)) return;
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const AiAdvisorScreen()),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF6C63FF).withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.psychology_alt_rounded,
-                              color: Color(0xFF6C63FF),
-                              size: 22,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      'Chat with GrowwAI Advisor',
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: isDark ? Colors.white : Colors.black87,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF6C63FF),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: const Text(
-                                        'AI',
-                                        style: TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Ask questions & get smart saving tips',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    color: isDark ? Colors.grey[400] : Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF6C63FF)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // 2. Rapid Actions Hub (Imports, OCR Scans, AI Voice, and CSV Statement Export)
+              // 2. Featured Smart Tools Row (Option 1: Khata, Split Bills, Subscriptions, More)
               Row(
                 children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _showOcrSourceDialog(context),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF181B22) : Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            CircleAvatar(
-                              radius: 17,
-                              backgroundColor: const Color(0xFF00D09C).withOpacity(0.1),
-                              child: const Icon(Icons.document_scanner_outlined, color: Color(0xFF00D09C), size: 17),
-                            ),
-                            const SizedBox(height: 7),
-                            Text(
-                              'Smart OCR',
-                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Receipts',
-                              style: GoogleFonts.inter(fontSize: 8.5, color: Colors.grey),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => SmsExpenseParserDialog.show(context),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF181B22) : Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFF6C63FF).withOpacity(0.3),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            CircleAvatar(
-                              radius: 17,
-                              backgroundColor: const Color(0xFF6C63FF).withOpacity(0.12),
-                              child: const Icon(Icons.sms_outlined, color: Color(0xFF6C63FF), size: 18),
-                            ),
-                            const SizedBox(height: 7),
-                            Text(
-                              'SMS Parser',
-                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF6C63FF)),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Bank alerts',
-                              style: GoogleFonts.inter(fontSize: 8.5, color: Colors.grey),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _triggerFileImport(context),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF181B22) : Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            CircleAvatar(
-                              radius: 17,
-                              backgroundColor: Colors.blue.withOpacity(0.1),
-                              child: const Icon(Icons.file_upload_outlined, color: Colors.blue, size: 17),
-                            ),
-                            const SizedBox(height: 7),
-                            Text(
-                              'Import',
-                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'XLSX / PDF',
-                              style: GoogleFonts.inter(fontSize: 8.5, color: Colors.grey),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _triggerCSVExport(context),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF181B22) : Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            CircleAvatar(
-                              radius: 17,
-                              backgroundColor: Colors.purple.withOpacity(0.1),
-                              child: const Icon(Icons.table_view_outlined, color: Colors.purple, size: 17),
-                            ),
-                            const SizedBox(height: 7),
-                            Text(
-                              'Export',
-                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'CSV Ledger',
-                              style: GoogleFonts.inter(fontSize: 8.5, color: Colors.grey),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-
-              // 2.2 Smart Tools Row (Bank SMS, Trips & Tags, Khata Book, Split Bills)
-              Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => SmsExpenseParserDialog.show(context),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF181B22) : Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFF00D09C).withOpacity(0.3),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            CircleAvatar(
-                              radius: 17,
-                              backgroundColor: const Color(0xFF00D09C).withOpacity(0.12),
-                              child: const Icon(Icons.sms_outlined, color: Color(0xFF00D09C), size: 17),
-                            ),
-                            const SizedBox(height: 7),
-                            Text(
-                              'Bank SMS',
-                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF00D09C)),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Auto-log ₹',
-                              style: GoogleFonts.inter(fontSize: 8.5, color: Colors.grey),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const TripTagScreen()),
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF181B22) : Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            CircleAvatar(
-                              radius: 17,
-                              backgroundColor: const Color(0xFFE040FB).withOpacity(0.1),
-                              child: const Icon(Icons.tag_rounded, color: Color(0xFFE040FB), size: 17),
-                            ),
-                            const SizedBox(height: 7),
-                            Text(
-                              'Trip Tags',
-                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '#Goa #Diwali',
-                              style: GoogleFonts.inter(fontSize: 8.5, color: Colors.grey),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
+                  // 1. Khata Book
                   Expanded(
                     child: InkWell(
                       onTap: () => Navigator.of(context).push(
@@ -3653,7 +3593,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           children: [
                             CircleAvatar(
                               radius: 17,
-                              backgroundColor: Colors.amber.withOpacity(0.12),
+                              backgroundColor: Colors.amber.withValues(alpha: 0.14),
                               child: const Icon(Icons.menu_book_rounded, color: Colors.amber, size: 17),
                             ),
                             const SizedBox(height: 7),
@@ -3675,6 +3615,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
+
+                  // 2. Split Bills
                   Expanded(
                     child: InkWell(
                       onTap: () => Navigator.of(context).push(
@@ -3694,7 +3636,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           children: [
                             CircleAvatar(
                               radius: 17,
-                              backgroundColor: const Color(0xFF6C63FF).withOpacity(0.12),
+                              backgroundColor: const Color(0xFF6C63FF).withValues(alpha: 0.14),
                               child: const Icon(Icons.call_split_rounded, color: Color(0xFF6C63FF), size: 17),
                             ),
                             const SizedBox(height: 7),
@@ -3707,6 +3649,94 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             const SizedBox(height: 2),
                             Text(
                               'UPI QR Split',
+                              style: GoogleFonts.inter(fontSize: 8.5, color: Colors.grey),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+
+                  // 3. Subscriptions
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF181B22) : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 17,
+                              backgroundColor: const Color(0xFFFF4081).withValues(alpha: 0.14),
+                              child: const Icon(Icons.autorenew_rounded, color: Color(0xFFFF4081), size: 17),
+                            ),
+                            const SizedBox(height: 7),
+                            Text(
+                              'Subscriptions',
+                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Renewals',
+                              style: GoogleFonts.inter(fontSize: 8.5, color: Colors.grey),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+
+                  // 4. More Tools (All Utilities Sheet)
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _showAllToolsModalSheet(context),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF181B22) : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(0xFF00D09C).withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 17,
+                              backgroundColor: const Color(0xFF00D09C).withValues(alpha: 0.14),
+                              child: const Icon(Icons.grid_view_rounded, color: Color(0xFF00D09C), size: 17),
+                            ),
+                            const SizedBox(height: 7),
+                            Text(
+                              'More Tools',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF00D09C),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'All Utilities',
                               style: GoogleFonts.inter(fontSize: 8.5, color: Colors.grey),
                               textAlign: TextAlign.center,
                             ),
