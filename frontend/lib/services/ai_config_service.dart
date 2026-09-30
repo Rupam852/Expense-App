@@ -539,8 +539,7 @@ JSON structure:
 
           if (response.statusCode == 200) {
             final resJson = json.decode(response.body);
-            final rawText = resJson['candidates']?[0]?['content']?[parts]?[0]?['text']?.toString() ??
-                resJson['candidates']?[0]?['content']?['parts']?[0]?['text']?.toString() ?? '';
+            final rawText = resJson['candidates']?[0]?['content']?['parts']?[0]?['text']?.toString() ?? '';
             final parsed = _extractJsonFromText(rawText);
             if (parsed != null) {
               debugPrint('[AiConfigService] Gemini model $model succeeded!');
