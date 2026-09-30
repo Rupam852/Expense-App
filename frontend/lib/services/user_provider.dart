@@ -22,6 +22,7 @@ class UserProvider with ChangeNotifier {
   bool _isLoading = false;
   bool _biometricsEnabled = false;
   bool _highRefreshRateEnabled = true; // Default ON for smooth 90Hz/120Hz/144Hz
+  bool _showSpendingPredictionInBudget = false; // Default OFF: only shown in Budgets if enabled
   String? _errorMessage;
   String? _userGeminiApiKey;
   String? _userGeminiApiKeySecondary;
@@ -35,6 +36,7 @@ class UserProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get biometricsEnabled => _biometricsEnabled;
   bool get highRefreshRateEnabled => _highRefreshRateEnabled;
+  bool get showSpendingPredictionInBudget => _showSpendingPredictionInBudget;
   String? get errorMessage => _errorMessage;
   String? get userGeminiApiKey => _userGeminiApiKey;
   String? get userGeminiApiKeySecondary => _userGeminiApiKeySecondary;
@@ -71,6 +73,17 @@ class UserProvider with ChangeNotifier {
       await _applyRefreshRate(enabled);
     } catch (e) {
       debugPrint('[UserProvider] Error toggling refresh rate: $e');
+    }
+  }
+
+  Future<void> toggleSpendingPredictionInBudget(bool enabled) async {
+    _showSpendingPredictionInBudget = enabled;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('show_spending_prediction_in_budget', enabled);
+    } catch (e) {
+      debugPrint('[UserProvider] Error saving spending prediction pref: $e');
     }
   }
 
@@ -118,6 +131,7 @@ class UserProvider with ChangeNotifier {
 
       _highRefreshRateEnabled = prefs.getBool('high_refresh_rate') ?? true;
       _applyRefreshRate(_highRefreshRateEnabled);
+      _showSpendingPredictionInBudget = prefs.getBool('show_spending_prediction_in_budget') ?? false;
 
       _userGeminiApiKey = prefs.getString('user_gemini_api_key');
       _userGeminiApiKeySecondary = prefs.getString('user_gemini_api_key_secondary');

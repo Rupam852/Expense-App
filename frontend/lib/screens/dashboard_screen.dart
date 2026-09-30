@@ -3749,23 +3749,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Proactive Smart Spending Prediction & Overspending Velocity Alerts
-              Consumer<ExpenseProvider>(
-                builder: (context, expProvider, _) {
-                  final predictions = SpendingPrediction.analyze(
-                    expenses: expProvider.expenses,
-                    budgets: expProvider.budgets,
-                    referenceDate: _selectedMonthYear,
-                  );
-                  if (predictions.isEmpty) return const SizedBox.shrink();
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12.0),
-                    child: SpendingPredictionCard(predictions: predictions),
-                  );
-                },
-              ),
-              const SizedBox(height: 8),
-
               // 3. Recent Activity Section Title
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

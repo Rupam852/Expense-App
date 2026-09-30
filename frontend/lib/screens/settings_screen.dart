@@ -689,6 +689,29 @@ class SettingsScreen extends StatelessWidget {
                         }
                       },
                     ),
+                    Divider(height: 1, color: borderColor),
+                    SwitchListTile(
+                      activeColor: primaryColor,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      secondary: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00D09C).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.analytics_outlined, color: Color(0xFF00D09C), size: 22),
+                      ),
+                      title: Text(
+                        'Spending Forecast & Runway',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        'Show burn rate & budget forecast inside Budgets screen (Default OFF)',
+                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                      ),
+                      value: userProvider.showSpendingPredictionInBudget,
+                      onChanged: (val) => userProvider.toggleSpendingPredictionInBudget(val),
+                    ),
                   ],
                 ),
 

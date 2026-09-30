@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../services/expense_provider.dart';
+import '../services/user_provider.dart';
 import '../models/budget.dart';
 import '../widgets/app_logo.dart';
 import '../models/spending_prediction.dart';
@@ -323,9 +324,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
             ),
             const SizedBox(height: 16),
 
-            // AI Burn Velocity & Predictions in Budget Screen
-            Consumer<ExpenseProvider>(
-              builder: (context, expProvider, _) {
+            // AI Burn Velocity & Predictions in Budget Screen (Only if enabled in Settings)
+            Consumer2<ExpenseProvider, UserProvider>(
+              builder: (context, expProvider, userProvider, _) {
+                if (!userProvider.showSpendingPredictionInBudget) {
+                  return const SizedBox.shrink();
+                }
                 final predictions = SpendingPrediction.analyze(
                   expenses: expProvider.expenses,
                   budgets: expProvider.budgets,
