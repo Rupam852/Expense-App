@@ -1066,6 +1066,9 @@ class ExpenseProvider with ChangeNotifier {
     _expenses.clear();
     _budgets.clear();
     _paymentDetails.clear();
+    _khataEntries.clear();
+    _splitBills.clear();
+    _subscriptions.clear();
     notifyListeners();
   }
 
@@ -1198,3 +1201,4 @@ class ExpenseProvider with ChangeNotifier {
         (100000 + (900000 * (DateTime.now().microsecond / 1000000))).toInt().toString();
   }
 }
+

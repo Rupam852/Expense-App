@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'biometric_service.dart';
 import 'supabase_service.dart';
+import 'ai_config_service.dart';
 
 class UserProvider with ChangeNotifier {
   final _supabase = SupabaseService.instance;
@@ -424,11 +425,13 @@ class UserProvider with ChangeNotifier {
       await prefs.remove('user_gemini_api_key');
       await prefs.remove('user_gemini_api_key_secondary');
       await prefs.remove('last_sync_time');
+      await AiConfigService.instance.clearConfig();
     } catch (_) {}
 
     _userProfile = null;
     _userGeminiApiKey = null;
     _userGeminiApiKeySecondary = null;
+    _showApiKeyPrompt = false;
     _isAuthenticated = false;
     _isLoading = false;
     notifyListeners();
@@ -452,11 +455,13 @@ class UserProvider with ChangeNotifier {
         await prefs.remove('user_gemini_api_key');
         await prefs.remove('user_gemini_api_key_secondary');
         await prefs.remove('last_sync_time');
+        await AiConfigService.instance.clearConfig();
       } catch (_) {}
 
       _userProfile = null;
       _userGeminiApiKey = null;
       _userGeminiApiKeySecondary = null;
+      _showApiKeyPrompt = false;
       _isAuthenticated = false;
       _isLoading = false;
       notifyListeners();

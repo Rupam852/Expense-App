@@ -1164,6 +1164,9 @@ class DatabaseHelper {
     await db.delete('budgets');
     await db.delete('payment_details');
     await db.delete('deleted_records');
+    try { await db.delete('khata_entries'); } catch (_) {}
+    try { await db.delete('split_bills'); } catch (_) {}
+    try { await db.delete('subscriptions'); } catch (_) {}
   }
 
   Future<void> close() async {

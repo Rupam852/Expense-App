@@ -177,6 +177,30 @@ class AiConfigService with ChangeNotifier {
     }
   }
 
+  /// Cleanly reset / clear all AI API keys and models on user logout
+  Future<void> clearConfig() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_keyGeminiModel);
+      await prefs.remove(_keyGeminiApiKey);
+      await prefs.remove(_keyNvidiaModel);
+      await prefs.remove(_keyNvidiaApiKey);
+      await prefs.remove(_keyPrimaryProvider);
+      await prefs.remove(_keySecondaryProvider);
+
+      _geminiModel = 'gemini-2.5-flash';
+      _geminiApiKey = '';
+      _nvidiaModel = 'meta/llama-3.2-11b-vision-instruct';
+      _nvidiaApiKey = '';
+      _primaryProvider = 'gemini';
+      _secondaryProvider = 'nvidia';
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('[AiConfigService] Error clearing AI config: $e');
+    }
+  }
+
   // ─────────────────────────────────────────────────────────
   // TEST CUSTOM AI CONFIGURATION (Primary & Secondary)
   // ─────────────────────────────────────────────────────────
