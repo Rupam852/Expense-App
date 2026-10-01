@@ -485,7 +485,8 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
           // Footer: UPI QR button & Delete
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            chi              if (!isFullyDone)
+            children: [
+              if (!isFullyDone)
                 TextButton.icon(
                   onPressed: () {
                     final pendingParts = bill.participants.where((p) => p.name.toLowerCase() != 'you' && !p.isSettled).toList();
@@ -512,7 +513,7 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
                     bill.isPaidByMe ? 'Collect Payment / QR' : 'Pay Payer (${bill.paidBy}) / QR',
                     style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF00D09C)),
                   ),
-                )        )
+                )
               else
                 const SizedBox.shrink(),
 
