@@ -258,7 +258,8 @@ class SupabaseService {
     final data = await _client
         .from('payment_details')
         .select()
-        .eq('user_id', uid);
+        .eq('user_id', uid)
+        .order('updated_at', ascending: false);
     return List<Map<String, dynamic>>.from(data);
   }
 
@@ -269,6 +270,24 @@ class SupabaseService {
     copy['user_id'] = uid;
     copy['updated_at'] = detail['updated_at'] ?? DateTime.now().toIso8601String();
     copy.remove('is_synced');
+
+    // Clean up any older/stale payment_details rows for this user on Supabase
+    try {
+      final existing = await _client
+          .from('payment_details')
+          .select('id')
+          .eq('user_id', uid);
+      final existingIds = (existing as List)
+          .map((e) => e['id'] as String)
+          .where((id) => id != detail['id'])
+          .toList();
+      if (existingIds.isNotEmpty) {
+        await _client.from('payment_details').delete().filter('id', 'in', existingIds);
+      }
+    } catch (e) {
+      print('[Sync] Cleaning old payment_details on Supabase: $e');
+    }
+
     final res = await _client.from('payment_details').upsert(copy).select('id');
     if (res.isEmpty) {
       throw Exception('Upsert failed: RLS policy or database restriction prevented writing to the payment_details table.');

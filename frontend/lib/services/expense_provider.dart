@@ -333,16 +333,26 @@ class ExpenseProvider with ChangeNotifier {
     String? qrCodeUrl,
   }) async {
     final db = await _dbHelper.database;
+    
+    // Preserve existing ID if present to prevent multiple duplicate rows on cloud
+    final detailId = _paymentDetails.isNotEmpty ? _paymentDetails.first.id : cryptoUuid();
+    final now = DateTime.now();
+
     await db.delete('payment_details');
 
     final detail = PaymentDetail(
-      id: cryptoUuid(),
+      id: detailId,
       upiId: upiId,
       qrCodeUrl: qrCodeUrl,
+      createdAt: _paymentDetails.isNotEmpty ? _paymentDetails.first.createdAt : now,
+      updatedAt: now,
     );
     await _dbHelper.insertPaymentDetail(detail);
     _paymentDetails = [detail];
     notifyListeners();
+
+    // Trigger immediate background sync to Supabase so changes are permanently backed up!
+    triggerQuietSync();
   }
 
   // ──────────────────────────────────────────────────────

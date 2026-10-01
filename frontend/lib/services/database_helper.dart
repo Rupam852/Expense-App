@@ -718,7 +718,7 @@ class DatabaseHelper {
 
   Future<List<PaymentDetail>> getPaymentDetails() async {
     final db = await instance.database;
-    final result = await db.query('payment_details');
+    final result = await db.query('payment_details', orderBy: 'updated_at DESC');
     return result.map((json) => PaymentDetail.fromMap(json)).toList();
   }
 
@@ -1322,8 +1322,16 @@ class DatabaseHelper {
 
   Future<void> syncDownPaymentDetails(List<PaymentDetail> payments) async {
     final db = await instance.database;
+    if (payments.isEmpty) return;
+
+    // Sort descending by updated_at so the latest payment detail comes first
+    final sortedPayments = List<PaymentDetail>.from(payments)
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+
     await db.transaction((txn) async {
-      for (final pay in payments) {
+      // Clear out old local records so only the latest valid payment profile stays
+      await txn.delete('payment_details');
+      for (final pay in sortedPayments) {
         final map = pay.toMap();
         map['is_synced'] = 1;
         await txn.insert(
@@ -1331,6 +1339,8 @@ class DatabaseHelper {
           map,
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
+        // Only keep the latest active profile in local DB
+        break;
       }
     });
   }

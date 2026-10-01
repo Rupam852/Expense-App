@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:qr_code_dart_decoder/qr_code_dart_decoder.dart';
 import '../services/expense_provider.dart';
 import '../services/user_provider.dart';
+import '../services/supabase_service.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/custom_toast.dart';
 
@@ -25,6 +26,7 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
 
   String? _cachedQrPath;
   bool _isEditing = false;
+  bool _isUploadingQr = false;
 
   @override
   void initState() {
@@ -55,23 +57,39 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
     
     if (image != null) {
       String savedPath = image.path;
+      setState(() {
+        _isUploadingQr = true;
+      });
 
       try {
         final appDir = await getApplicationDocumentsDirectory();
         final fileName = 'payment_qr_${DateTime.now().millisecondsSinceEpoch}.jpg';
         final savedFile = await File(image.path).copy('${appDir.path}/$fileName');
         savedPath = savedFile.path;
-      } catch (_) {
-        // Fallback to temp path if copy fails
-      }
 
-      setState(() {
-        _cachedQrPath = savedPath;
-      });
+        // Upload to Supabase Storage if user is logged in for cloud permanence
+        final supabase = SupabaseService.instance;
+        if (supabase.currentUser != null) {
+          final imageBytes = await savedFile.readAsBytes();
+          final cloudUrl = await supabase.uploadQrCode(imageBytes, fileName);
+          if (cloudUrl != null && cloudUrl.isNotEmpty) {
+            savedPath = cloudUrl;
+          }
+        }
+      } catch (e) {
+        print('[PaymentDetails] QR save/upload warning: $e');
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isUploadingQr = false;
+            _cachedQrPath = savedPath;
+          });
+        }
+      }
 
       // Attempt to decode QR data from image and auto-fill UPI ID
       try {
-        final Uint8List imageBytes = await File(savedPath).readAsBytes();
+        final Uint8List imageBytes = await File(image.path).readAsBytes();
         final decoder = QrCodeDartDecoder();
         final result = await decoder.decodeFile(imageBytes);
         final qrData = result?.text;
@@ -127,7 +145,7 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
     });
 
     if (mounted) {
-      CustomToast.show(context, 'Payment profiles saved successfully!');
+      CustomToast.show(context, 'Payment profile saved and synced to cloud!');
     }
   }
 
@@ -142,8 +160,11 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
 
     final userName = userProvider.userProfile?['name'] ?? 'User';
 
-    // Check if custom QR image file exists locally
-    final hasLocalQrFile = _cachedQrPath != null && File(_cachedQrPath!).existsSync();
+    // Get the active QR path
+    final activeQrPath = _isEditing ? _cachedQrPath : (details?.qrCodeUrl ?? _cachedQrPath);
+    final isNetworkQr = activeQrPath != null && (activeQrPath.startsWith('http://') || activeQrPath.startsWith('https://'));
+    final hasLocalQrFile = activeQrPath != null && !isNetworkQr && File(activeQrPath).existsSync();
+    final hasCustomQr = isNetworkQr || hasLocalQrFile;
 
     // Standardized UPI link for native QR codes scanning
     // Format: upi://pay?pa=upi_address&pn=Display_Name
@@ -160,6 +181,8 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
               onPressed: () {
                 setState(() {
                   _isEditing = true;
+                  _upiController.text = details!.upiId;
+                  _cachedQrPath = details.qrCodeUrl;
                 });
               },
               icon: const Icon(Icons.edit_outlined),
@@ -235,15 +258,21 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
                         children: [
                           Expanded(
                             child: OutlinedButton.icon(
-                              onPressed: _pickCustomQr,
+                              onPressed: _isUploadingQr ? null : _pickCustomQr,
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 side: BorderSide(color: Theme.of(context).primaryColor),
                                 foregroundColor: Theme.of(context).primaryColor,
                               ),
-                              icon: const Icon(Icons.upload_file),
-                              label: const Text('Upload QR from Gallery'),
+                              icon: _isUploadingQr
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Icon(Icons.upload_file),
+                              label: Text(_isUploadingQr ? 'Processing QR...' : 'Upload QR from Gallery'),
                             ),
                           ),
                         ],
@@ -320,8 +349,73 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
                       ),
                       const SizedBox(height: 32),
 
-                      // Standard Live QR generated by qr_flutter!
-                      if (!hasLocalQrFile) ...[
+                      // Render QR Code: Custom image (Cloud or Local) or Live Standard UPI QR
+                      if (hasCustomQr) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: isNetworkQr
+                                ? Image.network(
+                                    activeQrPath!,
+                                    height: 220,
+                                    width: 220,
+                                    fit: BoxFit.contain,
+                                    loadingBuilder: (ctx, child, progress) {
+                                      if (progress == null) return child;
+                                      return SizedBox(
+                                        height: 220,
+                                        width: 220,
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            value: progress.expectedTotalBytes != null
+                                                ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
+                                                : null,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    errorBuilder: (_, __, ___) => QrImageView(
+                                      data: upiString,
+                                      version: QrVersions.auto,
+                                      size: 200.0,
+                                      gapless: false,
+                                      foregroundColor: const Color(0xFF1E2229),
+                                    ),
+                                  )
+                                : Image.file(
+                                    File(activeQrPath!),
+                                    height: 220,
+                                    width: 220,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (_, __, ___) => QrImageView(
+                                      data: upiString,
+                                      version: QrVersions.auto,
+                                      size: 200.0,
+                                      gapless: false,
+                                      foregroundColor: const Color(0xFF1E2229),
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Scan custom payment QR code',
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                        ),
+                      ] else ...[
+                        // Standard Live QR generated by qr_flutter!
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
@@ -348,7 +442,7 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
                           'Scan to Pay standard UPI',
                           style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
                         ),
-                        if (_cachedQrPath != null) ...[
+                        if (activeQrPath != null && !hasCustomQr) ...[
                           const SizedBox(height: 12),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -363,43 +457,13 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
                                 const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 16),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Custom QR file missing on this device.',
+                                  'Custom QR file missing on this device. Showing dynamic QR.',
                                   style: GoogleFonts.inter(fontSize: 10, color: Colors.amber[800], fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
                           ),
                         ],
-                      ] else ...[
-                        // Render the user's custom cached app QR image!
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.file(
-                              File(_cachedQrPath!),
-                              height: 220,
-                              width: 220,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Scan custom payment QR code',
-                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
-                        ),
                       ],
                       const SizedBox(height: 8),
                       Text(
