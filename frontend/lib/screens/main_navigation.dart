@@ -141,7 +141,7 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
             // ══════════════════════════════════════════════════════
             // BACKDROP OVERLAY (Dismisses FAB menu on tap anywhere)
             // ══════════════════════════════════════════════════════
-            if (_isFabOpen)
+            if (_currentIndex == 0 && _isFabOpen)
               Positioned.fill(
                 child: GestureDetector(
                   onTap: _closeFabMenu,
@@ -158,79 +158,80 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
               ),
 
             // ══════════════════════════════════════════════════════
-            // FLOATING GROWWAI CHAT BUTTON (Visible above + FAB when closed)
+            // FLOATING GROWWAI CHAT BUTTON (Visible above + FAB on Home tab only)
             // ══════════════════════════════════════════════════════
-            Positioned(
-              right: 18,
-              bottom: 84, // Directly above the + FAB button
-              child: AnimatedBuilder(
-                animation: _expandAnimation,
-                builder: (context, child) {
-                  final chatScale = (1.0 - _expandAnimation.value).clamp(0.0, 1.0);
-                  if (chatScale == 0.0 || _isFabOpen) {
-                    return const SizedBox.shrink(); // Completely removed from hit testing when open
-                  }
-                  return IgnorePointer(
-                    ignoring: _isFabOpen,
-                    child: Transform.scale(
-                      scale: chatScale,
-                      alignment: Alignment.center,
-                      child: Opacity(
-                        opacity: chatScale,
-                        child: child,
-                      ),
-                    ),
-                  );
-                },
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: _openAiAdvisorChat,
-                    borderRadius: BorderRadius.circular(28),
-                    child: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+            if (_currentIndex == 0)
+              Positioned(
+                right: 18,
+                bottom: 84, // Directly above the + FAB button
+                child: AnimatedBuilder(
+                  animation: _expandAnimation,
+                  builder: (context, child) {
+                    final chatScale = (1.0 - _expandAnimation.value).clamp(0.0, 1.0);
+                    if (chatScale == 0.0 || _isFabOpen) {
+                      return const SizedBox.shrink(); // Completely removed from hit testing when open
+                    }
+                    return IgnorePointer(
+                      ignoring: _isFabOpen,
+                      child: Transform.scale(
+                        scale: chatScale,
+                        alignment: Alignment.center,
+                        child: Opacity(
+                          opacity: chatScale,
+                          child: child,
                         ),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFF00D09C).withValues(alpha: 0.75),
-                          width: 1.8,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF00D09C).withValues(alpha: 0.35),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
                       ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.psychology_alt_rounded,
-                          color: Color(0xFF00D09C),
-                          size: 25,
+                    );
+                  },
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _openAiAdvisorChat,
+                      borderRadius: BorderRadius.circular(28),
+                      child: Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFF00D09C).withValues(alpha: 0.75),
+                            width: 1.8,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF00D09C).withValues(alpha: 0.35),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.psychology_alt_rounded,
+                            color: Color(0xFF00D09C),
+                            size: 25,
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
 
             // ══════════════════════════════════════════════════════
             // SPEED DIAL POPUP ITEMS (Voice + Manual Entry on + click)
             // ══════════════════════════════════════════════════════
-            if (_isFabOpen || _fabAnimationController.isAnimating)
+            if (_currentIndex == 0 && (_isFabOpen || _fabAnimationController.isAnimating))
               Positioned(
                 right: 16,
                 bottom: 84, // Replaces chat button position and stacks upwards
@@ -316,20 +317,22 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
             ),
           ],
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _toggleFabMenu,
-          tooltip: _isFabOpen ? 'Close Menu' : 'Add Expense',
-          elevation: _isFabOpen ? 8 : 4,
-          backgroundColor: _isFabOpen ? const Color(0xFFEF4444) : primaryColor,
-          foregroundColor: _isFabOpen ? Colors.white : Colors.black,
-          child: RotationTransition(
-            turns: _rotateAnimation,
-            child: const Icon(
-              Icons.add,
-              size: 28,
-            ),
-          ),
-        ),
+        floatingActionButton: _currentIndex == 0
+            ? FloatingActionButton(
+                onPressed: _toggleFabMenu,
+                tooltip: _isFabOpen ? 'Close Menu' : 'Add Expense',
+                elevation: _isFabOpen ? 8 : 4,
+                backgroundColor: _isFabOpen ? const Color(0xFFEF4444) : primaryColor,
+                foregroundColor: _isFabOpen ? Colors.white : Colors.black,
+                child: RotationTransition(
+                  turns: _rotateAnimation,
+                  child: const Icon(
+                    Icons.add,
+                    size: 28,
+                  ),
+                ),
+              )
+            : null,
         floatingActionButtonLocation: FloatingActionButtonLocation.miniEndFloat,
       ),
     );
