@@ -8,6 +8,7 @@ import '../models/expense.dart';
 import '../services/ai_config_service.dart';
 import '../services/expense_provider.dart';
 import '../screens/expense_entry_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'custom_toast.dart';
 import 'ai_config_required_dialog.dart';
 
@@ -44,9 +45,24 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
+  final List<Map<String, String>> _supportedLanguages = const [
+    {'code': 'hi_IN', 'name': 'Hindi', 'native': 'हिंदी', 'flag': '🇮🇳'},
+    {'code': 'bn_IN', 'name': 'Bengali', 'native': 'বাংলা', 'flag': '🇮🇳'},
+    {'code': 'en_IN', 'name': 'English / Hinglish', 'native': 'English', 'flag': '🇮🇳'},
+    {'code': 'gu_IN', 'name': 'Gujarati', 'native': 'ગુજરાતી', 'flag': '🇮🇳'},
+    {'code': 'mr_IN', 'name': 'Marathi', 'native': 'मराठी', 'flag': '🇮🇳'},
+    {'code': 'ta_IN', 'name': 'Tamil', 'native': 'தமிழ்', 'flag': '🇮🇳'},
+    {'code': 'te_IN', 'name': 'Telugu', 'native': 'తెలుగు', 'flag': '🇮🇳'},
+    {'code': 'kn_IN', 'name': 'Kannada', 'native': 'ಕನ್ನಡ', 'flag': '🇮🇳'},
+    {'code': 'pa_IN', 'name': 'Punjabi', 'native': 'ਪੰਜਾਬੀ', 'flag': '🇮🇳'},
+    {'code': 'ur_IN', 'name': 'Urdu', 'native': 'اردو', 'flag': '🇮🇳'},
+  ];
+  String _selectedLocale = 'hi_IN';
+
   @override
   void initState() {
     super.initState();
+    _loadSavedLocale();
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -60,6 +76,47 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startListening();
     });
+  }
+
+  Future<void> _loadSavedLocale() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString('preferred_voice_stt_locale');
+      if (saved != null && mounted) {
+        setState(() {
+          _selectedLocale = saved;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _changeLocale(String newLocale) async {
+    if (_selectedLocale == newLocale) return;
+    HapticFeedback.selectionClick();
+    setState(() {
+      _selectedLocale = newLocale;
+      _transcribedText = '';
+      _statusMessage = 'Listening in ${_getLanguageName(newLocale)}... Speak now';
+    });
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('preferred_voice_stt_locale', newLocale);
+    } catch (_) {}
+
+    if (_isListening) {
+      _silenceTimer?.cancel();
+      await _speech.stop();
+      await Future.delayed(const Duration(milliseconds: 150));
+      if (mounted) _startListening();
+    }
+  }
+
+  String _getLanguageName(String code) {
+    final found = _supportedLanguages.firstWhere(
+      (l) => l['code'] == code,
+      orElse: () => {'name': 'selected language'},
+    );
+    return found['name'] ?? 'selected language';
   }
 
   @override
@@ -111,7 +168,7 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
       if (available) {
         setState(() {
           _isListening = true;
-          _statusMessage = 'Listening... Speak in any language (English, Hindi, Bengali, etc.)';
+          _statusMessage = 'Listening in ${_getLanguageName(_selectedLocale)}... Speak now';
           _transcribedText = '';
           _extractedData = null;
         });
@@ -138,7 +195,7 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
             partialResults: true,
             listenFor: const Duration(seconds: 40),
             pauseFor: const Duration(seconds: 4),
-            localeId: 'en_IN',
+            localeId: _selectedLocale,
           ),
         );
       } else {
@@ -368,6 +425,41 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
 
           // Main Interactive Area
           if (_extractedData == null) ...[
+            // Voice Speech Language Selector Bar
+            SizedBox(
+              height: 38,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _supportedLanguages.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final lang = _supportedLanguages[index];
+                  final isSelected = lang['code'] == _selectedLocale;
+                  return ChoiceChip(
+                    label: Text('${lang['flag']} ${lang['native']} (${lang['name']})'),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      if (selected) _changeLocale(lang['code']!);
+                    },
+                    selectedColor: primaryColor.withValues(alpha: 0.2),
+                    backgroundColor: isDark ? const Color(0xFF1E2430) : const Color(0xFFF1F5F9),
+                    labelStyle: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      color: isSelected ? primaryColor : (isDark ? Colors.grey[300] : Colors.grey[700]),
+                    ),
+                    side: BorderSide(
+                      color: isSelected ? primaryColor : (isDark ? const Color(0xFF2E384D) : const Color(0xFFE2E8F0)),
+                      width: isSelected ? 1.5 : 1,
+                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    showCheckmark: false,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
             // Waveform / Pulsing Mic Area
             Container(
               width: double.infinity,
@@ -510,7 +602,7 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Try speaking in any language:',
+                'Try speaking in ${_getLanguageName(_selectedLocale)}:',
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -522,12 +614,9 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: [
-                _buildExampleChip('“Ami 150 takar mach kinechi”', isDark),
-                _buildExampleChip('“Dost ke sath khana khaya 450 rupay”', isDark),
-                _buildExampleChip('“Petrol ₹500 Indian Oil”', isDark),
-                _buildExampleChip('“Auto fare 80 rupees yesterday”', isDark),
-              ],
+              children: _getExamplesForLocale(_selectedLocale).map((ex) {
+                return _buildExampleChip(ex, isDark);
+              }).toList(),
             ),
           ] else ...[
             // Extracted Confirmation Card
@@ -660,6 +749,55 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
         ],
       ),
     );
+  }
+
+  List<String> _getExamplesForLocale(String locale) {
+    if (locale.startsWith('bn')) {
+      return [
+        '“Ami 150 takar mach kinechi”',
+        '“Duto dim ar dudh kinlam 80 taka”',
+        '“Rikshaw bhara dilam 40 taka”',
+        '“250 taka diye lunch korlam”',
+      ];
+    } else if (locale.startsWith('hi')) {
+      return [
+        '“Dost ke sath khana khaya 450 rupay”',
+        '“Petrol ₹500 Indian Oil par bharwaya”',
+        '“Dudh aur bread liya 70 rupay”',
+        '“Auto wale ko 80 rupay diye”',
+      ];
+    } else if (locale.startsWith('gu')) {
+      return [
+        '“Dudh ane shakbhaji 150 rupiya ma lidhu”',
+        '“Petrol 300 rupiya puravyu”',
+        '“Rickshaw vadane 60 rupiya apya”',
+      ];
+    } else if (locale.startsWith('mr')) {
+      return [
+        '“Doodh ani ande aani 90 rupaye”',
+        '“Rickshaw che 50 rupaye dile”',
+        '“Dmart madhun shopping keli 800 rupaye”',
+      ];
+    } else if (locale.startsWith('ta')) {
+      return [
+        '“Kaalai unavu 120 roobai”',
+        '“Pal matrum muttai 85 roobai”',
+        '“Auto vaadagai 70 roobai”',
+      ];
+    } else if (locale.startsWith('te')) {
+      return [
+        '“Tiffin ki 80 rupayalu ayyindi”',
+        '“Auto ki 50 rupayalu ichanu”',
+        '“Petrol 300 rupayalu kottinchanu”',
+      ];
+    } else {
+      return [
+        '“Spent 250 on grocery shopping”',
+        '“Paid 500 for electricity bill”',
+        '“Uber ride 180 rs yesterday”',
+        '“Lunch with friends 450 rupees”',
+      ];
+    }
   }
 
   Widget _buildExampleChip(String text, bool isDark) {
