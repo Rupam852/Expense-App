@@ -152,14 +152,14 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
   // ────────────────────────────────────────────────────────────
   Uint8List _generateCsvBytes(List<Expense> expenses) {
     final List<List<dynamic>> rows = [
-      ['Date', 'Category', 'Amount (INR)', 'Description', 'Recurring', 'Payment Method'],
+      ['Date', 'Category', 'Amount (INR)', 'Description', 'Recurring', 'Period'],
       ...expenses.map((e) => [
         DateFormat('yyyy-MM-dd HH:mm').format(e.transactionDate),
         e.category,
         e.amount,
         e.description,
-        e.isRecurring ? 'Yes (${e.recurrencePeriod})' : 'No',
-        e.paymentMethod,
+        e.isRecurring ? 'Yes' : 'No',
+        e.recurrencePeriod,
       ]),
     ];
     final csvString = const ListToCsvConverter().convert(rows);
@@ -182,7 +182,7 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
         xls.TextCellValue('Generated on: ${DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now())}');
 
     // Headers
-    final headers = ['Date', 'Category', 'Description', 'Amount (INR)', 'Payment Mode', 'Recurring'];
+    final headers = ['Date', 'Category', 'Description', 'Amount (INR)', 'Recurring', 'Period'];
     for (int i = 0; i < headers.length; i++) {
       final cell = sheet.cell(xls.CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 3));
       cell.value = xls.TextCellValue(headers[i]);
@@ -202,9 +202,9 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
       sheet.cell(xls.CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rowIndex)).value =
           xls.DoubleCellValue(exp.amount);
       sheet.cell(xls.CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rowIndex)).value =
-          xls.TextCellValue(exp.paymentMethod);
+          xls.TextCellValue(exp.isRecurring ? 'Yes' : 'No');
       sheet.cell(xls.CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: rowIndex)).value =
-          xls.TextCellValue(exp.isRecurring ? 'Recurring' : '-');
+          xls.TextCellValue(exp.recurrencePeriod);
       rowIndex++;
     }
 
@@ -282,13 +282,13 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
         build: (pw.Context context) {
           return [
             pw.TableHelper.fromTextArray(
-              headers: ['Date', 'Category', 'Description', 'Mode', 'Amount (INR)'],
+              headers: ['Date', 'Category', 'Description', 'Recurring', 'Amount (INR)'],
               data: expenses.map((e) {
                 return [
                   DateFormat('dd MMM yyyy').format(e.transactionDate),
                   e.category,
-                  e.description,
-                  e.paymentMethod,
+                  e.description.isEmpty ? '-' : e.description,
+                  e.isRecurring ? 'Yes (${e.recurrencePeriod})' : 'No',
                   'Rs. ${e.amount.toStringAsFixed(2)}',
                 ];
               }).toList(),

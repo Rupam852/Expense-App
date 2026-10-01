@@ -811,6 +811,7 @@ class ExpenseProvider with ChangeNotifier {
       }
 
       int importedCount = 0;
+      int skippedDuplicatesCount = 0;
       final startRow = 1; // Assume row 0 is header
 
       for (int i = startRow; i < rows.length; i++) {
@@ -954,12 +955,6 @@ class ExpenseProvider with ChangeNotifier {
           }
         }
 
-        final now = DateTime.now();
-        if (parsedDate.year != now.year || parsedDate.month != now.month) {
-          // Skip transactions from other months
-          continue;
-        }
-
         final exp = Expense(
           id: cryptoUuid(),
           amount: amount.abs(), // expenses are positive values in UI
@@ -972,6 +967,8 @@ class ExpenseProvider with ChangeNotifier {
         final insertResult = await _dbHelper.insertExpense(exp, preventDuplicates: true);
         if (insertResult != -1) {
           importedCount++;
+        } else {
+          skippedDuplicatesCount++;
         }
       }
 
@@ -982,9 +979,17 @@ class ExpenseProvider with ChangeNotifier {
         notifyListeners();
         // Silent background sync after import
         triggerQuietSync();
-        return 'Parsed $importedCount transactions successfully!';
+        if (skippedDuplicatesCount > 0) {
+          return '✅ $importedCount new transactions imported! ($skippedDuplicatesCount duplicates skipped)';
+        }
+        return '✅ $importedCount transactions imported successfully!';
+      } else if (skippedDuplicatesCount > 0) {
+        _syncErrorMessage = 'All $skippedDuplicatesCount transactions already exist in the app.';
+        _isLoading = false;
+        notifyListeners();
+        return 'ℹ️ All $skippedDuplicatesCount transactions were duplicate and already exist.';
       } else {
-        _syncErrorMessage = 'No valid transactions found in the CSV file.';
+        _syncErrorMessage = 'No valid transactions found in the file.';
         _isLoading = false;
         notifyListeners();
         return null;
