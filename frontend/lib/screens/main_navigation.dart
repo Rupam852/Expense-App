@@ -107,6 +107,15 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
     );
   }
 
+  void _openOcrScanner() {
+    _closeFabMenu();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const ExpenseEntryScreen(openCameraScanner: true),
+      ),
+    );
+  }
+
   void _openVoiceExpenseDialog() {
     _closeFabMenu();
     VoiceExpenseDialog.show(context);
@@ -310,7 +319,20 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
                               ),
                               const SizedBox(height: 12),
 
-                              // 2. Manual Typing Action
+                              // 2. Smart OCR Receipt Scanner
+                              _buildSpeedDialItem(
+                                context: context,
+                                isDark: isDark,
+                                label: 'Smart OCR Scan',
+                                subtitle: 'Scan bills & receipts',
+                                icon: Icons.document_scanner_rounded,
+                                iconColor: Colors.white,
+                                gradientColors: const [Color(0xFF2563EB), Color(0xFF38BDF8)],
+                                onTap: _openOcrScanner,
+                              ),
+                              const SizedBox(height: 12),
+
+                              // 3. Manual Typing Action
                               _buildSpeedDialItem(
                                 context: context,
                                 isDark: isDark,
