@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
-import '../models/expense.dart';
 import '../services/ai_config_service.dart';
 import '../services/expense_provider.dart';
 import '../screens/expense_entry_screen.dart';
@@ -314,7 +313,11 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
     final data = _extractedData!;
     final double amount = (data['amount'] is num) ? (data['amount'] as num).toDouble() : 0.0;
     final String category = data['category']?.toString() ?? 'Miscellaneous';
-    final String description = data['description']?.toString() ?? '';
+    final String description = (data['description'] != null && data['description'].toString().trim().isNotEmpty)
+        ? data['description'].toString().trim()
+        : ((data['vendor'] != null && data['vendor'].toString().trim().isNotEmpty)
+            ? data['vendor'].toString().trim()
+            : '');
     final String currency = data['currency']?.toString() ?? 'INR';
 
     DateTime date = DateTime.now();
@@ -324,19 +327,16 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
       } catch (_) {}
     }
 
-    final draft = Expense(
-      id: 'temp-voice-draft',
-      amount: amount,
-      category: category,
-      description: description,
-      currency: currency,
-      transactionDate: date,
-    );
-
     Navigator.of(context).pop();
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ExpenseEntryScreen(editExpense: draft),
+        builder: (_) => ExpenseEntryScreen(
+          initialAmount: amount > 0 ? amount : null,
+          initialCategory: category,
+          initialDescription: description,
+          initialDate: date,
+          initialCurrency: currency,
+        ),
       ),
     );
   }

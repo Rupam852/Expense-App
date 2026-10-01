@@ -17,9 +17,12 @@ import '../widgets/sms_expense_parser_dialog.dart';
 class ExpenseEntryScreen extends StatefulWidget {
   final bool openCameraScanner;
   final bool openGalleryScanner;
-  final Expense? editExpense; // If passed, we are in Edit Mode
+  final Expense? editExpense; // If passed and valid ID, we are in Edit Mode
   final String? initialDescription;
   final String? initialCategory;
+  final double? initialAmount;
+  final DateTime? initialDate;
+  final String? initialCurrency;
 
   const ExpenseEntryScreen({
     super.key,
@@ -28,6 +31,9 @@ class ExpenseEntryScreen extends StatefulWidget {
     this.editExpense,
     this.initialDescription,
     this.initialCategory,
+    this.initialAmount,
+    this.initialDate,
+    this.initialCurrency,
   });
 
   @override
@@ -50,6 +56,12 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
 
   bool _isLocalLoading = false;
   bool _isSaving = false;
+
+  bool get _isRealEdit =>
+      widget.editExpense != null &&
+      widget.editExpense!.id.isNotEmpty &&
+      widget.editExpense!.id != 'temp-voice-draft' &&
+      widget.editExpense!.id != 'draft';
 
   final List<String> _categories = [
     'Shopping',
@@ -83,10 +95,12 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   void initState() {
     super.initState();
     
-    // Check if we are in edit mode
-    if (widget.editExpense != null) {
+    // Check if we are in real edit mode or draft creation
+    if (_isRealEdit) {
       final exp = widget.editExpense!;
-      _amountController.text = exp.amount.toString();
+      _amountController.text = exp.amount > 0
+          ? (exp.amount == exp.amount.roundToDouble() ? exp.amount.toInt().toString() : exp.amount.toString())
+          : '';
       _descriptionController.text = exp.description;
       _selectedCategory = exp.category;
       _selectedCurrency = exp.currency;
@@ -95,11 +109,37 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
       _recurrencePeriod = exp.recurrencePeriod == 'none' ? 'monthly' : exp.recurrencePeriod;
       _receiptLocalPath = exp.receiptUrl;
     } else {
+      // Prefill from initial parameters or draft Expense
+      if (widget.initialAmount != null && widget.initialAmount! > 0) {
+        final amt = widget.initialAmount!;
+        _amountController.text = amt == amt.roundToDouble() ? amt.toInt().toString() : amt.toString();
+      } else if (widget.editExpense != null && widget.editExpense!.amount > 0) {
+        final amt = widget.editExpense!.amount;
+        _amountController.text = amt == amt.roundToDouble() ? amt.toInt().toString() : amt.toString();
+      }
+
       if (widget.initialDescription != null) {
         _descriptionController.text = widget.initialDescription!;
+      } else if (widget.editExpense != null && widget.editExpense!.description.isNotEmpty) {
+        _descriptionController.text = widget.editExpense!.description;
       }
-      if (widget.initialCategory != null) {
+
+      if (widget.initialCategory != null && widget.initialCategory!.isNotEmpty) {
         _selectedCategory = widget.initialCategory;
+      } else if (widget.editExpense != null && widget.editExpense!.category.isNotEmpty) {
+        _selectedCategory = widget.editExpense!.category;
+      }
+
+      if (widget.initialDate != null) {
+        _selectedDate = widget.initialDate!;
+      } else if (widget.editExpense != null) {
+        _selectedDate = widget.editExpense!.transactionDate;
+      }
+
+      if (widget.initialCurrency != null && widget.initialCurrency!.isNotEmpty) {
+        _selectedCurrency = widget.initialCurrency!;
+      } else if (widget.editExpense != null && widget.editExpense!.currency.isNotEmpty) {
+        _selectedCurrency = widget.editExpense!.currency;
       }
     }
 
@@ -368,7 +408,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
 
     try {
-      if (widget.editExpense != null) {
+      if (_isRealEdit) {
         final updated = widget.editExpense!.copyWith(
           amount: amount,
           category: _selectedCategory!,
@@ -381,6 +421,9 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
           updatedAt: DateTime.now(),
         );
         await expenseProvider.editExpense(updated);
+        if (mounted) {
+          CustomToast.show(context, 'Expense updated successfully! ✨');
+        }
       } else {
         await expenseProvider.addExpense(
           amount: amount,
@@ -392,6 +435,9 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
           recurrencePeriod: _isRecurring ? _recurrencePeriod : 'none',
           receiptUrl: _receiptLocalPath,
         );
+        if (mounted) {
+          CustomToast.show(context, 'Expense saved successfully! 🎉');
+        }
       }
 
       if (mounted) {
@@ -413,7 +459,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.editExpense != null ? 'Edit Transaction' : 'Add Transaction'),
+        title: Text(_isRealEdit ? 'Edit Transaction' : 'Add Transaction'),
         actions: [
           IconButton(
             onPressed: () => SmsExpenseParserDialog.show(context),
@@ -757,7 +803,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                               ),
                             )
                           : Text(
-                              widget.editExpense != null ? 'Update Expense' : 'Save Expense',
+                              _isRealEdit ? 'Update Expense' : 'Save Expense',
                               style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
                             ),
                     ),
