@@ -7,6 +7,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/khata_entry.dart';
 import '../services/expense_provider.dart';
 import '../widgets/custom_toast.dart';
+import '../widgets/payment_reminder_modal.dart';
+import 'payment_details_screen.dart';
 
 class KhataScreen extends StatefulWidget {
   const KhataScreen({super.key});
@@ -67,37 +69,15 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
     );
   }
 
-  Future<void> _sendWhatsAppReminder(KhataEntry entry, String? userUpiId) async {
-    final formattedAmt = _currencyFormat.format(entry.amount);
-    final notePart = entry.note != null && entry.note!.isNotEmpty ? ' for "${entry.note}"' : '';
-    final upiPart = userUpiId != null && userUpiId.isNotEmpty ? '\n\nYou can pay via UPI to: $userUpiId' : '';
-    
-    final message = 'Hi ${entry.personName}! 👋\n\n'
-        'This is a friendly reminder regarding $formattedAmt$notePart on Groww Expense App.'
-        '$upiPart\n\nPlease settle whenever convenient. Thank you! 🙏';
-
-    if (entry.phoneNumber != null && entry.phoneNumber!.trim().isNotEmpty) {
-      String cleanPhone = entry.phoneNumber!.replaceAll(RegExp(r'[^0-9+]'), '');
-      if (cleanPhone.startsWith('+')) {
-        cleanPhone = cleanPhone.substring(1);
-      } else if (cleanPhone.length == 10) {
-        cleanPhone = '91$cleanPhone'; // Default Indian country code
-      }
-      final whatsappUrl = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(message)}');
-      try {
-        if (await canLaunchUrl(whatsappUrl)) {
-          await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
-          return;
-        }
-      } catch (_) {}
-    }
-
-    // Fallback: system share sheet
-    await SharePlus.instance.share(
-      ShareParams(
-        text: message,
-        subject: 'Payment Reminder for $formattedAmt',
-      ),
+  void _openReminderModal(KhataEntry entry) {
+    PaymentReminderModal.show(
+      context: context,
+      personName: entry.personName,
+      amount: entry.amount,
+      titleOrNote: entry.note,
+      phoneNumber: entry.phoneNumber,
+      date: entry.entryDate,
+      isKhata: true,
     );
   }
 
@@ -576,10 +556,10 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
 
                 Row(
                   children: [
-                    // WhatsApp Reminder (only for lent & unsettled)
+                    // WhatsApp / UPI Payment Reminder (only for lent & unsettled)
                     if (isLent && !entry.isSettled) ...[
                       OutlinedButton.icon(
-                        onPressed: () => _sendWhatsAppReminder(entry, userUpiId),
+                        onPressed: () => _openReminderModal(entry),
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: Color(0xFF25D366)),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

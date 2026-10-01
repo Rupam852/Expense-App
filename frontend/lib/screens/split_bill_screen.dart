@@ -8,6 +8,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/split_bill.dart';
 import '../services/expense_provider.dart';
 import '../widgets/custom_toast.dart';
+import '../widgets/payment_reminder_modal.dart';
+import 'payment_details_screen.dart';
 
 class SplitBillScreen extends StatefulWidget {
   const SplitBillScreen({super.key});
@@ -570,12 +572,23 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
                       },
                     ),
 
-                    // WhatsApp Reminder
+                    // Share / Payment Reminder modal
                     if (!isSettled)
                       IconButton(
-                        tooltip: 'Share on WhatsApp',
+                        tooltip: 'Share Payment Reminder',
                         icon: const Icon(Icons.send_rounded, color: Color(0xFF25D366), size: 18),
-                        onPressed: () => _shareSplitOnWhatsApp(bill: bill, participant: p),
+                        onPressed: () {
+                          PaymentReminderModal.show(
+                            context: context,
+                            personName: p.name,
+                            amount: p.shareAmount,
+                            titleOrNote: bill.title,
+                            phoneNumber: p.phoneNumber,
+                            date: bill.billDate,
+                            isKhata: false,
+                            customPayerUpiId: bill.payerUpiId,
+                          );
+                        },
                       ),
                   ],
                 ],
@@ -588,19 +601,22 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              if (bill.payerUpiId != null && bill.payerUpiId!.isNotEmpty && !isFullyDone)
+              if (!isFullyDone)
                 TextButton.icon(
                   onPressed: () {
-                    _showUpiQrDialog(
-                      upiId: bill.payerUpiId!,
-                      payeeName: bill.paidBy,
+                    PaymentReminderModal.show(
+                      context: context,
+                      personName: 'Participants (${totalParts - settledParts} Pending)',
                       amount: bill.pendingCollection > 0 ? bill.pendingCollection : bill.totalAmount,
-                      billTitle: bill.title,
+                      titleOrNote: bill.title,
+                      date: bill.billDate,
+                      isKhata: false,
+                      customPayerUpiId: bill.payerUpiId,
                     );
                   },
                   icon: const Icon(Icons.qr_code_2_rounded, size: 16, color: Color(0xFF00D09C)),
                   label: Text(
-                    'Show UPI QR',
+                    'Collect Payment / QR',
                     style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF00D09C)),
                   ),
                 )
@@ -856,6 +872,24 @@ class _AddSplitBillSheetState extends State<_AddSplitBillSheet> {
                 ),
               ],
             ),
+            if (_upiController.text.trim().isEmpty) ...[
+              const SizedBox(height: 6),
+              InkWell(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PaymentDetailsScreen()),
+                  );
+                },
+                child: Text(
+                  '💡 Tip: Set up your UPI in Payment Settings to auto-fill here',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: const Color(0xFF00D09C),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
 
             // Split Mode Toggle
