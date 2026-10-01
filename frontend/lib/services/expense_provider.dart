@@ -678,6 +678,11 @@ class ExpenseProvider with ChangeNotifier {
       _paymentDetails = await _dbHelper.getPaymentDetails();
     }
     notifyListeners();
+    try {
+      if (_supabase.currentUser != null) {
+        await _supabase.deletePaymentDetailOnServer(id);
+      }
+    } catch (_) {}
     triggerQuietSync();
   }
 
@@ -1089,6 +1094,10 @@ class ExpenseProvider with ChangeNotifier {
           .where((d) => d['table_name'] == 'budgets')
           .map((d) => d['id'] as String)
           .toList();
+      final deletedPayIds = unsyncedDeletes
+          .where((d) => d['table_name'] == 'payment_details')
+          .map((d) => d['id'] as String)
+          .toList();
       final deletedKhataIds = unsyncedDeletes
           .where((d) => d['table_name'] == 'khata_entries')
           .map((d) => d['id'] as String)
@@ -1111,6 +1120,7 @@ class ExpenseProvider with ChangeNotifier {
         unsyncedSplitBills: unsyncedSplits,
         deletedExpenseIds: deletedExpIds,
         deletedBudgetIds: deletedBudIds,
+        deletedPaymentDetailIds: deletedPayIds,
         deletedKhataIds: deletedKhataIds,
         deletedSubscriptionIds: deletedSubIds,
         deletedSplitBillIds: deletedSplitIds,

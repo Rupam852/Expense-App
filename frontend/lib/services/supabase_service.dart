@@ -759,6 +759,7 @@ class SupabaseService {
     List<Map<String, dynamic>> unsyncedSplitBills = const [],
     required List<String> deletedExpenseIds,
     required List<String> deletedBudgetIds,
+    List<String> deletedPaymentDetailIds = const [],
     List<String> deletedKhataIds = const [],
     List<String> deletedSubscriptionIds = const [],
     List<String> deletedSplitBillIds = const [],
@@ -793,6 +794,8 @@ class SupabaseService {
           _client.from('expenses').delete().inFilter('id', deletedExpenseIds).eq('user_id', uid).catchError((e) => null),
         if (deletedBudgetIds.isNotEmpty)
           _client.from('budgets').delete().inFilter('id', deletedBudgetIds).eq('user_id', uid).catchError((e) => null),
+        if (deletedPaymentDetailIds.isNotEmpty)
+          _client.from('payment_details').delete().inFilter('id', deletedPaymentDetailIds).eq('user_id', uid).catchError((e) => null),
         if (deletedKhataIds.isNotEmpty)
           _client.from('khata_entries').delete().inFilter('id', deletedKhataIds).eq('user_id', uid).catchError((e) => null),
         if (deletedSubscriptionIds.isNotEmpty)

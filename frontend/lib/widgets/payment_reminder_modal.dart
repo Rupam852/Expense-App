@@ -582,7 +582,7 @@ class _PaymentReminderModalState extends State<PaymentReminderModal> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Save your UPI ID & QR Code in Payment Details so friends can pay you directly with 1 tap. (This note won\'t be shared with them).',
+                          'Save your UPI ID & QR Code in Payment Cards & QR so friends can pay you directly with 1 tap. (This note won\'t be shared with them).',
                           style: GoogleFonts.inter(
                             fontSize: 11.5,
                             color: isDark ? Colors.grey[300] : const Color(0xFF78350F),
@@ -613,7 +613,7 @@ class _PaymentReminderModalState extends State<PaymentReminderModal> {
                                   const Icon(Icons.account_balance_wallet_rounded, size: 14, color: Colors.white),
                                   const SizedBox(width: 6),
                                   Text(
-                                    'Setup Payment Method',
+                                    'Setup Payment Cards & QR',
                                     style: GoogleFonts.inter(
                                       fontSize: 11.5,
                                       fontWeight: FontWeight.bold,

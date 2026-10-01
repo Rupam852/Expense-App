@@ -48,7 +48,7 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
               isPrimary: isPrimary,
             );
             if (mounted) {
-              CustomToast.show(context, '✅ Payment method "$name" added!');
+              CustomToast.show(context, '✅ Payment card "$name" added!');
             }
           } else {
             final updated = existing.copyWith(
@@ -60,7 +60,7 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
             );
             await provider.updatePaymentDetail(updated);
             if (mounted) {
-              CustomToast.show(context, '✅ Payment method updated!');
+              CustomToast.show(context, '✅ Payment card updated!');
             }
           }
         },
@@ -178,15 +178,15 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
       backgroundColor: isDark ? const Color(0xFF12141A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Text(
-          'Payment Methods & QR',
+          'Payment Cards & QR',
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 19),
         ),
         elevation: 0,
         backgroundColor: isDark ? const Color(0xFF181B22) : Colors.white,
         actions: [
-          // Clear + icon for adding new payment method (tune icon removed as requested)
+          // Clear + icon for adding new payment card
           IconButton(
-            tooltip: 'Add Payment Method',
+            tooltip: 'Add Payment Card / QR',
             icon: const Icon(Icons.add_rounded, color: Color(0xFF00D09C), size: 26),
             onPressed: () => _openAddEditSheet(),
           ),
@@ -380,7 +380,7 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
             ),
             const SizedBox(height: 20),
             Text(
-              'No Payment Methods Added',
+              'No Payment Cards Added',
               style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
@@ -401,7 +401,7 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
               ),
               icon: const Icon(Icons.add_rounded),
               label: Text(
-                '+ Add First Payment Method',
+                '+ Add First Payment Card',
                 style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold),
               ),
             ),
@@ -514,12 +514,12 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
                     } else if (val == 'primary') {
                       await provider.setPrimaryPaymentDetail(item.id);
                       if (context.mounted) {
-                        CustomToast.show(context, '⭐ "${item.name}" set as Primary Payment Method');
+                        CustomToast.show(context, '⭐ "${item.name}" set as Primary Card');
                       }
                     } else if (val == 'delete') {
                       await provider.deletePaymentDetail(item.id);
                       if (context.mounted) {
-                        CustomToast.show(context, 'Payment method deleted');
+                        CustomToast.show(context, 'Payment card deleted');
                       }
                     }
                   },
@@ -551,7 +551,7 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
                         children: [
                           Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFEF4444)),
                           SizedBox(width: 10),
-                          Text('Delete Method', style: TextStyle(color: Color(0xFFEF4444))),
+                          Text('Delete Card', style: TextStyle(color: Color(0xFFEF4444))),
                         ],
                       ),
                     ),
@@ -855,7 +855,7 @@ class _AddEditPaymentSheetState extends State<_AddEditPaymentSheet> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    widget.existing == null ? 'Add Payment Method' : 'Edit Payment Method',
+                    widget.existing == null ? 'Add Payment Card / QR' : 'Edit Payment Card / QR',
                     style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   IconButton(
@@ -869,9 +869,9 @@ class _AddEditPaymentSheetState extends State<_AddEditPaymentSheet> {
               // 1. Account Name Input
               TextFormField(
                 controller: _nameController,
-                validator: (val) => val == null || val.trim().isEmpty ? 'Please enter a name for this payment method' : null,
+                validator: (val) => val == null || val.trim().isEmpty ? 'Please enter a name for this card / account' : null,
                 decoration: InputDecoration(
-                  labelText: 'Payment Method Name *',
+                  labelText: 'Payment Card Name *',
                   hintText: 'e.g. Personal GPay, Shop PhonePe',
                   prefixIcon: const Icon(Icons.label_outline_rounded),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
@@ -1158,7 +1158,7 @@ class _AddEditPaymentSheetState extends State<_AddEditPaymentSheet> {
                   elevation: 0,
                 ),
                 child: Text(
-                  widget.existing == null ? 'Save Payment Method' : 'Update Payment Method',
+                  widget.existing == null ? 'Save Payment Card' : 'Update Payment Card',
                   style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -1307,7 +1307,7 @@ class _ManagePaymentMethodsSheetState extends State<_ManagePaymentMethodsSheet> 
                           _localList = List.from(provider.paymentDetails);
                         });
                         if (context.mounted) {
-                          CustomToast.show(context, 'Payment method deleted');
+                          CustomToast.show(context, 'Payment card deleted');
                         }
                       },
                     ),

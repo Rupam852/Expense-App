@@ -842,6 +842,15 @@ class DatabaseHelper {
 
   Future<void> deletePaymentDetail(String id) async {
     final db = await instance.database;
+    await db.insert(
+      'deleted_records',
+      {
+        'id': id,
+        'table_name': 'payment_details',
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
     await db.delete('payment_details', where: 'id = ?', whereArgs: [id]);
   }
 
@@ -1477,8 +1486,19 @@ class DatabaseHelper {
     final db = await instance.database;
     if (payments.isEmpty) return;
 
+    final deletedRecords = await db.query(
+      'deleted_records',
+      columns: ['id'],
+      where: 'table_name = ?',
+      whereArgs: ['payment_details'],
+    );
+    final deletedIds = deletedRecords.map((r) => r['id'] as String).toSet();
+
     await db.transaction((txn) async {
       for (final pay in payments) {
+        if (deletedIds.contains(pay.id)) {
+          continue;
+        }
         final map = pay.toMap();
         map['is_synced'] = 1;
         await txn.insert(
