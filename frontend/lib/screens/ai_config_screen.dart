@@ -31,6 +31,45 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
   bool _obscureNvidiaKey = true;
   bool _isSaving = false;
 
+  static const int _testCooldownSeconds = 45;
+  static DateTime? _lastDefaultTestTime;
+  static DateTime? _lastCustomTestTime;
+
+  Timer? _cooldownTicker;
+
+  int get _defaultCooldownRemaining {
+    if (_lastDefaultTestTime == null) return 0;
+    final elapsed = DateTime.now().difference(_lastDefaultTestTime!).inSeconds;
+    final remaining = _testCooldownSeconds - elapsed;
+    return remaining > 0 ? remaining : 0;
+  }
+
+  int get _customCooldownRemaining {
+    if (_lastCustomTestTime == null) return 0;
+    final elapsed = DateTime.now().difference(_lastCustomTestTime!).inSeconds;
+    final remaining = _testCooldownSeconds - elapsed;
+    return remaining > 0 ? remaining : 0;
+  }
+
+  bool get _isDefaultCooldownActive => _defaultCooldownRemaining > 0;
+  bool get _isCustomCooldownActive => _customCooldownRemaining > 0;
+
+  void _startCooldownTicker() {
+    _cooldownTicker?.cancel();
+    _cooldownTicker = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_defaultCooldownRemaining > 0 || _customCooldownRemaining > 0) {
+        setState(() {});
+      } else {
+        setState(() {});
+        timer.cancel();
+      }
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -42,10 +81,15 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
     _primaryProvider = _aiService.primaryProvider;
     _secondaryProvider = _aiService.secondaryProvider;
     _responseLanguage = _aiService.responseLanguage;
+
+    if (_isDefaultCooldownActive || _isCustomCooldownActive) {
+      _startCooldownTicker();
+    }
   }
 
   @override
   void dispose() {
+    _cooldownTicker?.cancel();
     _geminiKeyController.dispose();
     _nvidiaKeyController.dispose();
     super.dispose();
@@ -217,6 +261,20 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
       return;
     }
 
+    final remaining = _customCooldownRemaining;
+    if (remaining > 0) {
+      CustomToast.show(
+        context,
+        '⏳ Please wait ${remaining}s before running another test.',
+        isError: false,
+      );
+      return;
+    }
+
+    _lastCustomTestTime = DateTime.now();
+    _startCooldownTicker();
+    setState(() {});
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -235,6 +293,20 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
 
   // Testing Dialog trigger for Default Server AI
   Future<void> _checkDefaultServerStatus() async {
+    final remaining = _defaultCooldownRemaining;
+    if (remaining > 0) {
+      CustomToast.show(
+        context,
+        '⏳ Please wait ${remaining}s before running another test.',
+        isError: false,
+      );
+      return;
+    }
+
+    _lastDefaultTestTime = DateTime.now();
+    _startCooldownTicker();
+    setState(() {});
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -435,16 +507,27 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
 
                 // Test Default Server AI Button
                 OutlinedButton.icon(
-                  onPressed: _checkDefaultServerStatus,
+                  onPressed: _isDefaultCooldownActive ? null : _checkDefaultServerStatus,
                   style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: primaryColor.withOpacity(0.6)),
-                    foregroundColor: primaryColor,
+                    side: BorderSide(
+                      color: _isDefaultCooldownActive
+                          ? (isDark ? Colors.grey[700]! : Colors.grey[400]!)
+                          : primaryColor.withValues(alpha: 0.6),
+                    ),
+                    foregroundColor: _isDefaultCooldownActive
+                        ? Colors.grey
+                        : primaryColor,
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
-                  icon: const Icon(Icons.speed_rounded, size: 20),
+                  icon: Icon(
+                    _isDefaultCooldownActive ? Icons.timer_outlined : Icons.speed_rounded,
+                    size: 20,
+                  ),
                   label: Text(
-                    'Test Default Server AI Latency',
+                    _isDefaultCooldownActive
+                        ? 'Test Cooldown (${_defaultCooldownRemaining}s)'
+                        : 'Test Default Server AI Latency',
                     style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                 ),
@@ -596,16 +679,25 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: _checkCustomConfigurationStatus,
+                        onPressed: _isCustomCooldownActive ? null : _checkCustomConfigurationStatus,
                         style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: primaryColor),
-                          foregroundColor: primaryColor,
+                          side: BorderSide(
+                            color: _isCustomCooldownActive
+                                ? (isDark ? Colors.grey[700]! : Colors.grey[400]!)
+                                : primaryColor,
+                          ),
+                          foregroundColor: _isCustomCooldownActive ? Colors.grey : primaryColor,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
-                        icon: const Icon(Icons.speed_rounded, size: 20),
+                        icon: Icon(
+                          _isCustomCooldownActive ? Icons.timer_outlined : Icons.speed_rounded,
+                          size: 20,
+                        ),
                         label: Text(
-                          'Test Keys',
+                          _isCustomCooldownActive
+                              ? 'Wait ${_customCooldownRemaining}s'
+                              : 'Test Keys',
                           style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                       ),
