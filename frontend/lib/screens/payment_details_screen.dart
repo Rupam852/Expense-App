@@ -10,6 +10,7 @@ import 'package:qr_code_dart_decoder/qr_code_dart_decoder.dart';
 import '../services/expense_provider.dart';
 import '../services/user_provider.dart';
 import '../services/supabase_service.dart';
+import '../models/payment_detail.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/custom_toast.dart';
 
