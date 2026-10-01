@@ -591,20 +591,14 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Description text input
+                    // Description text input (Optional)
                     TextFormField(
                       controller: _descriptionController,
                       decoration: const InputDecoration(
-                        hintText: 'Spent on lunch with friends, rent, utilities...',
-                        labelText: 'Description / Vendor Details',
+                        hintText: 'Spent on lunch with friends, rent, utilities (optional)...',
+                        labelText: 'Description / Vendor Details (Optional)',
                         prefixIcon: Icon(Icons.description_outlined),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a brief description.';
-                        }
-                        return null;
-                      },
                     ),
                     const SizedBox(height: 8),
 

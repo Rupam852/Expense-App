@@ -214,7 +214,11 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
     final data = _extractedData!;
     final double amount = (data['amount'] is num) ? (data['amount'] as num).toDouble() : 0.0;
     final String category = data['category']?.toString() ?? 'Miscellaneous';
-    final String description = data['description']?.toString() ?? 'Voice Expense';
+    final String description = (data['description'] != null && data['description'].toString().trim().isNotEmpty)
+        ? data['description'].toString().trim()
+        : ((data['vendor'] != null && data['vendor'].toString().trim().isNotEmpty)
+            ? data['vendor'].toString().trim()
+            : category);
     final String currency = data['currency']?.toString() ?? 'INR';
     final String paymentMethod = data['payment_method']?.toString() ?? 'UPI';
 
