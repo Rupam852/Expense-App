@@ -130,6 +130,53 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
     }
   }
 
+  void _confirmRemoveCustomQr(BuildContext context, PaymentDetail details) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1E232E) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Remove Custom QR Code?',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Aapka uploaded QR code image remove ho jayega aur app automatically standard dynamic UPI QR code par switch kar dega.',
+          style: GoogleFonts.inter(fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+              await expenseProvider.savePaymentDetails(
+                upiId: details.upiId,
+                qrCodeUrl: null,
+              );
+              setState(() {
+                _cachedQrPath = null;
+              });
+              if (context.mounted) {
+                CustomToast.show(context, '🗑️ Custom QR removed! Switched to dynamic UPI QR.');
+              }
+            },
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _saveDetails() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -279,20 +326,39 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
                       ),
                       if (_cachedQrPath != null) ...[
                         const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            const Icon(Icons.check_circle_outline, color: Color(0xFF00D09C), size: 16),
-                            const SizedBox(width: 8),
-                            const Expanded(child: Text('Custom QR Code attached.', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
-                            IconButton(
-                              onPressed: () {
-                                setState(() {
-                                  _cachedQrPath = null;
-                                });
-                              },
-                              icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
-                            ),
-                          ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF252A36) : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFF00D09C).withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.check_circle_outline, color: Color(0xFF00D09C), size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Custom QR attached',
+                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                              TextButton.icon(
+                                onPressed: () {
+                                  setState(() {
+                                    _cachedQrPath = null;
+                                  });
+                                  CustomToast.show(context, 'Custom QR detached');
+                                },
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.red,
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                ),
+                                icon: const Icon(Icons.delete_outline, size: 16),
+                                label: const Text('Remove', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                       const SizedBox(height: 24),
@@ -409,10 +475,26 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
                                   ),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 14),
                         Text(
-                          'Scan custom payment QR code',
+                          'Custom uploaded QR code',
                           style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                        ),
+                        const SizedBox(height: 10),
+                        // Direct Remove Custom QR button in View Mode
+                        OutlinedButton.icon(
+                          onPressed: () => _confirmRemoveCustomQr(context, details),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red[400],
+                            side: BorderSide(color: Colors.red.withValues(alpha: 0.35)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          ),
+                          icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                          label: Text(
+                            'Remove Custom QR',
+                            style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ] else ...[
                         // Standard Live QR generated by qr_flutter!
