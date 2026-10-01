@@ -442,32 +442,32 @@ class AiConfigService with ChangeNotifier {
 
     final results = <ModelCheckResult>[];
 
-    // 1. Check Default Gemini Server AI
+    // 1. Check Default Gemini Server AI starting from top of availableGeminiModels
     final geminiKey = _defaultGeminiApiKey.isNotEmpty ? _defaultGeminiApiKey : effectiveGeminiApiKey;
-    final geminiModel = _defaultGeminiModel.isNotEmpty ? _defaultGeminiModel : 'gemini-2.5-flash';
+    final geminiModel = _defaultGeminiModel.isNotEmpty ? _defaultGeminiModel : availableGeminiModels.first;
     if (geminiKey.isNotEmpty) {
       final res = await _testGeminiApiKeyAndModel(geminiKey, geminiModel, role: 'Primary Server Cloud Engine');
       results.add(res);
     } else {
       results.add(ModelCheckResult(
         provider: 'Google Gemini (Server Cloud)',
-        modelName: geminiModel,
+        modelName: availableGeminiModels.first,
         isWorking: false,
         latencyMs: 0,
         message: 'Connecting to Cloud Configuration...',
       ));
     }
 
-    // 2. Check Default NVIDIA Server AI (Backup)
+    // 2. Check Default NVIDIA Server AI (Backup) starting from top of availableNvidiaModels
     final nvidiaKey = _defaultNvidiaApiKey.isNotEmpty ? _defaultNvidiaApiKey : effectiveNvidiaApiKey;
-    final nvidiaModel = _defaultNvidiaModel.isNotEmpty ? _defaultNvidiaModel : 'meta/llama-3.2-11b-vision-instruct';
+    final nvidiaModel = _defaultNvidiaModel.isNotEmpty ? _defaultNvidiaModel : availableNvidiaModels.first;
     if (nvidiaKey.isNotEmpty) {
       final res = await _testNvidiaApiKeyAndModel(nvidiaKey, nvidiaModel, role: 'Backup Server Cloud Engine');
       results.add(res);
     } else {
       results.add(ModelCheckResult(
         provider: 'NVIDIA NIM (Server Cloud Backup)',
-        modelName: nvidiaModel,
+        modelName: availableNvidiaModels.first,
         isWorking: false,
         latencyMs: 0,
         message: 'Connecting to Cloud Configuration...',
