@@ -33,94 +33,81 @@ class SettingsScreen extends StatelessWidget {
   }
 
   void _showRestoreBackupDialog(BuildContext context, ExpenseProvider expenseProvider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (ctx) {
-        bool isRestoring = false;
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            final isDark = Theme.of(context).brightness == Brightness.dark;
-            return AlertDialog(
-              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: BorderSide(
-                  color: const Color(0xFF00D09C).withValues(alpha: 0.3),
+        return AlertDialog(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: const Color(0xFF00D09C).withValues(alpha: 0.3),
+            ),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00D09C).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.cloud_download_rounded, color: Color(0xFF00D09C), size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Restore Cloud Backup?',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
                 ),
               ),
-              title: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00D09C).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.cloud_download_rounded, color: Color(0xFF00D09C), size: 24),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Restore Cloud Backup?',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
-                    ),
-                  ),
-                ],
+            ],
+          ),
+          content: Text(
+            'This will pull your complete cloud backup from Supabase (Expenses, Budgets, Payment Accounts, Khata, Split Bills, Subscriptions) and restore it to this device.',
+            style: GoogleFonts.inter(fontSize: 13, height: 1.4, color: isDark ? Colors.grey[300] : Colors.grey[700]),
+          ),
+          actionsPadding: const EdgeInsets.all(16),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00D09C),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'This will pull your complete cloud backup from Supabase (Expenses, Budgets, Payment Accounts, Khata, Split Bills, Subscriptions) and restore it to this device.',
-                    style: GoogleFonts.inter(fontSize: 13, height: 1.4, color: isDark ? Colors.grey[300] : Colors.grey[700]),
-                  ),
-                  if (isRestoring) ...[
-                    const SizedBox(height: 20),
-                    const Center(
-                      child: CircularProgressIndicator(color: Color(0xFF00D09C)),
-                    ),
-                  ],
-                ],
-              ),
-              actionsPadding: const EdgeInsets.all(16),
-              actions: [
-                TextButton(
-                  onPressed: isRestoring ? null : () => Navigator.of(ctx).pop(),
-                  child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00D09C),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  onPressed: isRestoring
-                      ? null
-                      : () async {
-                          setDialogState(() => isRestoring = true);
-                          final success = await expenseProvider.restoreFromCloud();
-                          if (ctx.mounted) {
-                            Navigator.of(ctx).pop();
-                            if (success) {
-                              CustomToast.show(
-                                context,
-                                'Cloud backup restored successfully! (${expenseProvider.expenses.length} expenses, ${expenseProvider.khataEntries.length} khata entries)',
-                              );
-                            } else {
-                              CustomToast.show(
-                                context,
-                                expenseProvider.syncErrorMessage ?? 'Failed to restore backup from cloud.',
-                                isError: true,
-                              );
-                            }
-                          }
-                        },
-                  child: Text('Restore Now', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-                ),
-              ],
-            );
-          },
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                CustomToast.show(context, 'Restoring backup from Supabase Cloud...');
+                try {
+                  final success = await expenseProvider.restoreFromCloud();
+                  if (context.mounted) {
+                    if (success) {
+                      CustomToast.show(
+                        context,
+                        '✅ Backup restored! (${expenseProvider.expenses.length} expenses, ${expenseProvider.khataEntries.length} khata entries, ${expenseProvider.paymentDetails.length} payment methods)',
+                      );
+                    } else {
+                      CustomToast.show(
+                        context,
+                        expenseProvider.syncErrorMessage ?? 'Failed to restore backup from cloud.',
+                        isError: true,
+                      );
+                    }
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    CustomToast.show(context, 'Restore error: $e', isError: true);
+                  }
+                }
+              },
+              child: Text('Restore Now', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+            ),
+          ],
         );
       },
     );
