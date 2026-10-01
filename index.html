@@ -499,49 +499,6 @@
     </div>
   </section>
 
-  <!-- Live AI Model Ping Demo Section -->
-  <section class="ai-demo-section">
-    <div class="section-header">
-      <h2>Interactive AI Status & Cooldown Ping</h2>
-      <p>Test the multi-provider response latency and smart 45-second rate limiter in action.</p>
-    </div>
-    <div class="ai-demo-card">
-      <div class="ai-demo-models">
-        <div class="ai-model-pill active" data-model="gemini">
-          <span class="ai-status-indicator online"></span>
-          <div class="ai-model-info">
-            <strong>Google Gemini 2.5 Flash</strong>
-            <span>Active Default • Fast OCR</span>
-          </div>
-          <span class="ai-latency-badge" id="latency-gemini">~420ms</span>
-        </div>
-        <div class="ai-model-pill" data-model="deepseek">
-          <span class="ai-status-indicator online"></span>
-          <div class="ai-model-info">
-            <strong>DeepSeek R1 / V3</strong>
-            <span>Custom Provider • Deep Reasoning</span>
-          </div>
-          <span class="ai-latency-badge" id="latency-deepseek">~680ms</span>
-        </div>
-        <div class="ai-model-pill" data-model="groq">
-          <span class="ai-status-indicator online"></span>
-          <div class="ai-model-info">
-            <strong>Groq Llama 3.3 70B</strong>
-            <span>Ultra Fast • Instant Parsing</span>
-          </div>
-          <span class="ai-latency-badge" id="latency-groq">~180ms</span>
-        </div>
-      </div>
-      <div class="ai-demo-action-area">
-        <button class="ai-test-btn" id="ai-demo-test-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          <span id="ai-test-btn-text">Test AI Endpoint</span>
-        </button>
-        <span class="ai-cooldown-note" id="ai-cooldown-note">Ready to ping models • 45s smart cooldown</span>
-      </div>
-    </div>
-  </section>
-
   <!-- How It Works Section -->
   <section id="how-it-works" class="how-it-works">
     <div class="section-header">
