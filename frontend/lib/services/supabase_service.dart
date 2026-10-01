@@ -194,10 +194,7 @@ class SupabaseService {
       copy.remove('is_synced');
       return copy;
     }).toList();
-    final res = await _client.from('expenses').upsert(rows).select('id');
-    if (res.length < rows.length) {
-      throw Exception('Upsert failed: RLS policy or database restriction prevented writing some rows to the expenses table.');
-    }
+    await _client.from('expenses').upsert(rows);
   }
 
   Future<void> softDeleteExpense(String id) async {
@@ -238,10 +235,7 @@ class SupabaseService {
       copy.remove('is_synced');
       return copy;
     }).toList();
-    final res = await _client.from('budgets').upsert(rows).select('id');
-    if (res.length < rows.length) {
-      throw Exception('Upsert failed: RLS policy or database restriction prevented writing some rows to the budgets table.');
-    }
+    await _client.from('budgets').upsert(rows);
   }
 
   Future<void> softDeleteBudget(String id) async {
@@ -658,70 +652,52 @@ class SupabaseService {
     String? lastSyncTime,
   }) async {
     try {
-      // PUSH: upsert all unsynced local data
-      await upsertExpenses(unsyncedExpenses);
-      await upsertBudgets(unsyncedBudgets);
-      for (final pd in unsyncedPaymentDetails) {
-        await upsertPaymentDetail(pd);
-      }
-      try {
-        await upsertKhataEntries(unsyncedKhataEntries);
-      } catch (e) {
-        print('[Sync] Khata upsert warning: $e');
-      }
-      try {
-        await upsertSubscriptions(unsyncedSubscriptions);
-      } catch (e) {
-        print('[Sync] Subscriptions upsert warning: $e');
-      }
-      try {
-        await upsertSplitBills(unsyncedSplitBills);
-      } catch (e) {
-        print('[Sync] SplitBills upsert warning: $e');
+      final uid = currentUser?.id;
+      if (uid == null) {
+        print('[Sync] No authenticated Supabase user found.');
+        return null;
       }
 
-      // PUSH: apply server-side soft deletes
-      for (final id in deletedExpenseIds) {
-        await softDeleteExpense(id);
-      }
-      for (final id in deletedBudgetIds) {
-        await softDeleteBudget(id);
-      }
-      for (final id in deletedKhataIds) {
-        await softDeleteKhataEntry(id);
-      }
-      for (final id in deletedSubscriptionIds) {
-        await softDeleteSubscription(id);
-      }
-      for (final id in deletedSplitBillIds) {
-        await softDeleteSplitBill(id);
-      }
+      // 1. PUSH unsynced data to cloud in parallel with timeout
+      await Future.wait([
+        if (unsyncedExpenses.isNotEmpty) upsertExpenses(unsyncedExpenses),
+        if (unsyncedBudgets.isNotEmpty) upsertBudgets(unsyncedBudgets),
+        if (unsyncedPaymentDetails.isNotEmpty) upsertPaymentDetails(unsyncedPaymentDetails),
+        if (unsyncedKhataEntries.isNotEmpty) upsertKhataEntries(unsyncedKhataEntries),
+        if (unsyncedSubscriptions.isNotEmpty) upsertSubscriptions(unsyncedSubscriptions),
+        if (unsyncedSplitBills.isNotEmpty) upsertSplitBills(unsyncedSplitBills),
+      ]).timeout(const Duration(seconds: 10));
 
-      // PULL: fetch server data since last sync
-      final serverExpenses = await fetchExpensesSince(lastSyncTime);
-      final serverBudgets = await fetchBudgets();
-      final serverPayments = await fetchPaymentDetails();
+      // 2. PUSH batch deletes in parallel with timeout
+      await Future.wait([
+        if (deletedExpenseIds.isNotEmpty)
+          _client.from('expenses').delete().inFilter('id', deletedExpenseIds).eq('user_id', uid),
+        if (deletedBudgetIds.isNotEmpty)
+          _client.from('budgets').delete().inFilter('id', deletedBudgetIds).eq('user_id', uid),
+        if (deletedKhataIds.isNotEmpty)
+          _client.from('khata_entries').delete().inFilter('id', deletedKhataIds).eq('user_id', uid),
+        if (deletedSubscriptionIds.isNotEmpty)
+          _client.from('subscriptions').delete().inFilter('id', deletedSubscriptionIds).eq('user_id', uid),
+        if (deletedSplitBillIds.isNotEmpty)
+          _client.from('split_bills').delete().inFilter('id', deletedSplitBillIds).eq('user_id', uid),
+      ]).timeout(const Duration(seconds: 8));
 
-      List<Map<String, dynamic>> serverKhata = [];
-      try {
-        serverKhata = await fetchKhataEntriesSince(lastSyncTime);
-      } catch (e) {
-        print('[Sync] Khata fetch warning: $e');
-      }
+      // 3. PULL fresh server data concurrently with timeout
+      final pullResults = await Future.wait([
+        fetchExpensesSince(lastSyncTime),
+        fetchBudgets(),
+        fetchPaymentDetails(),
+        fetchKhataEntriesSince(lastSyncTime),
+        fetchSubscriptionsSince(lastSyncTime),
+        fetchSplitBillsSince(lastSyncTime),
+      ]).timeout(const Duration(seconds: 12));
 
-      List<Map<String, dynamic>> serverSubs = [];
-      try {
-        serverSubs = await fetchSubscriptionsSince(lastSyncTime);
-      } catch (e) {
-        print('[Sync] Subscriptions fetch warning: $e');
-      }
-
-      List<Map<String, dynamic>> serverSplits = [];
-      try {
-        serverSplits = await fetchSplitBillsSince(lastSyncTime);
-      } catch (e) {
-        print('[Sync] SplitBills fetch warning: $e');
-      }
+      final serverExpenses = pullResults[0];
+      final serverBudgets = pullResults[1];
+      final serverPayments = pullResults[2];
+      final serverKhata = pullResults[3];
+      final serverSubs = pullResults[4];
+      final serverSplits = pullResults[5];
 
       // Store new server time
       final prefs = await SharedPreferences.getInstance();
@@ -736,7 +712,7 @@ class SupabaseService {
         'splitBills': serverSplits,
       };
     } catch (e) {
-      print('[Sync] Error: $e');
+      print('[Sync] Error during Supabase sync: $e');
       return null;
     }
   }

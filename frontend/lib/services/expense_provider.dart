@@ -1146,6 +1146,7 @@ class ExpenseProvider with ChangeNotifier {
   }
 
   Future<bool> triggerManualSync() async {
+    if (_isSyncing) return false;
     _isSyncing = true;
     _syncErrorMessage = null;
     notifyListeners();
@@ -1153,26 +1154,24 @@ class ExpenseProvider with ChangeNotifier {
     try {
       if (await _checkIfGuest()) {
         _syncErrorMessage = 'Cloud Sync is only available for registered accounts. Please log in.';
-        _isSyncing = false;
-        notifyListeners();
         return false;
       }
       final success = await triggerQuietSync();
-      _isSyncing = false;
       if (!success) {
         _syncErrorMessage = 'Sync failed. Please check internet connection or database setup.';
       }
-      notifyListeners();
       return success;
     } catch (e) {
       _syncErrorMessage = 'Sync failed. Running in offline mode.';
+      return false;
+    } finally {
       _isSyncing = false;
       notifyListeners();
-      return false;
     }
   }
 
   Future<bool> restoreFromCloud() async {
+    if (_isSyncing) return false;
     _isSyncing = true;
     _syncErrorMessage = null;
     notifyListeners();
@@ -1180,18 +1179,10 @@ class ExpenseProvider with ChangeNotifier {
     try {
       if (await _checkIfGuest()) {
         _syncErrorMessage = 'Restore is only available for registered accounts. Please log in.';
-        _isSyncing = false;
-        notifyListeners();
         return false;
       }
-      // 1. Clear local SQLite cached database
-      await _dbHelper.clearAllData();
-      
-      // 2. Remove last sync time to force a full pull from Supabase
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('last_sync_time');
 
-      // 3. Trigger sync with empty local arrays and null timestamp to fetch all records
+      // 1. Trigger sync with empty local arrays and null timestamp to fetch all records
       final syncResult = await _supabase.sync(
         unsyncedExpenses: [],
         unsyncedBudgets: [],
@@ -1208,6 +1199,11 @@ class ExpenseProvider with ChangeNotifier {
       );
 
       if (syncResult != null) {
+        // Clear local database safely only after cloud payload is verified
+        await _dbHelper.clearAllData();
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('last_sync_time');
+
         final List<dynamic> serverExpenses = syncResult['expenses'] ?? [];
         final List<dynamic> serverBudgets = syncResult['budgets'] ?? [];
         final List<dynamic> serverPayments = syncResult['paymentDetails'] ?? [];
@@ -1238,25 +1234,22 @@ class ExpenseProvider with ChangeNotifier {
         await _dbHelper.markSplitBillsSynced(splitIds);
 
         _lastSyncTime = prefs.getString('last_sync_time');
-      } else {
-        throw Exception('Cloud restoration returned empty database payload.');
-      }
 
-      // Reload memory lists
-      _expenses = await _dbHelper.getExpenses();
-      _budgets = await _dbHelper.getBudgets();
-      _paymentDetails = await _dbHelper.getPaymentDetails();
-      _khataEntries = await _dbHelper.getKhataEntries();
-      _subscriptions = await _dbHelper.getSubscriptions();
-      _splitBills = await _dbHelper.getSplitBills();
-      
-      _isSyncing = false;
-      notifyListeners();
-      return true;
+        // Reload memory lists
+        _expenses = await _dbHelper.getExpenses();
+        _budgets = await _dbHelper.getBudgets();
+        _paymentDetails = await _dbHelper.getPaymentDetails();
+        _khataEntries = await _dbHelper.getKhataEntries();
+        _subscriptions = await _dbHelper.getSubscriptions();
+        _splitBills = await _dbHelper.getSplitBills();
+        return true;
+      } else {
+        _syncErrorMessage = 'Cloud backup restore failed. Please check your internet connection.';
+        return false;
+      }
     } catch (e) {
       print('[Sync] Restore Backup error: $e');
       _syncErrorMessage = 'Backup restore failed: $e';
-      _isSyncing = false;
       // Re-load whatever lists are left
       _expenses = await _dbHelper.getExpenses();
       _budgets = await _dbHelper.getBudgets();
@@ -1264,8 +1257,10 @@ class ExpenseProvider with ChangeNotifier {
       _khataEntries = await _dbHelper.getKhataEntries();
       _subscriptions = await _dbHelper.getSubscriptions();
       _splitBills = await _dbHelper.getSplitBills();
-      notifyListeners();
       return false;
+    } finally {
+      _isSyncing = false;
+      notifyListeners();
     }
   }
 
