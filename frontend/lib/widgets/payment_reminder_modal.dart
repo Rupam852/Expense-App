@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -12,7 +13,7 @@ import '../services/expense_provider.dart';
 import '../services/user_provider.dart';
 import 'custom_toast.dart';
 
-class PaymentReminderModal extends StatelessWidget {
+class PaymentReminderModal extends StatefulWidget {
   final String personName;
   final double amount;
   final String? titleOrNote;
@@ -58,30 +59,37 @@ class PaymentReminderModal extends StatelessWidget {
     );
   }
 
+  @override
+  State<PaymentReminderModal> createState() => _PaymentReminderModalState();
+}
+
+class _PaymentReminderModalState extends State<PaymentReminderModal> {
+  String? _selectedPaymentId;
+
   String _buildShareMessage({
     required String? upiId,
     required String? payeeName,
     required String formattedAmt,
   }) {
-    final notePart = (titleOrNote != null && titleOrNote!.trim().isNotEmpty)
-        ? ' regarding "${titleOrNote!.trim()}"'
+    final notePart = (widget.titleOrNote != null && widget.titleOrNote!.trim().isNotEmpty)
+        ? ' regarding "${widget.titleOrNote!.trim()}"'
         : '';
 
     if (upiId != null && upiId.trim().isNotEmpty) {
       final cleanUpi = upiId.trim();
       final nameParam = Uri.encodeComponent(payeeName ?? 'Payee');
-      final noteParam = Uri.encodeComponent(titleOrNote ?? (isKhata ? 'Khata Settlement' : 'Split Bill Share'));
-      final upiUri = 'upi://pay?pa=$cleanUpi&pn=$nameParam&am=${amount.toStringAsFixed(2)}&cu=INR&tn=$noteParam';
+      final noteParam = Uri.encodeComponent(widget.titleOrNote ?? (widget.isKhata ? 'Khata Settlement' : 'Split Bill Share'));
+      final upiUri = 'upi://pay?pa=$cleanUpi&pn=$nameParam&am=${widget.amount.toStringAsFixed(2)}&cu=INR&tn=$noteParam';
 
-      if (isKhata) {
-        return 'Hi $personName! 👋\n\n'
+      if (widget.isKhata) {
+        return 'Hi ${widget.personName}! 👋\n\n'
             'This is a friendly reminder for $formattedAmt$notePart on Grow Expense App.\n\n'
             '📱 Pay directly via UPI:\n'
             '• UPI ID: $cleanUpi\n'
             '• Fast Pay Link: $upiUri\n\n'
             'Please settle whenever convenient. Thank you! 🙏';
       } else {
-        return 'Hey $personName! 👋\n\n'
+        return 'Hey ${widget.personName}! 👋\n\n'
             'Your split share is $formattedAmt$notePart on Grow Expense App.\n\n'
             '📱 Pay directly via UPI:\n'
             '• UPI ID: $cleanUpi\n'
@@ -91,20 +99,20 @@ class PaymentReminderModal extends StatelessWidget {
     }
 
     // Clean message without payment method (NOTE IS NOT INCLUDED IN SHARED TEXT)
-    if (isKhata) {
-      return 'Hi $personName! 👋\n\n'
+    if (widget.isKhata) {
+      return 'Hi ${widget.personName}! 👋\n\n'
           'This is a friendly reminder regarding $formattedAmt$notePart on Grow Expense App.\n\n'
           'Please settle whenever convenient. Thank you! 🙏';
     } else {
-      return 'Hey $personName! 👋\n\n'
+      return 'Hey ${widget.personName}! 👋\n\n'
           'Your split share is $formattedAmt$notePart on Grow Expense App.\n\n'
           'Please settle whenever possible. Thanks! 🙏';
     }
   }
 
   Future<void> _shareOnWhatsApp(BuildContext context, String message) async {
-    if (phoneNumber != null && phoneNumber!.trim().isNotEmpty) {
-      String cleanPhone = phoneNumber!.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (widget.phoneNumber != null && widget.phoneNumber!.trim().isNotEmpty) {
+      String cleanPhone = widget.phoneNumber!.replaceAll(RegExp(r'[^0-9+]'), '');
       if (cleanPhone.startsWith('+')) {
         cleanPhone = cleanPhone.substring(1);
       } else if (cleanPhone.length == 10) {
@@ -124,16 +132,22 @@ class PaymentReminderModal extends StatelessWidget {
     await SharePlus.instance.share(
       ShareParams(
         text: message,
-        subject: 'Payment Reminder for $personName',
+        subject: 'Payment Reminder for ${widget.personName}',
       ),
     );
   }
 
-  void _showQrCodeDialog(BuildContext context, String upiId, String payeeName) {
+  void _showQrCodeDialog({
+    required BuildContext context,
+    required String upiId,
+    required String? qrCodeUrl,
+    required String payeeName,
+    required String title,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
-    final noteParam = Uri.encodeComponent(titleOrNote ?? (isKhata ? 'Khata Settlement' : 'Split Bill Share'));
-    final upiUri = 'upi://pay?pa=$upiId&pn=${Uri.encodeComponent(payeeName)}&am=${amount.toStringAsFixed(2)}&cu=INR&tn=$noteParam';
+    final noteParam = Uri.encodeComponent(widget.titleOrNote ?? (widget.isKhata ? 'Khata Settlement' : 'Split Bill Share'));
+    final upiUri = 'upi://pay?pa=$upiId&pn=${Uri.encodeComponent(payeeName)}&am=${widget.amount.toStringAsFixed(2)}&cu=INR&tn=$noteParam';
 
     showDialog(
       context: context,
@@ -144,9 +158,11 @@ class PaymentReminderModal extends StatelessWidget {
           children: [
             const Icon(Icons.qr_code_2_rounded, color: Color(0xFF00D09C)),
             const SizedBox(width: 10),
-            Text(
-              'Instant UPI Payment QR',
-              style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold),
+            Expanded(
+              child: Text(
+                title,
+                style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
@@ -166,16 +182,20 @@ class PaymentReminderModal extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
               ),
-              child: QrImageView(
-                data: upiUri,
-                version: QrVersions.auto,
-                size: 200.0,
-                backgroundColor: Colors.white,
-              ),
+              child: qrCodeUrl != null && qrCodeUrl.isNotEmpty
+                  ? (qrCodeUrl.startsWith('http')
+                      ? Image.network(qrCodeUrl, width: 200, height: 200, fit: BoxFit.contain)
+                      : Image.file(File(qrCodeUrl), width: 200, height: 200, fit: BoxFit.contain))
+                  : QrImageView(
+                      data: upiUri,
+                      version: QrVersions.auto,
+                      size: 200.0,
+                      backgroundColor: Colors.white,
+                    ),
             ),
             const SizedBox(height: 14),
             Text(
-              currencyFormat.format(amount),
+              currencyFormat.format(widget.amount),
               style: GoogleFonts.outfit(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -210,15 +230,21 @@ class PaymentReminderModal extends StatelessWidget {
     final cardBg = isDark ? const Color(0xFF1E222D) : Colors.white;
     final borderColor = isDark ? const Color(0xFF2C3242) : const Color(0xFFE2E8F0);
     final currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
-    final formattedAmt = currencyFormat.format(amount);
+    final formattedAmt = currencyFormat.format(widget.amount);
 
     return Consumer2<ExpenseProvider, UserProvider>(
       builder: (context, provider, userProvider, _) {
         final paymentDetails = provider.paymentDetails;
-        final PaymentDetail? activePayment = paymentDetails.isNotEmpty ? paymentDetails.first : null;
         
-        final effectiveUpiId = customPayerUpiId != null && customPayerUpiId!.isNotEmpty
-            ? customPayerUpiId
+        // Find selected payment method or fallback to primary/first
+        PaymentDetail? activePayment;
+        if (_selectedPaymentId != null) {
+          activePayment = paymentDetails.where((p) => p.id == _selectedPaymentId).firstOrNull;
+        }
+        activePayment ??= provider.primaryPaymentDetail;
+
+        final effectiveUpiId = widget.customPayerUpiId != null && widget.customPayerUpiId!.isNotEmpty
+            ? widget.customPayerUpiId
             : (activePayment?.upiId.isNotEmpty == true ? activePayment!.upiId : null);
 
         final payeeName = userProvider.userProfile?['full_name']?.toString() ?? 'Grow Expense User';
@@ -271,7 +297,7 @@ class PaymentReminderModal extends StatelessWidget {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
-                            isKhata ? Icons.menu_book_rounded : Icons.call_split_rounded,
+                            widget.isKhata ? Icons.menu_book_rounded : Icons.call_split_rounded,
                             color: primaryColor,
                             size: 20,
                           ),
@@ -281,7 +307,7 @@ class PaymentReminderModal extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              isKhata ? 'Khata Payment Reminder' : 'Split Bill Share Reminder',
+                              widget.isKhata ? 'Khata Payment Reminder' : 'Split Bill Share Reminder',
                               style: GoogleFonts.outfit(
                                 fontSize: 17,
                                 fontWeight: FontWeight.bold,
@@ -289,7 +315,7 @@ class PaymentReminderModal extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              'Remind $personName to settle $formattedAmt',
+                              'Remind ${widget.personName} to settle $formattedAmt',
                               style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
                             ),
                           ],
@@ -329,16 +355,16 @@ class PaymentReminderModal extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            personName,
+                            widget.personName,
                             style: GoogleFonts.outfit(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: isDark ? Colors.white : Colors.black87,
                             ),
                           ),
-                          if (titleOrNote != null && titleOrNote!.isNotEmpty)
+                          if (widget.titleOrNote != null && widget.titleOrNote!.isNotEmpty)
                             Text(
-                              'Note: $titleOrNote',
+                              'Note: ${widget.titleOrNote}',
                               style: GoogleFonts.inter(
                                 fontSize: 11.5,
                                 color: isDark ? Colors.grey[400] : Colors.grey[600],
@@ -361,10 +387,81 @@ class PaymentReminderModal extends StatelessWidget {
                 const SizedBox(height: 14),
 
                 // ──────────────────────────────────────────────────────────
-                // PAYMENT METHOD STATE: ACTIVE VS NOT CONFIGURED TIP
+                // MULTI-ACCOUNT CHIP SELECTOR (IF MULTIPLE METHODS EXIST)
+                // ──────────────────────────────────────────────────────────
+                if (paymentDetails.length > 1) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'SELECT PAYMENT ACCOUNT',
+                        style: GoogleFonts.inter(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      Text(
+                        '${paymentDetails.length} available',
+                        style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: paymentDetails.map((p) {
+                        final isSelected = (activePayment?.id == p.id);
+                        return GestureDetector(
+                          onTap: () => setState(() => _selectedPaymentId = p.id),
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? primaryColor.withValues(alpha: isDark ? 0.25 : 0.15)
+                                  : (isDark ? const Color(0xFF1E222D) : const Color(0xFFF1F5F9)),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isSelected ? primaryColor : borderColor,
+                                width: isSelected ? 1.5 : 1.0,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (p.isPrimary)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 4),
+                                    child: Icon(Icons.star_rounded, size: 14, color: primaryColor),
+                                  ),
+                                Text(
+                                  p.name,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                    color: isSelected
+                                        ? primaryColor
+                                        : (isDark ? Colors.white : Colors.black87),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+
+                // ──────────────────────────────────────────────────────────
+                // ACTIVE PAYMENT METHOD CARD VS NOT CONFIGURED TIP
                 // ──────────────────────────────────────────────────────────
                 if (hasPaymentMethod) ...[
-                  // A. PAYMENT METHOD ACTIVE CARD
+                  // ACTIVE PAYMENT METHOD CARD
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -388,7 +485,7 @@ class PaymentReminderModal extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'UPI Payment Linked',
+                                activePayment?.name ?? 'UPI Payment Linked',
                                 style: GoogleFonts.inter(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.bold,
@@ -407,7 +504,13 @@ class PaymentReminderModal extends StatelessWidget {
                           ),
                         ),
                         TextButton.icon(
-                          onPressed: () => _showQrCodeDialog(context, effectiveUpiId, payeeName),
+                          onPressed: () => _showQrCodeDialog(
+                            context: context,
+                            upiId: effectiveUpiId,
+                            qrCodeUrl: activePayment?.qrCodeUrl,
+                            payeeName: payeeName,
+                            title: activePayment?.name ?? 'Payment QR',
+                          ),
                           style: TextButton.styleFrom(
                             backgroundColor: primaryColor.withValues(alpha: 0.15),
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -427,7 +530,7 @@ class PaymentReminderModal extends StatelessWidget {
                     ),
                   ),
                 ] else ...[
-                  // B. PAYMENT METHOD NOT SAVED -> IN-APP TIP NOTE WITH DIRECT SETUP BUTTON
+                  // NOT CONFIGURED TIP
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -538,7 +641,7 @@ class PaymentReminderModal extends StatelessWidget {
 
                 const SizedBox(height: 18),
 
-                // Action Buttons (WhatsApp & Share Sheet)
+                // Action Buttons (WhatsApp, Other Apps, Copy)
                 Row(
                   children: [
                     // WhatsApp Share Button

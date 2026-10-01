@@ -589,6 +589,88 @@ class ExpenseProvider with ChangeNotifier {
   }
 
   // ──────────────────────────────────────────────────────
+  // PAYMENT METHODS (MULTI-ACCOUNT, PRIMARY & REORDERING)
+  // ──────────────────────────────────────────────────────
+  List<PaymentDetail> get paymentDetails => _paymentDetails;
+
+  PaymentDetail? get primaryPaymentDetail {
+    if (_paymentDetails.isEmpty) return null;
+    final primary = _paymentDetails.where((p) => p.isPrimary).toList();
+    if (primary.isNotEmpty) return primary.first;
+    return _paymentDetails.first;
+  }
+
+  Future<void> fetchPaymentDetails() async {
+    _paymentDetails = await _dbHelper.getPaymentDetails();
+    notifyListeners();
+  }
+
+  Future<void> addPaymentDetail({
+    required String name,
+    required String upiId,
+    String? qrCodeUrl,
+    bool isPrimary = false,
+  }) async {
+    final makePrimary = isPrimary || _paymentDetails.isEmpty;
+    final item = PaymentDetail(
+      id: cryptoUuid(),
+      name: name.trim().isEmpty ? 'Primary UPI' : name.trim(),
+      upiId: upiId.trim(),
+      qrCodeUrl: qrCodeUrl,
+      isPrimary: makePrimary,
+      sortOrder: _paymentDetails.length,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    await _dbHelper.insertPaymentDetail(item);
+    _paymentDetails = await _dbHelper.getPaymentDetails();
+    notifyListeners();
+    triggerQuietSync();
+  }
+
+  Future<void> updatePaymentDetail(PaymentDetail item) async {
+    await _dbHelper.updatePaymentDetail(item);
+    _paymentDetails = await _dbHelper.getPaymentDetails();
+    notifyListeners();
+    triggerQuietSync();
+  }
+
+  Future<void> setPrimaryPaymentDetail(String id) async {
+    await _dbHelper.setPrimaryPaymentDetail(id);
+    _paymentDetails = await _dbHelper.getPaymentDetails();
+    notifyListeners();
+    triggerQuietSync();
+  }
+
+  Future<void> reorderPaymentDetails(List<PaymentDetail> reorderedList) async {
+    _paymentDetails = reorderedList;
+    notifyListeners();
+    await _dbHelper.reorderPaymentDetails(reorderedList);
+    _paymentDetails = await _dbHelper.getPaymentDetails();
+    notifyListeners();
+    triggerQuietSync();
+  }
+
+  Future<void> deletePaymentDetail(String id) async {
+    await _dbHelper.deletePaymentDetail(id);
+    _paymentDetails = await _dbHelper.getPaymentDetails();
+    if (_paymentDetails.isNotEmpty && !_paymentDetails.any((p) => p.isPrimary)) {
+      await _dbHelper.setPrimaryPaymentDetail(_paymentDetails.first.id);
+      _paymentDetails = await _dbHelper.getPaymentDetails();
+    }
+    notifyListeners();
+    triggerQuietSync();
+  }
+
+  Future<void> deleteAllPaymentDetails() async {
+    await _dbHelper.deleteAllPaymentDetails();
+    _paymentDetails = [];
+    notifyListeners();
+    triggerQuietSync();
+  }
+
+  // ──────────────────────────────────────────────────────
   // RECEIPT OCR (via Supabase Edge Function)
   // ──────────────────────────────────────────────────────
   Future<Map<String, dynamic>?> scanReceiptOCR(String imagePath) async {

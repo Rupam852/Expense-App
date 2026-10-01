@@ -269,7 +269,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 8,
+      version: 9,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -392,6 +392,34 @@ class DatabaseHelper {
       } catch (e) {
         print('Ai chat messages migration error: $e');
       }
+    }
+    if (oldVersion < 9) {
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS payment_details (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL DEFAULT 'Primary UPI',
+            upi_id TEXT NOT NULL,
+            qr_code_url TEXT,
+            is_primary INTEGER NOT NULL DEFAULT 0,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            is_synced INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+      } catch (e) {
+        print('Payment details migration error: $e');
+      }
+      try {
+        await db.execute("ALTER TABLE payment_details ADD COLUMN name TEXT NOT NULL DEFAULT 'Primary UPI'");
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE payment_details ADD COLUMN is_primary INTEGER NOT NULL DEFAULT 0');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE payment_details ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0');
+      } catch (_) {}
     }
   }
 
@@ -519,6 +547,21 @@ class DatabaseHelper {
         timestamp TEXT NOT NULL,
         model_used TEXT,
         created_at TEXT NOT NULL
+      )
+    ''');
+
+    // 9. Payment Details SQLite Table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS payment_details (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL DEFAULT 'Primary UPI',
+        upi_id TEXT NOT NULL,
+        qr_code_url TEXT,
+        is_primary INTEGER NOT NULL DEFAULT 0,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        is_synced INTEGER NOT NULL DEFAULT 0
       )
     ''');
   }
@@ -709,6 +752,12 @@ class DatabaseHelper {
     final db = await instance.database;
     final map = paymentDetail.toMap();
     map['is_synced'] = 0;
+
+    // If this is set as primary, unset other primaries
+    if (paymentDetail.isPrimary) {
+      await db.update('payment_details', {'is_primary': 0});
+    }
+
     return await db.insert(
       'payment_details',
       map,
@@ -716,15 +765,62 @@ class DatabaseHelper {
     );
   }
 
+  Future<int> updatePaymentDetail(PaymentDetail paymentDetail) async {
+    final db = await instance.database;
+    final map = paymentDetail.toMap();
+    map['is_synced'] = 0;
+
+    if (paymentDetail.isPrimary) {
+      await db.update('payment_details', {'is_primary': 0});
+    }
+
+    return await db.update(
+      'payment_details',
+      map,
+      where: 'id = ?',
+      whereArgs: [paymentDetail.id],
+    );
+  }
+
   Future<List<PaymentDetail>> getPaymentDetails() async {
     final db = await instance.database;
-    final result = await db.query('payment_details', orderBy: 'updated_at DESC');
+    final result = await db.query(
+      'payment_details',
+      orderBy: 'is_primary DESC, sort_order ASC, updated_at DESC',
+    );
     return result.map((json) => PaymentDetail.fromMap(json)).toList();
+  }
+
+  Future<void> deletePaymentDetail(String id) async {
+    final db = await instance.database;
+    await db.delete('payment_details', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> deletePaymentDetails() async {
     final db = await instance.database;
     await db.delete('payment_details');
+  }
+
+  Future<void> setPrimaryPaymentDetail(String id) async {
+    final db = await instance.database;
+    await db.transaction((txn) async {
+      await txn.update('payment_details', {'is_primary': 0});
+      await txn.update('payment_details', {'is_primary': 1, 'is_synced': 0}, where: 'id = ?', whereArgs: [id]);
+    });
+  }
+
+  Future<void> reorderPaymentDetails(List<PaymentDetail> reorderedList) async {
+    final db = await instance.database;
+    await db.transaction((txn) async {
+      for (int i = 0; i < reorderedList.length; i++) {
+        await txn.update(
+          'payment_details',
+          {'sort_order': i, 'is_synced': 0},
+          where: 'id = ?',
+          whereArgs: [reorderedList[i].id],
+        );
+      }
+    });
   }
 
   // ================= KHATA / UDHAR CRUD =================
