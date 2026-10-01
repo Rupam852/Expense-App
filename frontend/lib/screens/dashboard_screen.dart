@@ -2571,6 +2571,233 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildFinancialCalculatorHubBanner(BuildContext context, bool isDark) {
+    const primaryColor = Color(0xFF00D09C);
+    final cardBg = isDark ? const Color(0xFF181B24) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF262C3A) : const Color(0xFFE2E8F0);
+
+    return Container(
+      margin: const EdgeInsets.only(top: 10, bottom: 4),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? primaryColor.withValues(alpha: 0.25) : primaryColor.withValues(alpha: 0.35),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black.withValues(alpha: 0.3) : primaryColor.withValues(alpha: 0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Row
+          InkWell(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const CalculatorHubScreen(initialTabIndex: 0)),
+              );
+            },
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 12, 10),
+              child: Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF00D09C), Color(0xFF059669)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF00D09C).withValues(alpha: 0.35),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.calculate_rounded, color: Colors.white, size: 22),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Financial Calculators Hub',
+                              style: GoogleFonts.outfit(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: primaryColor.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                'ALL-IN-1',
+                                style: GoogleFonts.inter(
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: primaryColor,
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Mandi Rate • EMI Loan • GST • SIP Wealth',
+                          style: GoogleFonts.inter(
+                            fontSize: 10.5,
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF222834) : const Color(0xFFF1F5F9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 13,
+                      color: primaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Divider
+          Divider(
+            height: 1,
+            thickness: 1,
+            color: borderColor.withValues(alpha: 0.6),
+          ),
+
+          // Quick Tab Shortcut Chips
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                children: [
+                  _buildCalcQuickChip(
+                    context: context,
+                    isDark: isDark,
+                    icon: Icons.calculate_outlined,
+                    label: 'Standard',
+                    color: const Color(0xFF00D09C),
+                    tabIndex: 0,
+                  ),
+                  const SizedBox(width: 6),
+                  _buildCalcQuickChip(
+                    context: context,
+                    isDark: isDark,
+                    icon: Icons.storefront_rounded,
+                    label: 'Mandi Rate',
+                    color: const Color(0xFFF59E0B),
+                    tabIndex: 1,
+                  ),
+                  const SizedBox(width: 6),
+                  _buildCalcQuickChip(
+                    context: context,
+                    isDark: isDark,
+                    icon: Icons.account_balance_rounded,
+                    label: 'EMI Loan',
+                    color: const Color(0xFF6366F1),
+                    tabIndex: 2,
+                  ),
+                  const SizedBox(width: 6),
+                  _buildCalcQuickChip(
+                    context: context,
+                    isDark: isDark,
+                    icon: Icons.auto_graph_rounded,
+                    label: 'GST & SIP',
+                    color: const Color(0xFFEC4899),
+                    tabIndex: 3,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCalcQuickChip({
+    required BuildContext context,
+    required bool isDark,
+    required IconData icon,
+    required String label,
+    required Color color,
+    required int tabIndex,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => CalculatorHubScreen(initialTabIndex: tabIndex)),
+          );
+        },
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: isDark ? 0.12 : 0.08),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: color.withValues(alpha: isDark ? 0.35 : 0.25),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: color),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showSettingsDrawer(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -3627,6 +3854,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 6),
+
+              // Financial Calculators Hub - Direct Quick Action Banner
+              _buildFinancialCalculatorHubBanner(context, isDark),
+
               const SizedBox(height: 16),
 
               // 3. Recent Activity Section Title
