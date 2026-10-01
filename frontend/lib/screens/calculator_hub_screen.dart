@@ -867,16 +867,16 @@ class _StandardCalculatorViewState extends State<_StandardCalculatorView> {
     final opColor = const Color(0xFF00D09C);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+      padding: const EdgeInsets.fromLTRB(16.0, 6.0, 16.0, 10.0),
       child: Column(
         children: [
-          // Display Screen Card (Clean, compact, no excessive empty top space)
+          // Display Screen Card (Clean, compact, starts immediately from top)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF181B22) : Colors.white,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0),
               ),
@@ -892,20 +892,22 @@ class _StandardCalculatorViewState extends State<_StandardCalculatorView> {
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  _expression.isEmpty ? ' ' : _expression,
-                  style: GoogleFonts.firaCode(
-                    fontSize: 16,
-                    color: Colors.grey[500],
+                if (_expression.isNotEmpty) ...[
+                  Text(
+                    _expression,
+                    style: GoogleFonts.firaCode(
+                      fontSize: 15,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
+                  const SizedBox(height: 2),
+                ],
                 Text(
                   _result,
                   style: GoogleFonts.outfit(
-                    fontSize: 36,
+                    fontSize: 38,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF00D09C),
                   ),
@@ -915,7 +917,7 @@ class _StandardCalculatorViewState extends State<_StandardCalculatorView> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
           // Keypad Rows
           Row(
