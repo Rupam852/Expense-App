@@ -16,35 +16,50 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('scroll', handleScroll);
   handleScroll();
 
-  // 2. Privacy Policy Modal Controls
+  // 2. Download APK & Privacy Policy Modals
   const privacyModal = document.getElementById('privacy-modal');
   const openPrivacyBtn = document.getElementById('open-privacy-btn');
   const openPrivacyFooter = document.getElementById('open-privacy-footer');
   const closePrivacyBtn = document.getElementById('close-privacy-btn');
 
-  const openModal = () => {
-    privacyModal.classList.add('active');
+  const downloadModal = document.getElementById('download-modal');
+  const navDownloadTrigger = document.getElementById('nav-download-trigger');
+  const heroDownloadTrigger = document.getElementById('hero-download-trigger');
+  const ctaDownloadTrigger = document.getElementById('cta-download-trigger');
+  const closeDownloadBtn = document.getElementById('close-download-btn');
+
+  const openModal = (modal) => {
+    if (!modal) return;
+    modal.classList.add('active');
     document.body.style.overflow = 'hidden';
   };
 
-  const closeModal = () => {
-    privacyModal.classList.remove('active');
+  const closeModal = (modal) => {
+    if (!modal) return;
+    modal.classList.remove('active');
     document.body.style.overflow = '';
   };
 
-  if (openPrivacyBtn) openPrivacyBtn.addEventListener('click', openModal);
-  if (openPrivacyFooter) openPrivacyFooter.addEventListener('click', openModal);
-  if (closePrivacyBtn) closePrivacyBtn.addEventListener('click', closeModal);
+  if (openPrivacyBtn) openPrivacyBtn.addEventListener('click', () => openModal(privacyModal));
+  if (openPrivacyFooter) openPrivacyFooter.addEventListener('click', () => openModal(privacyModal));
+  if (closePrivacyBtn) closePrivacyBtn.addEventListener('click', () => closeModal(privacyModal));
 
-  privacyModal.addEventListener('click', (e) => {
-    if (e.target === privacyModal) {
-      closeModal();
-    }
+  if (navDownloadTrigger) navDownloadTrigger.addEventListener('click', () => openModal(downloadModal));
+  if (heroDownloadTrigger) heroDownloadTrigger.addEventListener('click', () => openModal(downloadModal));
+  if (ctaDownloadTrigger) ctaDownloadTrigger.addEventListener('click', () => openModal(downloadModal));
+  if (closeDownloadBtn) closeDownloadBtn.addEventListener('click', () => closeModal(downloadModal));
+
+  [privacyModal, downloadModal].forEach(modal => {
+    if (!modal) return;
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal(modal);
+    });
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && privacyModal.classList.contains('active')) {
-      closeModal();
+    if (e.key === 'Escape') {
+      if (privacyModal && privacyModal.classList.contains('active')) closeModal(privacyModal);
+      if (downloadModal && downloadModal.classList.contains('active')) closeModal(downloadModal);
     }
   });
 
@@ -497,31 +512,237 @@ document.addEventListener('DOMContentLoaded', () => {
         playHaptic('success');
       }
     }, 600);
+  // 13. Mobile App Simulator Interactive Logic
+  let simSpentTotal = 1914.00;
+  let simRecordsCount = 15;
+
+  const simSpentTotalEl = document.getElementById('sim-spent-total');
+  const simRecordsCountEl = document.getElementById('sim-records-count');
+  const simTxListEl = document.getElementById('sim-tx-list');
+  const simScanOverlay = document.getElementById('sim-scan-overlay');
+  const simVoiceOverlay = document.getElementById('sim-voice-overlay');
+  const simVoiceText = document.getElementById('sim-voice-text');
+  const simSyncOverlay = document.getElementById('sim-sync-overlay');
+  const simSyncTextOverlay = document.getElementById('sim-sync-text-overlay');
+  const simCloudIcon = document.getElementById('sim-cloud-icon');
+  const simSyncTrigger = document.getElementById('sim-sync-trigger');
+  const simApp = document.getElementById('simulator-app');
+  const simThemeToggleBtn = document.getElementById('sim-theme-toggle-btn');
+  const simThemeIcon = document.getElementById('sim-theme-icon');
+
+  const formatCurrency = (val) => {
+    return '₹' + val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  const addKhataUdharEntry = () => {
-    const khataItems = [
-      { merchant: 'Lent to Aman (Lunch Split)', category: 'Khata • WhatsApp Remind', amount: 350.00, iconType: 'services' },
-      { merchant: 'Netflix 4K Subscription', category: 'Subscription • 3 Days Left', amount: 649.00, iconType: 'food' },
-      { merchant: 'Goa Trip Cafe (Split with 4)', category: 'Split Bill • Active', amount: 480.00, iconType: 'other' }
+  const updateSimUI = () => {
+    if (simSpentTotalEl) simSpentTotalEl.textContent = formatCurrency(simSpentTotal);
+    if (simRecordsCountEl) simRecordsCountEl.textContent = simRecordsCount + ' Records';
+  };
+
+  // Simulator Tab Switcher
+  const simNavItems = document.querySelectorAll('.sim-bottom-nav .sim-nav-item');
+  const simTabContents = document.querySelectorAll('.sim-tab-content');
+
+  const switchSimTab = (tabId) => {
+    simTabContents.forEach(tab => {
+      if (tab.id === tabId) {
+        tab.classList.add('active');
+      } else {
+        tab.classList.remove('active');
+      }
+    });
+
+    simNavItems.forEach(item => {
+      if (item.getAttribute('data-tab') === tabId) {
+        item.classList.add('active');
+      } else {
+        item.classList.remove('active');
+      }
+    });
+    playHaptic('click');
+  };
+
+  simNavItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const tabId = item.getAttribute('data-tab');
+      if (tabId) switchSimTab(tabId);
+    });
+  });
+
+  // Simulator Theme Toggle
+  if (simThemeToggleBtn && simApp) {
+    simThemeToggleBtn.addEventListener('click', () => {
+      simApp.classList.toggle('light-mode');
+      const isLight = simApp.classList.contains('light-mode');
+      if (simThemeIcon) simThemeIcon.textContent = isLight ? '☀️' : '🌙';
+      playHaptic('click');
+    });
+  }
+
+  const addManualExpense = () => {
+    switchSimTab('sim-tab-home');
+    const manualExpenses = [
+      { merchant: 'Tea Stall Chai', category: 'Food', amount: 15.00, iconType: 'food' },
+      { merchant: 'Lunch Thali Meal', category: 'Food', amount: 120.00, iconType: 'food' },
+      { merchant: 'Mobile Recharge', category: 'Services', amount: 399.00, iconType: 'services' },
+      { merchant: 'Grocery Items', category: 'Shopping', amount: 450.00, iconType: 'other' }
     ];
-    const item = khataItems[Math.floor(Math.random() * khataItems.length)];
-    addSimTransaction(item.merchant, item.amount, item.category, item.iconType);
-    playHaptic('success');
+    
+    const randomItem = manualExpenses[Math.floor(Math.random() * manualExpenses.length)];
+    addSimTransaction(randomItem.merchant, randomItem.amount, randomItem.category, randomItem.iconType);
+  };
+
+  const addScanExpense = () => {
+    switchSimTab('sim-tab-home');
+    if (!simScanOverlay) return;
+    simScanOverlay.classList.add('active');
+    
+    let beepInterval = setInterval(() => playHaptic('beep'), 600);
+    
+    setTimeout(() => {
+      clearInterval(beepInterval);
+      simScanOverlay.classList.remove('active');
+      
+      const scanExpenses = [
+        { merchant: 'McDonalds Burger Deal', category: 'Food', amount: 320.00, iconType: 'food' },
+        { merchant: 'Zudio T-Shirt', category: 'Shopping', amount: 499.00, iconType: 'other' },
+        { merchant: 'Apollo Pharmacy', category: 'Services', amount: 280.00, iconType: 'services' }
+      ];
+      
+      const randomItem = scanExpenses[Math.floor(Math.random() * scanExpenses.length)];
+      addSimTransaction(randomItem.merchant, randomItem.amount, randomItem.category, randomItem.iconType);
+      playHaptic('success');
+    }, 2200);
+  };
+
+  const simulateMandiVoice = () => {
+    switchSimTab('sim-tab-home');
+    if (!simVoiceOverlay) return;
+    simVoiceOverlay.classList.add('active');
+    
+    const voiceSamples = [
+      { text: '"50 kg aalu at 25 rupee..."', merchant: 'Mandi Potato 50kg', amount: 1250.00 },
+      { text: '"20 kg pyaj at 35 rupee plus 5 kg tamatar at 40..."', merchant: 'Mandi Onion & Tomato Batch', amount: 900.00 },
+      { text: '"3 peti kela at 450 per peti..."', merchant: 'Fruit Trade Banana Peti', amount: 1350.00 }
+    ];
+
+    const sample = voiceSamples[Math.floor(Math.random() * voiceSamples.length)];
+    if (simVoiceText) simVoiceText.textContent = sample.text;
+
+    let beepInterval = setInterval(() => playHaptic('beep'), 400);
+
+    setTimeout(() => {
+      clearInterval(beepInterval);
+      simVoiceOverlay.classList.remove('active');
+      addSimTransaction(sample.merchant, sample.amount, 'Voice Mandi', 'food');
+      playHaptic('success');
+    }, 2200);
+  };
+
+  const addSimTransaction = (merchant, amount, category, iconType) => {
+    if (!simTxListEl) return;
+    simSpentTotal += amount;
+    simRecordsCount += 1;
+    
+    const newTx = document.createElement('div');
+    newTx.className = 'sim-tx-item';
+    
+    let iconHTML = '';
+    let bgClass = 'bg-orange-dim';
+    
+    if (iconType === 'services') {
+      bgClass = 'bg-blue-dim';
+      iconHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #3b82f6;"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`;
+    } else if (iconType === 'food') {
+      bgClass = 'bg-orange-dim';
+      iconHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #f97316;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`;
+    } else {
+      bgClass = 'bg-purple-dim';
+      iconHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #a78bfa;"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="12" y1="4" x2="12" y2="20"/></svg>`;
+    }
+    
+    let catClass = 'text-purple';
+    if (iconType === 'services') catClass = 'text-blue';
+    else if (iconType === 'food') catClass = 'text-orange';
+
+    newTx.innerHTML = `
+      <span class="sim-tx-category-icon ${bgClass}">
+        ${iconHTML}
+      </span>
+      <div class="sim-tx-details">
+        <h4 class="sim-tx-merchant">${merchant}</h4>
+        <span class="sim-tx-date"><span class="sim-tx-category ${catClass}">${category}</span> • Just now</span>
+      </div>
+      <span class="sim-tx-value">₹${amount.toFixed(2)}</span>
+    `;
+    
+    if (simTxListEl.children.length >= 3) {
+      simTxListEl.removeChild(simTxListEl.lastElementChild);
+    }
+    simTxListEl.insertBefore(newTx, simTxListEl.firstChild);
+    
+    if (simCloudIcon && simSyncTrigger) {
+      simSyncTrigger.classList.add('syncing');
+      simCloudIcon.style.color = '#ef4444';
+    }
+    
+    updateSimUI();
+  };
+
+  const syncSimDatabase = () => {
+    if (!simSyncOverlay) return;
+    simSyncOverlay.classList.add('active');
+    if (simSyncTrigger && simCloudIcon) {
+      simSyncTrigger.classList.add('syncing');
+      simCloudIcon.style.color = '#fbbf24';
+    }
+    
+    const steps = [
+      'Securing offline SQLite sandbox...',
+      'Opening encrypted Supabase tunnel...',
+      'Syncing 6 tables (Cards, Ledgers, AI logs)...',
+      'Reconciliation complete!'
+    ];
+    
+    let currentStep = 0;
+    const interval = setInterval(() => {
+      if (currentStep < steps.length) {
+        if (simSyncTextOverlay) simSyncTextOverlay.textContent = steps[currentStep];
+        playHaptic('click');
+        currentStep++;
+      } else {
+        clearInterval(interval);
+        simSyncOverlay.classList.remove('active');
+        
+        if (simSyncTrigger && simCloudIcon) {
+          simSyncTrigger.classList.remove('syncing');
+          simCloudIcon.style.color = '';
+        }
+        playHaptic('success');
+      }
+    }, 550);
   };
 
   const btnScan = document.getElementById('sim-action-scan');
-  const btnAdd = document.getElementById('sim-action-add');
-  const btnKhata = document.getElementById('sim-action-khata');
+  const btnVoice = document.getElementById('sim-action-voice');
+  const btnCardsQr = document.getElementById('sim-action-cards-qr');
   const btnSync = document.getElementById('sim-action-sync');
   const simFabBtn = document.getElementById('sim-fab-btn');
 
+  const quickScan = document.getElementById('sim-quick-scan');
+  const quickVoice = document.getElementById('sim-quick-voice');
+  const quickQr = document.getElementById('sim-quick-qr');
+
   if (btnScan) btnScan.addEventListener('click', addScanExpense);
-  if (btnAdd) btnAdd.addEventListener('click', addManualExpense);
-  if (btnKhata) btnKhata.addEventListener('click', addKhataUdharEntry);
+  if (btnVoice) btnVoice.addEventListener('click', simulateMandiVoice);
+  if (btnCardsQr) btnCardsQr.addEventListener('click', () => switchSimTab('sim-tab-cards'));
   if (btnSync) btnSync.addEventListener('click', syncSimDatabase);
   if (simSyncTrigger) simSyncTrigger.addEventListener('click', syncSimDatabase);
   if (simFabBtn) simFabBtn.addEventListener('click', addManualExpense);
+
+  if (quickScan) quickScan.addEventListener('click', addScanExpense);
+  if (quickVoice) quickVoice.addEventListener('click', simulateMandiVoice);
+  if (quickQr) quickQr.addEventListener('click', () => switchSimTab('sim-tab-cards'));
 
   // 14. 3D Card Hover Tilt Micro-Interactions
   const bentoCards = document.querySelectorAll('.bento-card');
@@ -605,4 +826,58 @@ document.addEventListener('DOMContentLoaded', () => {
     expenseSlider.addEventListener('input', calculateProjections);
     calculateProjections();
   }
-});
+
+  // 16. Live AI Model Ping Demo with 45s Cooldown Timer
+  const aiTestBtn = document.getElementById('ai-demo-test-btn');
+  const aiTestBtnText = document.getElementById('ai-test-btn-text');
+  const aiCooldownNote = document.getElementById('ai-cooldown-note');
+  const latencyGemini = document.getElementById('latency-gemini');
+  const latencyDeepseek = document.getElementById('latency-deepseek');
+  const latencyGroq = document.getElementById('latency-groq');
+  const aiModelPills = document.querySelectorAll('.ai-model-pill');
+
+  let aiCooldownTimer = null;
+  let remainingSeconds = 0;
+
+  aiModelPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      aiModelPills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      playHaptic('click');
+    });
+  });
+
+  if (aiTestBtn) {
+    aiTestBtn.addEventListener('click', () => {
+      if (remainingSeconds > 0) return;
+
+      playHaptic('success');
+      aiTestBtn.disabled = true;
+
+      // Randomize realistic latencies
+      if (latencyGemini) latencyGemini.textContent = `~${Math.floor(Math.random() * 80 + 380)}ms`;
+      if (latencyDeepseek) latencyDeepseek.textContent = `~${Math.floor(Math.random() * 120 + 640)}ms`;
+      if (latencyGroq) latencyGroq.textContent = `~${Math.floor(Math.random() * 50 + 160)}ms`;
+
+      remainingSeconds = 45;
+      if (aiTestBtnText) aiTestBtnText.textContent = `Cooldown (${remainingSeconds}s)`;
+      if (aiCooldownNote) aiCooldownNote.textContent = `Models verified online! Next test available in ${remainingSeconds}s`;
+
+      if (aiCooldownTimer) clearInterval(aiCooldownTimer);
+      aiCooldownTimer = setInterval(() => {
+        remainingSeconds--;
+        if (remainingSeconds > 0) {
+          if (aiTestBtnText) aiTestBtnText.textContent = `Cooldown (${remainingSeconds}s)`;
+          if (aiCooldownNote) aiCooldownNote.textContent = `Smart rate limiter active. Next test in ${remainingSeconds}s`;
+        } else {
+          clearInterval(aiCooldownTimer);
+          aiTestBtn.disabled = false;
+          if (aiTestBtnText) aiTestBtnText.textContent = 'Test AI Endpoint';
+          if (aiCooldownNote) aiCooldownNote.textContent = 'Ready to ping models • 45s smart cooldown';
+          playHaptic('click');
+        }
+      }, 1000);
+    });
+  }
+
+});

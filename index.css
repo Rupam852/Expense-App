@@ -2978,4 +2978,580 @@ section[id] {
   transform: translateZ(25px); /* Add 3D layer spacing */
 }
 
+/* -----------------------------------------
+   16. Upgraded Features & Components Styles
+   ----------------------------------------- */
+.nav-version-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--primary-green);
+  background: var(--primary-green-dim);
+  border: 1px solid rgba(0, 208, 156, 0.25);
+  padding: 2px 8px;
+  border-radius: 12px;
+  letter-spacing: 0.05em;
+}
+
+/* Simulator Theme Toggle & Simulator Tabs */
+.sim-theme-toggle-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.25s ease;
+}
+
+.sim-theme-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.08);
+}
+
+/* Light Mode Theme inside Simulator */
+.simulator-app.light-mode {
+  background: #f8fafc;
+  color: #0f172a;
+}
+.simulator-app.light-mode .sim-header {
+  background: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+}
+.simulator-app.light-mode .sim-username {
+  color: #0f172a;
+}
+.simulator-app.light-mode .sim-spent-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+.simulator-app.light-mode .sim-spent-value {
+  color: #0f172a;
+}
+.simulator-app.light-mode .sim-action-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+}
+.simulator-app.light-mode .sim-action-title {
+  color: #0f172a;
+}
+.simulator-app.light-mode .sim-tx-item {
+  background: #ffffff;
+  border-color: #e2e8f0;
+}
+.simulator-app.light-mode .sim-tx-merchant {
+  color: #0f172a;
+}
+.simulator-app.light-mode .sim-tx-value {
+  color: #0f172a;
+}
+.simulator-app.light-mode .sim-bottom-nav {
+  background: #ffffff;
+  border-top-color: #e2e8f0;
+}
+.simulator-app.light-mode .sim-bottom-nav .sim-nav-item {
+  color: #64748b;
+}
+.simulator-app.light-mode .sim-bottom-nav .sim-nav-item.active {
+  color: var(--primary-green);
+}
+
+/* Simulator Tab Content Transitions */
+.sim-tab-content {
+  display: none;
+  animation: fadeInTab 0.3s ease forwards;
+}
+.sim-tab-content.active {
+  display: block;
+}
+
+@keyframes fadeInTab {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* AI Advisor View */
+.sim-ai-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 14px;
+}
+.sim-ai-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 6px 10px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sim-ai-chat-bubble {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+.sim-ai-chat-bubble.tip {
+  background: rgba(0, 208, 156, 0.08);
+  border-color: rgba(0, 208, 156, 0.2);
+}
+.sim-ai-chat-bubble .ai-role {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--primary-green);
+  display: block;
+  margin-bottom: 4px;
+}
+.sim-ai-health-pill {
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+.health-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.health-dot.green {
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+/* Payment Cards & QR View inside Simulator */
+.sim-cards-view {
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.sim-credit-card {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sim-cc-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+.sim-cc-num {
+  font-family: monospace;
+  font-size: 1rem;
+  letter-spacing: 2px;
+  color: #fff;
+}
+.sim-cc-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+.sim-cc-label {
+  font-size: 0.55rem;
+  color: #64748b;
+  display: block;
+}
+.sim-cc-val {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+.sim-cc-brand {
+  font-weight: 900;
+  font-style: italic;
+  color: #38bdf8;
+  font-size: 0.9rem;
+}
+.sim-card-mini-preview {
+  background: rgba(56, 189, 248, 0.06);
+  border: 1px dashed rgba(56, 189, 248, 0.25);
+  border-radius: 10px;
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+}
+.sim-card-badge {
+  font-weight: 600;
+  color: #38bdf8;
+}
+.sim-card-num {
+  color: var(--text-muted);
+  font-family: monospace;
+}
+.sim-card-balance {
+  color: var(--primary-green);
+  font-weight: 600;
+}
+
+.sim-qr-box {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+}
+.sim-qr-code-placeholder {
+  width: 90px;
+  height: 90px;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.qr-pattern {
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(0deg, #000, #000 6px, #fff 6px, #fff 12px),
+              repeating-linear-gradient(90deg, #000, #000 6px, #fff 6px, #fff 12px);
+  background-blend-mode: difference;
+  border-radius: 4px;
+}
+.sim-qr-caption {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+.sim-qr-upi {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--primary-green);
+}
+
+/* Voice Mandi Wave Overlay */
+.sim-voice-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(16, 18, 22, 0.92);
+  backdrop-filter: blur(8px);
+  z-index: 20;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+  text-align: center;
+}
+.sim-voice-overlay.active {
+  display: flex;
+}
+.voice-wave-bars {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 40px;
+}
+.wave-bar {
+  width: 6px;
+  background: var(--gradient-primary);
+  border-radius: 4px;
+  animation: waveAnim 0.8s infinite ease-in-out;
+}
+.wave-bar:nth-child(1) { height: 15px; animation-delay: 0.1s; }
+.wave-bar:nth-child(2) { height: 35px; animation-delay: 0.2s; }
+.wave-bar:nth-child(3) { height: 25px; animation-delay: 0.3s; }
+.wave-bar:nth-child(4) { height: 40px; animation-delay: 0.4s; }
+.wave-bar:nth-child(5) { height: 20px; animation-delay: 0.5s; }
+
+@keyframes waveAnim {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+
+.sim-voice-text {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #fff;
+}
+.sim-voice-sub {
+  font-size: 0.72rem;
+  color: var(--primary-green);
+}
+
+/* -----------------------------------------
+   17. AI Health & Ping Demo Section
+   ----------------------------------------- */
+.ai-demo-section {
+  padding: 80px 24px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+.ai-demo-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.ai-demo-models {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.ai-model-pill {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+.ai-model-pill:hover,
+.ai-model-pill.active {
+  background: rgba(0, 208, 156, 0.06);
+  border-color: rgba(0, 208, 156, 0.3);
+  transform: translateY(-2px);
+}
+.ai-status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+.ai-status-indicator.online {
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+.ai-model-info strong {
+  font-size: 0.95rem;
+  display: block;
+  color: #fff;
+  margin-bottom: 2px;
+}
+.ai-model-info span {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.ai-latency-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--primary-green);
+  background: var(--primary-green-dim);
+  padding: 3px 8px;
+  border-radius: 8px;
+  align-self: flex-start;
+}
+.ai-demo-action-area {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.ai-test-btn {
+  background: var(--gradient-primary);
+  color: #000;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.88rem;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.ai-test-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 208, 156, 0.4);
+}
+.ai-test-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #475569;
+  color: #94a3b8;
+}
+.ai-cooldown-note {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+  .ai-demo-models {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* -----------------------------------------
+   18. Split APK Download Modal Styles
+   ----------------------------------------- */
+.download-modal-box {
+  max-width: 600px;
+  width: 90%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+}
+.modal-title-wrap h2 {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #fff;
+}
+.modal-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 2px;
+}
+.download-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+.download-apk-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 18px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+.download-apk-card:hover {
+  background: rgba(0, 208, 156, 0.06);
+  border-color: rgba(0, 208, 156, 0.4);
+  transform: translateY(-2px);
+}
+.download-apk-card.recommended {
+  border-color: rgba(0, 208, 156, 0.3);
+  background: rgba(0, 208, 156, 0.04);
+}
+.apk-card-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #000;
+  background: var(--gradient-primary);
+  padding: 3px 10px;
+  border-radius: 20px;
+  align-self: flex-start;
+}
+.apk-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.apk-card-title h3 {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.apk-card-title p {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.apk-size-pill {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 4px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+.apk-size-pill.text-green {
+  color: var(--primary-green);
+  background: var(--primary-green-dim);
+  border: 1px solid rgba(0, 208, 156, 0.2);
+}
+.apk-card-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--primary-green);
+}
+
+.apk-other-archs {
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+.other-archs-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 8px;
+}
+.arch-pills-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.arch-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+.arch-pill:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+.arch-pill.github {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.2);
+}
+
+
 

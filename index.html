@@ -56,20 +56,22 @@
       <div class="logo-area">
         <img src="logo.png" alt="Grow Expense Logo" class="nav-logo">
         <span class="nav-brand">Grow Expense</span>
+        <span class="nav-version-badge">v2.5</span>
       </div>
       <nav class="nav-links">
         <a href="#features">Features</a>
-        
+        <a href="#ai-hub">AI Hub</a>
+        <a href="#calculators">Calculators</a>
         <a href="#how-it-works">How It Works</a>
         <a href="#faq">FAQ</a>
-        <a href="https://neo-files-transfer.pages.dev/download/a1d6633466f3" class="download-btn-small">
+        <button id="nav-download-trigger" class="download-btn-small">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="nav-download-icon" style="width:14px;height:14px;flex-shrink:0;">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="7 10 12 15 17 10"/>
             <line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
-          Download
-        </a>
+          Download APK
+        </button>
         <button id="open-privacy-btn" class="nav-link-btn">Privacy Policy</button>
       </nav>
     </div>
@@ -81,12 +83,12 @@
     <div class="hero-container">
       <div class="hero-content">
         <div class="hero-badge">
-          <span class="pulse-dot"></span> Secure Local Sandbox + Ultra-Fast Supabase Sync
+          <span class="pulse-dot"></span> ⚡ New: Multi-Model AI • Payment Cards & QR • Split APKs (~27MB)
         </div>
         <h1>Take Control of Your Money <span class="text-gradient">Offline & Securely</span></h1>
-        <p class="hero-desc">Grow Expense is a local-first personal accounting app that secures your data inside an encrypted database on your device. Scan bills with secure AI, import netbanking statements, and sync to a private backup cloud using secure authentication and the fastest data synchronization.</p>
+        <p class="hero-desc">Grow Expense is a local-first personal accounting app with Multi-Model AI (Gemini 2.5, DeepSeek & Groq), Mandi Voice Calculator, custom Payment Cards with dynamic UPI QR, and instant 1-tap encrypted Supabase cloud backup.</p>
         <div class="hero-actions">
-          <a href="https://neo-files-transfer.pages.dev/download/a1d6633466f3" class="download-btn">
+          <button id="hero-download-trigger" class="download-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="button-download-icon" style="width:24px;height:24px;flex-shrink:0;">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="7 10 12 15 17 10"/>
@@ -94,26 +96,28 @@
             </svg>
             <div class="btn-text-area">
               <span class="btn-sub">Download for Android</span>
-              <span class="btn-main">Direct APK File</span>
+              <span class="btn-main">Get Split APK (27 MB)</span>
             </div>
-          </a>
+          </button>
           <a href="#features" class="learn-more-btn">Explore Features</a>
         </div>
-
-
 
         <div class="hero-trust-badges">
           <span class="trust-badge">
             <svg class="trust-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            Secure Offline Sandbox
+            Encrypted Offline SQLite
           </span>
           <span class="trust-badge">
             <svg class="trust-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            No Tracking & Ads
+            Gemini 2.5 & DeepSeek AI
           </span>
           <span class="trust-badge">
             <svg class="trust-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            No Account Needed
+            Dynamic UPI QR Cards
+          </span>
+          <span class="trust-badge">
+            <svg class="trust-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            No Tracking & No Ads
           </span>
         </div>
       </div>
@@ -121,13 +125,13 @@
       <!-- Interactive Mobile Phone Mockup & App Simulator -->
       <div class="hero-visual">
         <div class="phone-wrapper">
-          <div class="phone-mockup">
+          <div class="phone-mockup" id="sim-phone-frame">
             <div class="phone-speaker"></div>
             <div class="phone-camera"></div>
-            <div class="phone-screen">
+            <div class="phone-screen" id="sim-screen-container">
               
               <!-- App Interface Inside Simulator -->
-              <div class="simulator-app">
+              <div class="simulator-app" id="simulator-app">
                 <!-- App Header -->
                 <div class="sim-header">
                   <div class="sim-header-user">
@@ -140,147 +144,195 @@
                     <span class="sim-username">Hello, Alex</span>
                   </div>
                   <div class="sim-header-actions">
-                    <div class="sim-sync-trigger" id="sim-sync-trigger">
+                    <button class="sim-theme-toggle-btn" id="sim-theme-toggle-btn" title="Toggle Light/Dark Theme">
+                      <span id="sim-theme-icon">🌙</span>
+                    </button>
+                    <div class="sim-sync-trigger" id="sim-sync-trigger" title="Cloud Sync">
                       <svg class="sim-cloud-icon" id="sim-cloud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M17.5 19A3.5 3.5 0 0 0 21 15.5c0-2.79-2.54-4.5-5-4.5-.47 0-.89.09-1.3.27A7 7 0 1 0 2 12h2a5 5 0 0 1 9.8-1.5 1 1 0 0 0 .8.8c2.22 0 4 1.8 4 4a3.5 3.5 0 0 0 3.5 3.7h-4.6"/>
                       </svg>
                     </div>
-                    <svg class="sim-settings-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                      <circle cx="12" cy="12" r="3"/>
-                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                    </svg>
                   </div>
                 </div>
 
-                <div class="sim-body">
-                  <!-- Spent Month Card -->
-                  <div class="sim-spent-card">
-                    <span class="sim-spent-title">TOTAL SPENT THIS MONTH</span>
-                    <h2 class="sim-spent-value" id="sim-spent-total">₹1,914.00</h2>
-                    <div class="sim-spent-pills">
-                      <span class="sim-spent-pill">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-pill-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                        <span id="sim-records-count">15 Records</span>
-                      </span>
-                      <span class="sim-spent-pill">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-pill-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        <span id="sim-current-date">19 June 2026</span>
-                      </span>
+                <!-- Simulator Tab Content: Home Dashboard -->
+                <div class="sim-tab-content active" id="sim-tab-home">
+                  <div class="sim-body">
+                    <!-- Spent Month Card -->
+                    <div class="sim-spent-card">
+                      <span class="sim-spent-title">TOTAL SPENT THIS MONTH</span>
+                      <h2 class="sim-spent-value" id="sim-spent-total">₹1,914.00</h2>
+                      <div class="sim-spent-pills">
+                        <span class="sim-spent-pill">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-pill-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                          <span id="sim-records-count">15 Records</span>
+                        </span>
+                        <span class="sim-spent-pill">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-pill-icon"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                          <span>Offline AES</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Payment Card Mini Preview -->
+                    <div class="sim-card-mini-preview" id="sim-card-mini-preview">
+                      <div class="sim-card-badge">HDFC Regalia Gold</div>
+                      <div class="sim-card-num">•••• 8492</div>
+                      <div class="sim-card-balance">₹42,500 Available</div>
+                    </div>
+
+                    <!-- Quick Action Grid -->
+                    <div class="sim-quick-actions">
+                      <div class="sim-action-card" id="sim-quick-scan">
+                        <div class="sim-action-icon blue">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        </div>
+                        <span class="sim-action-title">AI OCR</span>
+                        <span class="sim-action-subtitle">Scan Bill</span>
+                      </div>
+                      <div class="sim-action-card" id="sim-quick-voice">
+                        <div class="sim-action-icon green">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                        </div>
+                        <span class="sim-action-title">Mandi Calc</span>
+                        <span class="sim-action-subtitle">Voice Trade</span>
+                      </div>
+                      <div class="sim-action-card" id="sim-quick-qr">
+                        <div class="sim-action-icon purple">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
+                        </div>
+                        <span class="sim-action-title">UPI QR</span>
+                        <span class="sim-action-subtitle">Cards & Pay</span>
+                      </div>
+                    </div>
+
+                    <!-- Ledger Section -->
+                    <div class="sim-ledger">
+                      <div class="sim-section-title-row">
+                        <span class="sim-section-title">RECENT TRANSACTIONS</span>
+                        <div class="sim-swipe-delete">
+                          <span>Live Sync</span>
+                        </div>
+                      </div>
+                      <div class="sim-tx-list" id="sim-tx-list">
+                        <div class="sim-tx-item" data-id="1">
+                          <span class="sim-tx-category-icon bg-blue-dim">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #3b82f6;"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                          </span>
+                          <div class="sim-tx-details">
+                            <h4 class="sim-tx-merchant">Cloud Database Fee</h4>
+                            <span class="sim-tx-date"><span class="sim-tx-category text-blue">Services</span> • HDFC Card</span>
+                          </div>
+                          <span class="sim-tx-value">₹799.00</span>
+                        </div>
+                        <div class="sim-tx-item" data-id="2">
+                          <span class="sim-tx-category-icon bg-orange-dim">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #f97316;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                          </span>
+                          <div class="sim-tx-details">
+                            <h4 class="sim-tx-merchant">Morning Coffee & Toast</h4>
+                            <span class="sim-tx-date"><span class="sim-tx-category text-orange">Food</span> • GPay QR</span>
+                          </div>
+                          <span class="sim-tx-value">₹120.00</span>
+                        </div>
+                        <div class="sim-tx-item" data-id="3">
+                          <span class="sim-tx-category-icon bg-purple-dim">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #a855f7;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                          </span>
+                          <div class="sim-tx-details">
+                            <h4 class="sim-tx-merchant">Mandi Potato Batch</h4>
+                            <span class="sim-tx-date"><span class="sim-tx-category text-purple">Voice Mandi</span> • Cash</span>
+                          </div>
+                          <span class="sim-tx-value">₹1,250.00</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                </div>
 
-                  <!-- Quick Action Grid -->
-                  <div class="sim-quick-actions">
-                    <div class="sim-action-card">
-                      <div class="sim-action-icon blue">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                      </div>
-                      <span class="sim-action-title">Smart OCR</span>
-                      <span class="sim-action-subtitle">Read receipts</span>
+                <!-- Simulator Tab Content: AI Advisor View -->
+                <div class="sim-tab-content" id="sim-tab-ai">
+                  <div class="sim-ai-view">
+                    <div class="sim-ai-badge">🤖 Gemini 2.5 Flash Financial Advisor</div>
+                    <div class="sim-ai-chat-bubble bot">
+                      <span class="ai-role">AI Advisor</span>
+                      <p>Aapne is mahine food & dining par <strong>₹3,400</strong> kharch kiya hai, jo aapke target budget se 12% kam hai! Good job! 🎯</p>
                     </div>
-                    <div class="sim-action-card">
-                      <div class="sim-action-icon green">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                      </div>
-                      <span class="sim-action-title">Import File</span>
-                      <span class="sim-action-subtitle">XLSX / PDF Bank</span>
+                    <div class="sim-ai-chat-bubble bot tip">
+                      <span class="ai-role">Smart Tip</span>
+                      <p>Aap ₹2,000 monthly SIP shuru karke 3 saal me ~₹85,000 generate kar sakte hain.</p>
                     </div>
-                    <div class="sim-action-card">
-                      <div class="sim-action-icon purple">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
-                      </div>
-                      <span class="sim-action-title">Export CSV</span>
-                      <span class="sim-action-subtitle">Excel statement</span>
+                    <div class="sim-ai-health-pill">
+                      <span class="health-dot green"></span> AI Models Active (Gemini / DeepSeek / Groq)
                     </div>
                   </div>
+                </div>
 
-                  <!-- Ledger Section -->
-                  <div class="sim-ledger">
-                    <div class="sim-section-title-row">
-                      <span class="sim-section-title">RECENT TRANSACTIONS</span>
-                      <div class="sim-swipe-delete">
-                        <span>Swipe left to delete</span>
-                        <svg class="sim-trash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                <!-- Simulator Tab Content: Payment Cards & QR View -->
+                <div class="sim-tab-content" id="sim-tab-cards">
+                  <div class="sim-cards-view">
+                    <div class="sim-credit-card">
+                      <div class="sim-cc-top">
+                        <span class="sim-cc-bank">SBI Cashback Credit Card</span>
+                        <span class="sim-cc-chip">💳</span>
+                      </div>
+                      <div class="sim-cc-num">4532 •••• •••• 9102</div>
+                      <div class="sim-cc-bottom">
+                        <div>
+                          <span class="sim-cc-label">CARD HOLDER</span>
+                          <span class="sim-cc-val">RUPAM BAIRAGYA</span>
+                        </div>
+                        <span class="sim-cc-brand">VISA</span>
                       </div>
                     </div>
-                    <div class="sim-tx-list" id="sim-tx-list">
-                      <div class="sim-tx-item" data-id="1">
-                        <span class="sim-tx-category-icon bg-blue-dim">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #3b82f6;"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-                        </span>
-                        <div class="sim-tx-details">
-                          <h4 class="sim-tx-merchant">Cloud Database Fee</h4>
-                          <span class="sim-tx-date"><span class="sim-tx-category text-blue">Services</span> • 17 Jun</span>
-                        </div>
-                        <span class="sim-tx-value">₹799.00</span>
+                    <div class="sim-qr-box">
+                      <div class="sim-qr-code-placeholder">
+                        <div class="qr-pattern"></div>
                       </div>
-                      <div class="sim-tx-item" data-id="2">
-                        <span class="sim-tx-category-icon bg-orange-dim">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #f97316;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                        </span>
-                        <div class="sim-tx-details">
-                          <h4 class="sim-tx-merchant">Morning Coffee & Toast</h4>
-                          <span class="sim-tx-date"><span class="sim-tx-category text-orange">Food & dining</span> • 14 Jun</span>
-                        </div>
-                        <span class="sim-tx-value">₹120.00</span>
-                      </div>
-                      <div class="sim-tx-item" data-id="3">
-                        <span class="sim-tx-category-icon bg-orange-dim">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #f97316;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                        </span>
-                        <div class="sim-tx-details">
-                          <h4 class="sim-tx-merchant">Steamed Veggie Dumplings</h4>
-                          <span class="sim-tx-date"><span class="sim-tx-category text-orange">Food & dining</span> • 13 Jun</span>
-                        </div>
-                        <span class="sim-tx-value">₹45.00</span>
-                      </div>
-                      <div class="sim-tx-item" data-id="4">
-                        <span class="sim-tx-category-icon bg-orange-dim">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #f97316;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                        </span>
-                        <div class="sim-tx-details">
-                          <h4 class="sim-tx-merchant">Premium Biryani Bowl</h4>
-                          <span class="sim-tx-date"><span class="sim-tx-category text-orange">Food & dining</span> • 12 Jun</span>
-                        </div>
-                        <span class="sim-tx-value">₹950.00</span>
-                      </div>
+                      <span class="sim-qr-caption">Scan to Pay via any UPI App</span>
+                      <span class="sim-qr-upi">expensetracker@ybl</span>
                     </div>
                   </div>
                 </div>
 
                 <!-- Floating Action Button -->
-                <div class="sim-fab" id="sim-fab-btn">
+                <div class="sim-fab" id="sim-fab-btn" title="Add Expense">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width: 20px; height: 20px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 </div>
 
                 <!-- In-app Bottom Navigation Bar -->
                 <div class="sim-bottom-nav">
-                  <div class="sim-nav-item active">
+                  <div class="sim-nav-item active" data-tab="sim-tab-home">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-nav-icon"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
                     <span>Home</span>
                   </div>
-                  <div class="sim-nav-item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-nav-icon"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                    <span>Budgets</span>
+                  <div class="sim-nav-item" data-tab="sim-tab-ai">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-nav-icon"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+                    <span>AI Advisor</span>
                   </div>
-                  <div class="sim-nav-item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-nav-icon"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                    <span>Analytics</span>
-                  </div>
-                  <div class="sim-nav-item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-nav-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                    <span>Invoices</span>
-                  </div>
-                  <div class="sim-nav-item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-nav-icon"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
-                    <span>Payments</span>
+                  <div class="sim-nav-item" data-tab="sim-tab-cards">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-nav-icon"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                    <span>Cards & QR</span>
                   </div>
                 </div>
 
                 <!-- Laser Scanning Overlay -->
                 <div class="sim-scan-overlay" id="sim-scan-overlay">
                   <div class="sim-laser"></div>
-                  <div class="sim-scan-text">Scanning Receipt via AI OCR...</div>
+                  <div class="sim-scan-text">Scanning Receipt via Gemini OCR...</div>
+                </div>
+
+                <!-- Voice Mandi Wave Overlay -->
+                <div class="sim-voice-overlay" id="sim-voice-overlay">
+                  <div class="voice-wave-bars">
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                  </div>
+                  <div class="sim-voice-text" id="sim-voice-text">"50 kg aalu at 25 rupee..."</div>
+                  <div class="sim-voice-sub">Mandi Voice Calculator parsing arithmetic</div>
                 </div>
 
                 <!-- Sync Success Alert Overlay -->
@@ -298,15 +350,15 @@
           <div class="sim-controls">
             <button class="sim-btn btn-scan" id="sim-action-scan" aria-label="Simulate Receipt OCR Scan">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-              AI Scan
+              AI OCR Scan
             </button>
-            <button class="sim-btn btn-add" id="sim-action-add" aria-label="Simulate Adding Manual Transaction">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Add Expense
+            <button class="sim-btn btn-voice" id="sim-action-voice" aria-label="Simulate Mandi Voice Entry">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+              Mandi Voice
             </button>
-            <button class="sim-btn btn-khata" id="sim-action-khata" aria-label="Simulate Khata Udhar Entry">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-              Khata Udhar
+            <button class="sim-btn btn-khata" id="sim-action-cards-qr" aria-label="Simulate Dynamic Payment Cards & QR">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              Cards & QR
             </button>
             <button class="sim-btn btn-sync" id="sim-action-sync" aria-label="Simulate Cloud Database Synchronization">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M17.5 19A3.5 3.5 0 0 0 21 15.5c0-2.79-2.54-4.5-5-4.5-.47 0-.89.09-1.3.27A7 7 0 1 0 2 12h2a5 5 0 0 1 9.8-1.5 1 1 0 0 0 .8.8c2.22 0 4 1.8 4 4a3.5 3.5 0 0 0 3.5 3.7h-4.6"/></svg>
@@ -323,124 +375,169 @@
   <section id="features" class="features">
     <div class="section-header">
       <h2>Sleek Features, Absolute Privacy</h2>
-      <p>A full-featured personal finance and ledger ecosystem built for the modern offline-first workflow.</p>
+      <p>A full-featured personal finance, AI assistant, and ledger ecosystem built for lightning-fast performance.</p>
     </div>
     
     <div class="bento-grid">
-      <!-- Card 1: Khata / Udhar Book (Spans 2 columns) -->
+      <!-- Card 1: Multi-Model AI Engine & Advisor (Spans 2 columns) -->
+      <div class="bento-card bento-wide" id="ai-hub">
+        <div class="feature-icon-wrapper">
+          <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#00d09c;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        </div>
+        <div class="bento-content">
+          <div class="feature-tag-badge">AI POWERED • MULTI-PROVIDER</div>
+          <h3>Multi-Model AI Hub & Financial Coach</h3>
+          <p>Powered by Google Gemini 2.5 (Flash, Pro, Flash-Lite), Groq (Llama 3.3 70B), and DeepSeek (R1, V3). Features a real-time 45s health test countdown, zero-server secure fallback, and deep financial advisory insights tailored to your savings goals.</p>
+        </div>
+      </div>
+
+      <!-- Card 2: Payment Cards & Dynamic Custom UPI QR -->
+      <div class="bento-card">
+        <div class="feature-icon-wrapper">
+          <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#38bdf8;"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        </div>
+        <div class="bento-content">
+          <div class="feature-tag-badge">NEW • CARDS & QR</div>
+          <h3>Payment Cards & Dynamic UPI QR</h3>
+          <p>Store your Visa, Mastercard, RuPay & Bank accounts with visual cards. Generate custom dynamic UPI QR codes instantly for fast payment requests, with instant deletion and real-time Supabase sync.</p>
+        </div>
+      </div>
+
+      <!-- Card 3: Mandi Voice Calculator & Financial Hub -->
+      <div class="bento-card" id="calculators">
+        <div class="feature-icon-wrapper">
+          <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#f59e0b;"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </div>
+        <div class="bento-content">
+          <div class="feature-tag-badge">NEW • VOICE ARITHMETIC</div>
+          <h3>Mandi Voice Calc & Financial Tools</h3>
+          <p>Speak wholesale trades (<em>"50 kg potato at 22 rupee plus 10 kg onion at 35"</em>) for instant itemized calculation! Plus Loan EMI, SIP Wealth Planner, and GST/Tax Calculators in one place.</p>
+        </div>
+      </div>
+
+      <!-- Card 4: Built-in SMTP Help & Diagnostic Support (Spans 2 columns) -->
       <div class="bento-card bento-wide">
+        <div class="feature-icon-wrapper">
+          <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ec4899;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        </div>
+        <div class="bento-content">
+          <div class="feature-tag-badge">DIRECT DEVELOPER SUPPORT</div>
+          <h3>1-Tap Help & Instant SMTP Issue Reporting</h3>
+          <p>Encounter an issue or need a new feature? Tap the "Help / Report" button anywhere in the app or inside Settings. Your feedback and device diagnostics are automatically emailed directly to the developer team via high-speed SMTP mailer.</p>
+        </div>
+      </div>
+
+      <!-- Card 5: Khata / Udhar Book -->
+      <div class="bento-card">
         <div class="feature-icon-wrapper">
           <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#10b981;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="12" y1="6" x2="12" y2="12"/><line x1="9" y1="9" x2="15" y2="9"/></svg>
         </div>
         <div class="bento-content">
-          <div class="feature-tag-badge">NEW • UDHAR BOOK</div>
-          <h3>Khata & Debt Ledger with 1-Tap WhatsApp Reminders</h3>
-          <p>Track money you lent to friends or borrowed from colleagues. Set repayment due dates, log settlements, and send gentle reminders on WhatsApp with auto-generated UPI payment links (GPay/PhonePe/Paytm) in one click.</p>
+          <div class="feature-tag-badge">UDHAR BOOK</div>
+          <h3>Khata & 1-Tap WhatsApp Reminders</h3>
+          <p>Track money lent or borrowed. Log due dates, partial payments, and send gentle reminders on WhatsApp with auto-generated UPI payment links in one tap.</p>
         </div>
       </div>
 
-      <!-- Card 2: Subscriptions & Recurring Bills -->
+      <!-- Card 6: Subscriptions & Recurring Bills -->
       <div class="bento-card">
         <div class="feature-icon-wrapper">
           <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#8b5cf6;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
         </div>
         <div class="bento-content">
-          <div class="feature-tag-badge">NEW • RECURRING</div>
+          <div class="feature-tag-badge">RECURRING</div>
           <h3>Subscriptions & Recurring Bills</h3>
-          <p>Keep track of Netflix, Spotify, Rent, WiFi, and EMIs. View monthly and yearly cost equivalents, get countdown alerts before renewal, and auto-log renewals into your expense ledger.</p>
+          <p>Monitor Netflix, Spotify, Rent, and EMIs. View monthly/yearly cost equivalents and get countdown alerts before renewal.</p>
         </div>
       </div>
 
-      <!-- Card 3: Split Bills with Friends -->
+      <!-- Card 7: Split Bills with Friends -->
       <div class="bento-card">
         <div class="feature-icon-wrapper">
           <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#f59e0b;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
         <div class="bento-content">
-          <div class="feature-tag-badge">NEW • GROUP SPLIT</div>
+          <div class="feature-tag-badge">GROUP SPLIT</div>
           <h3>Split Bills & Group Expenses</h3>
-          <p>Split dinner, trip, or room rent expenses with friends evenly or with custom amounts. Share breakdown summaries directly on WhatsApp with your UPI ID link for instant settlements.</p>
+          <p>Split dinner, trip, or rent expenses with friends evenly or with custom amounts. Share breakdown summaries directly on WhatsApp with your UPI link.</p>
         </div>
       </div>
 
-      <!-- Card 4: AI Voice & Bank SMS Parser (Spans 2 columns) -->
-      <div class="bento-card bento-wide">
-        <div class="feature-icon-wrapper">
-          <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#00d09c;"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-        </div>
-        <div class="bento-content">
-          <div class="feature-tag-badge">AI POWERED • ZERO TYPING</div>
-          <h3>Voice Entry & SMS Transaction Parser</h3>
-          <p>Speak naturally (<em>"Paid 350 for pizza via GPay"</em>) or paste bank debit SMS messages. The intelligent engine automatically identifies the amount, vendor, category, and payment channel with zero manual entry required.</p>
-        </div>
-      </div>
-
-      <!-- Card 5: Smart OCR Receipt Scanner -->
-      <div class="bento-card">
-        <div class="feature-icon-wrapper">
-          <svg class="feature-svg-icon camera-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle class="camera-lens" cx="12" cy="13" r="4"></circle></svg>
-        </div>
-        <div class="bento-content">
-          <h3>Smart OCR Receipt Scanner</h3>
-          <p>Take photos of bills and receipts. The scanner calls an advanced AI engine to extract items, dates, totals, and payment methods automatically.</p>
-        </div>
-      </div>
-
-      <!-- Card 6: BYO-AI Multi-Provider -->
-      <div class="bento-card">
-        <div class="feature-icon-wrapper">
-          <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#38bdf8;"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 14.5h-2v-2h2zm0-4h-2V7h2z"/></svg>
-        </div>
-        <div class="bento-content">
-          <div class="feature-tag-badge">BYO-KEY • PRIVATE</div>
-          <h3>Gemini & NVIDIA NIM Multi-AI</h3>
-          <p>Bring your own free Gemini or NVIDIA API key. Keys are stored inside Android's Hardware Secure Storage (`FlutterSecureStorage`) and never touch external servers.</p>
-        </div>
-      </div>
-
-      <!-- Card 7: Secure Local SQLite Database -->
+      <!-- Card 8: Secure Encrypted Database -->
       <div class="bento-card">
         <div class="feature-icon-wrapper">
           <svg class="feature-svg-icon lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path class="lock-shackle" d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
         </div>
         <div class="bento-content">
           <h3>AES-Encrypted Local Sandbox</h3>
-          <p>Your transactions, personal khata logs, and budgets remain 100% offline inside an AES-encrypted local database on your device with biometric protection.</p>
+          <p>All data stays 100% offline inside an AES-encrypted local database on your device with biometric fingerprint protection.</p>
         </div>
       </div>
 
-      <!-- Card 8: Full Supabase Cloud Sync -->
+      <!-- Card 9: Full Multi-Table Supabase Sync -->
       <div class="bento-card">
         <div class="feature-icon-wrapper">
           <svg class="feature-svg-icon cloud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.2 15c.9-1.2 1.4-2.7 1.4-4.2a7.5 7.5 0 0 0-14.8-1.5A5.5 5.5 0 0 0 2.5 15"></path><path d="M12 13v8M9 16l3-3 3 3"></path></svg>
         </div>
         <div class="bento-content">
           <h3>Full Multi-Table Cloud Backup</h3>
-          <p>Seamlessly backup and restore all 6 entities—Expenses, Budgets, Payment Methods, Khata entries, Subscriptions, and Split bills—to your private Supabase cloud.</p>
+          <p>Sync all 6 entities—Expenses, Budgets, Payment Cards, Khata entries, Subscriptions, and Split bills—to your private Supabase cloud.</p>
         </div>
       </div>
 
-      <!-- Card 9: Batch Statement Imports (PDF & Excel) -->
+      <!-- Card 10: Dual Fluid Theme (Dark & Light) -->
       <div class="bento-card">
         <div class="feature-icon-wrapper">
-          <svg class="feature-svg-icon import-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line class="doc-line doc-line-1" x1="16" y1="13" x2="8" y2="13"></line><line class="doc-line doc-line-2" x1="16" y1="17" x2="8" y2="17"></line></svg>
+          <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#eab308;"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         </div>
         <div class="bento-content">
-          <h3>Statement Imports & PDF Invoicing</h3>
-          <p>Import CSV/Excel bank statements and compile clean, formatted monthly PDF expense statements directly into your phone's Downloads folder.</p>
+          <div class="feature-tag-badge">FLUID THEMES</div>
+          <h3>Glassmorphic Dark & Light Themes</h3>
+          <p>Hand-tailored color schemes with high-contrast light mode and sleek obsidian dark mode for comfortable day and night usage.</p>
         </div>
       </div>
+    </div>
+  </section>
 
-      <!-- Card 10: In-App OTA Updates & Trip Tags -->
-      <div class="bento-card">
-        <div class="feature-icon-wrapper">
-          <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ec4899;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+  <!-- Live AI Model Ping Demo Section -->
+  <section class="ai-demo-section">
+    <div class="section-header">
+      <h2>Interactive AI Status & Cooldown Ping</h2>
+      <p>Test the multi-provider response latency and smart 45-second rate limiter in action.</p>
+    </div>
+    <div class="ai-demo-card">
+      <div class="ai-demo-models">
+        <div class="ai-model-pill active" data-model="gemini">
+          <span class="ai-status-indicator online"></span>
+          <div class="ai-model-info">
+            <strong>Google Gemini 2.5 Flash</strong>
+            <span>Active Default • Fast OCR</span>
+          </div>
+          <span class="ai-latency-badge" id="latency-gemini">~420ms</span>
         </div>
-        <div class="bento-content">
-          <div class="feature-tag-badge">SEAMLESS • OTA</div>
-          <h3>In-App Updates & Trip Tags</h3>
-          <p>Check for releases, read changelogs, and upgrade APKs directly inside the app. Tag expenses by event (#GoaTrip, #Diwali) for instant vacation cost summaries.</p>
+        <div class="ai-model-pill" data-model="deepseek">
+          <span class="ai-status-indicator online"></span>
+          <div class="ai-model-info">
+            <strong>DeepSeek R1 / V3</strong>
+            <span>Custom Provider • Deep Reasoning</span>
+          </div>
+          <span class="ai-latency-badge" id="latency-deepseek">~680ms</span>
         </div>
+        <div class="ai-model-pill" data-model="groq">
+          <span class="ai-status-indicator online"></span>
+          <div class="ai-model-info">
+            <strong>Groq Llama 3.3 70B</strong>
+            <span>Ultra Fast • Instant Parsing</span>
+          </div>
+          <span class="ai-latency-badge" id="latency-groq">~180ms</span>
+        </div>
+      </div>
+      <div class="ai-demo-action-area">
+        <button class="ai-test-btn" id="ai-demo-test-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span id="ai-test-btn-text">Test AI Endpoint</span>
+        </button>
+        <span class="ai-cooldown-note" id="ai-cooldown-note">Ready to ping models • 45s smart cooldown</span>
       </div>
     </div>
   </section>
@@ -454,18 +551,18 @@
     <div class="timeline">
       <div class="timeline-item">
         <div class="timeline-number">1</div>
-        <h3>Import Statements</h3>
-        <p>Drop statement files or photograph receipts. The AI engine parses merchants, sums, and timestamps locally.</p>
+        <h3>Import or Speak Entries</h3>
+        <p>Drop statement files, photograph receipts with AI OCR, or speak mandi voice arithmetic in Hindi/English.</p>
       </div>
       <div class="timeline-item">
         <div class="timeline-number">2</div>
-        <h3>Target Categories</h3>
-        <p>Allocate custom budget boundaries for food, travel, and shopping, monitoring real-time category dials.</p>
+        <h3>Manage Cards & Ledgers</h3>
+        <p>Organize payment cards, generate dynamic UPI QR codes, and track khata udhar with WhatsApp reminders.</p>
       </div>
       <div class="timeline-item">
         <div class="timeline-number">3</div>
-        <h3>Export Reports</h3>
-        <p>Export all columns to CSV spreadsheets, or compile entries into structured PDF statements for reimbursement.</p>
+        <h3>Export & Private Cloud Sync</h3>
+        <p>Export all columns to CSV/PDF statements, or sync encrypted records to your private Supabase database.</p>
       </div>
     </div>
   </section>
@@ -544,62 +641,6 @@
     </div>
   </section>
 
-  <!-- Testimonials Section -->
-  <section id="testimonials" class="testimonials">
-    <div class="section-header">
-      <h2>Loved by Budgeters & Privacy Enthusiasts</h2>
-      <p>See why users trust Grow Expense to track their finances securely offline.</p>
-    </div>
-    <div class="carousel-wrapper">
-      <div class="carousel-container" id="carousel-track">
-        <!-- Card 1 -->
-        <div class="testimonial-card active">
-          <div class="card-quote">“The offline sandbox is exactly what I was looking for. My financial accounts remain entirely inside my own phone, and the GPay PDF statement parser is incredibly fast.”</div>
-          <div class="card-user">
-            <div class="user-avatar">RA</div>
-            <div class="user-meta">
-              <span class="user-name">Rahul A.</span>
-              <span class="user-role">Android Developer</span>
-            </div>
-          </div>
-        </div>
-        <!-- Card 2 -->
-        <div class="testimonial-card">
-          <div class="card-quote">“Monthly rollovers are a lifesaver. Being able to compile a clear, clean invoice directly to my Downloads folder before wiping my device ledger keeps the app super responsive.”</div>
-          <div class="card-user">
-            <div class="user-avatar">PP</div>
-            <div class="user-meta">
-              <span class="user-name">Priya P.</span>
-              <span class="user-role">Freelance Designer</span>
-            </div>
-          </div>
-        </div>
-        <!-- Card 3 -->
-        <div class="testimonial-card">
-          <div class="card-quote">“The UI is stunningly clean, and the haptic feedback ticks make adding entries feel highly responsive. An absolute must-have if you value personal data privacy.”</div>
-          <div class="card-user">
-            <div class="user-avatar">DK</div>
-            <div class="user-meta">
-              <span class="user-name">Devendra K.</span>
-              <span class="user-role">Fintech Consultant</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Controls -->
-      <div class="carousel-controls">
-        <button class="control-btn prev" id="carousel-prev" aria-label="Previous Review">&larr;</button>
-        <div class="carousel-dots" id="carousel-dots">
-          <span class="dot active"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
-        </div>
-        <button class="control-btn next" id="carousel-next" aria-label="Next Review">&rarr;</button>
-      </div>
-    </div>
-  </section>
-
   <!-- FAQ Section -->
   <section class="faq" id="faq">
     <div class="section-header">
@@ -609,83 +650,56 @@
     <div class="faq-container">
       <div class="faq-item">
         <div class="faq-question">
+          <h3>Why should I download the Split APK instead of Universal APK?</h3>
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-answer">
+          <p>Split APKs are optimized specifically for your phone's processor architecture (ARM64 for almost all modern Android phones). It reduces download size by ~62% (from 72 MB down to just ~27 MB) and speeds up app installation and launch times.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">
+          <h3>Which AI models does Grow Expense support?</h3>
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-answer">
+          <p>Grow Expense includes built-in Google Gemini 2.5 (Flash, Pro, Flash-Lite) with remote fallback, and also allows you to configure your own custom API keys for Groq (Llama 3.3 70B) or DeepSeek (R1, V3). The app includes a 45-second smart cooldown health test button to check endpoint status safely.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">
+          <h3>How does Payment Cards & Dynamic UPI QR work?</h3>
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-answer">
+          <p>You can add your debit, credit, or bank accounts as sleek payment cards. For receiving money or bill sharing, generate a custom dynamic UPI QR code with a pre-filled amount that anyone can scan via GPay, PhonePe, Paytm, or BHIM.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">
+          <h3>What is the Mandi Voice Calculator?</h3>
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-answer">
+          <p>Designed for market traders, shopkeepers, and daily shoppers! Speak item quantities and rates in Hindi or English (e.g. <em>"50 kg aalu at 22 rupee plus 10 kg pyaj at 35"</em>) and the app automatically parses the arithmetic, calculates the totals, and logs it directly.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">
+          <h3>How does the 1-Tap Help & SMTP Issue Reporting work?</h3>
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-answer">
+          <p>Whenever an error occurs or if you have suggestions, simply tap "Help / Report" in error popups or Settings. Your message and optional debug details are transmitted straight to developer email (<code>rupambairagiya08@gmail.com</code>) via secure SMTP.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">
           <h3>Is my financial data shared with anyone?</h3>
           <span class="faq-icon">+</span>
         </div>
         <div class="faq-answer">
           <p>No. Grow Expense stores all statement rows and manual entries on a secure offline database inside your phone's local sandbox. Cloud sync to our backup server is completely optional and can be managed directly from user settings.</p>
-        </div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-question">
-          <h3>How does the AI statement scanning work?</h3>
-          <span class="faq-icon">+</span>
-        </div>
-        <div class="faq-answer">
-          <p>When parsing statements or scanning receipts, the app sends the document or image to our secure cloud gateway, which uses advanced AI models to extract key fields. You can also configure a custom AI API Key in the app preferences to run calls on your own quota.</p>
-        </div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-question">
-          <h3>Is the Biometric lock secure?</h3>
-          <span class="faq-icon">+</span>
-        </div>
-        <div class="faq-answer">
-          <p>Yes. The app utilizes Android's native Biometric API. All authentication flows are verified in the device's secure enclave. Grow Expense never accesses, views, or stores your biometric records.</p>
-        </div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-question">
-          <h3>Can I back up my information?</h3>
-          <span class="faq-icon">+</span>
-        </div>
-        <div class="faq-answer">
-          <p>Yes. You can optionally enable private Supabase Cloud Sync inside the app. This backs up and synchronizes all your Expenses, Budgets, Payment accounts, Khata entries, Subscriptions, and Split bills across devices seamlessly.</p>
-        </div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-question">
-          <h3>How does Khata / Udhar Book & WhatsApp Reminders work?</h3>
-          <span class="faq-icon">+</span>
-        </div>
-        <div class="faq-answer">
-          <p>The Khata screen lets you log who you lent money to or borrowed from. You can record due dates, partial payments, and tap the WhatsApp icon to automatically generate a friendly reminder message containing your direct UPI payment link.</p>
-        </div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-question">
-          <h3>How does Split Bills work with friends?</h3>
-          <span class="faq-icon">+</span>
-        </div>
-        <div class="faq-answer">
-          <p>You can create a Split Bill for group dinners, road trips, or flat rent. The app calculates each person's exact share, tracks who has settled, and allows you to share payment links directly over WhatsApp.</p>
-        </div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-question">
-          <h3>How do Voice Entry & SMS Parsing work?</h3>
-          <span class="faq-icon">+</span>
-        </div>
-        <div class="faq-answer">
-          <p>You can speak naturally into the app or paste standard bank debit SMS texts. The intelligent parsing engine detects the amount, merchant name, category, and payment channel with zero manual typing.</p>
-        </div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-question">
-          <h3>How do in-app OTA updates work?</h3>
-          <span class="faq-icon">+</span>
-        </div>
-        <div class="faq-answer">
-          <p>Whenever a new version is released on GitHub, the app alerts you with a changelog badge in Settings. You can download and install new versions directly inside the app without needing manual browser searches.</p>
-        </div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-question">
-          <h3>What is the Month Rollover clean-up and does it delete my data?</h3>
-          <span class="faq-icon">+</span>
-        </div>
-        <div class="faq-answer">
-          <p>At the end of each month, the app prompts you with a Rollover window. It summarizes your total monthly expenses and allows you to compile all transactions into a structured PDF statement directly inside your device's Downloads directory. Once compiled, you can clean up the local database to keep the app fast and clutter-free for the new month.</p>
         </div>
       </div>
     </div>
@@ -695,15 +709,15 @@
   <section class="cta">
     <div class="cta-container">
       <h2>Take Control of Your Money Today</h2>
-      <p>Download the official Grow Expense Android APK securely and keep your budget logs in your own pocket.</p>
-      <a href="https://neo-files-transfer.pages.dev/download/a1d6633466f3" class="download-btn-large">
+      <p>Download the official Grow Expense Android APK securely and experience the power of private local accounting.</p>
+      <button id="cta-download-trigger" class="download-btn-large">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;flex-shrink:0;">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
           <polyline points="7 10 12 15 17 10"/>
           <line x1="12" y1="15" x2="12" y2="3"/>
         </svg>
-        Download Grow Expense App (APK)
-      </a>
+        Download Optimized APK (Split & Universal)
+      </button>
     </div>
   </section>
 
@@ -729,20 +743,77 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
             GitHub
           </a>
-          <a href="upi://pay?pa=expensetracker@ybl&pn=Expense%20Tracker%20Support&cu=INR" class="footer-social-pill donate">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-            Support via UPI: expensetracker@ybl
+          <a href="mailto:rupambairagiya08@gmail.com" class="footer-social-pill donate">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            Email: rupambairagiya08@gmail.com
           </a>
         </div>
       </div>
       <p class="footer-copy">&copy; 2026 Grow Expense. Local-first financial tracking. • <strong>Proudly Made in India 🇮🇳</strong></p>
       <div class="footer-links">
-        <a href="mailto:rupambairagya852@gmail.com" class="footer-link-btn">Contact Support</a>
+        <a href="mailto:rupambairagiya08@gmail.com" class="footer-link-btn">Contact Support</a>
         <span class="divider">|</span>
         <button id="open-privacy-footer" class="footer-link-btn">Privacy Policy</button>
       </div>
     </div>
   </footer>
+
+  <!-- Download APK Modal -->
+  <div id="download-modal" class="modal-overlay">
+    <div class="modal-content download-modal-box">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <h2>Download Grow Expense App</h2>
+          <span class="modal-subtitle">Choose the best optimized APK for your Android device</span>
+        </div>
+        <button id="close-download-btn" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body download-modal-body">
+        
+        <!-- Recommended Split APK Card -->
+        <a href="https://neo-files-transfer.pages.dev/download/a1d6633466f3" class="download-apk-card recommended">
+          <div class="apk-card-badge">RECOMMENDED (62% LIGHTER)</div>
+          <div class="apk-card-header">
+            <div class="apk-card-title">
+              <h3>ARM64-v8a Split APK</h3>
+              <p>For modern Android phones (95%+ devices: Samsung, Xiaomi, Realme, OnePlus, Pixel, etc.)</p>
+            </div>
+            <div class="apk-size-pill text-green">27.5 MB</div>
+          </div>
+          <div class="apk-card-action">
+            <span class="apk-btn-text">Download ARM64 APK</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </div>
+        </a>
+
+        <!-- Universal APK Card -->
+        <a href="https://neo-files-transfer.pages.dev/download/a1d6633466f3" class="download-apk-card">
+          <div class="apk-card-header">
+            <div class="apk-card-title">
+              <h3>Universal Release APK</h3>
+              <p>All-in-one package compatible with all Android devices and chipsets</p>
+            </div>
+            <div class="apk-size-pill">72.6 MB</div>
+          </div>
+          <div class="apk-card-action">
+            <span class="apk-btn-text">Download Universal APK</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </div>
+        </a>
+
+        <!-- Other Architectures -->
+        <div class="apk-other-archs">
+          <span class="other-archs-label">Other Architectures:</span>
+          <div class="arch-pills-row">
+            <a href="https://neo-files-transfer.pages.dev/download/a1d6633466f3" class="arch-pill">ARMv7a (32-bit) • 26.3 MB</a>
+            <a href="https://neo-files-transfer.pages.dev/download/a1d6633466f3" class="arch-pill">x86_64 (Emulators) • 29.2 MB</a>
+            <a href="https://github.com/Rupam852/Expense-App/releases" target="_blank" rel="noopener" class="arch-pill github">View on GitHub Releases ↗</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
 
   <!-- Privacy Policy Modal -->
   <div id="privacy-modal" class="modal-overlay">
@@ -752,28 +823,25 @@
         <button id="close-privacy-btn" class="close-btn">&times;</button>
       </div>
       <div class="modal-body">
-        <p class="last-updated">Last Updated: June 2026</p>
+        <p class="last-updated">Last Updated: October 2026</p>
         
         <h3>1. Information Collection and Use</h3>
-        <p>Grow Expense App is designed as a **local-first** application. This means all personal financial data, budgets, accounts, and transaction history are stored securely on your device's local database. We do not transmit or sell your personal data to external databases or third parties.</p>
+        <p>Grow Expense App is designed as a **local-first** application. All personal financial data, payment cards, budgets, khata entries, and transaction history are stored securely on your device's local encrypted sandbox. We do not transmit or sell your personal data to external databases or third parties.</p>
         
-        <h3>2. Statement Scanning and AI Parsing</h3>
-        <p>When you use the UPI statement parsing feature, the app processes the file contents. If you choose to parse via AI features, the file details are passed directly to our secure AI models using the API Key you provide. This transaction is encrypted and communicates directly with Google. No intermediary servers store or process your statements.</p>
+        <h3>2. Multi-Model AI and Scanning</h3>
+        <p>When you use OCR bill scanning, Mandi voice calculation, or AI financial advisor, data is processed directly via Google Gemini, DeepSeek, or Groq using your chosen keys or encrypted remote fallback. No intermediary party stores your financial logs.</p>
         
         <h3>3. Device Permissions</h3>
         <ul>
-          <li><strong>Storage / Files:</strong> Used solely to pick statement documents for parsing, and to save generated PDF and CSV logs to your device's Downloads directory.</li>
-          <li><strong>Biometrics / Device Lock:</strong> Used to confirm identity when launching the app. The biometric authentication is handled entirely by your phone's native operating system (Android BiometricPrompt). The app never sees, stores, or accesses your actual fingerprint or passcode records.</li>
+          <li><strong>Storage / Files:</strong> Used solely to pick statement documents for parsing, and to save generated PDF/Excel statements to your device's Downloads directory.</li>
+          <li><strong>Biometrics / Device Lock:</strong> Used to confirm identity when launching the app. Authentication is handled natively by Android BiometricPrompt.</li>
         </ul>
 
         <h3>4. Optional Cloud Sync</h3>
-        <p>If you choose to enable the optional Private Cloud Backup sync feature, your local database records will sync dynamically to your personal private backup cloud storage. This feature is entirely optional and can be toggled off at any time. Data ownership belongs solely to you.</p>
+        <p>If you choose to enable the optional Private Cloud Backup feature, your local database records sync directly to your private Supabase cloud storage.</p>
 
-        <h3>5. Updates to This Privacy Policy</h3>
-        <p>We may update our Privacy Policy from time to time. Since the app is local-first, policy modifications will be published here on the landing page.</p>
-
-        <h3>6. Contact Us</h3>
-        <p>If you have any questions or feedback regarding privacy, feel free to contact us at <a href="mailto:growexpensetrackerapp@gmail.com" style="color: var(--primary-green); text-decoration: underline;">growexpensetrackerapp@gmail.com</a>.</p>
+        <h3>5. Contact Us</h3>
+        <p>If you have any questions or feedback, contact developer support directly at <a href="mailto:rupambairagiya08@gmail.com" style="color: var(--primary-green); text-decoration: underline;">rupambairagiya08@gmail.com</a>.</p>
       </div>
     </div>
   </div>
@@ -786,6 +854,5 @@
   </button>
 
   <script src="index.js"></script>
-  <!-- Vercel Deployment Trigger: Revert Download Modal -->
 </body>
 </html>
