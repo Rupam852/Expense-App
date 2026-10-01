@@ -233,6 +233,7 @@ class AiConfigService with ChangeNotifier {
       _aiMode = 'default';
       await prefs.setString(_keyAiMode, 'default');
     }
+    _backupToCloudQuietly();
     notifyListeners();
   }
 
@@ -334,8 +335,6 @@ class AiConfigService with ChangeNotifier {
       if (cloudGeminiKey != null && cloudGeminiKey.isNotEmpty) {
         _geminiApiKey = cloudGeminiKey;
         await prefs.setString(_keyGeminiApiKey, cloudGeminiKey);
-        _aiMode = 'custom';
-        await prefs.setString(_keyAiMode, 'custom');
         changed = true;
       }
 
@@ -343,8 +342,16 @@ class AiConfigService with ChangeNotifier {
       if (cloudNvidiaKey != null && cloudNvidiaKey.isNotEmpty) {
         _nvidiaApiKey = cloudNvidiaKey;
         await prefs.setString(_keyNvidiaApiKey, cloudNvidiaKey);
-        _aiMode = 'custom';
-        await prefs.setString(_keyAiMode, 'custom');
+        changed = true;
+      }
+
+      // Respect local AI mode preference first; if not set locally, fall back to cloud profile mode
+      final localMode = prefs.getString(_keyAiMode);
+      if (localMode != null && localMode.isNotEmpty) {
+        _aiMode = localMode;
+      } else if (profile['ai_mode'] != null && profile['ai_mode'].toString().trim().isNotEmpty) {
+        _aiMode = profile['ai_mode'].toString().trim();
+        await prefs.setString(_keyAiMode, _aiMode);
         changed = true;
       }
 
@@ -392,6 +399,7 @@ class AiConfigService with ChangeNotifier {
       final supabase = SupabaseService.instance;
       if (supabase.currentUser != null) {
         await supabase.upsertProfile({
+          'ai_mode': _aiMode,
           'gemini_api_key': _geminiApiKey,
           'nvidia_api_key': _nvidiaApiKey,
           'gemini_model': _geminiModel,
