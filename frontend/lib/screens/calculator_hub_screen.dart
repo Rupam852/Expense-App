@@ -2520,13 +2520,17 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
           ),
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
-              trackHeight: 4,
+              trackHeight: 5,
               activeTrackColor: const Color(0xFF00D09C),
               inactiveTrackColor: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0),
               thumbColor: const Color(0xFF00D09C),
               overlayColor: const Color(0xFF00D09C).withOpacity(0.15),
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
-              trackShape: const RoundedRectSliderTrackShape(),
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 9),
+              trackShape: _DottedSliderTrackShape(
+                dotCount: 16,
+                dotColor: isDark ? const Color(0xFF4A5568) : const Color(0xFF94A3B8),
+                dotRadius: 1.8,
+              ),
             ),
             child: Slider(
               value: sliderValue,
@@ -2557,6 +2561,73 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
         ],
       ),
     );
+  }
+}
+
+/// Custom Slider Track Shape that paints subtle tick dots directly inside the slider bar track
+class _DottedSliderTrackShape extends RoundedRectSliderTrackShape {
+  final int dotCount;
+  final Color? dotColor;
+  final double dotRadius;
+
+  const _DottedSliderTrackShape({
+    this.dotCount = 16,
+    this.dotColor,
+    this.dotRadius = 1.8,
+  });
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset offset, {
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required Animation<double> enableAnimation,
+    required TextDirection textDirection,
+    required Offset thumbCenter,
+    Offset? secondaryOffset,
+    bool isDiscrete = false,
+    bool isEnabled = false,
+    double additionalActiveTrackHeight = 0,
+  }) {
+    // 1. Base track rendering
+    super.paint(
+      context,
+      offset,
+      parentBox: parentBox,
+      sliderTheme: sliderTheme,
+      enableAnimation: enableAnimation,
+      textDirection: textDirection,
+      thumbCenter: thumbCenter,
+      secondaryOffset: secondaryOffset,
+      isDiscrete: isDiscrete,
+      isEnabled: isEnabled,
+      additionalActiveTrackHeight: additionalActiveTrackHeight,
+    );
+
+    // 2. Paint subtle dots directly inside the inactive slider track
+    final Rect trackRect = getPreferredRect(
+      parentBox: parentBox,
+      offset: offset,
+      sliderTheme: sliderTheme,
+      isEnabled: isEnabled,
+      isDiscrete: isDiscrete,
+    );
+
+    final Paint dotPaint = Paint()
+      ..color = dotColor ?? (sliderTheme.inactiveTrackColor ?? Colors.grey).withOpacity(0.6)
+      ..style = PaintingStyle.fill;
+
+    final double trackWidth = trackRect.width;
+    final double startX = trackRect.left;
+    final double centerY = trackRect.center.dy;
+
+    for (int i = 0; i <= dotCount; i++) {
+      final double dotX = startX + (trackWidth / dotCount) * i;
+      if (dotX > thumbCenter.dx + 8 && dotX < trackRect.right - 2) {
+        context.canvas.drawCircle(Offset(dotX, centerY), dotRadius, dotPaint);
+      }
+    }
   }
 }
 
