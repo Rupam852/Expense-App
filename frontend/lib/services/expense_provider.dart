@@ -591,8 +591,6 @@ class ExpenseProvider with ChangeNotifier {
   // ──────────────────────────────────────────────────────
   // PAYMENT METHODS (MULTI-ACCOUNT, PRIMARY & REORDERING)
   // ──────────────────────────────────────────────────────
-  List<PaymentDetail> get paymentDetails => _paymentDetails;
-
   PaymentDetail? get primaryPaymentDetail {
     if (_paymentDetails.isEmpty) return null;
     final primary = _paymentDetails.where((p) => p.isPrimary).toList();
@@ -664,7 +662,7 @@ class ExpenseProvider with ChangeNotifier {
   }
 
   Future<void> deleteAllPaymentDetails() async {
-    await _dbHelper.deleteAllPaymentDetails();
+    await _dbHelper.deletePaymentDetails();
     _paymentDetails = [];
     notifyListeners();
     triggerQuietSync();
