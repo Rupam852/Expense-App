@@ -754,12 +754,15 @@ class DatabaseHelper {
 
   Future<int> insertPaymentDetail(PaymentDetail paymentDetail) async {
     final db = await instance.database;
+    await _ensureColumnsExist(db);
     final map = paymentDetail.toMap();
     map['is_synced'] = 0;
 
     // If this is set as primary, unset other primaries
     if (paymentDetail.isPrimary) {
-      await db.update('payment_details', {'is_primary': 0});
+      try {
+        await db.update('payment_details', {'is_primary': 0});
+      } catch (_) {}
     }
 
     return await db.insert(
@@ -771,11 +774,14 @@ class DatabaseHelper {
 
   Future<int> updatePaymentDetail(PaymentDetail paymentDetail) async {
     final db = await instance.database;
+    await _ensureColumnsExist(db);
     final map = paymentDetail.toMap();
     map['is_synced'] = 0;
 
     if (paymentDetail.isPrimary) {
-      await db.update('payment_details', {'is_primary': 0});
+      try {
+        await db.update('payment_details', {'is_primary': 0});
+      } catch (_) {}
     }
 
     return await db.update(
@@ -788,11 +794,26 @@ class DatabaseHelper {
 
   Future<List<PaymentDetail>> getPaymentDetails() async {
     final db = await instance.database;
-    final result = await db.query(
-      'payment_details',
-      orderBy: 'is_primary DESC, sort_order ASC, updated_at DESC',
-    );
-    return result.map((json) => PaymentDetail.fromMap(json)).toList();
+    try {
+      final result = await db.query(
+        'payment_details',
+        orderBy: 'is_primary DESC, sort_order ASC, updated_at DESC',
+      );
+      return result.map((json) => PaymentDetail.fromMap(json)).toList();
+    } catch (e) {
+      // Self-heal table schema immediately if columns were missing!
+      await _ensureColumnsExist(db);
+      try {
+        final result = await db.query(
+          'payment_details',
+          orderBy: 'is_primary DESC, sort_order ASC, updated_at DESC',
+        );
+        return result.map((json) => PaymentDetail.fromMap(json)).toList();
+      } catch (_) {
+        final result = await db.query('payment_details');
+        return result.map((json) => PaymentDetail.fromMap(json)).toList();
+      }
+    }
   }
 
   Future<void> deletePaymentDetail(String id) async {
@@ -807,8 +828,11 @@ class DatabaseHelper {
 
   Future<void> setPrimaryPaymentDetail(String id) async {
     final db = await instance.database;
+    await _ensureColumnsExist(db);
     await db.transaction((txn) async {
-      await txn.update('payment_details', {'is_primary': 0});
+      try {
+        await txn.update('payment_details', {'is_primary': 0});
+      } catch (_) {}
       await txn.update('payment_details', {'is_primary': 1, 'is_synced': 0}, where: 'id = ?', whereArgs: [id]);
     });
   }
