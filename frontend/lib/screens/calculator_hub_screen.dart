@@ -2312,18 +2312,19 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
           ),
           const SizedBox(height: 18),
 
-          // 1. Loan Amount Slider & Input (Interactive on tap + dotted tick track)
+          // 1. Loan Amount Slider & Input (Interactive on tap + granular smooth slider)
           _buildInputCard(
             title: str.loanAmount,
             valueText: '₹${fmt.format(_loanAmount.round())}',
-            sliderValue: _loanAmount.clamp(10000, 10000000),
+            sliderValue: _loanAmount.clamp(10000, 5000000),
             min: 10000,
-            max: 10000000,
-            divisions: 100,
+            max: 5000000,
+            divisions: 499,
             onSliderChanged: (val) {
+              final stepped = (val / 10000).round() * 10000.0;
               setState(() {
-                _loanAmount = val;
-                _loanAmountCtrl.text = val.round().toString();
+                _loanAmount = stepped < 10000 ? 10000 : stepped;
+                _loanAmountCtrl.text = _loanAmount.round().toString();
               });
             },
             onValueTap: () {
@@ -2352,7 +2353,7 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
           ),
           const SizedBox(height: 14),
 
-          // 2. Interest Rate Slider & Input (Interactive on tap + dotted tick track)
+          // 2. Interest Rate Slider & Input (Interactive on tap)
           _buildInputCard(
             title: str.interestRatePa,
             valueText: '${_interestRate.toStringAsFixed(1)} %',
@@ -2393,7 +2394,7 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
           ),
           const SizedBox(height: 14),
 
-          // 3. Tenure Slider & Input (Interactive on tap + dotted tick track)
+          // 3. Tenure Slider & Input (Interactive on tap)
           _buildInputCard(
             title: str.loanTenure,
             valueText: '${_tenureYears.toInt()} ${_isTenureInYears ? str.years : str.months}',
@@ -2519,9 +2520,13 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
           ),
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
+              trackHeight: 4,
               activeTrackColor: const Color(0xFF00D09C),
+              inactiveTrackColor: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0),
               thumbColor: const Color(0xFF00D09C),
-              overlayColor: const Color(0xFF00D09C).withOpacity(0.2),
+              overlayColor: const Color(0xFF00D09C).withOpacity(0.15),
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+              trackShape: const RoundedRectSliderTrackShape(),
             ),
             child: Slider(
               value: sliderValue,
@@ -2531,26 +2536,8 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
               onChanged: onSliderChanged,
             ),
           ),
-          // Dotted tick track line indicator under slider
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 2.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: List.generate(
-                16,
-                (i) => Container(
-                  width: 3,
-                  height: 3,
-                  decoration: BoxDecoration(
-                    color: (isDark ? Colors.grey[600] : Colors.grey[400])?.withOpacity(0.5),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
           if (presets != null) ...[
+            const SizedBox(height: 4),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
