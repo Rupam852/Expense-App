@@ -61,6 +61,19 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
     return true;
   }
 
+  // Instant mode switcher
+  void _onSelectMode(String mode) async {
+    if (mode == 'default') {
+      setState(() => _aiMode = 'default');
+      await _aiService.setAiMode('default');
+      if (mounted) {
+        CustomToast.show(context, 'Default Server Cloud AI activated!');
+      }
+    } else {
+      setState(() => _aiMode = 'custom');
+    }
+  }
+
   void _onSetPrimary(String provider) {
     setState(() {
       if (provider == 'gemini') {
@@ -73,14 +86,53 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
     });
   }
 
-  Future<void> _saveConfiguration() async {
+  Future<void> _saveCustomConfiguration() async {
+    final hasGeminiKey = _geminiKeyController.text.trim().isNotEmpty;
+    final hasNvidiaKey = _nvidiaKeyController.text.trim().isNotEmpty;
+
+    // If no keys entered at all, revert to default
+    if (!hasGeminiKey && !hasNvidiaKey) {
+      setState(() {
+        _aiMode = 'default';
+      });
+      await _aiService.setAiMode('default');
+      if (mounted) {
+        CustomToast.show(context, 'No custom keys entered. Reverted to Default Server AI.');
+      }
+      return;
+    }
+
     setState(() {
       _isSaving = true;
     });
 
-    final hasCustomKeys = _geminiKeyController.text.trim().isNotEmpty || _nvidiaKeyController.text.trim().isNotEmpty;
-    final finalMode = (_aiMode == 'custom' && hasCustomKeys) ? 'custom' : 'default';
+    // Run test validation
+    final testResults = await _aiService.checkCustomConfiguration(
+      testGeminiKey: _geminiKeyController.text,
+      testGeminiModel: _selectedGeminiModel,
+      testNvidiaKey: _nvidiaKeyController.text,
+      testNvidiaModel: _selectedNvidiaModel,
+      testPrimary: _primaryProvider,
+      testSecondary: _secondaryProvider,
+    );
 
+    // Check if any provided key had an invalid API key credential error
+    final invalidResult = testResults.firstWhere(
+      (r) => !r.isWorking && (r.message.toLowerCase().contains('invalid api key') || r.message.toLowerCase().contains('api_key_invalid')),
+      orElse: () => ModelCheckResult(provider: '', modelName: '', isWorking: true, latencyMs: 0, message: ''),
+    );
+
+    if (invalidResult.provider.isNotEmpty) {
+      setState(() {
+        _isSaving = false;
+      });
+      if (mounted) {
+        _showInvalidKeyDialog(context, invalidResult);
+      }
+      return;
+    }
+
+    // Save custom configuration
     final success = await _aiService.saveCustomConfiguration(
       geminiModel: _selectedGeminiModel,
       geminiApiKey: _geminiKeyController.text,
@@ -88,30 +140,73 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
       nvidiaApiKey: _nvidiaKeyController.text,
       primaryProvider: _primaryProvider,
       secondaryProvider: _secondaryProvider,
-      aiMode: finalMode,
+      aiMode: 'custom',
     );
 
     await _aiService.setResponseLanguage(_responseLanguage);
 
     setState(() {
-      _aiMode = finalMode;
       _isSaving = false;
     });
 
     if (mounted) {
       if (success) {
-        if (finalMode == 'default' && _aiMode == 'custom' && !hasCustomKeys) {
-          CustomToast.show(context, 'No custom keys entered. Switched to Default Cloud AI.');
-        } else {
-          CustomToast.show(context, 'AI Configuration saved successfully!');
-        }
+        CustomToast.show(context, 'Custom AI Configuration saved & verified! ✨');
       } else {
         CustomToast.show(context, 'Failed to save configuration.', isError: true);
       }
     }
   }
 
-  Future<void> _checkConfigurationStatus() async {
+  void _showInvalidKeyDialog(BuildContext context, ModelCheckResult invalidResult) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF181B22) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.error_outline_rounded, color: Colors.red, size: 26),
+            const SizedBox(width: 10),
+            Text(
+              'Invalid API Key',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${invalidResult.provider} validation failed:',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              invalidResult.message,
+              style: GoogleFonts.inter(fontSize: 13, color: isDark ? Colors.white70 : Colors.black87),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Please double check the API key you entered for any missing characters or extra spaces.',
+              style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Edit Key', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Testing Dialog trigger for Custom Keys
+  Future<void> _checkCustomConfigurationStatus() async {
     if (_geminiKeyController.text.trim().isEmpty && _nvidiaKeyController.text.trim().isEmpty) {
       CustomToast.show(
         context,
@@ -126,12 +221,25 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
       barrierDismissible: false,
       builder: (ctx) => _ConfigurationTestingDialog(
         aiService: _aiService,
+        isDefaultServerTest: false,
         geminiKey: _geminiKeyController.text,
         geminiModel: _selectedGeminiModel,
         nvidiaKey: _nvidiaKeyController.text,
         nvidiaModel: _selectedNvidiaModel,
         primary: _primaryProvider,
         secondary: _secondaryProvider,
+      ),
+    );
+  }
+
+  // Testing Dialog trigger for Default Server AI
+  Future<void> _checkDefaultServerStatus() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _ConfigurationTestingDialog(
+        aiService: _aiService,
+        isDefaultServerTest: true,
       ),
     );
   }
@@ -189,7 +297,7 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. Mode Switcher (Default Server AI vs Custom Keys)
+              // 1. Top Mode Selector (Default vs Custom)
               _buildSectionHeader('AI ENGINE MODE', isDark),
               const SizedBox(height: 8),
               Container(
@@ -204,14 +312,12 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
                     Expanded(
                       child: _buildModeTab(
                         title: 'Default (Server Cloud AI)',
-                        subtitle: 'Free & Ready to Use',
+                        subtitle: 'Zero Setup • Auto Ready',
                         isSelected: _aiMode == 'default',
                         icon: Icons.cloud_done_rounded,
                         accentColor: primaryColor,
                         isDark: isDark,
-                        onTap: () {
-                          setState(() => _aiMode = 'default');
-                        },
+                        onTap: () => _onSelectMode('default'),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -223,9 +329,7 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
                         icon: Icons.vpn_key_rounded,
                         accentColor: const Color(0xFF3B82F6),
                         isDark: isDark,
-                        onTap: () {
-                          setState(() => _aiMode = 'custom');
-                        },
+                        onTap: () => _onSelectMode('custom'),
                       ),
                     ),
                   ],
@@ -234,8 +338,9 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
 
               const SizedBox(height: 20),
 
-              // 2. Mode Explanation Card
+              // 2. Default Mode UI vs Custom Mode UI
               if (_aiMode == 'default') ...[
+                // Default Mode Card
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
@@ -254,7 +359,7 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
                               color: primaryColor.withOpacity(0.18),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(Icons.verified_rounded, color: primaryColor, size: 20),
+                            child: Icon(Icons.verified_rounded, color: primaryColor, size: 22),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -284,7 +389,7 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'You are connected to the official Cloud AI engine. Smart OCR Receipt Scanning, Multilingual Voice Expense Logging, Market Price Analyzer, and the Financial Advisor Chatbot work seamlessly out of the box.',
+                        'You are connected to the official Cloud AI engine. Smart OCR Receipt Scanning, Multilingual Voice Expense Logging, Mandi Price Analyzer, and the Financial Advisor Chatbot work seamlessly out of the box.',
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           height: 1.45,
@@ -300,7 +405,7 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              'If you experience traffic delays, switch to "Custom (My Own Keys)" anytime for dedicated personal quotas.',
+                              'If you experience high traffic delays, switch to "Custom (My Own Keys)" anytime for dedicated personal quotas.',
                               style: GoogleFonts.inter(
                                 fontSize: 11.5,
                                 color: isDark ? Colors.white60 : Colors.black54,
@@ -310,6 +415,24 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
                         ],
                       ),
                     ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Test Default Server AI Button
+                OutlinedButton.icon(
+                  onPressed: _checkDefaultServerStatus,
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: primaryColor.withOpacity(0.6)),
+                    foregroundColor: primaryColor,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  icon: const Icon(Icons.speed_rounded, size: 20),
+                  label: Text(
+                    'Test Default Server AI Latency',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                 ),
               ] else ...[
@@ -340,7 +463,7 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
                             ),
                             const SizedBox(height: 3),
                             Text(
-                              'Your personal API keys are encrypted and saved strictly on your local phone storage.',
+                              'Your personal API keys are encrypted and stored strictly on your local phone storage.',
                               style: GoogleFonts.inter(
                                 fontSize: 12,
                                 height: 1.4,
@@ -370,7 +493,7 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Select primary provider. The other provider will automatically serve as backup failover.',
+                        'Select primary provider. If one provider fails, the other will automatically serve as backup failover.',
                         style: GoogleFonts.inter(fontSize: 12, color: Colors.grey, height: 1.4),
                       ),
                       const SizedBox(height: 14),
@@ -452,6 +575,55 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
                   helpUrl: 'https://build.nvidia.com',
                   helpText: 'Get free NVIDIA NIM Key (nvapi-...) → build.nvidia.com',
                 ),
+
+                const SizedBox(height: 20),
+
+                // Custom Mode Action Buttons (Test & Save)
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _checkCustomConfigurationStatus,
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: primaryColor),
+                          foregroundColor: primaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        icon: const Icon(Icons.speed_rounded, size: 20),
+                        label: Text(
+                          'Test Keys',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        onPressed: _isSaving ? null : _saveCustomConfiguration,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          foregroundColor: Colors.black87,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 1,
+                        ),
+                        icon: _isSaving
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black87),
+                              )
+                            : const Icon(Icons.save_rounded, size: 20),
+                        label: Text(
+                          _isSaving ? 'Validating...' : 'Save & Verify',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
 
               const SizedBox(height: 20),
@@ -502,6 +674,7 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
                           onChanged: (val) {
                             if (val != null) {
                               setState(() => _responseLanguage = val);
+                              _aiService.setResponseLanguage(val);
                             }
                           },
                         ),
@@ -510,79 +683,6 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
                   ],
                 ),
               ),
-
-              const SizedBox(height: 28),
-
-              // 4. Action Buttons
-              if (_aiMode == 'custom') ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _checkConfigurationStatus,
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: primaryColor),
-                          foregroundColor: primaryColor,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                        icon: const Icon(Icons.speed_rounded, size: 20),
-                        label: Text(
-                          'Test Keys',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton.icon(
-                        onPressed: _isSaving ? null : _saveConfiguration,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryColor,
-                          foregroundColor: Colors.black87,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          elevation: 1,
-                        ),
-                        icon: _isSaving
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black87),
-                              )
-                            : const Icon(Icons.save_rounded, size: 20),
-                        label: Text(
-                          _isSaving ? 'Saving...' : 'Save Configuration',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ] else ...[
-                ElevatedButton.icon(
-                  onPressed: _isSaving ? null : _saveConfiguration,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.black87,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    elevation: 1,
-                  ),
-                  icon: _isSaving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black87),
-                        )
-                      : const Icon(Icons.check_circle_rounded, size: 20),
-                  label: Text(
-                    _isSaving ? 'Saving...' : 'Save & Use Default AI',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
-                ),
-              ],
 
               const SizedBox(height: 24),
             ],
@@ -980,25 +1080,27 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// TEST RESULTS DIALOG
+// TEST RESULTS DIALOG (Supports both Default Server AI and Custom Keys)
 // ══════════════════════════════════════════════════════════════════
 class _ConfigurationTestingDialog extends StatefulWidget {
   final AiConfigService aiService;
-  final String geminiKey;
-  final String geminiModel;
-  final String nvidiaKey;
-  final String nvidiaModel;
-  final String primary;
-  final String secondary;
+  final bool isDefaultServerTest;
+  final String? geminiKey;
+  final String? geminiModel;
+  final String? nvidiaKey;
+  final String? nvidiaModel;
+  final String? primary;
+  final String? secondary;
 
   const _ConfigurationTestingDialog({
     required this.aiService,
-    required this.geminiKey,
-    required this.geminiModel,
-    required this.nvidiaKey,
-    required this.nvidiaModel,
-    required this.primary,
-    required this.secondary,
+    required this.isDefaultServerTest,
+    this.geminiKey,
+    this.geminiModel,
+    this.nvidiaKey,
+    this.nvidiaModel,
+    this.primary,
+    this.secondary,
   });
 
   @override
@@ -1016,14 +1118,19 @@ class _ConfigurationTestingDialogState extends State<_ConfigurationTestingDialog
   }
 
   Future<void> _runCheck() async {
-    final res = await widget.aiService.checkCustomConfiguration(
-      testGeminiKey: widget.geminiKey,
-      testGeminiModel: widget.geminiModel,
-      testNvidiaKey: widget.nvidiaKey,
-      testNvidiaModel: widget.nvidiaModel,
-      testPrimary: widget.primary,
-      testSecondary: widget.secondary,
-    );
+    List<ModelCheckResult> res;
+    if (widget.isDefaultServerTest) {
+      res = await widget.aiService.checkDefaultServerConfiguration();
+    } else {
+      res = await widget.aiService.checkCustomConfiguration(
+        testGeminiKey: widget.geminiKey,
+        testGeminiModel: widget.geminiModel,
+        testNvidiaKey: widget.nvidiaKey,
+        testNvidiaModel: widget.nvidiaModel,
+        testPrimary: widget.primary,
+        testSecondary: widget.secondary,
+      );
+    }
 
     if (mounted) {
       setState(() {
@@ -1051,7 +1158,7 @@ class _ConfigurationTestingDialogState extends State<_ConfigurationTestingDialog
                 Icon(Icons.speed_rounded, color: const Color(0xFF00D09C), size: 24),
                 const SizedBox(width: 10),
                 Text(
-                  'AI Key Validation',
+                  widget.isDefaultServerTest ? 'Server AI Connection' : 'Custom AI Validation',
                   style: GoogleFonts.outfit(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -1066,7 +1173,9 @@ class _ConfigurationTestingDialogState extends State<_ConfigurationTestingDialog
               const Center(child: CircularProgressIndicator(color: Color(0xFF00D09C))),
               const SizedBox(height: 16),
               Text(
-                'Testing live connection to AI models...',
+                widget.isDefaultServerTest
+                    ? 'Pinging default cloud AI models & checking latency...'
+                    : 'Testing live connection to AI models with multi-model fallback...',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(fontSize: 13, color: Colors.grey),
               ),
@@ -1104,7 +1213,7 @@ class _ConfigurationTestingDialogState extends State<_ConfigurationTestingDialog
                               ),
                             ),
                           ),
-                          if (isSuccess)
+                          if (isSuccess && r.latencyMs > 0)
                             Text(
                               '${r.latencyMs}ms',
                               style: GoogleFonts.inter(

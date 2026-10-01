@@ -432,6 +432,52 @@ class AiConfigService with ChangeNotifier {
   }
 
   // ─────────────────────────────────────────────────────────
+  // TEST DEFAULT SERVER AI CONFIGURATION
+  // ─────────────────────────────────────────────────────────
+  Future<List<ModelCheckResult>> checkDefaultServerConfiguration() async {
+    // Ensure remote config is fetched
+    if (_defaultGeminiApiKey.isEmpty && _defaultNvidiaApiKey.isEmpty) {
+      await fetchRemoteDefaultConfig(force: true);
+    }
+
+    final results = <ModelCheckResult>[];
+
+    // 1. Check Default Gemini Server AI
+    final geminiKey = _defaultGeminiApiKey.isNotEmpty ? _defaultGeminiApiKey : effectiveGeminiApiKey;
+    final geminiModel = _defaultGeminiModel.isNotEmpty ? _defaultGeminiModel : 'gemini-2.5-flash';
+    if (geminiKey.isNotEmpty) {
+      final res = await _testGeminiApiKeyAndModel(geminiKey, geminiModel, role: 'Primary Server Cloud Engine');
+      results.add(res);
+    } else {
+      results.add(ModelCheckResult(
+        provider: 'Google Gemini (Server Cloud)',
+        modelName: geminiModel,
+        isWorking: false,
+        latencyMs: 0,
+        message: 'Connecting to Cloud Configuration...',
+      ));
+    }
+
+    // 2. Check Default NVIDIA Server AI (Backup)
+    final nvidiaKey = _defaultNvidiaApiKey.isNotEmpty ? _defaultNvidiaApiKey : effectiveNvidiaApiKey;
+    final nvidiaModel = _defaultNvidiaModel.isNotEmpty ? _defaultNvidiaModel : 'meta/llama-3.2-11b-vision-instruct';
+    if (nvidiaKey.isNotEmpty) {
+      final res = await _testNvidiaApiKeyAndModel(nvidiaKey, nvidiaModel, role: 'Backup Server Cloud Engine');
+      results.add(res);
+    } else {
+      results.add(ModelCheckResult(
+        provider: 'NVIDIA NIM (Server Cloud Backup)',
+        modelName: nvidiaModel,
+        isWorking: false,
+        latencyMs: 0,
+        message: 'Connecting to Cloud Configuration...',
+      ));
+    }
+
+    return results;
+  }
+
+  // ─────────────────────────────────────────────────────────
   // TEST CUSTOM AI CONFIGURATION (Primary & Secondary)
   // ─────────────────────────────────────────────────────────
   Future<List<ModelCheckResult>> checkCustomConfiguration({
@@ -495,147 +541,196 @@ class AiConfigService with ChangeNotifier {
     return results;
   }
 
-  // Helper: Live Gemini Verification
+  // Helper: Live Gemini Verification with model failover fallback
   Future<ModelCheckResult> _testGeminiApiKeyAndModel(String apiKey, String modelName, {required String role}) async {
-    final stopwatch = Stopwatch()..start();
-    try {
-      final url = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/$modelName:generateContent?key=$apiKey',
-      );
-      final body = json.encode({
-        'contents': [
-          {
-            'parts': [
-              {'text': 'Hello, reply with only the word OK.'}
-            ]
-          }
-        ],
-        'generationConfig': {
-          'maxOutputTokens': 5,
-        }
-      });
-
-      final response = await http
-          .post(
-            url,
-            headers: {'Content-Type': 'application/json'},
-            body: body,
-          )
-          .timeout(const Duration(seconds: 12));
-
-      stopwatch.stop();
-
-      if (response.statusCode == 200) {
-        return ModelCheckResult(
-          provider: 'Google Gemini ($role)',
-          modelName: modelName,
-          isWorking: true,
-          latencyMs: stopwatch.elapsedMilliseconds,
-          message: 'Key validated & model responded successfully!',
-        );
-      } else {
-        String errorDesc = 'Error HTTP ${response.statusCode}';
-        try {
-          final jsonMap = json.decode(response.body);
-          if (jsonMap['error'] != null && jsonMap['error']['message'] != null) {
-            errorDesc = jsonMap['error']['message'].toString();
-          }
-        } catch (_) {
-          errorDesc = response.body;
-        }
-
-        return ModelCheckResult(
-          provider: 'Google Gemini ($role)',
-          modelName: modelName,
-          isWorking: false,
-          latencyMs: stopwatch.elapsedMilliseconds,
-          message: 'Failed: $errorDesc',
-          errorDetails: response.body,
-        );
-      }
-    } catch (e) {
-      stopwatch.stop();
-      return ModelCheckResult(
-        provider: 'Google Gemini ($role)',
-        modelName: modelName,
-        isWorking: false,
-        latencyMs: stopwatch.elapsedMilliseconds,
-        message: 'Network / Connection error: $e',
-        errorDetails: e.toString(),
-      );
+    final candidateModels = <String>[modelName];
+    for (final m in availableGeminiModels) {
+      if (!candidateModels.contains(m)) candidateModels.add(m);
     }
-  }
 
-  // Helper: Live NVIDIA NIM Verification
-  Future<ModelCheckResult> _testNvidiaApiKeyAndModel(String apiKey, String modelName, {required String role}) async {
     final stopwatch = Stopwatch()..start();
-    try {
-      final url = Uri.parse('https://integrate.api.nvidia.com/v1/chat/completions');
-      final body = json.encode({
-        'model': modelName,
-        'messages': [
-          {'role': 'user', 'content': 'Hello, reply with only the word OK.'}
-        ],
-        'max_tokens': 5,
-        'temperature': 0.1,
-      });
+    String? lastError;
+    int lastStatusCode = 0;
 
-      final response = await http
-          .post(
-            url,
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $apiKey',
-            },
-            body: body,
-          )
-          .timeout(const Duration(seconds: 12));
-
-      stopwatch.stop();
-
-      if (response.statusCode == 200) {
-        return ModelCheckResult(
-          provider: 'NVIDIA NIM ($role)',
-          modelName: modelName,
-          isWorking: true,
-          latencyMs: stopwatch.elapsedMilliseconds,
-          message: 'Key validated & model responded successfully!',
+    for (final currentModel in candidateModels) {
+      try {
+        final url = Uri.parse(
+          'https://generativelanguage.googleapis.com/v1beta/models/$currentModel:generateContent?key=$apiKey',
         );
-      } else {
-        String errorDesc = 'Error HTTP ${response.statusCode}';
-        try {
-          final jsonMap = json.decode(response.body);
-          if (jsonMap['error'] != null) {
-            if (jsonMap['error'] is Map && jsonMap['error']['message'] != null) {
-              errorDesc = jsonMap['error']['message'].toString();
-            } else {
-              errorDesc = jsonMap['error'].toString();
+        final body = json.encode({
+          'contents': [
+            {
+              'parts': [
+                {'text': 'Hello, reply with only the word OK.'}
+              ]
+            }
+          ],
+          'generationConfig': {
+            'maxOutputTokens': 5,
+          }
+        });
+
+        final response = await http
+            .post(
+              url,
+              headers: {'Content-Type': 'application/json'},
+              body: body,
+            )
+            .timeout(const Duration(seconds: 12));
+
+        lastStatusCode = response.statusCode;
+
+        if (response.statusCode == 200) {
+          stopwatch.stop();
+          return ModelCheckResult(
+            provider: 'Google Gemini ($role)',
+            modelName: currentModel,
+            isWorking: true,
+            latencyMs: stopwatch.elapsedMilliseconds,
+            message: currentModel == modelName 
+                ? 'Key validated & model responded successfully! (HTTP 200)'
+                : 'Key validated via fallback model: $currentModel (HTTP 200)',
+          );
+        } else {
+          try {
+            final jsonMap = json.decode(response.body);
+            if (jsonMap['error'] != null && jsonMap['error']['message'] != null) {
+              lastError = jsonMap['error']['message'].toString();
+            }
+          } catch (_) {
+            lastError = response.body;
+          }
+
+          // If key is definitely invalid (400 / 401), stop immediately (no point checking other models)
+          if (response.statusCode == 400 || response.statusCode == 401) {
+            final errLower = (lastError ?? '').toLowerCase();
+            if (errLower.contains('api_key_invalid') || errLower.contains('invalid api key') || errLower.contains('api key not valid')) {
+              stopwatch.stop();
+              return ModelCheckResult(
+                provider: 'Google Gemini ($role)',
+                modelName: currentModel,
+                isWorking: false,
+                latencyMs: stopwatch.elapsedMilliseconds,
+                message: 'Invalid API Key. Please check your Gemini API key from Google AI Studio.',
+                errorDetails: lastError,
+              );
             }
           }
-        } catch (_) {
-          errorDesc = response.body;
         }
-
-        return ModelCheckResult(
-          provider: 'NVIDIA NIM ($role)',
-          modelName: modelName,
-          isWorking: false,
-          latencyMs: stopwatch.elapsedMilliseconds,
-          message: 'Failed: $errorDesc',
-          errorDetails: response.body,
-        );
+      } catch (e) {
+        lastError = e.toString();
       }
-    } catch (e) {
-      stopwatch.stop();
-      return ModelCheckResult(
-        provider: 'NVIDIA NIM ($role)',
-        modelName: modelName,
-        isWorking: false,
-        latencyMs: stopwatch.elapsedMilliseconds,
-        message: 'Network / Connection error: $e',
-        errorDetails: e.toString(),
-      );
     }
+
+    stopwatch.stop();
+    final errLower = (lastError ?? '').toLowerCase();
+    final isRateLimit = lastStatusCode == 429 || errLower.contains('quota') || errLower.contains('rate limit') || errLower.contains('resource_exhausted');
+
+    return ModelCheckResult(
+      provider: 'Google Gemini ($role)',
+      modelName: modelName,
+      isWorking: isRateLimit, // Mark as usable if it's just a temporary rate limit
+      latencyMs: stopwatch.elapsedMilliseconds,
+      message: isRateLimit 
+          ? 'Key is valid (currently high demand / rate-limited).'
+          : 'Failed: ${lastError ?? "HTTP $lastStatusCode"}',
+      errorDetails: lastError,
+    );
+  }
+
+  // Helper: Live NVIDIA NIM Verification with model failover fallback
+  Future<ModelCheckResult> _testNvidiaApiKeyAndModel(String apiKey, String modelName, {required String role}) async {
+    final candidateModels = <String>[modelName];
+    for (final m in availableNvidiaModels) {
+      if (!candidateModels.contains(m)) candidateModels.add(m);
+    }
+
+    final stopwatch = Stopwatch()..start();
+    String? lastError;
+    int lastStatusCode = 0;
+
+    for (final currentModel in candidateModels) {
+      try {
+        final url = Uri.parse('https://integrate.api.nvidia.com/v1/chat/completions');
+        final body = json.encode({
+          'model': currentModel,
+          'messages': [
+            {'role': 'user', 'content': 'Hello, reply with only the word OK.'}
+          ],
+          'max_tokens': 5,
+          'temperature': 0.1,
+        });
+
+        final response = await http
+            .post(
+              url,
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer $apiKey',
+              },
+              body: body,
+            )
+            .timeout(const Duration(seconds: 12));
+
+        lastStatusCode = response.statusCode;
+
+        if (response.statusCode == 200) {
+          stopwatch.stop();
+          return ModelCheckResult(
+            provider: 'NVIDIA NIM ($role)',
+            modelName: currentModel,
+            isWorking: true,
+            latencyMs: stopwatch.elapsedMilliseconds,
+            message: currentModel == modelName
+                ? 'Key validated & model responded successfully! (HTTP 200)'
+                : 'Key validated via fallback model: $currentModel (HTTP 200)',
+          );
+        } else {
+          try {
+            final jsonMap = json.decode(response.body);
+            if (jsonMap['error'] != null) {
+              if (jsonMap['error'] is Map && jsonMap['error']['message'] != null) {
+                lastError = jsonMap['error']['message'].toString();
+              } else {
+                lastError = jsonMap['error'].toString();
+              }
+            }
+          } catch (_) {
+            lastError = response.body;
+          }
+
+          // If invalid authorization / 401, stop immediately
+          if (response.statusCode == 401 || response.statusCode == 403) {
+            stopwatch.stop();
+            return ModelCheckResult(
+              provider: 'NVIDIA NIM ($role)',
+              modelName: currentModel,
+              isWorking: false,
+              latencyMs: stopwatch.elapsedMilliseconds,
+              message: 'Invalid NVIDIA API Key. Please verify your nvapi-... key from build.nvidia.com.',
+              errorDetails: lastError,
+            );
+          }
+        }
+      } catch (e) {
+        lastError = e.toString();
+      }
+    }
+
+    stopwatch.stop();
+    final errLower = (lastError ?? '').toLowerCase();
+    final isRateLimit = lastStatusCode == 429 || errLower.contains('quota') || errLower.contains('rate limit') || errLower.contains('429');
+
+    return ModelCheckResult(
+      provider: 'NVIDIA NIM ($role)',
+      modelName: modelName,
+      isWorking: isRateLimit,
+      latencyMs: stopwatch.elapsedMilliseconds,
+      message: isRateLimit
+          ? 'Key is valid (currently high demand / rate-limited).'
+          : 'Failed: ${lastError ?? "HTTP $lastStatusCode"}',
+      errorDetails: lastError,
+    );
   }
 
   // ─────────────────────────────────────────────────────────
@@ -862,7 +957,7 @@ JSON structure:
             url,
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': 'Bearer $_nvidiaApiKey',
+              'Authorization': 'Bearer $key',
             },
             body: json.encode(payload),
           ).timeout(const Duration(seconds: 30));
