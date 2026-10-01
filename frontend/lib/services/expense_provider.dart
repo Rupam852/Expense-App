@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
@@ -16,7 +17,6 @@ import '../models/split_bill.dart';
 import '../models/subscription_item.dart';
 import 'ai_config_service.dart';
 import 'notification_service.dart';
-
 
 class ExpenseProvider with ChangeNotifier {
   final _dbHelper = DatabaseHelper.instance;
@@ -56,6 +56,7 @@ class ExpenseProvider with ChangeNotifier {
 
   bool _isLoading = false;
   bool _isSyncing = false;
+  bool _isQuietSyncing = false;
   String? _syncErrorMessage;
   String? _lastSyncTime;
 
@@ -189,9 +190,6 @@ class ExpenseProvider with ChangeNotifier {
       _splitBills = await _dbHelper.getSplitBills();
       _subscriptions = await _dbHelper.getSubscriptions();
       _syncErrorMessage = null;
-
-      // Auto-deduplicate local cached expenses on startup
-      await deduplicateExpenses(triggerSync: true);
 
       // Check subscriptions, budgets and khata reminders on app load
       NotificationService.instance.checkAndNotifyDueSubscriptions(_subscriptions);
@@ -1042,7 +1040,12 @@ class ExpenseProvider with ChangeNotifier {
   // SYNC (SQLite ↔ Supabase)
   // ──────────────────────────────────────────────────────
   Future<bool> triggerQuietSync() async {
+    if (_isQuietSyncing || _isSyncing) return false;
+    _isQuietSyncing = true;
+
     try {
+      if (await _checkIfGuest()) return false;
+
       final unsyncedExps = await _dbHelper.getUnsyncedExpenses();
       final unsyncedBuds = await _dbHelper.getUnsyncedBudgets();
       final unsyncedPays = await _dbHelper.getUnsyncedPaymentDetails();
@@ -1114,8 +1117,6 @@ class ExpenseProvider with ChangeNotifier {
         await _dbHelper.syncDownSubscriptions(serverSubs.map((s) => SubscriptionItem.fromMap(Map<String, dynamic>.from(s))).toList());
         await _dbHelper.syncDownSplitBills(serverSplits.map((sb) => SplitBill.fromMap(Map<String, dynamic>.from(sb))).toList());
 
-        // Deduplicate local cached expenses after pulling from Supabase
-        await deduplicateExpenses(triggerSync: false);
         _lastSyncTime = prefs.getString('last_sync_time');
       }
 
@@ -1130,6 +1131,8 @@ class ExpenseProvider with ChangeNotifier {
     } catch (e) {
       print('[Sync] Quiet sync error (offline?): $e');
       return false;
+    } finally {
+      _isQuietSyncing = false;
     }
   }
 
@@ -1399,12 +1402,16 @@ class ExpenseProvider with ChangeNotifier {
   }
 
   // ──────────────────────────────────────────────────────
-  // UUID GENERATOR
+  // UUID GENERATOR (RFC 4122 v4 Cryptographically Secure)
   // ──────────────────────────────────────────────────────
+  static final Random _secureRandom = Random.secure();
+
   String cryptoUuid() {
-    return DateTime.now().millisecondsSinceEpoch.toString() +
-        '-' +
-        (100000 + (900000 * (DateTime.now().microsecond / 1000000))).toInt().toString();
+    final bytes = List<int>.generate(16, (_) => _secureRandom.nextInt(256));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40; // Version 4
+    bytes[8] = (bytes[8] & 0x3f) | 0x80; // Variant RFC 4122
+    final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20, 32)}';
   }
 }
 
