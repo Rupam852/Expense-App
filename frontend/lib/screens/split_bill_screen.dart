@@ -1403,7 +1403,7 @@ class _AddSplitBillSheetState extends State<_AddSplitBillSheet> {
                 Text(
                   _isPaidByMe
                       ? 'SPLIT WITH (YOU + FRIENDS)'
-                      : 'PARTICIPANTS SPLITTING WITH (YOU + PAYER)',
+                      : 'SPLIT WITH (YOU + PAYER + FRIENDS)',
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
