@@ -13,6 +13,7 @@ import '../services/app_update_service.dart';
 import 'app_update_screen.dart';
 import 'about_screen.dart';
 import 'notification_settings_screen.dart';
+import '../widgets/report_issue_modal.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -1088,6 +1089,34 @@ class SettingsScreen extends StatelessWidget {
                             Navigator.of(context).push(
                               MaterialPageRoute(builder: (_) => const AboutScreen()),
                             );
+                          },
+                        ),
+                        Divider(height: 1, color: borderColor),
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.support_agent_rounded,
+                              color: Color(0xFFF59E0B),
+                              size: 22,
+                            ),
+                          ),
+                          title: Text(
+                            'Help & Problem Report',
+                            style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                          ),
+                          subtitle: Text(
+                            'Encountered an error or bug? Contact developer directly',
+                            style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                          ),
+                          trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+                          onTap: () {
+                            ReportIssueModal.show(context, category: 'General Bug / Feedback');
                           },
                         ),
                         Divider(height: 1, color: borderColor),

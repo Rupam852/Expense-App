@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../screens/ai_config_screen.dart';
 import '../services/ai_config_service.dart';
+import 'report_issue_modal.dart';
 
 /// Checks if AI service has active keys. With Server Remote Config, default AI is active out of the box.
 /// Returns `true` if AI is available.
@@ -38,9 +39,9 @@ void showAiConfigRequiredDialog(BuildContext context) {
                   width: 64,
                   height: 64,
                   decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.12),
+                    color: primaryColor.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
-                    border: Border.all(color: primaryColor.withOpacity(0.3), width: 1.5),
+                    border: Border.all(color: primaryColor.withValues(alpha: 0.3), width: 1.5),
                   ),
                   child: Icon(
                     Icons.psychology_alt_rounded,
@@ -123,6 +124,24 @@ void showAiConfigRequiredDialog(BuildContext context) {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: TextButton.icon(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    ReportIssueModal.show(
+                      context,
+                      category: 'AI Assistant / Models',
+                      initialMessage: 'I need assistance setting up AI Configuration in Grow Expense.',
+                    );
+                  },
+                  icon: const Icon(Icons.help_outline_rounded, size: 15, color: Colors.grey),
+                  label: Text(
+                    'Need Help? Contact Support',
+                    style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey),
+                  ),
+                ),
               ),
             ],
           ),
@@ -264,6 +283,24 @@ void showAiServerBusyDialog(BuildContext context, {VoidCallback? onRetry}) {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: TextButton.icon(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    ReportIssueModal.show(
+                      context,
+                      category: 'AI Assistant / Models',
+                      initialMessage: 'Encountered AI server high traffic or rate limits in Grow Expense.',
+                    );
+                  },
+                  icon: const Icon(Icons.help_outline_rounded, size: 15, color: Colors.grey),
+                  label: Text(
+                    'Need Help? Report to Support',
+                    style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey),
+                  ),
+                ),
               ),
             ],
           ),

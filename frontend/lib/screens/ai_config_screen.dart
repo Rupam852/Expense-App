@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/ai_config_service.dart';
 import '../widgets/custom_toast.dart';
+import '../widgets/report_issue_modal.dart';
 
 class AiConfigScreen extends StatefulWidget {
   const AiConfigScreen({super.key});
@@ -291,6 +292,18 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
               color: isDark ? Colors.white : Colors.black87,
             ),
           ),
+          actions: [
+            IconButton(
+              tooltip: 'Help & Support',
+              icon: Icon(Icons.help_outline_rounded, color: isDark ? Colors.white70 : Colors.black87),
+              onPressed: () {
+                ReportIssueModal.show(
+                  context,
+                  category: 'AI Assistant / Models',
+                );
+              },
+            ),
+          ],
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -1253,6 +1266,31 @@ class _ConfigurationTestingDialogState extends State<_ConfigurationTestingDialog
                 ),
                 child: Text('Done', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
               ),
+              if (_results != null && _results!.any((r) => !r.isSuccess)) ...[
+                const SizedBox(height: 6),
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () {
+                      final failedLogs = _results!
+                          .where((r) => !r.isSuccess)
+                          .map((r) => '${r.provider} (${r.modelName}): ${r.message}')
+                          .join('\n');
+                      Navigator.of(context).pop();
+                      ReportIssueModal.show(
+                        context,
+                        category: 'AI Assistant / Models',
+                        initialError: failedLogs,
+                        initialMessage: 'My AI test run encountered an error.',
+                      );
+                    },
+                    icon: const Icon(Icons.help_outline_rounded, size: 15, color: Colors.grey),
+                    label: Text(
+                      'Tests Failed? Contact Support',
+                      style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ],
         ),
