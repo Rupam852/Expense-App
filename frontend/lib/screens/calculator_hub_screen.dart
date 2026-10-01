@@ -39,14 +39,14 @@ const List<CalcVoiceLanguage> kSupportedCalcVoiceLanguages = [
     code: 'en_IN',
     name: 'English',
     nativeName: 'English (India)',
-    flag: '🇬🇧',
+    flag: '🇮🇳',
     sampleHint: 'e.g. "Potato 30 per kg, onion 50 per 2 kg, tomato 20 per 500g"',
   ),
   CalcVoiceLanguage(
     code: 'bn_IN',
     name: 'Bengali',
-    nativeName: 'বাংলা',
-    flag: '🇧🇩',
+    nativeName: 'বাংলা (ভারত)',
+    flag: '🇮🇳',
     sampleHint: 'যেমন: "আলু ৩০ টাকা কেজি, পেঁয়াজ ৫০ টাকা ২ কেজি, পটল ২০ টাকা ৫০০ গ্রাম"',
   ),
   CalcVoiceLanguage(
@@ -100,6 +100,310 @@ const List<CalcVoiceLanguage> kSupportedCalcVoiceLanguages = [
   ),
 ];
 
+// ═══════════════════════════════════════════════════════════════════════════
+// LOCALIZATION STRINGS FOR FINANCIAL CALCULATOR HUB
+// ═══════════════════════════════════════════════════════════════════════════
+
+class CalcHubStrings {
+  final String hubTitle;
+  final String tabStandard;
+  final String tabMarket;
+  final String tabEmi;
+  final String tabDaily;
+  final String tabHistory;
+
+  // Market Price
+  final String manualRate;
+  final String aiVoice;
+  final String vegGroceryRateInput;
+  final String itemNameOptional;
+  final String basePrice;
+  final String forQty;
+  final String unit;
+  final String stdUnitRate;
+  final String quickBreakdown;
+  final String customCalc;
+  final String wantToBuy;
+  final String budgetLabel;
+  final String youWillGet;
+  final String saveHistory;
+  final String aiVoiceAnalyzer;
+  final String tapMicToSpeak;
+  final String listeningNow;
+  final String processingAi;
+
+  // EMI Loan
+  final String monthlyEmi;
+  final String totalInterest;
+  final String totalAmount;
+  final String principal;
+  final String interest;
+  final String loanAmount;
+  final String interestRatePa;
+  final String loanTenure;
+  final String years;
+  final String months;
+  final String tapToEdit;
+  final String enterAmount;
+  final String enterRate;
+  final String enterTenure;
+  final String apply;
+  final String cancel;
+
+  // Daily Tools
+  final String gstTax;
+  final String discount;
+  final String sipWealth;
+  final String addGst;
+  final String removeGst;
+  final String originalPrice;
+  final String discountPercent;
+  final String finalPrice;
+  final String youSave;
+  final String monthlySip;
+  final String returnRatePa;
+  final String sipPeriod;
+  final String investedAmount;
+  final String estReturns;
+  final String totalFutureValue;
+
+  const CalcHubStrings({
+    required this.hubTitle,
+    required this.tabStandard,
+    required this.tabMarket,
+    required this.tabEmi,
+    required this.tabDaily,
+    required this.tabHistory,
+    required this.manualRate,
+    required this.aiVoice,
+    required this.vegGroceryRateInput,
+    required this.itemNameOptional,
+    required this.basePrice,
+    required this.forQty,
+    required this.unit,
+    required this.stdUnitRate,
+    required this.quickBreakdown,
+    required this.customCalc,
+    required this.wantToBuy,
+    required this.budgetLabel,
+    required this.youWillGet,
+    required this.saveHistory,
+    required this.aiVoiceAnalyzer,
+    required this.tapMicToSpeak,
+    required this.listeningNow,
+    required this.processingAi,
+    required this.monthlyEmi,
+    required this.totalInterest,
+    required this.totalAmount,
+    required this.principal,
+    required this.interest,
+    required this.loanAmount,
+    required this.interestRatePa,
+    required this.loanTenure,
+    required this.years,
+    required this.months,
+    required this.tapToEdit,
+    required this.enterAmount,
+    required this.enterRate,
+    required this.enterTenure,
+    required this.apply,
+    required this.cancel,
+    required this.gstTax,
+    required this.discount,
+    required this.sipWealth,
+    required this.addGst,
+    required this.removeGst,
+    required this.originalPrice,
+    required this.discountPercent,
+    required this.finalPrice,
+    required this.youSave,
+    required this.monthlySip,
+    required this.returnRatePa,
+    required this.sipPeriod,
+    required this.investedAmount,
+    required this.estReturns,
+    required this.totalFutureValue,
+  });
+
+  static CalcHubStrings of(String langCode) {
+    if (langCode.startsWith('bn')) {
+      return const CalcHubStrings(
+        hubTitle: 'ফিনান্সিয়াল ক্যালকুলেটর হাব',
+        tabStandard: 'সাধারণ',
+        tabMarket: 'বাজার দর',
+        tabEmi: 'ঋণ / ইএমআই',
+        tabDaily: 'দৈনিক টুলস',
+        tabHistory: 'ইতিহাস',
+        manualRate: 'ম্যানুয়াল রেট',
+        aiVoice: 'এআই ভয়েস দর ✨',
+        vegGroceryRateInput: 'সবজি ও মুদি দর ইনপুট',
+        itemNameOptional: 'আইটেমের নাম (ঐচ্ছিক)',
+        basePrice: 'দাম (₹)',
+        forQty: 'পরিমাণ',
+        unit: 'একক',
+        stdUnitRate: 'আদর্শ একক দর',
+        quickBreakdown: 'দ্রুত পরিমাণের মূল্য তালিকা',
+        customCalc: 'কাস্টম পরিমাণ ও বাজেট হিসাব',
+        wantToBuy: 'আমি কিনতে চাই',
+        budgetLabel: 'আমার বাজেট আছে (₹)',
+        youWillGet: 'আপনি পাবেন',
+        saveHistory: 'ইতিহাসে সংরক্ষণ',
+        aiVoiceAnalyzer: 'এআই মাণ্ডি ভয়েস রেট অ্যানালাইজার',
+        tapMicToSpeak: 'মাইক স্পর্শ করে বাজারের দর বলুন',
+        listeningNow: 'শুনছি... এখন বলুন',
+        processingAi: 'এআই বিশ্লেষণ করছে...',
+        monthlyEmi: 'মাসিক ইএমআই (EMI)',
+        totalInterest: 'মোট সুদ',
+        totalAmount: 'মোট পরিশোধ',
+        principal: 'আসল',
+        interest: 'সুদ',
+        loanAmount: 'ঋণের পরিমাণ',
+        interestRatePa: 'সুদের হার (% বার্ষিক)',
+        loanTenure: 'ঋণের সময়কাল',
+        years: 'বছর',
+        months: 'মাস',
+        tapToEdit: 'সরাসরি মান লিখতে স্পর্শ করুন',
+        enterAmount: 'ঋণের পরিমাণ লিখুন',
+        enterRate: 'সুদের হার লিখুন (%)',
+        enterTenure: 'সময়কাল লিখুন',
+        apply: 'প্রয়োগ করুন',
+        cancel: 'বাতিল',
+        gstTax: 'জিএসটি কর',
+        discount: 'ছাড় / ডিসকাউন্ট',
+        sipWealth: 'এসআইপি সম্পদ',
+        addGst: 'জিএসটি যোগ (+)',
+        removeGst: 'জিএসটি বাদ (-)',
+        originalPrice: 'আসল দাম',
+        discountPercent: 'ছাড় (%)',
+        finalPrice: 'ছাড়ের পর দাম',
+        youSave: 'আপনার সাশ্রয়',
+        monthlySip: 'মাসিক বিনিয়োগ',
+        returnRatePa: 'প্রত্যাশিত লাভ (% বার্ষিক)',
+        sipPeriod: 'বিনিয়োগের সময়কাল',
+        investedAmount: 'বিনিয়োগকৃত অর্থ',
+        estReturns: 'আনুমানিক লাভ',
+        totalFutureValue: 'মোট ভবিষ্যৎ মূল্য',
+      );
+    } else if (langCode.startsWith('hi') || langCode == 'hinglish') {
+      return const CalcHubStrings(
+        hubTitle: 'फाइनेंशियल कैलकुलेटर हब',
+        tabStandard: 'साधारण',
+        tabMarket: 'मंडी भाव',
+        tabEmi: 'ईएमआई लोन',
+        tabDaily: 'दैनिक टूल्स',
+        tabHistory: 'इतिहास',
+        manualRate: 'मैन्युअल दर',
+        aiVoice: 'एआई वॉइस भाव ✨',
+        vegGroceryRateInput: 'सब्जी व किराना दर इनपुट',
+        itemNameOptional: 'सामग्री का नाम (वैकल्पिक)',
+        basePrice: 'मूल्य (₹)',
+        forQty: 'मात्रा के लिए',
+        unit: 'इकाई',
+        stdUnitRate: 'मानक इकाई दर',
+        quickBreakdown: 'त्वरित मात्रा मूल्य विवरण',
+        customCalc: 'कस्टम मात्रा व बजट हिसाब',
+        wantToBuy: 'मुझे खरीदना है',
+        budgetLabel: 'मेरा बजट है (₹)',
+        youWillGet: 'आपको मिलेगा',
+        saveHistory: 'इतिहास में सहेजें',
+        aiVoiceAnalyzer: 'एआई मंडी भाव वॉइस एनालाइज़र',
+        tapMicToSpeak: 'माइक दबाएं और मंडी के भाव बोलें',
+        listeningNow: 'सुन रहा है... अब बोलें',
+        processingAi: 'एआई प्रोसेस कर रहा है...',
+        monthlyEmi: 'मासिक ईएमआई (EMI)',
+        totalInterest: 'कुल ब्याज',
+        totalAmount: 'कुल भुगतान',
+        principal: 'मूलधन',
+        interest: 'ब्याज',
+        loanAmount: 'लोन राशि',
+        interestRatePa: 'ब्याज दर (% वार्षिक)',
+        loanTenure: 'लोन की अवधि',
+        years: 'वर्ष',
+        months: 'महीने',
+        tapToEdit: 'सीधा मान दर्ज करने के लिए टैप करें',
+        enterAmount: 'लोन राशि दर्ज करें',
+        enterRate: 'ब्याज दर दर्ज करें (%)',
+        enterTenure: 'अवधि दर्ज करें',
+        apply: 'लागू करें',
+        cancel: 'रद्द करें',
+        gstTax: 'जीएसटी टैक्स',
+        discount: 'छूट / डिस्काउंट',
+        sipWealth: 'एसआईपी वेल्थ',
+        addGst: 'जीएसटी जोड़ें (+)',
+        removeGst: 'जीएसटी घटाएं (-)',
+        originalPrice: 'मूल मूल्य',
+        discountPercent: 'छूट (%)',
+        finalPrice: 'छूट के बाद अंतिम मूल्य',
+        youSave: 'आपकी बचत',
+        monthlySip: 'मासिक निवेश',
+        returnRatePa: 'अपेक्षित रिटर्न दर (%)',
+        sipPeriod: 'निवेश की अवधि',
+        investedAmount: 'निवेश की गई राशि',
+        estReturns: 'अनुमानित रिटर्न',
+        totalFutureValue: 'कुल भविष्य मूल्य',
+      );
+    }
+
+    return const CalcHubStrings(
+      hubTitle: 'Financial Calculators Hub',
+      tabStandard: 'Standard',
+      tabMarket: 'Market Price',
+      tabEmi: 'EMI Loan',
+      tabDaily: 'Daily Tools',
+      tabHistory: 'History',
+      manualRate: 'Manual Unit Rate',
+      aiVoice: 'AI Mandi Voice ✨',
+      vegGroceryRateInput: 'Vegetable / Grocery Rate Input',
+      itemNameOptional: 'Item Name (Optional)',
+      basePrice: 'Price (₹)',
+      forQty: 'Qty',
+      unit: 'Unit',
+      stdUnitRate: 'STANDARD UNIT RATE',
+      quickBreakdown: 'Quick Quantity Price Breakdown',
+      customCalc: 'Custom Quantity & Budget Calc',
+      wantToBuy: 'I want to buy',
+      budgetLabel: 'I have budget (₹)',
+      youWillGet: 'You will get',
+      saveHistory: 'Save to History',
+      aiVoiceAnalyzer: 'AI Mandi Rate Voice Analyzer',
+      tapMicToSpeak: 'Tap Mic & Speak Market Rates',
+      listeningNow: 'Listening... Speak now',
+      processingAi: 'Analyzing with AI...',
+      monthlyEmi: 'MONTHLY EMI',
+      totalInterest: 'Total Interest',
+      totalAmount: 'Total Amount',
+      principal: 'Principal',
+      interest: 'Interest',
+      loanAmount: 'Loan Amount',
+      interestRatePa: 'Interest Rate (% p.a.)',
+      loanTenure: 'Loan Tenure',
+      years: 'Years',
+      months: 'Months',
+      tapToEdit: 'Tap to edit exact value',
+      enterAmount: 'Enter Loan Amount',
+      enterRate: 'Enter Interest Rate (%)',
+      enterTenure: 'Enter Loan Tenure',
+      apply: 'Apply',
+      cancel: 'Cancel',
+      gstTax: 'GST Tax',
+      discount: 'Discount',
+      sipWealth: 'SIP Wealth',
+      addGst: 'Add GST (+)',
+      removeGst: 'Remove GST (-)',
+      originalPrice: 'Original Price',
+      discountPercent: 'Discount (%)',
+      finalPrice: 'Final Discounted Price',
+      youSave: 'You Save',
+      monthlySip: 'Monthly Investment',
+      returnRatePa: 'Expected Return Rate (% p.a.)',
+      sipPeriod: 'Investment Period',
+      investedAmount: 'Invested Amount',
+      estReturns: 'Est. Returns',
+      totalFutureValue: 'Total Future Value',
+    );
+  }
+}
+
 Future<void> showCalcLanguagePickerSheet({
   required BuildContext context,
   required String currentCode,
@@ -136,7 +440,7 @@ Future<void> showCalcLanguagePickerSheet({
                   const Icon(Icons.translate_rounded, color: Color(0xFF00D09C), size: 22),
                   const SizedBox(width: 10),
                   Text(
-                    'Select Market & Voice Language',
+                    'Select Hub & Voice Language',
                     style: GoogleFonts.outfit(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -146,7 +450,7 @@ Future<void> showCalcLanguagePickerSheet({
               ),
               const SizedBox(height: 6),
               Text(
-                'Default is English. You can switch to Bengali, Hindi, or any regional language anytime.',
+                'Calculators and voice tools will comfortably adapt to your chosen language.',
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   color: Colors.grey[500],
@@ -277,16 +581,16 @@ class _CalculatorHubScreenState extends State<CalculatorHubScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = Theme.of(context).primaryColor;
     final currentLang = kSupportedCalcVoiceLanguages.firstWhere(
       (l) => l.code == _selectedLangCode,
       orElse: () => kSupportedCalcVoiceLanguages.first,
     );
+    final str = CalcHubStrings.of(_selectedLangCode);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Financial Calculators Hub',
+          str.hubTitle,
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         actions: [
@@ -340,23 +644,23 @@ class _CalculatorHubScreenState extends State<CalculatorHubScreen>
           indicatorWeight: 3,
           labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
           unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 13),
-          tabs: const [
-            Tab(icon: Icon(Icons.calculate_outlined, size: 20), text: 'Standard'),
-            Tab(icon: Icon(Icons.shopping_basket_outlined, size: 20), text: 'Market Price'),
-            Tab(icon: Icon(Icons.account_balance_outlined, size: 20), text: 'EMI Loan'),
-            Tab(icon: Icon(Icons.percent_rounded, size: 20), text: 'Daily Tools'),
-            Tab(icon: Icon(Icons.history_rounded, size: 20), text: 'History'),
+          tabs: [
+            Tab(icon: const Icon(Icons.calculate_outlined, size: 20), text: str.tabStandard),
+            Tab(icon: const Icon(Icons.shopping_basket_outlined, size: 20), text: str.tabMarket),
+            Tab(icon: const Icon(Icons.account_balance_outlined, size: 20), text: str.tabEmi),
+            Tab(icon: const Icon(Icons.percent_rounded, size: 20), text: str.tabDaily),
+            Tab(icon: const Icon(Icons.history_rounded, size: 20), text: str.tabHistory),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
-        children: const [
-          _StandardCalculatorView(),
-          _MarketPriceCalculatorView(),
-          _EmiCalculatorView(),
-          _DailyFinancialToolsView(),
-          _CalculatorHistoryView(),
+        children: [
+          _StandardCalculatorView(langCode: _selectedLangCode),
+          _MarketPriceCalculatorView(langCode: _selectedLangCode),
+          _EmiCalculatorView(langCode: _selectedLangCode),
+          _DailyFinancialToolsView(langCode: _selectedLangCode),
+          _CalculatorHistoryView(langCode: _selectedLangCode),
         ],
       ),
     );
@@ -367,8 +671,13 @@ class _CalculatorHubScreenState extends State<CalculatorHubScreen>
 // TAB 1: STANDARD CALCULATOR
 // ═══════════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB 1: STANDARD CALCULATOR
+// ═══════════════════════════════════════════════════════════════════════════
+
 class _StandardCalculatorView extends StatefulWidget {
-  const _StandardCalculatorView();
+  final String langCode;
+  const _StandardCalculatorView({this.langCode = 'en_IN'});
 
   @override
   State<_StandardCalculatorView> createState() => _StandardCalculatorViewState();
@@ -529,7 +838,7 @@ class _StandardCalculatorViewState extends State<_StandardCalculatorView> {
           onTap: () => _onBtnTap(label),
           borderRadius: BorderRadius.circular(16),
           child: Container(
-            height: 60,
+            height: 56,
             decoration: BoxDecoration(
               color: bg ?? defaultBg,
               borderRadius: BorderRadius.circular(16),
@@ -558,16 +867,16 @@ class _StandardCalculatorViewState extends State<_StandardCalculatorView> {
     final opColor = const Color(0xFF00D09C);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
       child: Column(
         children: [
-          // Display Screen Card
+          // Display Screen Card (Clean, compact, no excessive empty top space)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF181B22) : Colors.white,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(
                 color: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0),
               ),
@@ -581,21 +890,22 @@ class _StandardCalculatorViewState extends State<_StandardCalculatorView> {
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _expression.isEmpty ? '0' : _expression,
+                  _expression.isEmpty ? ' ' : _expression,
                   style: GoogleFonts.firaCode(
-                    fontSize: 22,
+                    fontSize: 16,
                     color: Colors.grey[500],
                   ),
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 4),
                 Text(
                   _result,
                   style: GoogleFonts.outfit(
-                    fontSize: 38,
+                    fontSize: 36,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF00D09C),
                   ),
@@ -605,7 +915,7 @@ class _StandardCalculatorViewState extends State<_StandardCalculatorView> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
           // Keypad Rows
           Row(
@@ -658,7 +968,8 @@ class _StandardCalculatorViewState extends State<_StandardCalculatorView> {
 // ═══════════════════════════════════════════════════════════════════════════
 
 class _MarketPriceCalculatorView extends StatefulWidget {
-  const _MarketPriceCalculatorView();
+  final String langCode;
+  const _MarketPriceCalculatorView({this.langCode = 'en_IN'});
 
   @override
   State<_MarketPriceCalculatorView> createState() => _MarketPriceCalculatorViewState();
@@ -694,8 +1005,17 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
   @override
   void initState() {
     super.initState();
+    _selectedVoiceLangCode = widget.langCode;
     _loadVoiceLanguage();
     _recomputeManualRates();
+  }
+
+  @override
+  void didUpdateWidget(covariant _MarketPriceCalculatorView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.langCode != widget.langCode) {
+      _selectedVoiceLangCode = widget.langCode;
+    }
   }
 
   Future<void> _loadVoiceLanguage() async {
@@ -944,6 +1264,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).primaryColor;
+    final str = CalcHubStrings.of(widget.langCode);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -980,7 +1301,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'Manual Unit Rate',
+                            str.manualRate,
                             style: GoogleFonts.inter(
                               fontWeight: FontWeight.bold,
                               fontSize: 12.5,
@@ -1013,7 +1334,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'AI Mandi Voice ✨',
+                            str.aiVoice,
                             style: GoogleFonts.inter(
                               fontWeight: FontWeight.bold,
                               fontSize: 12.5,
@@ -1031,16 +1352,16 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
           const SizedBox(height: 18),
 
           if (_modeIndex == 0) ...[
-            _buildManualUnitCalculatorSection(isDark, primaryColor),
+            _buildManualUnitCalculatorSection(isDark, primaryColor, str),
           ] else ...[
-            _buildAiVoiceSection(isDark, primaryColor),
+            _buildAiVoiceSection(isDark, primaryColor, str),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildManualUnitCalculatorSection(bool isDark, Color primaryColor) {
+  Widget _buildManualUnitCalculatorSection(bool isDark, Color primaryColor, CalcHubStrings str) {
     final ratePerStd = _ratePerBaseStandardUnit;
     final stdUnitLabel = (_selectedUnit == 'g' || _selectedUnit == 'kg')
         ? 'kg'
@@ -1065,16 +1386,16 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Vegetable / Grocery Rate Input',
+                str.vegGroceryRateInput,
                 style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _itemNameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Item Name (Optional)',
+                decoration: InputDecoration(
+                  labelText: str.itemNameOptional,
                   hintText: 'e.g. Tomato, Potato, Paneer, Oil',
-                  prefixIcon: Icon(Icons.shopping_bag_outlined),
+                  prefixIcon: const Icon(Icons.shopping_bag_outlined),
                 ),
                 onChanged: (_) => _recomputeManualRates(),
               ),
@@ -1087,33 +1408,36 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
                       controller: _basePriceCtrl,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
-                      decoration: const InputDecoration(
-                        labelText: 'Price (₹)',
+                      decoration: InputDecoration(
+                        labelText: str.basePrice,
                         prefixText: '₹ ',
                       ),
                       onChanged: (_) => _recomputeManualRates(),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  const Text('for', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
+                  Text(
+                    str.forQty,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     flex: 2,
                     child: TextField(
                       controller: _baseQuantityCtrl,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(
-                        labelText: 'Qty',
+                      decoration: InputDecoration(
+                        labelText: str.forQty,
                       ),
                       onChanged: (_) => _recomputeManualRates(),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   Expanded(
                     flex: 3,
                     child: DropdownButtonFormField<String>(
                       value: _selectedUnit,
-                      decoration: const InputDecoration(labelText: 'Unit'),
+                      decoration: InputDecoration(labelText: str.unit),
                       items: _units.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
                       onChanged: (val) {
                         if (val != null) {
@@ -1157,7 +1481,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'STANDARD UNIT RATE',
+                      str.stdUnitRate,
                       style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white70),
                     ),
                     Text(
@@ -1170,7 +1494,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
               IconButton(
                 onPressed: _saveManualMarketCalculation,
                 icon: const Icon(Icons.bookmark_add_outlined, color: Colors.white),
-                tooltip: 'Save Rate to History',
+                tooltip: str.saveHistory,
               ),
             ],
           ),
@@ -1179,7 +1503,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
 
         // Standard Quantity Matrix (100g, 250g, 500g, 1kg etc.)
         Text(
-          'Quick Quantity Price Breakdown',
+          str.quickBreakdown,
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
         ),
         const SizedBox(height: 10),
@@ -1200,7 +1524,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Custom Quantity & Budget Calc',
+                str.customCalc,
                 style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
               ),
               const SizedBox(height: 12),
@@ -1213,7 +1537,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
                       controller: _customQuantityCtrl,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       decoration: InputDecoration(
-                        labelText: 'I want to buy ($_customQuantityUnit)',
+                        labelText: '${str.wantToBuy} ($_customQuantityUnit)',
                         prefixIcon: const Icon(Icons.scale_rounded, size: 18),
                       ),
                       onChanged: (_) => _recomputeManualRates(),
@@ -1247,9 +1571,9 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
                     child: TextField(
                       controller: _customBudgetCtrl,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(
-                        labelText: 'I have budget (₹)',
-                        prefixIcon: Icon(Icons.currency_rupee_rounded, size: 18),
+                      decoration: InputDecoration(
+                        labelText: str.budgetLabel,
+                        prefixIcon: const Icon(Icons.currency_rupee_rounded, size: 18),
                       ),
                       onChanged: (_) => _recomputeManualRates(),
                     ),
@@ -1354,7 +1678,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
     );
   }
 
-  Widget _buildAiVoiceSection(bool isDark, Color primaryColor) {
+  Widget _buildAiVoiceSection(bool isDark, Color primaryColor, CalcHubStrings str) {
     final activeLang = kSupportedCalcVoiceLanguages.firstWhere(
       (l) => l.code == _selectedVoiceLangCode,
       orElse: () => kSupportedCalcVoiceLanguages.first,
@@ -1382,8 +1706,8 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
                   const Icon(Icons.psychology_alt_rounded, color: Colors.white, size: 24),
                   const SizedBox(width: 8),
                   Text(
-                    'AI Mandi Rate Voice Analyzer',
-                    style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17),
+                    str.aiVoiceAnalyzer,
+                    style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ],
               ),
@@ -1412,7 +1736,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
                       Text(activeLang.flag, style: const TextStyle(fontSize: 14)),
                       const SizedBox(width: 6),
                       Text(
-                        'Voice Language: ${activeLang.name} (${activeLang.nativeName})',
+                        '${activeLang.name} (${activeLang.nativeName})',
                         style: GoogleFonts.inter(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -1460,8 +1784,8 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
               const SizedBox(height: 10),
               Text(
                 _isListening
-                    ? 'Listening in ${activeLang.name}... Tap to Stop'
-                    : (_isAiProcessing ? 'Gemini AI Analyzing Mandi Rates...' : 'Tap Mic & Speak Market Rates'),
+                    ? '${str.listeningNow} (${activeLang.name})...'
+                    : (_isAiProcessing ? str.processingAi : str.tapMicToSpeak),
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -1689,11 +2013,12 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TAB 3: EMI & LOAN CALCULATOR
+// TAB 3: EMI & LOAN CALCULATOR (With Dotted Tick Track & Direct Click Inputs)
 // ═══════════════════════════════════════════════════════════════════════════
 
 class _EmiCalculatorView extends StatefulWidget {
-  const _EmiCalculatorView();
+  final String langCode;
+  const _EmiCalculatorView({this.langCode = 'en_IN'});
 
   @override
   State<_EmiCalculatorView> createState() => _EmiCalculatorViewState();
@@ -1770,11 +2095,92 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
     }
   }
 
+  void _showEditValueDialog({
+    required String title,
+    required String initialValue,
+    required String suffix,
+    required ValueChanged<double> onSubmitted,
+    double min = 0,
+    double max = 100000000,
+  }) {
+    final str = CalcHubStrings.of(widget.langCode);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final ctrl = TextEditingController(text: initialValue);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1E222D) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.edit_note_rounded, color: Color(0xFF00D09C)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              str.tapToEdit,
+              style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold),
+              decoration: InputDecoration(
+                suffixText: suffix.isNotEmpty ? ' $suffix' : null,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0xFF00D09C), width: 2),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(str.cancel, style: const TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final val = double.tryParse(ctrl.text.trim());
+              if (val != null && val >= min && val <= max) {
+                onSubmitted(val);
+                Navigator.of(ctx).pop();
+              } else {
+                CustomToast.show(context, 'Please enter a valid value between $min and $max', isError: true);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00D09C),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text(str.apply, style: const TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = Theme.of(context).primaryColor;
     final fmt = NumberFormat('#,##,###');
+    final str = CalcHubStrings.of(widget.langCode);
 
     final principalShare = _totalPayment > 0 ? (_loanAmount / _totalPayment).clamp(0.0, 1.0) : 0.5;
     final interestShare = 1.0 - principalShare;
@@ -1808,13 +2214,13 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'MONTHLY EMI',
+                      str.monthlyEmi,
                       style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.white70),
                     ),
                     IconButton(
                       onPressed: _saveEmiCalculation,
                       icon: const Icon(Icons.bookmark_add_outlined, color: Colors.white),
-                      tooltip: 'Save to History',
+                      tooltip: str.saveHistory,
                     ),
                   ],
                 ),
@@ -1830,7 +2236,7 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
                   children: [
                     Column(
                       children: [
-                        Text('Total Interest', style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
+                        Text(str.totalInterest, style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
                         const SizedBox(height: 2),
                         Text('₹${fmt.format(_totalInterest.round())}', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                       ],
@@ -1838,7 +2244,7 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
                     Container(height: 24, width: 1, color: Colors.white24),
                     Column(
                       children: [
-                        Text('Total Amount', style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
+                        Text(str.totalAmount, style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
                         const SizedBox(height: 2),
                         Text('₹${fmt.format(_totalPayment.round())}', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                       ],
@@ -1868,14 +2274,14 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
                       children: [
                         Container(width: 10, height: 10, decoration: const BoxDecoration(color: Color(0xFF00D09C), shape: BoxShape.circle)),
                         const SizedBox(width: 6),
-                        Text('Principal (${(principalShare * 100).toStringAsFixed(1)}%)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
+                        Text('${str.principal} (${(principalShare * 100).toStringAsFixed(1)}%)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
                       ],
                     ),
                     Row(
                       children: [
                         Container(width: 10, height: 10, decoration: const BoxDecoration(color: Color(0xFFFF6B6B), shape: BoxShape.circle)),
                         const SizedBox(width: 6),
-                        Text('Interest (${(interestShare * 100).toStringAsFixed(1)}%)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
+                        Text('${str.interest} (${(interestShare * 100).toStringAsFixed(1)}%)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ],
@@ -1904,9 +2310,9 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
           ),
           const SizedBox(height: 18),
 
-          // 1. Loan Amount Slider & Input
+          // 1. Loan Amount Slider & Input (Interactive on tap + dotted tick track)
           _buildInputCard(
-            title: 'Loan Amount',
+            title: str.loanAmount,
             valueText: '₹${fmt.format(_loanAmount.round())}',
             sliderValue: _loanAmount.clamp(10000, 10000000),
             min: 10000,
@@ -1917,6 +2323,21 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
                 _loanAmount = val;
                 _loanAmountCtrl.text = val.round().toString();
               });
+            },
+            onValueTap: () {
+              _showEditValueDialog(
+                title: str.enterAmount,
+                initialValue: _loanAmount.round().toString(),
+                suffix: '₹',
+                min: 1000,
+                max: 100000000,
+                onSubmitted: (val) {
+                  setState(() {
+                    _loanAmount = val;
+                    _loanAmountCtrl.text = val.round().toString();
+                  });
+                },
+              );
             },
             isDark: isDark,
             presets: [50000, 100000, 500000, 1000000, 2500000, 5000000],
@@ -1929,9 +2350,9 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
           ),
           const SizedBox(height: 14),
 
-          // 2. Interest Rate Slider & Input
+          // 2. Interest Rate Slider & Input (Interactive on tap + dotted tick track)
           _buildInputCard(
-            title: 'Interest Rate (% p.a.)',
+            title: str.interestRatePa,
             valueText: '${_interestRate.toStringAsFixed(1)} %',
             sliderValue: _interestRate.clamp(1, 30),
             min: 1,
@@ -1942,6 +2363,21 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
                 _interestRate = val;
                 _interestRateCtrl.text = val.toStringAsFixed(1);
               });
+            },
+            onValueTap: () {
+              _showEditValueDialog(
+                title: str.enterRate,
+                initialValue: _interestRate.toStringAsFixed(1),
+                suffix: '%',
+                min: 0.1,
+                max: 50.0,
+                onSubmitted: (val) {
+                  setState(() {
+                    _interestRate = val;
+                    _interestRateCtrl.text = val.toStringAsFixed(1);
+                  });
+                },
+              );
             },
             isDark: isDark,
             presets: [7.5, 8.5, 10.5, 12.0, 14.5, 18.0],
@@ -1955,10 +2391,10 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
           ),
           const SizedBox(height: 14),
 
-          // 3. Tenure Slider & Input
+          // 3. Tenure Slider & Input (Interactive on tap + dotted tick track)
           _buildInputCard(
-            title: 'Loan Tenure',
-            valueText: '${_tenureYears.toInt()} ${_isTenureInYears ? 'Years' : 'Months'}',
+            title: str.loanTenure,
+            valueText: '${_tenureYears.toInt()} ${_isTenureInYears ? str.years : str.months}',
             sliderValue: _tenureYears.clamp(1, _isTenureInYears ? 30 : 360),
             min: 1,
             max: _isTenureInYears ? 30 : 360,
@@ -1969,11 +2405,26 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
                 _tenureCtrl.text = val.round().toString();
               });
             },
+            onValueTap: () {
+              _showEditValueDialog(
+                title: str.enterTenure,
+                initialValue: _tenureYears.round().toString(),
+                suffix: _isTenureInYears ? str.years : str.months,
+                min: 1,
+                max: _isTenureInYears ? 50 : 600,
+                onSubmitted: (val) {
+                  setState(() {
+                    _tenureYears = val;
+                    _tenureCtrl.text = val.round().toString();
+                  });
+                },
+              );
+            },
             isDark: isDark,
             headerWidget: Row(
               children: [
                 ChoiceChip(
-                  label: const Text('Yr'),
+                  label: Text(_isTenureInYears ? 'Yr' : 'Yr'),
                   selected: _isTenureInYears,
                   onSelected: (val) {
                     if (val) {
@@ -1986,7 +2437,7 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
                 ),
                 const SizedBox(width: 6),
                 ChoiceChip(
-                  label: const Text('Mo'),
+                  label: Text(!_isTenureInYears ? 'Mo' : 'Mo'),
                   selected: !_isTenureInYears,
                   onSelected: (val) {
                     if (val) {
@@ -2014,6 +2465,7 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
     required int divisions,
     required ValueChanged<double> onSliderChanged,
     required bool isDark,
+    VoidCallback? onValueTap,
     Widget? headerWidget,
     List<num>? presets,
     String presetSuffix = '',
@@ -2034,7 +2486,33 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
             children: [
               Text(title, style: GoogleFonts.inter(fontSize: 13, color: Colors.grey)),
               if (headerWidget != null) headerWidget,
-              Text(valueText, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF00D09C))),
+              InkWell(
+                onTap: onValueTap,
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00D09C).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFF00D09C).withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        valueText,
+                        style: GoogleFonts.outfit(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF00D09C),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.edit_outlined, size: 14, color: Color(0xFF00D09C)),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
           SliderTheme(
@@ -2051,6 +2529,25 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
               onChanged: onSliderChanged,
             ),
           ),
+          // Dotted tick track line indicator under slider
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 2.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: List.generate(
+                16,
+                (i) => Container(
+                  width: 3,
+                  height: 3,
+                  decoration: BoxDecoration(
+                    color: (isDark ? Colors.grey[600] : Colors.grey[400])?.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
           if (presets != null) ...[
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -2079,7 +2576,8 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
 // ═══════════════════════════════════════════════════════════════════════════
 
 class _DailyFinancialToolsView extends StatefulWidget {
-  const _DailyFinancialToolsView();
+  final String langCode;
+  const _DailyFinancialToolsView({this.langCode = 'en_IN'});
 
   @override
   State<_DailyFinancialToolsView> createState() => _DailyFinancialToolsViewState();
@@ -2127,7 +2625,7 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = Theme.of(context).primaryColor;
+    final str = CalcHubStrings.of(widget.langCode);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -2137,18 +2635,18 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
           // Tool Selector Chips
           Row(
             children: [
-              _buildToolChip('GST Tax', 0, Icons.receipt_long_outlined),
+              _buildToolChip(str.gstTax, 0, Icons.receipt_long_outlined),
               const SizedBox(width: 8),
-              _buildToolChip('Discount', 1, Icons.local_offer_outlined),
+              _buildToolChip(str.discount, 1, Icons.local_offer_outlined),
               const SizedBox(width: 8),
-              _buildToolChip('SIP Wealth', 2, Icons.trending_up_rounded),
+              _buildToolChip(str.sipWealth, 2, Icons.trending_up_rounded),
             ],
           ),
           const SizedBox(height: 18),
 
-          if (_toolIndex == 0) _buildGstView(isDark),
-          if (_toolIndex == 1) _buildDiscountView(isDark),
-          if (_toolIndex == 2) _buildSipView(isDark),
+          if (_toolIndex == 0) _buildGstView(isDark, str),
+          if (_toolIndex == 1) _buildDiscountView(isDark, str),
+          if (_toolIndex == 2) _buildSipView(isDark, str),
         ],
       ),
     );
@@ -2172,12 +2670,16 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
             children: [
               Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.grey),
               const SizedBox(width: 6),
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12.5,
-                  color: isSelected ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87),
+              Flexible(
+                child: Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12.5,
+                    color: isSelected ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -2188,7 +2690,7 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
   }
 
   // 1. GST CALCULATOR VIEW
-  Widget _buildGstView(bool isDark) {
+  Widget _buildGstView(bool isDark, CalcHubStrings str) {
     final base = double.tryParse(_gstAmountCtrl.text) ?? 0.0;
     double gstAmount = 0.0;
     double totalAmount = 0.0;
@@ -2306,7 +2808,7 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
                 children: [
                   Expanded(
                     child: RadioListTile<bool>(
-                      title: const Text('Add GST (+)', style: TextStyle(fontSize: 12.5)),
+                      title: Text(str.addGst, style: const TextStyle(fontSize: 12.5)),
                       value: true,
                       groupValue: _isGstExclusive,
                       onChanged: (val) => setState(() => _isGstExclusive = val!),
@@ -2314,7 +2816,7 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
                   ),
                   Expanded(
                     child: RadioListTile<bool>(
-                      title: const Text('Remove GST (-)', style: TextStyle(fontSize: 12.5)),
+                      title: Text(str.removeGst, style: const TextStyle(fontSize: 12.5)),
                       value: false,
                       groupValue: _isGstExclusive,
                       onChanged: (val) => setState(() => _isGstExclusive = val!),
@@ -2330,7 +2832,7 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
   }
 
   // 2. DISCOUNT CALCULATOR VIEW
-  Widget _buildDiscountView(bool isDark) {
+  Widget _buildDiscountView(bool isDark, CalcHubStrings str) {
     final orig = double.tryParse(_originalPriceCtrl.text) ?? 0.0;
     final disc = double.tryParse(_discountPercentCtrl.text) ?? 0.0;
 
@@ -2352,7 +2854,7 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('FINAL DISCOUNTED PRICE', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white70)),
+                  Text(str.finalPrice.toUpperCase(), style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white70)),
                   IconButton(
                     onPressed: () => _saveToolCalculation(
                       'discount',
@@ -2373,13 +2875,13 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
                 children: [
                   Column(
                     children: [
-                      Text('Original Price', style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
+                      Text(str.originalPrice, style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
                       Text('₹${fmt.format(orig)}', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                     ],
                   ),
                   Column(
                     children: [
-                      Text('You Save 🎉', style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
+                      Text('${str.youSave} 🎉', style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
                       Text('₹${fmt.format(saved)}', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                     ],
                   ),
@@ -2403,7 +2905,7 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
                 controller: _originalPriceCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
-                decoration: const InputDecoration(labelText: 'Original Price (₹)', prefixText: '₹ '),
+                decoration: InputDecoration(labelText: str.originalPrice, prefixText: '₹ '),
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 14),
@@ -2411,7 +2913,7 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
                 controller: _discountPercentCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
-                decoration: const InputDecoration(labelText: 'Discount (% Off)', suffixText: ' %'),
+                decoration: InputDecoration(labelText: str.discountPercent, suffixText: ' %'),
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 12),
@@ -2441,7 +2943,7 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
   }
 
   // 3. SIP WEALTH CALCULATOR VIEW
-  Widget _buildSipView(bool isDark) {
+  Widget _buildSipView(bool isDark, CalcHubStrings str) {
     final P = _monthlySip;
     final i = (_expectedReturnRate / 12) / 100.0;
     final n = _sipTenureYears * 12;
@@ -2468,7 +2970,7 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('TOTAL MATURITY VALUE', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white70)),
+                  Text(str.totalFutureValue.toUpperCase(), style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white70)),
                   IconButton(
                     onPressed: () => _saveToolCalculation(
                       'sip',
@@ -2489,13 +2991,13 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
                 children: [
                   Column(
                     children: [
-                      Text('Invested Amount', style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
+                      Text(str.investedAmount, style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
                       Text('₹${fmt.format(invested.round())}', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                     ],
                   ),
                   Column(
                     children: [
-                      Text('Est. Returns 🚀', style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
+                      Text('${str.estReturns} 🚀', style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
                       Text('₹${fmt.format(wealthGained.round())}', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                     ],
                   ),
@@ -2519,7 +3021,7 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Monthly Investment', style: GoogleFonts.inter(fontSize: 13, color: Colors.grey)),
+                  Text(str.monthlySip, style: GoogleFonts.inter(fontSize: 13, color: Colors.grey)),
                   Text('₹${fmt.format(_monthlySip.round())}', style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: const Color(0xFFF59E0B))),
                 ],
               ),
@@ -2536,7 +3038,7 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Expected Return Rate (% p.a.)', style: GoogleFonts.inter(fontSize: 13, color: Colors.grey)),
+                  Text(str.returnRatePa, style: GoogleFonts.inter(fontSize: 13, color: Colors.grey)),
                   Text('${_expectedReturnRate.toStringAsFixed(1)} %', style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: const Color(0xFFF59E0B))),
                 ],
               ),
@@ -2553,8 +3055,8 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Time Period (Years)', style: GoogleFonts.inter(fontSize: 13, color: Colors.grey)),
-                  Text('${_sipTenureYears.toInt()} Years', style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: const Color(0xFFF59E0B))),
+                  Text('${str.sipPeriod} (${str.years})', style: GoogleFonts.inter(fontSize: 13, color: Colors.grey)),
+                  Text('${_sipTenureYears.toInt()} ${str.years}', style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: const Color(0xFFF59E0B))),
                 ],
               ),
               Slider(
@@ -2578,7 +3080,8 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
 // ═══════════════════════════════════════════════════════════════════════════
 
 class _CalculatorHistoryView extends StatefulWidget {
-  const _CalculatorHistoryView();
+  final String langCode;
+  const _CalculatorHistoryView({this.langCode = 'en_IN'});
 
   @override
   State<_CalculatorHistoryView> createState() => _CalculatorHistoryViewState();

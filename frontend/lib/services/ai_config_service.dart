@@ -1584,16 +1584,28 @@ $financialContextSummary
     String spokenLanguage = 'English',
   }) async {
     final promptText = '''You are an expert Local Market, Sabji Mandi, and Grocery Rate Analyzer.
-The user speaks items and their rates at a local market or grocery store in $spokenLanguage or any mix of Indian regional languages (such as Bengali, Hindi, Hinglish, Marathi, Tamil, Telugu, Gujarati, English, etc.).
+The user speaks items and their rates at a local market or grocery store in $spokenLanguage or any mix of Indian regional languages (such as Bengali / বাংলা, Hindi / हिन्दी, Hinglish, Marathi, Tamil, Telugu, Gujarati, English, etc.).
+
+CRITICAL REGIONAL TRADE KNOWLEDGE:
+- Bengali:
+  - Numbers: "এক (1)", "দুই / দুটো (2)", "তিন / তিনটে (3)", "চার / চারটে (4)", "পাঁচ (5)", "দশ (10)", "কুড়ি (20)", "তিরিশ (30)", "চল্লিশ (40)", "পঞ্চাশ (50)", "একশো (100)"
+  - Fractions: "এক পোয়া (250 grams)", "আধ কেজি / আধা কিলো (500 grams)", "দেড় কেজি (1.5 kg)", "আড়াই কেজি (2.5 kg)", "পৌনে এক কেজি (750 grams)"
+  - Common items: "আলু (Potato)", "পেঁয়াজ (Onion)", "রসুন (Garlic)", "আদা (Ginger)", "টমেটো (Tomato)", "পটল (Pointed Gourd)", "বেগুন (Brinjal / Eggplant)", "কাঁচা লঙ্কা (Green Chilli)", "ডিম (Eggs)", "মাছ (Fish)", "মাংস (Chicken / Meat)", "তেল (Oil)", "চাল (Rice)", "ডাল (Lentils)", "দুধ (Milk)", "চিনি (Sugar)", "ফুলকপি (Cauliflower)", "বাঁধাকপি (Cabbage)", "গাজর (Carrot)", "শসা (Cucumber)"
+  - Units & Money: "টাকা (Taka / Rs)", "কেজি / কিলো (kg)", "গ্রাম (g)", "লিটার (Litre)", "ডজন (Dozen)", "পিস / টা (piece)"
+- Hindi:
+  - Numbers & Fractions: "एक (1)", "दो (2)", "तीन (3)", "चार (4)", "पाव / एक पाव (250g)", "आधा किलो (500g)", "डेढ़ किलो (1.5kg)", "ढाई किलो (2.5kg)", "सवा किलो (1.25kg)"
+  - Common items: "आलू (Potato)", "प्याज (Onion)", "लहसुन (Garlic)", "अदरक (Ginger)", "टमाटर (Tomato)", "बैंगन (Brinjal)", "हरी मिर्च (Green Chilli)", "अंडे (Eggs)", "तेल (Oil)", "चावल (Rice)", "दाल (Lentils)", "दूध (Milk)"
+  - Units & Money: "रुपये / रु (Rupees)", "किलो (kg)", "ग्राम (g)", "लीटर (Litre)", "दर्जन (Dozen)", "पीस (piece)"
+
 Examples:
 - "Aloo 30 rupaye kilo, pyaaz 50 rupaye 2 kilo, tamatar 30 rupaye 500 gram, adrak 20 rupaye 100 gram, sarson tel 160 rupaye litre"
-- "Ek kg begun 60 taka, potol 40 taka kilo, duto dim 16 taka, 250 gram kacha lonka 15 taka"
+- "Ek kg begun 60 taka, potol 40 taka kilo, duto dim 16 taka, ek poa kacha lonka 15 taka, adha kilo aloo 15 taka"
 - "Apple 180 per kg, banana 50 dozen, milk 64 per litre"
 
 Your job:
 1. Identify all distinct items mentioned.
-2. Standardize the item name in English (e.g. "Potato (Aloo)", "Onion (Pyaaz)", "Tomato (Tamatar)", "Ginger (Adrak)", "Mustard Oil", "Egg", "Apple", "Banana").
-3. Extract base quantity (e.g. 1.0, 2.0, 500.0, 100.0), base unit ("kg", "g", "litre", "ml", "dozen", "piece"), and base price (INR number).
+2. Standardize the item name with clear English & Regional naming (e.g. "Potato (Aloo / আলু)", "Onion (Pyaaz / পেঁয়াজ)", "Tomato (Tamatar / টমেটো)", "Pointed Gourd (Potol / পটল)", "Brinjal (Begun / বেগুন)", "Ginger (Adrak / আদা)", "Mustard Oil", "Egg (Dim / अंडा)", "Apple", "Banana").
+3. Extract base quantity (e.g. 1.0, 2.0, 500.0, 100.0, 250.0), base unit ("kg", "g", "litre", "ml", "dozen", "piece"), and base price (INR number).
 4. Compute standard rate per standard unit (e.g. Rate per 1 kg for weight, Rate per 1 litre for volume, Rate per 1 dozen, Rate per 1 piece).
 5. For weight items ("kg" or "g"), generate:
    - quantity_breakdown: [

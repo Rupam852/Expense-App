@@ -13,6 +13,8 @@ import '../services/expense_provider.dart';
 import '../services/user_provider.dart';
 import 'custom_toast.dart';
 
+import '../models/split_bill.dart';
+
 class PaymentReminderModal extends StatefulWidget {
   final String personName;
   final double amount;
@@ -21,6 +23,7 @@ class PaymentReminderModal extends StatefulWidget {
   final DateTime? date;
   final bool isKhata;
   final String? customPayerUpiId;
+  final List<SplitParticipant>? participants;
 
   const PaymentReminderModal({
     super.key,
@@ -31,6 +34,7 @@ class PaymentReminderModal extends StatefulWidget {
     this.date,
     this.isKhata = true,
     this.customPayerUpiId,
+    this.participants,
   });
 
   static Future<void> show({
@@ -42,6 +46,7 @@ class PaymentReminderModal extends StatefulWidget {
     DateTime? date,
     bool isKhata = true,
     String? customPayerUpiId,
+    List<SplitParticipant>? participants,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -55,6 +60,7 @@ class PaymentReminderModal extends StatefulWidget {
         date: date,
         isKhata: isKhata,
         customPayerUpiId: customPayerUpiId,
+        participants: participants,
       ),
     );
   }
@@ -65,6 +71,25 @@ class PaymentReminderModal extends StatefulWidget {
 
 class _PaymentReminderModalState extends State<PaymentReminderModal> {
   String? _selectedPaymentId;
+  late String _activePersonName;
+  late double _activeAmount;
+  late String? _activePhoneNumber;
+  int? _selectedParticipantIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.participants != null && widget.participants!.isNotEmpty) {
+      _selectedParticipantIndex = 0;
+      _activePersonName = widget.participants![0].name;
+      _activeAmount = widget.participants![0].shareAmount;
+      _activePhoneNumber = widget.participants![0].phoneNumber;
+    } else {
+      _activePersonName = widget.personName;
+      _activeAmount = widget.amount;
+      _activePhoneNumber = widget.phoneNumber;
+    }
+  }
 
   String _buildShareMessage({
     required String? upiId,
@@ -79,17 +104,17 @@ class _PaymentReminderModalState extends State<PaymentReminderModal> {
       final cleanUpi = upiId.trim();
       final nameParam = Uri.encodeComponent(payeeName ?? 'Payee');
       final noteParam = Uri.encodeComponent(widget.titleOrNote ?? (widget.isKhata ? 'Khata Settlement' : 'Split Bill Share'));
-      final upiUri = 'upi://pay?pa=$cleanUpi&pn=$nameParam&am=${widget.amount.toStringAsFixed(2)}&cu=INR&tn=$noteParam';
+      final upiUri = 'upi://pay?pa=$cleanUpi&pn=$nameParam&am=${_activeAmount.toStringAsFixed(2)}&cu=INR&tn=$noteParam';
 
       if (widget.isKhata) {
-        return 'Hi ${widget.personName}! 👋\n\n'
+        return 'Hi $_activePersonName! 👋\n\n'
             'This is a friendly reminder for $formattedAmt$notePart on Grow Expense App.\n\n'
             '📱 Pay directly via UPI:\n'
             '• UPI ID: $cleanUpi\n'
             '• Fast Pay Link: $upiUri\n\n'
             'Please settle whenever convenient. Thank you! 🙏';
       } else {
-        return 'Hey ${widget.personName}! 👋\n\n'
+        return 'Hey $_activePersonName! 👋\n\n'
             'Your split share is $formattedAmt$notePart on Grow Expense App.\n\n'
             '📱 Pay directly via UPI:\n'
             '• UPI ID: $cleanUpi\n'
@@ -100,19 +125,19 @@ class _PaymentReminderModalState extends State<PaymentReminderModal> {
 
     // Clean message without payment method (NOTE IS NOT INCLUDED IN SHARED TEXT)
     if (widget.isKhata) {
-      return 'Hi ${widget.personName}! 👋\n\n'
+      return 'Hi $_activePersonName! 👋\n\n'
           'This is a friendly reminder regarding $formattedAmt$notePart on Grow Expense App.\n\n'
           'Please settle whenever convenient. Thank you! 🙏';
     } else {
-      return 'Hey ${widget.personName}! 👋\n\n'
+      return 'Hey $_activePersonName! 👋\n\n'
           'Your split share is $formattedAmt$notePart on Grow Expense App.\n\n'
           'Please settle whenever possible. Thanks! 🙏';
     }
   }
 
   Future<void> _shareOnWhatsApp(BuildContext context, String message) async {
-    if (widget.phoneNumber != null && widget.phoneNumber!.trim().isNotEmpty) {
-      String cleanPhone = widget.phoneNumber!.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (_activePhoneNumber != null && _activePhoneNumber!.trim().isNotEmpty) {
+      String cleanPhone = _activePhoneNumber!.replaceAll(RegExp(r'[^0-9+]'), '');
       if (cleanPhone.startsWith('+')) {
         cleanPhone = cleanPhone.substring(1);
       } else if (cleanPhone.length == 10) {
@@ -132,7 +157,7 @@ class _PaymentReminderModalState extends State<PaymentReminderModal> {
     await SharePlus.instance.share(
       ShareParams(
         text: message,
-        subject: 'Payment Reminder for ${widget.personName}',
+        subject: 'Payment Reminder for $_activePersonName',
       ),
     );
   }
@@ -226,11 +251,11 @@ class _PaymentReminderModalState extends State<PaymentReminderModal> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = const Color(0xFF00D09C);
+    const primaryColor = Color(0xFF00D09C);
     final cardBg = isDark ? const Color(0xFF1E222D) : Colors.white;
     final borderColor = isDark ? const Color(0xFF2C3242) : const Color(0xFFE2E8F0);
     final currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
-    final formattedAmt = currencyFormat.format(widget.amount);
+    final formattedAmt = currencyFormat.format(_activeAmount);
 
     return Consumer2<ExpenseProvider, UserProvider>(
       builder: (context, provider, userProvider, _) {
@@ -262,11 +287,11 @@ class _PaymentReminderModalState extends State<PaymentReminderModal> {
 
         final displayName = isUserAccount
             ? activePayment.name
-            : '${widget.personName}\'s UPI';
+            : '$_activePersonName\'s UPI';
 
         final payeeName = isUserAccount
             ? (userProvider.userProfile?['full_name']?.toString() ?? 'Grow Expense User')
-            : widget.personName;
+            : _activePersonName;
 
         final qrCodeUrl = isUserAccount ? activePayment.qrCodeUrl : null;
         final hasPaymentMethod = effectiveUpiId != null && effectiveUpiId.trim().isNotEmpty;
@@ -336,7 +361,7 @@ class _PaymentReminderModalState extends State<PaymentReminderModal> {
                               ),
                             ),
                             Text(
-                              'Remind ${widget.personName} to settle $formattedAmt',
+                              'Remind $_activePersonName to settle $formattedAmt',
                               style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
                             ),
                           ],
@@ -350,6 +375,83 @@ class _PaymentReminderModalState extends State<PaymentReminderModal> {
                   ],
                 ),
                 const SizedBox(height: 16),
+
+                // Participant Switcher (If multiple participants)
+                if (widget.participants != null && widget.participants!.length > 1) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'SELECT PERSON TO REMIND',
+                        style: GoogleFonts.inter(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      Text(
+                        '${widget.participants!.length} friends',
+                        style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: widget.participants!.asMap().entries.map((entry) {
+                        final idx = entry.key;
+                        final p = entry.value;
+                        final isSel = (_selectedParticipantIndex == idx);
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedParticipantIndex = idx;
+                              _activePersonName = p.name;
+                              _activeAmount = p.shareAmount;
+                              _activePhoneNumber = p.phoneNumber;
+                            });
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: isSel
+                                  ? primaryColor.withValues(alpha: isDark ? 0.25 : 0.15)
+                                  : (isDark ? const Color(0xFF1E222D) : const Color(0xFFF1F5F9)),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isSel ? primaryColor : borderColor,
+                                width: isSel ? 1.5 : 1.0,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.person_outline_rounded,
+                                  size: 14,
+                                  color: isSel ? primaryColor : Colors.grey,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${p.name} (₹${p.shareAmount.toStringAsFixed(0)})',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                                    color: isSel ? primaryColor : (isDark ? Colors.white : Colors.black87),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
 
                 // Amount Due Pill Card
                 Container(
@@ -376,7 +478,7 @@ class _PaymentReminderModalState extends State<PaymentReminderModal> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            widget.personName,
+                            _activePersonName,
                             style: GoogleFonts.outfit(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,

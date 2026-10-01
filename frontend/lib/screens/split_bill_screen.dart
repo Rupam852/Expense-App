@@ -485,22 +485,26 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
           // Footer: UPI QR button & Delete
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              if (!isFullyDone)
+            chi              if (!isFullyDone)
                 TextButton.icon(
                   onPressed: () {
+                    final pendingParts = bill.participants.where((p) => p.name.toLowerCase() != 'you' && !p.isSettled).toList();
+                    final defaultPerson = bill.isPaidByMe
+                        ? (pendingParts.isNotEmpty ? pendingParts.first.name : 'Participant')
+                        : bill.paidBy;
+                    final defaultAmount = bill.isPaidByMe
+                        ? (pendingParts.isNotEmpty ? pendingParts.first.shareAmount : (bill.pendingCollection > 0 ? bill.pendingCollection : bill.totalAmount))
+                        : (bill.myPendingToPay > 0 ? bill.myPendingToPay : bill.myShare);
+
                     PaymentReminderModal.show(
                       context: context,
-                      personName: bill.isPaidByMe
-                          ? 'Participants (${totalParts - settledParts} Pending)'
-                          : bill.paidBy,
-                      amount: bill.isPaidByMe
-                          ? (bill.pendingCollection > 0 ? bill.pendingCollection : bill.totalAmount)
-                          : (bill.myPendingToPay > 0 ? bill.myPendingToPay : bill.myShare),
+                      personName: defaultPerson,
+                      amount: defaultAmount,
                       titleOrNote: bill.title,
                       date: bill.billDate,
                       isKhata: false,
                       customPayerUpiId: bill.payerUpiId,
+                      participants: bill.isPaidByMe && pendingParts.isNotEmpty ? pendingParts : null,
                     );
                   },
                   icon: const Icon(Icons.qr_code_2_rounded, size: 16, color: Color(0xFF00D09C)),
@@ -508,7 +512,7 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
                     bill.isPaidByMe ? 'Collect Payment / QR' : 'Pay Payer (${bill.paidBy}) / QR',
                     style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF00D09C)),
                   ),
-                )
+                )        )
               else
                 const SizedBox.shrink(),
 
