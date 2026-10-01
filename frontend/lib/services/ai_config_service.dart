@@ -1293,7 +1293,10 @@ $financialContextSummary
   // ──────────────────────────────────────────────────────────
   // 4. SABJI MANDI / MARKET VOICE UNIT PRICE PARSER
   // ──────────────────────────────────────────────────────────
-  Future<Map<String, dynamic>> parseMarketVoicePrice(String naturalSpeechText) async {
+  Future<Map<String, dynamic>> parseMarketVoicePrice(
+    String naturalSpeechText, {
+    String spokenLanguage = 'English',
+  }) async {
     if (!hasAnyApiKey) {
       return {
         'success': false,
@@ -1307,6 +1310,7 @@ $financialContextSummary
     final primaryResult = await _invokeProviderForMarketVoice(
       provider: primary,
       naturalSpeechText: naturalSpeechText,
+      spokenLanguage: spokenLanguage,
     );
 
     if (primaryResult['success'] == true) {
@@ -1318,6 +1322,7 @@ $financialContextSummary
       final secondaryResult = await _invokeProviderForMarketVoice(
         provider: secondary,
         naturalSpeechText: naturalSpeechText,
+        spokenLanguage: spokenLanguage,
       );
 
       if (secondaryResult['success'] == true) {
@@ -1339,12 +1344,13 @@ $financialContextSummary
   Future<Map<String, dynamic>> _invokeProviderForMarketVoice({
     required String provider,
     required String naturalSpeechText,
+    String spokenLanguage = 'English',
   }) async {
     final promptText = '''You are an expert Local Market, Sabji Mandi, and Grocery Rate Analyzer.
-The user speaks items and their rates at a local market or grocery store in ANY language or mixture of languages (such as Hindi, Bengali, Hinglish, Marathi, Tamil, Telugu, Gujarati, English, etc.).
+The user speaks items and their rates at a local market or grocery store in $spokenLanguage or any mix of Indian regional languages (such as Bengali, Hindi, Hinglish, Marathi, Tamil, Telugu, Gujarati, English, etc.).
 Examples:
 - "Aloo 30 rupaye kilo, pyaaz 50 rupaye 2 kilo, tamatar 30 rupaye 500 gram, adrak 20 rupaye 100 gram, sarson tel 160 rupaye litre"
-- "Ek kg begun 60 taka, potol 40 taka kilo, duto dim 16 taka"
+- "Ek kg begun 60 taka, potol 40 taka kilo, duto dim 16 taka, 250 gram kacha lonka 15 taka"
 - "Apple 180 per kg, banana 50 dozen, milk 64 per litre"
 
 Your job:

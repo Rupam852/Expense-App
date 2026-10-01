@@ -5,11 +5,223 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../services/ai_config_service.dart';
 import '../services/database_helper.dart';
 import '../widgets/ai_config_required_dialog.dart';
 import '../widgets/custom_toast.dart';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SUPPORTED VOICE & CALCULATION LANGUAGES
+// ═══════════════════════════════════════════════════════════════════════════
+
+class CalcVoiceLanguage {
+  final String code;
+  final String name;
+  final String nativeName;
+  final String flag;
+  final String sampleHint;
+
+  const CalcVoiceLanguage({
+    required this.code,
+    required this.name,
+    required this.nativeName,
+    required this.flag,
+    required this.sampleHint,
+  });
+}
+
+const String kPrefCalcVoiceLang = 'calc_hub_voice_lang_code';
+
+const List<CalcVoiceLanguage> kSupportedCalcVoiceLanguages = [
+  CalcVoiceLanguage(
+    code: 'en_IN',
+    name: 'English',
+    nativeName: 'English (India)',
+    flag: '🇬🇧',
+    sampleHint: 'e.g. "Potato 30 per kg, onion 50 per 2 kg, tomato 20 per 500g"',
+  ),
+  CalcVoiceLanguage(
+    code: 'bn_IN',
+    name: 'Bengali',
+    nativeName: 'বাংলা',
+    flag: '🇧🇩',
+    sampleHint: 'যেমন: "আলু ৩০ টাকা কেজি, পেঁয়াজ ৫০ টাকা ২ কেজি, পটল ২০ টাকা ৫০০ গ্রাম"',
+  ),
+  CalcVoiceLanguage(
+    code: 'hi_IN',
+    name: 'Hindi',
+    nativeName: 'हिन्दी',
+    flag: '🇮🇳',
+    sampleHint: 'जैसे: "आलू 30 रुपये किलो, प्याज 50 रुपये 2 किलो, टमाटर 20 रुपये 500 ग्राम"',
+  ),
+  CalcVoiceLanguage(
+    code: 'hinglish',
+    name: 'Hinglish / Banglish',
+    nativeName: 'Colloquial Mix',
+    flag: '🇮🇳',
+    sampleHint: 'e.g. "Aloo 30 rs kg, pyaaz 50 rs 2 kg, tamatar 20 rs 500 gm"',
+  ),
+  CalcVoiceLanguage(
+    code: 'ta_IN',
+    name: 'Tamil',
+    nativeName: 'தமிழ்',
+    flag: '🇮🇳',
+    sampleHint: 'எ.கா: "தக்காளி 40 ரூபாய் கிலோ, வெங்காயம் 50 ரூபாய் 2 கிலோ"',
+  ),
+  CalcVoiceLanguage(
+    code: 'te_IN',
+    name: 'Telugu',
+    nativeName: 'తెలుగు',
+    flag: '🇮🇳',
+    sampleHint: 'ఉదా: "ఉల్లిపాయలు 50 రూపాయలు 2 కేజీలు, టమోటా 40 రూపాయలు కేజీ"',
+  ),
+  CalcVoiceLanguage(
+    code: 'mr_IN',
+    name: 'Marathi',
+    nativeName: 'मराठी',
+    flag: '🇮🇳',
+    sampleHint: 'उदा: "बटाटा 30 रुपये किलो, कांदा 50 रुपये 2 किलो, टोमॅटो 20 रुपये 500 ग्रॅम"',
+  ),
+  CalcVoiceLanguage(
+    code: 'gu_IN',
+    name: 'Gujarati',
+    nativeName: 'ગુજરાતી',
+    flag: '🇮🇳',
+    sampleHint: 'ઉદા: "બટાકા 30 રૂપિયા કિલો, ડુંગળી 50 રૂપિયા 2 કિલો"',
+  ),
+  CalcVoiceLanguage(
+    code: 'kn_IN',
+    name: 'Kannada',
+    nativeName: 'ಕನ್ನಡ',
+    flag: '🇮🇳',
+    sampleHint: 'ಉದಾ: "ಆಲೂಗಡ್ಡೆ 30 ರೂ ಕೆಜಿ, ಈರುಳ್ಳಿ 50 ರೂ 2 ಕೆಜಿ"',
+  ),
+];
+
+Future<void> showCalcLanguagePickerSheet({
+  required BuildContext context,
+  required String currentCode,
+  required ValueChanged<String> onSelected,
+}) async {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  await showModalBottomSheet(
+    context: context,
+    backgroundColor: isDark ? const Color(0xFF181B22) : Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (ctx) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[400],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Icon(Icons.translate_rounded, color: Color(0xFF00D09C), size: 22),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Select Market & Voice Language',
+                    style: GoogleFonts.outfit(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Default is English. You can switch to Bengali, Hindi, or any regional language anytime.',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: Colors.grey[500],
+                ),
+              ),
+              const SizedBox(height: 14),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: kSupportedCalcVoiceLanguages.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, idx) {
+                    final item = kSupportedCalcVoiceLanguages[idx];
+                    final isSelected = item.code == currentCode;
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      leading: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? const Color(0xFF00D09C).withOpacity(0.15)
+                              : (isDark ? const Color(0xFF1E222D) : const Color(0xFFF1F5F9)),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected ? const Color(0xFF00D09C) : Colors.transparent,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(item.flag, style: const TextStyle(fontSize: 20)),
+                      ),
+                      title: Row(
+                        children: [
+                          Text(
+                            item.name,
+                            style: GoogleFonts.inter(
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                              fontSize: 14,
+                              color: isSelected ? const Color(0xFF00D09C) : null,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            item.nativeName,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                      subtitle: Text(
+                        item.sampleHint,
+                        style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[400]),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: isSelected
+                          ? const Icon(Icons.check_circle_rounded, color: Color(0xFF00D09C), size: 22)
+                          : null,
+                      onTap: () {
+                        Navigator.of(ctx).pop();
+                        onSelected(item.code);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
 
 class CalculatorHubScreen extends StatefulWidget {
   final int initialTabIndex;
@@ -22,15 +234,38 @@ class CalculatorHubScreen extends StatefulWidget {
 class _CalculatorHubScreenState extends State<CalculatorHubScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  String _selectedLangCode = 'en_IN';
 
   @override
   void initState() {
     super.initState();
+    _loadLanguagePreference();
     _tabController = TabController(
       length: 5,
       vsync: this,
       initialIndex: widget.initialTabIndex.clamp(0, 4),
     );
+  }
+
+  Future<void> _loadLanguagePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(kPrefCalcVoiceLang);
+    if (saved != null && mounted) {
+      setState(() => _selectedLangCode = saved);
+    }
+  }
+
+  Future<void> _updateLanguage(String newCode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(kPrefCalcVoiceLang, newCode);
+    if (mounted) {
+      setState(() => _selectedLangCode = newCode);
+      final lang = kSupportedCalcVoiceLanguages.firstWhere(
+        (l) => l.code == newCode,
+        orElse: () => kSupportedCalcVoiceLanguages.first,
+      );
+      CustomToast.show(context, 'Language set to ${lang.name} (${lang.nativeName}) ${lang.flag}');
+    }
   }
 
   @override
@@ -43,13 +278,59 @@ class _CalculatorHubScreenState extends State<CalculatorHubScreen>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).primaryColor;
+    final currentLang = kSupportedCalcVoiceLanguages.firstWhere(
+      (l) => l.code == _selectedLangCode,
+      orElse: () => kSupportedCalcVoiceLanguages.first,
+    );
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
           'Financial Calculators Hub',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 19),
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12.0),
+            child: InkWell(
+              onTap: () {
+                showCalcLanguagePickerSheet(
+                  context: context,
+                  currentCode: _selectedLangCode,
+                  onSelected: _updateLanguage,
+                );
+              },
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E222D) : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: const Color(0xFF00D09C).withOpacity(0.4),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(currentLang.flag, style: const TextStyle(fontSize: 13)),
+                    const SizedBox(width: 4),
+                    Text(
+                      currentLang.name,
+                      style: GoogleFonts.inter(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF00D09C),
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    const Icon(Icons.arrow_drop_down_rounded, size: 18, color: Color(0xFF00D09C)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
@@ -405,7 +686,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
   bool _isListening = false;
   bool _isAiProcessing = false;
   String _spokenText = '';
-  String _selectedVoiceLocale = 'hi_IN';
+  String _selectedVoiceLangCode = 'en_IN';
   Map<String, dynamic>? _aiParsedResult;
 
   final List<String> _units = ['kg', 'g', 'litre', 'ml', 'dozen', 'piece'];
@@ -413,7 +694,34 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
   @override
   void initState() {
     super.initState();
+    _loadVoiceLanguage();
     _recomputeManualRates();
+  }
+
+  Future<void> _loadVoiceLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(kPrefCalcVoiceLang);
+    if (saved != null && mounted) {
+      setState(() => _selectedVoiceLangCode = saved);
+    }
+  }
+
+  Future<void> _setVoiceLanguage(String code) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(kPrefCalcVoiceLang, code);
+    if (mounted) {
+      setState(() => _selectedVoiceLangCode = code);
+      final lang = kSupportedCalcVoiceLanguages.firstWhere(
+        (l) => l.code == code,
+        orElse: () => kSupportedCalcVoiceLanguages.first,
+      );
+      CustomToast.show(context, 'Voice language set to ${lang.name} (${lang.nativeName}) ${lang.flag}');
+    }
+  }
+
+  String get _effectiveSttLocale {
+    if (_selectedVoiceLangCode == 'hinglish') return 'en_IN';
+    return _selectedVoiceLangCode;
   }
 
   @override
@@ -555,7 +863,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
             setState(() => _spokenText = val.recognizedWords);
           }
         },
-        localeId: _selectedVoiceLocale,
+        localeId: _effectiveSttLocale,
         listenFor: const Duration(seconds: 25),
         pauseFor: const Duration(seconds: 3),
       );
@@ -579,8 +887,16 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
       _isAiProcessing = true;
     });
 
+    final activeLang = kSupportedCalcVoiceLanguages.firstWhere(
+      (l) => l.code == _selectedVoiceLangCode,
+      orElse: () => kSupportedCalcVoiceLanguages.first,
+    );
+
     final aiService = AiConfigService.instance;
-    final result = await aiService.parseMarketVoicePrice(text);
+    final result = await aiService.parseMarketVoicePrice(
+      text,
+      spokenLanguage: '${activeLang.name} (${activeLang.nativeName})',
+    );
 
     if (!mounted) return;
     setState(() {
@@ -1034,6 +1350,11 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
   }
 
   Widget _buildAiVoiceSection(bool isDark, Color primaryColor) {
+    final activeLang = kSupportedCalcVoiceLanguages.firstWhere(
+      (l) => l.code == _selectedVoiceLangCode,
+      orElse: () => kSupportedCalcVoiceLanguages.first,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1041,8 +1362,8 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [const Color(0xFF6366F1), const Color(0xFF4F46E5)],
+            gradient: const LinearGradient(
+              colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -1061,10 +1382,48 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
+
+              // Active Language Pill & Switcher
+              InkWell(
+                onTap: () {
+                  showCalcLanguagePickerSheet(
+                    context: context,
+                    currentCode: _selectedVoiceLangCode,
+                    onSelected: _setVoiceLanguage,
+                  );
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white38),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(activeLang.flag, style: const TextStyle(fontSize: 14)),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Voice Language: ${activeLang.name} (${activeLang.nativeName})',
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white, size: 18),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
               Text(
-                'Speak multiple rates in Hindi, Bengali, Hinglish, or English at the market. AI will parse everything into a unit price comparison chart!',
-                style: GoogleFonts.inter(color: Colors.white.withOpacity(0.85), fontSize: 12),
+                activeLang.sampleHint,
+                style: GoogleFonts.inter(color: Colors.white.withOpacity(0.9), fontSize: 12),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 18),
@@ -1096,7 +1455,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
               const SizedBox(height: 10),
               Text(
                 _isListening
-                    ? 'Listening... Tap to Stop'
+                    ? 'Listening in ${activeLang.name}... Tap to Stop'
                     : (_isAiProcessing ? 'Gemini AI Analyzing Mandi Rates...' : 'Tap Mic & Speak Market Rates'),
                 style: GoogleFonts.inter(
                   fontSize: 12,
@@ -1140,11 +1499,13 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
+              _buildSampleVoiceChip('“Ek kg begun 60 taka, potol 40 taka kilo, duto dim 16 taka”', isDark),
+              const SizedBox(width: 8),
               _buildSampleVoiceChip('“Aloo 30 rs kilo, pyaaz 50 rs 2 kg, tamatar 40 rs 500g”', isDark),
               const SizedBox(width: 8),
               _buildSampleVoiceChip('“Adrak 20 rs 100g, mirchi 10 rs 50g, oil 160 rs litre”', isDark),
               const SizedBox(width: 8),
-              _buildSampleVoiceChip('“Ek kg begun 60 taka, potol 40 taka kilo, duto dim 16 taka”', isDark),
+              _buildSampleVoiceChip('“Apple 180 per kg, banana 60 dozen, milk 64 per litre”', isDark),
             ],
           ),
         ),
