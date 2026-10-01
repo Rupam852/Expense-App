@@ -49,6 +49,8 @@ class NotificationService with ChangeNotifier {
   bool _dailyReminderEnabled = true;
   bool _splitBillAlertsEnabled = true;
   bool _monthlyReportEnabled = true;
+  bool _monthEndAlertsEnabled = true;
+  bool _newMonthStartAlertsEnabled = true;
   bool _appUpdatesEnabled = true;
   String _notificationLanguage = 'en'; // 'en', 'hi', 'bn', 'hinglish'
 
@@ -60,6 +62,8 @@ class NotificationService with ChangeNotifier {
   bool get dailyReminderEnabled => _dailyReminderEnabled;
   bool get splitBillAlertsEnabled => _splitBillAlertsEnabled;
   bool get monthlyReportEnabled => _monthlyReportEnabled;
+  bool get monthEndAlertsEnabled => _monthEndAlertsEnabled;
+  bool get newMonthStartAlertsEnabled => _newMonthStartAlertsEnabled;
   bool get appUpdatesEnabled => _appUpdatesEnabled;
   String get notificationLanguage => _notificationLanguage;
 
@@ -88,6 +92,8 @@ class NotificationService with ChangeNotifier {
       _dailyReminderEnabled = prefs.getBool('notif_daily_reminder_enabled') ?? true;
       _splitBillAlertsEnabled = prefs.getBool('notif_split_bill_enabled') ?? true;
       _monthlyReportEnabled = prefs.getBool('notif_monthly_report_enabled') ?? true;
+      _monthEndAlertsEnabled = prefs.getBool('notif_month_end_enabled') ?? true;
+      _newMonthStartAlertsEnabled = prefs.getBool('notif_new_month_start_enabled') ?? true;
       _appUpdatesEnabled = prefs.getBool('notif_app_updates_enabled') ?? true;
       _notificationLanguage = prefs.getString('notif_language') ?? 'en';
       notifyListeners();
@@ -144,6 +150,20 @@ class NotificationService with ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('notif_monthly_report_enabled', val);
+  }
+
+  Future<void> setMonthEndAlertsEnabled(bool val) async {
+    _monthEndAlertsEnabled = val;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notif_month_end_enabled', val);
+  }
+
+  Future<void> setNewMonthStartAlertsEnabled(bool val) async {
+    _newMonthStartAlertsEnabled = val;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notif_new_month_start_enabled', val);
   }
 
   Future<void> setAppUpdatesEnabled(bool val) async {
@@ -975,7 +995,215 @@ class NotificationService with ChangeNotifier {
   }
 
   // ──────────────────────────────────────────────────────────
-  // 8. TEST NOTIFICATION
+  // 8. MONTH-END INVOICE & ROLLOVER REMINDER (8:00 - 9:00 PM on Last Day)
+  // ──────────────────────────────────────────────────────────
+  Future<void> showMonthEndReminderNotification() async {
+    if (!_masterEnabled || !_monthEndAlertsEnabled) return;
+
+    try {
+      if (!_isInitialized) await initialize();
+
+      String title;
+      String body;
+
+      switch (_notificationLanguage) {
+        case 'hi':
+          title = '🗓️ कल से नया महीना शुरू हो रहा है!';
+          body = 'कल आपके इस महीने के पूरे खर्चे PDF इनवॉइस में कन्वर्ट होकर आपके फोन के Downloads फोल्डर में सुरक्षित सेव होंगे।';
+          break;
+
+        case 'bn':
+          title = '🗓️ আগামীকাল থেকে নতুন মাস শুরু হচ্ছে!';
+          body = 'আগামীকাল আপনার এই মাসের সমস্ত খরচ PDF ইনভয়েসে কনভার্ট হয়ে আপনার ফোনের Downloads ফোল্ডারে সেভ হবে।';
+          break;
+
+        case 'hinglish':
+          title = '🗓️ Kal Se New Month Start Ho Raha Hai!';
+          body = 'Kal aapka is mahine ka pura expenses invoice PDF me convert hokar phone ke Downloads folder me auto-save hoga.';
+          break;
+
+        case 'en':
+        default:
+          title = '🗓️ Month-End Tomorrow: New Month Starting!';
+          body = 'Tomorrow all your current month expenses will be converted to a PDF invoice and saved to your phone\'s Downloads folder.';
+      }
+
+      final bigTextStyleInformation = BigTextStyleInformation(
+        body,
+        htmlFormatBigText: false,
+        contentTitle: title,
+        htmlFormatContentTitle: false,
+        summaryText: 'Month-End Invoice Alert',
+        htmlFormatSummaryText: false,
+      );
+
+      final androidDetails = AndroidNotificationDetails(
+        _generalChannelId,
+        _generalChannelName,
+        channelDescription: _generalChannelDescription,
+        importance: Importance.high,
+        priority: Priority.high,
+        showWhen: true,
+        icon: '@mipmap/ic_launcher',
+        styleInformation: bigTextStyleInformation,
+        color: const Color(0xFFF97316),
+      );
+
+      final notificationDetails = NotificationDetails(android: androidDetails);
+
+      await _notificationsPlugin.show(
+        6601,
+        title,
+        body,
+        notificationDetails,
+        payload: 'month_end_reminder',
+      );
+      debugPrint('[NotificationService] Fired Month-End Reminder notification.');
+    } catch (e) {
+      debugPrint('[NotificationService] Error showing month end notification: $e');
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // 9. NEW MONTH START ACTION NOTIFICATION (8:00 - 9:00 AM on 1st Day)
+  // ──────────────────────────────────────────────────────────
+  Future<void> showNewMonthStartNotification({required bool hasExpenses}) async {
+    if (!_masterEnabled || !_newMonthStartAlertsEnabled) return;
+
+    try {
+      if (!_isInitialized) await initialize();
+
+      String title;
+      String body;
+
+      if (hasExpenses) {
+        switch (_notificationLanguage) {
+          case 'hi':
+            title = '🚀 नया महीना शुरू! पुराना इनवॉइस डाउनलोड करें';
+            body = 'कृपया ऐप खोलकर अपने पिछले महीने के खर्चों का इनवॉइस PDF डाउनलोड करें और नया महीना शुरू करें।';
+            break;
+
+          case 'bn':
+            title = '🚀 নতুন মাস শুরু! পুরোনো ইনভয়েস ডাউনলোড করুন';
+            body = 'অনুগ্রহ করে অ্যাপ খুলে আপনার গত মাসের খরচের PDF ইনভয়েস ডাউনলোড করে নতুন মাস শুরু করুন।';
+            break;
+
+          case 'hinglish':
+            title = '🚀 New Month Started! Purana Invoice Download Karein';
+            body = 'Please app khol kar apna purane month ke expenses ko invoice PDF me download kar lein aur new month start karein.';
+            break;
+
+          case 'en':
+          default:
+            title = '🚀 New Month Started! Download Previous Invoice';
+            body = 'Please open the app to download your previous month\'s expense invoice PDF and start your new month fresh.';
+        }
+      } else {
+        // If user recorded 0 expenses in previous month
+        switch (_notificationLanguage) {
+          case 'hi':
+            title = '🚀 नया महीना शुरू हो चुका है!';
+            body = 'ऐप खोलें और नए महीने के लिए अपनी फ्रेश खर्च ट्रैकिंग और बजट शुरू करें।';
+            break;
+
+          case 'bn':
+            title = '🚀 নতুন মাস শুরু হয়ে গেছে!';
+            body = 'অ্যাপ খুলুন এবং এই নতুন মাসের জন্য নতুন খরচ ট্র্যাকিং ও বাজেট শুরু করুন।';
+            break;
+
+          case 'hinglish':
+            title = '🚀 Naya Mahina Shuru Ho Chuka Hai!';
+            body = 'App open karein aur new month ke liye fresh expense tracking aur budget start karein.';
+            break;
+
+          case 'en':
+          default:
+            title = '🚀 Welcome to the New Month!';
+            body = 'Open the app and kickstart your fresh expense tracking and budget for this month!';
+        }
+      }
+
+      final bigTextStyleInformation = BigTextStyleInformation(
+        body,
+        htmlFormatBigText: false,
+        contentTitle: title,
+        htmlFormatContentTitle: false,
+        summaryText: 'New Month Started',
+        htmlFormatSummaryText: false,
+      );
+
+      final androidDetails = AndroidNotificationDetails(
+        _generalChannelId,
+        _generalChannelName,
+        channelDescription: _generalChannelDescription,
+        importance: Importance.high,
+        priority: Priority.high,
+        showWhen: true,
+        icon: '@mipmap/ic_launcher',
+        styleInformation: bigTextStyleInformation,
+        color: const Color(0xFF10B981),
+      );
+
+      final notificationDetails = NotificationDetails(android: androidDetails);
+
+      await _notificationsPlugin.show(
+        6602,
+        title,
+        body,
+        notificationDetails,
+        payload: 'new_month_start',
+      );
+      debugPrint('[NotificationService] Fired New Month Start notification (hasExpenses=$hasExpenses).');
+    } catch (e) {
+      debugPrint('[NotificationService] Error showing new month start notification: $e');
+    }
+  }
+
+  /// Automated check for Month-End (last day 8-9 PM) & New Month Start (1st day 8-9 AM)
+  Future<void> checkAndNotifyMonthEndAndNewMonth({required List<Expense> expenses}) async {
+    if (!_masterEnabled) return;
+
+    try {
+      final now = DateTime.now();
+      final prefs = await SharedPreferences.getInstance();
+
+      // 1. Month-End Check (Last day of current month, evening >= 20:00)
+      final tomorrow = now.add(const Duration(days: 1));
+      final isLastDayOfMonth = tomorrow.month != now.month;
+
+      if (isLastDayOfMonth && now.hour >= 20 && _monthEndAlertsEnabled) {
+        final notifKey = 'notif_fired_month_end_${now.year}_${now.month}';
+        final alreadyFired = prefs.getBool(notifKey) ?? false;
+        if (!alreadyFired) {
+          await showMonthEndReminderNotification();
+          await prefs.setBool(notifKey, true);
+        }
+      }
+
+      // 2. New Month Start Check (1st day of month, morning >= 8:00)
+      final isFirstDayOfMonth = now.day == 1;
+      if (isFirstDayOfMonth && now.hour >= 8 && _newMonthStartAlertsEnabled) {
+        final notifKey = 'notif_fired_new_month_start_${now.year}_${now.month}';
+        final alreadyFired = prefs.getBool(notifKey) ?? false;
+        if (!alreadyFired) {
+          final prevMonth = DateTime(now.year, now.month - 1, 1);
+          final prevMonthExpenses = expenses.where((e) {
+            if (e.isDeleted) return false;
+            return e.transactionDate.year == prevMonth.year && e.transactionDate.month == prevMonth.month;
+          }).toList();
+          final hasExpenses = prevMonthExpenses.isNotEmpty;
+
+          await showNewMonthStartNotification(hasExpenses: hasExpenses);
+          await prefs.setBool(notifKey, true);
+        }
+      }
+    } catch (e) {
+      debugPrint('[NotificationService] Error in checkAndNotifyMonthEndAndNewMonth: $e');
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // 10. TEST NOTIFICATION
   // ──────────────────────────────────────────────────────────
   Future<bool> sendTestNotification({
     String? title,

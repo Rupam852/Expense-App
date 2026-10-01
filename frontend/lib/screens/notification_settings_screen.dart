@@ -136,6 +136,163 @@ class NotificationSettingsScreen extends StatelessWidget {
     );
   }
 
+  void _showNewMonthTestOptionsSheet(BuildContext context, NotificationService notifService) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = const Color(0xFF00D09C);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E232E) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 20,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.grey[700] : Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Test New Month Notification',
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Dono scenarios test karein aapki selected language me:',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Scenario A: Purane expenses the
+              InkWell(
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  await notifService.showNewMonthStartNotification(hasExpenses: true);
+                  if (context.mounted) {
+                    CustomToast.show(context, '🚀 Scenario A Test: "PDF Download" Notification sent!');
+                  }
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF252A36) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Text('📄', style: TextStyle(fontSize: 22)),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Scenario A: Purane Mahine Ke Expenses The',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13.5,
+                                color: isDark ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                            Text(
+                              'Content: "PDF invoice download karein aur new month shuru karein"',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: primaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.send_rounded, color: Color(0xFF00D09C), size: 18),
+                    ],
+                  ),
+                ),
+              ),
+              // Scenario B: 0 Expenses the
+              InkWell(
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  await notifService.showNewMonthStartNotification(hasExpenses: false);
+                  if (context.mounted) {
+                    CustomToast.show(context, '🚀 Scenario B Test: "Fresh Start" Notification sent!');
+                  }
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF252A36) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Text('✨', style: TextStyle(fontSize: 22)),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Scenario B: Koi Kharcha Nahi Tha (0 Expenses)',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13.5,
+                                color: isDark ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                            Text(
+                              'Content: "Naya mahina shuru ho chuka hai, fresh tracking shuru karein"',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: const Color(0xFF38BDF8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.send_rounded, color: Color(0xFF38BDF8), size: 18),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -476,7 +633,44 @@ class NotificationSettingsScreen extends StatelessWidget {
                             ),
                             Divider(height: 1, color: borderColor),
 
-                            // G. App Updates
+                            // G. Month-End Invoice Rollover Reminder
+                            _buildFeatureTileWithTest(
+                              context: context,
+                              isDark: isDark,
+                              primaryColor: primaryColor,
+                              icon: Icons.calendar_month_rounded,
+                              iconColor: const Color(0xFFF97316),
+                              title: 'Month-End Invoice Reminder',
+                              subtitle: 'Evening alert (8-9 PM) on the last day before month ends',
+                              isEnabled: isMasterOn && service.monthEndAlertsEnabled,
+                              isMasterOn: isMasterOn,
+                              onToggle: (val) => service.setMonthEndAlertsEnabled(val),
+                              onTestTap: () async {
+                                await service.showMonthEndReminderNotification();
+                                if (context.mounted) {
+                                  CustomToast.show(context, '🗓️ Test Month-End Invoice Alert sent to status bar!');
+                                }
+                              },
+                            ),
+                            Divider(height: 1, color: borderColor),
+
+                            // H. New Month Start Action Alert
+                            _buildFeatureTileWithTest(
+                              context: context,
+                              isDark: isDark,
+                              primaryColor: primaryColor,
+                              icon: Icons.rocket_launch_rounded,
+                              iconColor: const Color(0xFF10B981),
+                              title: 'New Month Start Alert',
+                              subtitle: 'Morning alert (8-9 AM) on the 1st of every month',
+                              isEnabled: isMasterOn && service.newMonthStartAlertsEnabled,
+                              isMasterOn: isMasterOn,
+                              onToggle: (val) => service.setNewMonthStartAlertsEnabled(val),
+                              onTestTap: () => _showNewMonthTestOptionsSheet(context, service),
+                            ),
+                            Divider(height: 1, color: borderColor),
+
+                            // I. App Updates
                             _buildFeatureTileWithTest(
                               context: context,
                               isDark: isDark,

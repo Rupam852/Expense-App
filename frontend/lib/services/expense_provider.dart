@@ -200,6 +200,7 @@ class ExpenseProvider with ChangeNotifier {
         currentMonth: _selectedMonthYear,
       );
       NotificationService.instance.checkAndNotifyKhataEntries(_khataEntries);
+      NotificationService.instance.checkAndNotifyMonthEndAndNewMonth(expenses: _expenses);
     } catch (_) {}
     _isLoading = false;
     notifyListeners();
