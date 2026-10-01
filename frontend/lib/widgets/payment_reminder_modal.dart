@@ -221,7 +221,7 @@ class PaymentReminderModal extends StatelessWidget {
             ? customPayerUpiId
             : (activePayment?.upiId.isNotEmpty == true ? activePayment!.upiId : null);
 
-        final payeeName = userProvider.profile?.fullName ?? 'Grow Expense User';
+        final payeeName = userProvider.userProfile?['full_name']?.toString() ?? 'Grow Expense User';
         final hasPaymentMethod = effectiveUpiId != null && effectiveUpiId.trim().isNotEmpty;
         final shareMessage = _buildShareMessage(
           upiId: effectiveUpiId,

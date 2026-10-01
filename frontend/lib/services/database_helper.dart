@@ -724,10 +724,6 @@ class DatabaseHelper {
 
   Future<void> deletePaymentDetails() async {
     final db = await instance.database;
-    final existing = await getPaymentDetails();
-    for (final p in existing) {
-      await recordDeletion('payment_details', p.id);
-    }
     await db.delete('payment_details');
   }
 
