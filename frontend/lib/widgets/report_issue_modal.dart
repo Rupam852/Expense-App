@@ -131,12 +131,12 @@ class _ReportIssueModalState extends State<ReportIssueModal> {
         if (success) {
           CustomToast.show(
             context,
-            '✅ Support request sent to support team! We will review it shortly.',
+            '📧 Opening Email app with pre-filled report to rupambairagya08@gmail.com!',
           );
         } else {
           CustomToast.show(
             context,
-            'Your report has been logged and sent to support.',
+            'Your report has been logged and sent to developer.',
           );
         }
       }
@@ -468,6 +468,18 @@ class _ReportIssueModalState extends State<ReportIssueModal> {
                           ),
                         ],
                       ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.mail_outline_rounded, size: 14, color: Colors.grey),
+                  const SizedBox(width: 5),
+                  Text(
+                    'Direct delivery to rupambairagya08@gmail.com',
+                    style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                  ),
+                ],
               ),
             ],
           ),
