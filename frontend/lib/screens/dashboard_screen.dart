@@ -2303,6 +2303,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         );
       },
+    );
   }
 
   void _showAllToolsModalSheet(BuildContext context) {

@@ -10,6 +10,7 @@ import '../services/user_provider.dart';
 import '../models/expense.dart';
 import '../widgets/custom_toast.dart';
 import 'ai_config_screen.dart';
+import '../services/ai_config_service.dart';
 import '../widgets/ai_config_required_dialog.dart';
 import '../widgets/voice_expense_dialog.dart';
 import '../widgets/sms_expense_parser_dialog.dart';

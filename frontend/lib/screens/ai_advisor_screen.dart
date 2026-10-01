@@ -250,7 +250,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
         timestamp: DateTime.now(),
       );
       if (aiService.isServerBusyError(errorMsg)) {
-        showAiServerBusyDialog(context, onRetry: () => _sendMessage(userQuestion: question));
+        showAiServerBusyDialog(context, onRetry: () => _sendMessage(question));
       }
     }
 

@@ -1358,13 +1358,13 @@ class _ConfigurationTestingDialogState extends State<_ConfigurationTestingDialog
                 ),
                 child: Text('Done', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
               ),
-              if (_results != null && _results!.any((r) => !r.isSuccess)) ...[
+              if (_results != null && _results!.any((r) => !r.isWorking)) ...[
                 const SizedBox(height: 6),
                 Center(
                   child: TextButton.icon(
                     onPressed: () {
                       final failedLogs = _results!
-                          .where((r) => !r.isSuccess)
+                          .where((r) => !r.isWorking)
                           .map((r) => '${r.provider} (${r.modelName}): ${r.message}')
                           .join('\n');
                       Navigator.of(context).pop();

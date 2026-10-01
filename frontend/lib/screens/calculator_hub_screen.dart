@@ -912,7 +912,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
     } else {
       final errorMsg = result['error']?.toString() ?? 'Could not parse market voice.';
       if (aiService.isServerBusyError(errorMsg)) {
-        showAiServerBusyDialog(context, onRetry: () => _parseVoiceWithAi(text));
+        showAiServerBusyDialog(context, onRetry: () => _processMandiVoice(text));
       } else {
         CustomToast.show(context, errorMsg, isError: true);
       }
