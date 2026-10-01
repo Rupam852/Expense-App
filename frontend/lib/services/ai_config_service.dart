@@ -1289,4 +1289,240 @@ $financialContextSummary
     } catch (_) {}
     return null;
   }
-}
+
+  // ──────────────────────────────────────────────────────────
+  // 4. SABJI MANDI / MARKET VOICE UNIT PRICE PARSER
+  // ──────────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> parseMarketVoicePrice(String naturalSpeechText) async {
+    if (!hasAnyApiKey) {
+      return {
+        'success': false,
+        'error': 'API Key is missing. Please configure your Gemini API Key in Settings → AI Configuration.',
+      };
+    }
+
+    final primary = _primaryProvider;
+    final secondary = _secondaryProvider;
+
+    final primaryResult = await _invokeProviderForMarketVoice(
+      provider: primary,
+      naturalSpeechText: naturalSpeechText,
+    );
+
+    if (primaryResult['success'] == true) {
+      return primaryResult;
+    }
+
+    if (hasSecondaryConfig && secondary != primary) {
+      debugPrint('[AiConfigService] Primary ($primary) failed for Market Voice. Failing over to Backup ($secondary)...');
+      final secondaryResult = await _invokeProviderForMarketVoice(
+        provider: secondary,
+        naturalSpeechText: naturalSpeechText,
+      );
+
+      if (secondaryResult['success'] == true) {
+        return secondaryResult;
+      }
+
+      return {
+        'success': false,
+        'error': 'Both Primary ($primary) and Backup ($secondary) AI engines failed.\nPrimary: ${primaryResult['error'] ?? 'No key'}\nBackup: ${secondaryResult['error']}',
+      };
+    }
+
+    return {
+      'success': false,
+      'error': primaryResult['error'] ?? 'Configured AI provider failed. Please check your API Key in Settings.',
+    };
+  }
+
+  Future<Map<String, dynamic>> _invokeProviderForMarketVoice({
+    required String provider,
+    required String naturalSpeechText,
+  }) async {
+    final promptText = '''You are an expert Local Market, Sabji Mandi, and Grocery Rate Analyzer.
+The user speaks items and their rates at a local market or grocery store in ANY language or mixture of languages (such as Hindi, Bengali, Hinglish, Marathi, Tamil, Telugu, Gujarati, English, etc.).
+Examples:
+- "Aloo 30 rupaye kilo, pyaaz 50 rupaye 2 kilo, tamatar 30 rupaye 500 gram, adrak 20 rupaye 100 gram, sarson tel 160 rupaye litre"
+- "Ek kg begun 60 taka, potol 40 taka kilo, duto dim 16 taka"
+- "Apple 180 per kg, banana 50 dozen, milk 64 per litre"
+
+Your job:
+1. Identify all distinct items mentioned.
+2. Standardize the item name in English (e.g. "Potato (Aloo)", "Onion (Pyaaz)", "Tomato (Tamatar)", "Ginger (Adrak)", "Mustard Oil", "Egg", "Apple", "Banana").
+3. Extract base quantity (e.g. 1.0, 2.0, 500.0, 100.0), base unit ("kg", "g", "litre", "ml", "dozen", "piece"), and base price (INR number).
+4. Compute standard rate per standard unit (e.g. Rate per 1 kg for weight, Rate per 1 litre for volume, Rate per 1 dozen, Rate per 1 piece).
+5. For weight items ("kg" or "g"), generate:
+   - quantity_breakdown: [
+       {"quantity": "50g", "price": calculated_num},
+       {"quantity": "100g", "price": calculated_num},
+       {"quantity": "250g", "price": calculated_num},
+       {"quantity": "500g", "price": calculated_num},
+       {"quantity": "1 kg", "price": calculated_num},
+       {"quantity": "2 kg", "price": calculated_num},
+       {"quantity": "5 kg", "price": calculated_num}
+     ]
+   - budget_breakdown: [
+       {"budget": "₹10", "quantity": "e.g. 333g"},
+       {"budget": "₹20", "quantity": "e.g. 667g"},
+       {"budget": "₹50", "quantity": "e.g. 1.67 kg"},
+       {"budget": "₹100", "quantity": "e.g. 3.33 kg"}
+     ]
+6. For liquid items ("litre" or "ml"), generate breakdowns for 100ml, 250ml, 500ml, 1L, 2L and budget breakdowns for ₹10, ₹20, ₹50, ₹100.
+7. For dozen/piece items, generate breakdowns for 1 pc, 2 pcs, 4 pcs, 6 pcs (half dozen), 12 pcs (1 dozen).
+
+USER SPOKEN INPUT:
+"$naturalSpeechText"
+
+Return ONLY a valid single JSON object without markdown fences, backticks, or other text:
+{
+  "items": [
+    {
+      "item_name": "Potato (Aloo)",
+      "category": "Vegetables",
+      "base_quantity": 1.0,
+      "base_unit": "kg",
+      "base_price": 30.0,
+      "rate_per_standard_unit": 30.0,
+      "standard_unit": "kg",
+      "quantity_breakdown": [
+        {"quantity": "100g", "price": 3.0},
+        {"quantity": "250g", "price": 7.5},
+        {"quantity": "500g", "price": 15.0},
+        {"quantity": "1 kg", "price": 30.0},
+        {"quantity": "2 kg", "price": 60.0},
+        {"quantity": "5 kg", "price": 150.0}
+      ],
+      "budget_breakdown": [
+        {"budget": "₹10", "quantity": "333g"},
+        {"budget": "₹20", "quantity": "667g"},
+        {"budget": "₹50", "quantity": "1.67 kg"},
+        {"budget": "₹100", "quantity": "3.33 kg"}
+      ]
+    }
+  ],
+  "market_summary": "Extracted items summary..."
+}''';
+
+    if (provider == 'gemini') {
+      if (_geminiApiKey.isEmpty) {
+        return {'success': false, 'error': 'Gemini API Key is missing. Please add it in Settings → AI Configuration.'};
+      }
+
+      final candidateModels = <String>[_geminiModel];
+      for (final m in availableGeminiModels) {
+        if (!candidateModels.contains(m)) {
+          candidateModels.add(m);
+        }
+      }
+
+      String? lastGeminiError;
+      for (final model in candidateModels) {
+        debugPrint('[AiConfigService] Attempting Gemini Market Voice with model: $model');
+        try {
+          final url = Uri.parse(
+            'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$_geminiApiKey',
+          );
+          final payload = {
+            'contents': [
+              {
+                'parts': [
+                  {'text': promptText},
+                ]
+              }
+            ],
+            'generationConfig': {
+              'temperature': 0.1,
+              'responseMimeType': 'application/json',
+            }
+          };
+
+          final response = await http.post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode(payload),
+          ).timeout(const Duration(seconds: 25));
+
+          if (response.statusCode == 200) {
+            final resJson = json.decode(response.body);
+            final candidates = resJson['candidates'] as List?;
+            if (candidates != null && candidates.isNotEmpty) {
+              final content = candidates[0]['content'];
+              final parts = content?['parts'] as List?;
+              if (parts != null && parts.isNotEmpty) {
+                final rawText = parts[0]['text']?.toString() ?? '';
+                final parsed = _extractJsonFromText(rawText);
+                if (parsed != null && parsed.containsKey('items')) {
+                  debugPrint('[AiConfigService] Gemini Market Voice model $model succeeded!');
+                  return {'success': true, 'data': parsed, 'modelUsed': model};
+                }
+              }
+            }
+            lastGeminiError = 'Model $model returned unparseable content';
+          } else {
+            lastGeminiError = 'Model $model: HTTP ${response.statusCode}';
+          }
+        } catch (e) {
+          lastGeminiError = 'Model $model: $e';
+        }
+      }
+
+      return {'success': false, 'error': 'All Gemini models failed ($lastGeminiError).'};
+    }
+
+    if (provider == 'nvidia') {
+      if (_nvidiaApiKey.isEmpty) {
+        return {'success': false, 'error': 'NVIDIA NIM API Key is missing. Please add it in Settings → AI Configuration.'};
+      }
+
+      final candidateModels = <String>[_nvidiaModel];
+      for (final m in availableNvidiaModels) {
+        if (!candidateModels.contains(m)) {
+          candidateModels.add(m);
+        }
+      }
+
+      String? lastNvidiaError;
+      for (final model in candidateModels) {
+        try {
+          final url = Uri.parse('https://integrate.api.nvidia.com/v1/chat/completions');
+          final payload = {
+            'model': model,
+            'messages': [
+              {'role': 'system', 'content': 'You are an accurate local market unit price analyzer. Return raw JSON only.'},
+              {'role': 'user', 'content': promptText},
+            ],
+            'temperature': 0.1,
+            'max_tokens': 2048,
+          };
+
+          final response = await http.post(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $_nvidiaApiKey',
+            },
+            body: json.encode(payload),
+          ).timeout(const Duration(seconds: 30));
+
+          if (response.statusCode == 200) {
+            final resJson = json.decode(response.body);
+            final rawText = resJson['choices']?[0]?['message']?['content']?.toString() ?? '';
+            final parsed = _extractJsonFromText(rawText);
+            if (parsed != null && parsed.containsKey('items')) {
+              return {'success': true, 'data': parsed, 'modelUsed': model};
+            }
+            lastNvidiaError = 'Model $model returned invalid JSON';
+          } else {
+            lastNvidiaError = 'Model $model: HTTP ${response.statusCode}';
+          }
+        } catch (e) {
+          lastNvidiaError = 'Model $model: $e';
+        }
+      }
+
+      return {'success': false, 'error': 'All NVIDIA NIM models failed ($lastNvidiaError).'};
+    }
+
+    return {'success': false, 'error': 'Unknown provider: $provider'};
+  }

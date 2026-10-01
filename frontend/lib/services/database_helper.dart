@@ -277,6 +277,18 @@ class DatabaseHelper {
     try {
       await db.execute("ALTER TABLE split_bills ADD COLUMN split_type TEXT NOT NULL DEFAULT 'equal'");
     } catch (_) {}
+    try {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS calculator_history (
+          id TEXT PRIMARY KEY,
+          calc_type TEXT NOT NULL,
+          title TEXT NOT NULL,
+          summary TEXT NOT NULL,
+          details_json TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        )
+      ''');
+    } catch (_) {}
   }
 
   Future<Database> _initDB(String filePath) async {
@@ -565,6 +577,18 @@ class DatabaseHelper {
         is_user INTEGER NOT NULL,
         timestamp TEXT NOT NULL,
         model_used TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    // 9. Financial Calculator History SQLite Table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS calculator_history (
+        id TEXT PRIMARY KEY,
+        calc_type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        details_json TEXT NOT NULL,
         created_at TEXT NOT NULL
       )
     ''');
@@ -1531,6 +1555,65 @@ class DatabaseHelper {
   Future<int> clearAiChatMessages() async {
     final db = await instance.database;
     return await db.delete('ai_chat_messages');
+  }
+
+  // ================= CALCULATOR HISTORY CRUD =================
+
+  Future<int> insertCalculatorHistory({
+    required String id,
+    required String calcType, // 'standard', 'market_unit', 'market_voice', 'emi', 'discount', 'gst', 'sip'
+    required String title,
+    required String summary,
+    required String detailsJson,
+  }) async {
+    final db = await instance.database;
+    return await db.insert(
+      'calculator_history',
+      {
+        'id': id,
+        'calc_type': calcType,
+        'title': title,
+        'summary': summary,
+        'details_json': detailsJson,
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getCalculatorHistory({String? type}) async {
+    final db = await instance.database;
+    final where = type != null && type.isNotEmpty && type != 'all' ? 'calc_type = ?' : null;
+    final whereArgs = type != null && type.isNotEmpty && type != 'all' ? [type] : null;
+
+    return await db.query(
+      'calculator_history',
+      where: where,
+      whereArgs: whereArgs,
+      orderBy: 'created_at DESC',
+      limit: 100,
+    );
+  }
+
+  Future<int> deleteCalculatorHistory(String id) async {
+    final db = await instance.database;
+    return await db.delete(
+      'calculator_history',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> clearCalculatorHistory({String? type}) async {
+    final db = await instance.database;
+    if (type != null && type.isNotEmpty && type != 'all') {
+      return await db.delete(
+        'calculator_history',
+        where: 'calc_type = ?',
+        whereArgs: [type],
+      );
+    }
+    return await db.delete('calculator_history');
   }
 
   Future<void> close() async {

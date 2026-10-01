@@ -38,6 +38,7 @@ import 'subscription_screen.dart';
 import 'trip_tag_screen.dart';
 import '../widgets/sms_expense_parser_dialog.dart';
 import '../widgets/export_statement_dialog.dart';
+import 'calculator_hub_screen.dart';
 
 String getCurrencySymbol(String currencyCode) {
   switch (currencyCode.toUpperCase()) {
@@ -2428,6 +2429,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   // ─── 2. SMART UTILITIES & AI ───
                   _buildToolSectionHeader('SMART UTILITIES & AI', primaryColor),
                   const SizedBox(height: 10),
+                  _buildToolTile(
+                    ctx: ctx,
+                    isDark: isDark,
+                    icon: Icons.calculate_rounded,
+                    iconColor: const Color(0xFF00D09C),
+                    title: 'Financial Calculators Hub',
+                    subtitle: 'Standard math, Sabji Mandi unit rates, EMI loan, GST & AI Voice',
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CalculatorHubScreen()));
+                    },
+                  ),
+                  const SizedBox(height: 8),
                   _buildToolTile(
                     ctx: ctx,
                     isDark: isDark,

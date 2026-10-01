@@ -1,0 +1,2472 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:math';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import '../services/ai_config_service.dart';
+import '../services/database_helper.dart';
+import '../widgets/ai_config_required_dialog.dart';
+import '../widgets/custom_toast.dart';
+
+class CalculatorHubScreen extends StatefulWidget {
+  final int initialTabIndex;
+  const CalculatorHubScreen({super.key, this.initialTabIndex = 0});
+
+  @override
+  State<CalculatorHubScreen> createState() => _CalculatorHubScreenState();
+}
+
+class _CalculatorHubScreenState extends State<CalculatorHubScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(
+      length: 5,
+      vsync: this,
+      initialIndex: widget.initialTabIndex.clamp(0, 4),
+    );
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).primaryColor;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Financial Calculators Hub',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 19),
+        ),
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          labelColor: const Color(0xFF00D09C),
+          unselectedLabelColor: isDark ? Colors.grey[400] : Colors.grey[600],
+          indicatorColor: const Color(0xFF00D09C),
+          indicatorWeight: 3,
+          labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
+          unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 13),
+          tabs: const [
+            Tab(icon: Icon(Icons.calculate_outlined, size: 20), text: 'Standard'),
+            Tab(icon: Icon(Icons.shopping_basket_outlined, size: 20), text: 'Market Price'),
+            Tab(icon: Icon(Icons.account_balance_outlined, size: 20), text: 'EMI Loan'),
+            Tab(icon: Icon(Icons.percent_rounded, size: 20), text: 'Daily Tools'),
+            Tab(icon: Icon(Icons.history_rounded, size: 20), text: 'History'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: const [
+          _StandardCalculatorView(),
+          _MarketPriceCalculatorView(),
+          _EmiCalculatorView(),
+          _DailyFinancialToolsView(),
+          _CalculatorHistoryView(),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB 1: STANDARD CALCULATOR
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _StandardCalculatorView extends StatefulWidget {
+  const _StandardCalculatorView();
+
+  @override
+  State<_StandardCalculatorView> createState() => _StandardCalculatorViewState();
+}
+
+class _StandardCalculatorViewState extends State<_StandardCalculatorView> {
+  String _expression = '';
+  String _result = '0';
+
+  void _onBtnTap(String val) {
+    HapticFeedback.lightImpact();
+    setState(() {
+      if (val == 'AC') {
+        _expression = '';
+        _result = '0';
+      } else if (val == '⌫') {
+        if (_expression.isNotEmpty) {
+          _expression = _expression.substring(0, _expression.length - 1);
+          _calculateResult(live: true);
+        }
+      } else if (val == '=') {
+        _calculateResult(live: false, save: true);
+      } else if (val == '%') {
+        if (_expression.isNotEmpty && !'+-×÷%'.contains(_expression[_expression.length - 1])) {
+          _expression += '%';
+          _calculateResult(live: true);
+        }
+      } else if (['+', '-', '×', '÷'].contains(val)) {
+        if (_expression.isEmpty) {
+          if (val == '-') _expression = '-';
+        } else {
+          final lastChar = _expression[_expression.length - 1];
+          if (['+', '-', '×', '÷'].contains(lastChar)) {
+            _expression = _expression.substring(0, _expression.length - 1) + val;
+          } else {
+            _expression += val;
+          }
+        }
+      } else {
+        _expression += val;
+        _calculateResult(live: true);
+      }
+    });
+  }
+
+  void _calculateResult({bool live = false, bool save = false}) {
+    if (_expression.trim().isEmpty) {
+      _result = '0';
+      return;
+    }
+
+    try {
+      String cleanExp = _expression
+          .replaceAll('×', '*')
+          .replaceAll('÷', '/')
+          .replaceAll('%', '*0.01');
+
+      // Simple safe expression evaluator
+      final val = _evaluateSimpleExpression(cleanExp);
+      if (val != null) {
+        final formatted = (val == val.roundToDouble())
+            ? val.toInt().toString()
+            : NumberFormat('0.######').format(val);
+
+        _result = formatted;
+
+        if (save && _expression.isNotEmpty) {
+          _saveStandardCalculation(_expression, formatted);
+        }
+      }
+    } catch (_) {
+      if (!live) {
+        _result = 'Error';
+      }
+    }
+  }
+
+  double? _evaluateSimpleExpression(String expr) {
+    try {
+      List<String> tokens = [];
+      String currentNum = '';
+
+      for (int i = 0; i < expr.length; i++) {
+        final ch = expr[i];
+        if ('0123456789.'.contains(ch)) {
+          currentNum += ch;
+        } else if ('+-*/'.contains(ch)) {
+          if (currentNum.isNotEmpty) {
+            tokens.add(currentNum);
+            currentNum = '';
+          } else if (ch == '-' && (tokens.isEmpty || '+-*/'.contains(tokens.last))) {
+            currentNum = '-';
+            continue;
+          }
+          tokens.add(ch);
+        }
+      }
+      if (currentNum.isNotEmpty) tokens.add(currentNum);
+
+      if (tokens.isEmpty) return null;
+
+      // Process * and /
+      List<String> nextTokens = [];
+      int idx = 0;
+      while (idx < tokens.length) {
+        if (tokens[idx] == '*' || tokens[idx] == '/') {
+          final op = tokens[idx];
+          final prevNum = double.parse(nextTokens.removeLast());
+          final nextNum = double.parse(tokens[++idx]);
+          final res = (op == '*') ? (prevNum * nextNum) : (nextNum == 0 ? 0.0 : prevNum / nextNum);
+          nextTokens.add(res.toString());
+        } else {
+          nextTokens.add(tokens[idx]);
+        }
+        idx++;
+      }
+
+      // Process + and -
+      double finalVal = double.parse(nextTokens[0]);
+      idx = 1;
+      while (idx < nextTokens.length) {
+        final op = nextTokens[idx];
+        final nextNum = double.parse(nextTokens[idx + 1]);
+        if (op == '+') finalVal += nextNum;
+        if (op == '-') finalVal -= nextNum;
+        idx += 2;
+      }
+      return finalVal;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _saveStandardCalculation(String exp, String res) async {
+    final id = 'calc-${DateTime.now().millisecondsSinceEpoch}';
+    await DatabaseHelper.instance.insertCalculatorHistory(
+      id: id,
+      calcType: 'standard',
+      title: 'Standard Calculation',
+      summary: '$exp = $res',
+      detailsJson: jsonEncode({'expression': exp, 'result': res}),
+    );
+    if (mounted) {
+      CustomToast.show(context, 'Calculation saved to history ✨');
+    }
+  }
+
+  Widget _buildCalcBtn(String label, {Color? bg, Color? fg, bool isWide = false}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final defaultBg = isDark ? const Color(0xFF1E222D) : const Color(0xFFF1F5F9);
+    final defaultFg = isDark ? Colors.white : Colors.black87;
+
+    return Expanded(
+      flex: isWide ? 2 : 1,
+      child: Padding(
+        padding: const EdgeInsets.all(4.0),
+        child: InkWell(
+          onTap: () => _onBtnTap(label),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            height: 60,
+            decoration: BoxDecoration(
+              color: bg ?? defaultBg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0),
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              style: GoogleFonts.outfit(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: fg ?? defaultFg,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final opColor = const Color(0xFF00D09C);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          // Display Screen Card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF181B22) : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  _expression.isEmpty ? '0' : _expression,
+                  style: GoogleFonts.firaCode(
+                    fontSize: 22,
+                    color: Colors.grey[500],
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _result,
+                  style: GoogleFonts.outfit(
+                    fontSize: 38,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF00D09C),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Keypad Rows
+          Row(
+            children: [
+              _buildCalcBtn('AC', fg: Colors.redAccent),
+              _buildCalcBtn('⌫', fg: Colors.orangeAccent),
+              _buildCalcBtn('%', fg: opColor),
+              _buildCalcBtn('÷', fg: opColor),
+            ],
+          ),
+          Row(
+            children: [
+              _buildCalcBtn('7'),
+              _buildCalcBtn('8'),
+              _buildCalcBtn('9'),
+              _buildCalcBtn('×', fg: opColor),
+            ],
+          ),
+          Row(
+            children: [
+              _buildCalcBtn('4'),
+              _buildCalcBtn('5'),
+              _buildCalcBtn('6'),
+              _buildCalcBtn('-', fg: opColor),
+            ],
+          ),
+          Row(
+            children: [
+              _buildCalcBtn('1'),
+              _buildCalcBtn('2'),
+              _buildCalcBtn('3'),
+              _buildCalcBtn('+', fg: opColor),
+            ],
+          ),
+          Row(
+            children: [
+              _buildCalcBtn('0', isWide: true),
+              _buildCalcBtn('.'),
+              _buildCalcBtn('=', bg: opColor, fg: Colors.white),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB 2: MARKET PRICE / SABJI MANDI UNIT CALCULATOR (Manual + AI Voice)
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _MarketPriceCalculatorView extends StatefulWidget {
+  const _MarketPriceCalculatorView();
+
+  @override
+  State<_MarketPriceCalculatorView> createState() => _MarketPriceCalculatorViewState();
+}
+
+class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> {
+  int _modeIndex = 0; // 0: Manual Unit Calc, 1: AI Mandi Voice Rate Analyzer
+
+  // Manual Unit State
+  final _itemNameCtrl = TextEditingController(text: 'Tomato (Tamatar)');
+  final _basePriceCtrl = TextEditingController(text: '40');
+  final _baseQuantityCtrl = TextEditingController(text: '1');
+  String _selectedUnit = 'kg'; // 'kg', 'g', 'litre', 'ml', 'dozen', 'piece'
+
+  // Custom Target Calc Box
+  final _customQuantityCtrl = TextEditingController(text: '250');
+  String _customQuantityUnit = 'g';
+  double _customResultPrice = 0.0;
+
+  final _customBudgetCtrl = TextEditingController(text: '50');
+  String _customResultQuantity = '';
+
+  // AI Voice State
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  bool _isListening = false;
+  bool _isAiProcessing = false;
+  String _spokenText = '';
+  String _selectedVoiceLocale = 'hi_IN';
+  Map<String, dynamic>? _aiParsedResult;
+
+  final List<String> _units = ['kg', 'g', 'litre', 'ml', 'dozen', 'piece'];
+
+  @override
+  void initState() {
+    super.initState();
+    _recomputeManualRates();
+  }
+
+  @override
+  void dispose() {
+    _itemNameCtrl.dispose();
+    _basePriceCtrl.dispose();
+    _baseQuantityCtrl.dispose();
+    _customQuantityCtrl.dispose();
+    _customBudgetCtrl.dispose();
+    _speech.stop();
+    super.dispose();
+  }
+
+  double get _ratePerBaseStandardUnit {
+    final price = double.tryParse(_basePriceCtrl.text) ?? 0.0;
+    final qty = double.tryParse(_baseQuantityCtrl.text) ?? 1.0;
+    if (qty <= 0) return 0.0;
+
+    if (_selectedUnit == 'g') {
+      return (price / qty) * 1000.0; // Rate per 1 kg
+    } else if (_selectedUnit == 'ml') {
+      return (price / qty) * 1000.0; // Rate per 1 L
+    }
+    return price / qty;
+  }
+
+  void _recomputeManualRates() {
+    setState(() {
+      final ratePerStd = _ratePerBaseStandardUnit;
+
+      // 1. Custom Quantity Price Calc
+      final customQty = double.tryParse(_customQuantityCtrl.text) ?? 0.0;
+      if (customQty > 0) {
+        if (_customQuantityUnit == 'g') {
+          _customResultPrice = (ratePerStd / 1000.0) * customQty;
+        } else if (_customQuantityUnit == 'kg') {
+          _customResultPrice = ratePerStd * customQty;
+        } else if (_customQuantityUnit == 'ml') {
+          _customResultPrice = (ratePerStd / 1000.0) * customQty;
+        } else if (_customQuantityUnit == 'litre') {
+          _customResultPrice = ratePerStd * customQty;
+        } else {
+          _customResultPrice = ratePerStd * customQty;
+        }
+      } else {
+        _customResultPrice = 0.0;
+      }
+
+      // 2. Custom Budget Quantity Calc
+      final budget = double.tryParse(_customBudgetCtrl.text) ?? 0.0;
+      if (budget > 0 && ratePerStd > 0) {
+        if (_selectedUnit == 'kg' || _selectedUnit == 'g') {
+          final totalGrams = (budget / ratePerStd) * 1000.0;
+          if (totalGrams >= 1000) {
+            _customResultQuantity = '${(totalGrams / 1000.0).toStringAsFixed(2)} kg';
+          } else {
+            _customResultQuantity = '${totalGrams.toStringAsFixed(0)} g';
+          }
+        } else if (_selectedUnit == 'litre' || _selectedUnit == 'ml') {
+          final totalMl = (budget / ratePerStd) * 1000.0;
+          if (totalMl >= 1000) {
+            _customResultQuantity = '${(totalMl / 1000.0).toStringAsFixed(2)} L';
+          } else {
+            _customResultQuantity = '${totalMl.toStringAsFixed(0)} ml';
+          }
+        } else {
+          final pcs = budget / ratePerStd;
+          _customResultQuantity = '${pcs.toStringAsFixed(1)} pcs';
+        }
+      } else {
+        _customResultQuantity = '0';
+      }
+    });
+  }
+
+  void _saveManualMarketCalculation() async {
+    final item = _itemNameCtrl.text.trim().isEmpty ? 'Market Item' : _itemNameCtrl.text.trim();
+    final price = double.tryParse(_basePriceCtrl.text) ?? 0.0;
+    final qty = _baseQuantityCtrl.text.trim();
+    final stdRate = _ratePerBaseStandardUnit;
+
+    final id = 'market-${DateTime.now().millisecondsSinceEpoch}';
+    final summary = '$item: ₹$price for $qty $_selectedUnit (₹${stdRate.toStringAsFixed(2)} / std unit)';
+
+    await DatabaseHelper.instance.insertCalculatorHistory(
+      id: id,
+      calcType: 'market_unit',
+      title: 'Market Rate: $item',
+      summary: summary,
+      detailsJson: jsonEncode({
+        'item_name': item,
+        'base_price': price,
+        'base_qty': qty,
+        'unit': _selectedUnit,
+        'rate_per_std': stdRate,
+      }),
+    );
+
+    if (mounted) {
+      CustomToast.show(context, 'Market price saved to history! 🛒');
+    }
+  }
+
+  // ─── AI VOICE RECOGNITION & GEMINI PARSING ───
+
+  Future<void> _startAiListening() async {
+    if (!checkAndPromptAiConfig(context)) return;
+
+    bool available = await _speech.initialize(
+      onStatus: (status) {
+        if (status == 'done' || status == 'notListening') {
+          if (mounted && _isListening) {
+            setState(() => _isListening = false);
+            if (_spokenText.trim().isNotEmpty && !_isAiProcessing) {
+              _processMandiVoice(_spokenText);
+            }
+          }
+        }
+      },
+      onError: (e) {
+        if (mounted) {
+          setState(() => _isListening = false);
+          CustomToast.show(context, 'Mic error: ${e.errorMsg}', isError: true);
+        }
+      },
+    );
+
+    if (available) {
+      setState(() {
+        _isListening = true;
+        _spokenText = '';
+        _aiParsedResult = null;
+      });
+      HapticFeedback.mediumImpact();
+
+      await _speech.listen(
+        onResult: (val) {
+          if (mounted) {
+            setState(() => _spokenText = val.recognizedWords);
+          }
+        },
+        localeId: _selectedVoiceLocale,
+        listenFor: const Duration(seconds: 25),
+        pauseFor: const Duration(seconds: 3),
+      );
+    } else {
+      if (mounted) {
+        CustomToast.show(context, 'Speech recognition not available on this device.', isError: true);
+      }
+    }
+  }
+
+  Future<void> _stopAiListening() async {
+    await _speech.stop();
+    setState(() => _isListening = false);
+    if (_spokenText.trim().isNotEmpty && !_isAiProcessing) {
+      _processMandiVoice(_spokenText);
+    }
+  }
+
+  Future<void> _processMandiVoice(String text) async {
+    setState(() {
+      _isAiProcessing = true;
+    });
+
+    final aiService = AiConfigService.instance;
+    final result = await aiService.parseMarketVoicePrice(text);
+
+    if (!mounted) return;
+    setState(() {
+      _isAiProcessing = false;
+    });
+
+    if (result['success'] == true && result['data'] != null) {
+      setState(() {
+        _aiParsedResult = result['data'] as Map<String, dynamic>;
+      });
+      HapticFeedback.mediumImpact();
+      CustomToast.show(context, 'Mandi rates parsed successfully! 🎉');
+    } else {
+      CustomToast.show(context, result['error'] ?? 'Could not parse market voice.', isError: true);
+    }
+  }
+
+  void _saveAiMarketShoppingList() async {
+    if (_aiParsedResult == null) return;
+    final items = _aiParsedResult!['items'] as List? ?? [];
+    if (items.isEmpty) return;
+
+    final id = 'mandi-ai-${DateTime.now().millisecondsSinceEpoch}';
+    final summary = '${items.length} items parsed via AI Mandi Voice (${items.map((i) => i['item_name']).join(', ')})';
+
+    await DatabaseHelper.instance.insertCalculatorHistory(
+      id: id,
+      calcType: 'market_voice',
+      title: 'Mandi Voice Shopping List (${items.length} Items)',
+      summary: summary,
+      detailsJson: jsonEncode(_aiParsedResult),
+    );
+
+    if (mounted) {
+      CustomToast.show(context, 'Shopping breakdown saved to history! 🛒✨');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).primaryColor;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Mode Switcher (Manual vs AI Voice)
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E222D) : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () => setState(() => _modeIndex = 0),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: _modeIndex == 0 ? const Color(0xFF00D09C) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      alignment: Alignment.center,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.tune_rounded,
+                            size: 16,
+                            color: _modeIndex == 0 ? Colors.white : (isDark ? Colors.grey[400] : Colors.grey[700]),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Manual Unit Rate',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12.5,
+                              color: _modeIndex == 0 ? Colors.white : (isDark ? Colors.grey[400] : Colors.grey[700]),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => setState(() => _modeIndex = 1),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: _modeIndex == 1 ? const Color(0xFF6366F1) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      alignment: Alignment.center,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.mic_none_rounded,
+                            size: 16,
+                            color: _modeIndex == 1 ? Colors.white : (isDark ? Colors.grey[400] : Colors.grey[700]),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'AI Mandi Voice ✨',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12.5,
+                              color: _modeIndex == 1 ? Colors.white : (isDark ? Colors.grey[400] : Colors.grey[700]),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+
+          if (_modeIndex == 0) ...[
+            _buildManualUnitCalculatorSection(isDark, primaryColor),
+          ] else ...[
+            _buildAiVoiceSection(isDark, primaryColor),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildManualUnitCalculatorSection(bool isDark, Color primaryColor) {
+    final ratePerStd = _ratePerBaseStandardUnit;
+    final stdUnitLabel = (_selectedUnit == 'g' || _selectedUnit == 'kg')
+        ? 'kg'
+        : (_selectedUnit == 'ml' || _selectedUnit == 'litre')
+            ? 'L'
+            : _selectedUnit;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Inputs Box
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF181B22) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Vegetable / Grocery Rate Input',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _itemNameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Item Name (Optional)',
+                  hintText: 'e.g. Tomato, Potato, Paneer, Oil',
+                  prefixIcon: Icon(Icons.shopping_bag_outlined),
+                ),
+                onChanged: (_) => _recomputeManualRates(),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: TextField(
+                      controller: _basePriceCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+                      decoration: const InputDecoration(
+                        labelText: 'Price (₹)',
+                        prefixText: '₹ ',
+                      ),
+                      onChanged: (_) => _recomputeManualRates(),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text('for', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 2,
+                    child: TextField(
+                      controller: _baseQuantityCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: 'Qty',
+                      ),
+                      onChanged: (_) => _recomputeManualRates(),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 3,
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedUnit,
+                      decoration: const InputDecoration(labelText: 'Unit'),
+                      items: _units.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            _selectedUnit = val;
+                            if (val == 'kg' || val == 'g') {
+                              _customQuantityUnit = 'g';
+                            } else if (val == 'litre' || val == 'ml') {
+                              _customQuantityUnit = 'ml';
+                            } else {
+                              _customQuantityUnit = val;
+                            }
+                          });
+                          _recomputeManualRates();
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Standard Unit Banner
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF00D09C), Color(0xFF02B589)],
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.storefront_rounded, color: Colors.white, size: 28),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'STANDARD UNIT RATE',
+                      style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white70),
+                    ),
+                    Text(
+                      '₹${ratePerStd.toStringAsFixed(2)} / 1 $stdUnitLabel',
+                      style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: _saveManualMarketCalculation,
+                icon: const Icon(Icons.bookmark_add_outlined, color: Colors.white),
+                tooltip: 'Save Rate to History',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Standard Quantity Matrix (100g, 250g, 500g, 1kg etc.)
+        Text(
+          'Quick Quantity Price Breakdown',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
+        ),
+        const SizedBox(height: 10),
+        _buildQuantityGrid(ratePerStd, isDark),
+        const SizedBox(height: 16),
+
+        // Custom Calculator Card
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF181B22) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Custom Quantity & Budget Calc',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+              const SizedBox(height: 12),
+              // Option A: Enter Custom Quantity -> Get Price
+              Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: TextField(
+                      controller: _customQuantityCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: InputDecoration(
+                        labelText: 'I want to buy ($_customQuantityUnit)',
+                        prefixIcon: const Icon(Icons.scale_rounded, size: 18),
+                      ),
+                      onChanged: (_) => _recomputeManualRates(),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00D09C).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF00D09C).withOpacity(0.3)),
+                      ),
+                      child: Text(
+                        '₹${_customResultPrice.toStringAsFixed(2)}',
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: const Color(0xFF00D09C)),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              // Option B: Enter Budget -> Get Quantity
+              Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: TextField(
+                      controller: _customBudgetCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: 'I have budget (₹)',
+                        prefixIcon: Icon(Icons.currency_rupee_rounded, size: 18),
+                      ),
+                      onChanged: (_) => _recomputeManualRates(),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF38BDF8).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF38BDF8).withOpacity(0.3)),
+                      ),
+                      child: Text(
+                        _customResultQuantity,
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: const Color(0xFF38BDF8)),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuantityGrid(double ratePerStd, bool isDark) {
+    List<Map<String, dynamic>> items = [];
+
+    if (_selectedUnit == 'kg' || _selectedUnit == 'g') {
+      items = [
+        {'label': '50g', 'price': (ratePerStd / 1000.0) * 50},
+        {'label': '100g', 'price': (ratePerStd / 1000.0) * 100},
+        {'label': '250g', 'price': (ratePerStd / 1000.0) * 250},
+        {'label': '500g', 'price': (ratePerStd / 1000.0) * 500},
+        {'label': '750g', 'price': (ratePerStd / 1000.0) * 750},
+        {'label': '1 kg', 'price': ratePerStd},
+        {'label': '1.5 kg', 'price': ratePerStd * 1.5},
+        {'label': '2 kg', 'price': ratePerStd * 2},
+        {'label': '5 kg', 'price': ratePerStd * 5},
+      ];
+    } else if (_selectedUnit == 'litre' || _selectedUnit == 'ml') {
+      items = [
+        {'label': '100 ml', 'price': (ratePerStd / 1000.0) * 100},
+        {'label': '250 ml', 'price': (ratePerStd / 1000.0) * 250},
+        {'label': '500 ml', 'price': (ratePerStd / 1000.0) * 500},
+        {'label': '1 L', 'price': ratePerStd},
+        {'label': '2 L', 'price': ratePerStd * 2},
+        {'label': '5 L', 'price': ratePerStd * 5},
+      ];
+    } else {
+      items = [
+        {'label': '1 pc', 'price': ratePerStd},
+        {'label': '2 pcs', 'price': ratePerStd * 2},
+        {'label': '4 pcs', 'price': ratePerStd * 4},
+        {'label': '6 pcs (Half Dozen)', 'price': ratePerStd * 6},
+        {'label': '12 pcs (1 Dozen)', 'price': ratePerStd * 12},
+      ];
+    }
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        childAspectRatio: 1.8,
+      ),
+      itemCount: items.length,
+      itemBuilder: (ctx, idx) {
+        final item = items[idx];
+        return Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E222D) : const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0),
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                item['label'],
+                style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[500]),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '₹${(item['price'] as double).toStringAsFixed(1)}',
+                style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: const Color(0xFF00D09C)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAiVoiceSection(bool isDark, Color primaryColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Voice Control Banner
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [const Color(0xFF6366F1), const Color(0xFF4F46E5)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.psychology_alt_rounded, color: Colors.white, size: 24),
+                  const SizedBox(width: 8),
+                  Text(
+                    'AI Mandi Rate Voice Analyzer',
+                    style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Speak multiple rates in Hindi, Bengali, Hinglish, or English at the market. AI will parse everything into a unit price comparison chart!',
+                style: GoogleFonts.inter(color: Colors.white.withOpacity(0.85), fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 18),
+
+              // Mic Action Button
+              GestureDetector(
+                onTap: _isListening ? _stopAiListening : _startAiListening,
+                child: Container(
+                  height: 64,
+                  width: 64,
+                  decoration: BoxDecoration(
+                    color: _isListening ? Colors.redAccent : Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: (_isListening ? Colors.redAccent : Colors.white).withOpacity(0.4),
+                        blurRadius: 16,
+                        spreadRadius: 4,
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    _isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                    color: _isListening ? Colors.white : const Color(0xFF6366F1),
+                    size: 32,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                _isListening
+                    ? 'Listening... Tap to Stop'
+                    : (_isAiProcessing ? 'Gemini AI Analyzing Mandi Rates...' : 'Tap Mic & Speak Market Rates'),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // Spoken transcript preview
+        if (_spokenText.isNotEmpty) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF181B22) : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.3)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.record_voice_over_rounded, size: 18, color: Color(0xFF6366F1)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '"$_spokenText"',
+                    style: GoogleFonts.inter(fontSize: 12.5, fontStyle: FontStyle.italic),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
+
+        // Samples chips
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildSampleVoiceChip('“Aloo 30 rs kilo, pyaaz 50 rs 2 kg, tamatar 40 rs 500g”', isDark),
+              const SizedBox(width: 8),
+              _buildSampleVoiceChip('“Adrak 20 rs 100g, mirchi 10 rs 50g, oil 160 rs litre”', isDark),
+              const SizedBox(width: 8),
+              _buildSampleVoiceChip('“Ek kg begun 60 taka, potol 40 taka kilo, duto dim 16 taka”', isDark),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+
+        // Parsed AI Result Cards
+        if (_aiParsedResult != null) ...[
+          _buildAiParsedResultView(isDark),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSampleVoiceChip(String text, bool isDark) {
+    return InkWell(
+      onTap: () {
+        final clean = text.replaceAll('“', '').replaceAll('”', '');
+        _processMandiVoice(clean);
+      },
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E222D) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0)),
+        ),
+        child: Text(
+          text,
+          style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[300] : Colors.grey[700]),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAiParsedResultView(bool isDark) {
+    final items = _aiParsedResult!['items'] as List? ?? [];
+    final summary = _aiParsedResult!['market_summary']?.toString() ?? '';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Parsed Market Items (${items.length})',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 17),
+            ),
+            TextButton.icon(
+              onPressed: _saveAiMarketShoppingList,
+              icon: const Icon(Icons.bookmark_added_rounded, size: 18, color: Color(0xFF00D09C)),
+              label: Text(
+                'Save All',
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: const Color(0xFF00D09C)),
+              ),
+            ),
+          ],
+        ),
+        if (summary.isNotEmpty) ...[
+          Text(summary, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey)),
+          const SizedBox(height: 10),
+        ],
+        ...items.map((item) {
+          final name = item['item_name']?.toString() ?? 'Item';
+          final basePrice = item['base_price'];
+          final baseQty = item['base_quantity'];
+          final baseUnit = item['base_unit']?.toString() ?? 'kg';
+          final rateStd = item['rate_per_standard_unit'];
+          final stdUnit = item['standard_unit']?.toString() ?? 'kg';
+          final qBreakdowns = item['quantity_breakdown'] as List? ?? [];
+          final bBreakdowns = item['budget_breakdown'] as List? ?? [];
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF181B22) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFF00D09C).withOpacity(0.35),
+                width: 1.2,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00D09C).withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '₹$rateStd / $stdUnit',
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14, color: const Color(0xFF00D09C)),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Base Quote: ₹$basePrice for $baseQty $baseUnit',
+                  style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+                ),
+                const Divider(height: 18),
+
+                // Quantity breakdown chips
+                if (qBreakdowns.isNotEmpty) ...[
+                  Text(
+                    'Price by Weight / Quantity:',
+                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[500]),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: qBreakdowns.map((q) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF222836) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${q['quantity']}: ₹${q['price']}',
+                          style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+
+                // Budget breakdown chips
+                if (bBreakdowns.isNotEmpty) ...[
+                  Text(
+                    'Quantity by Budget:',
+                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[500]),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: bBreakdowns.map((b) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF38BDF8).withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'For ${b['budget']} ➔ ${b['quantity']}',
+                          style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: const Color(0xFF38BDF8)),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB 3: EMI & LOAN CALCULATOR
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _EmiCalculatorView extends StatefulWidget {
+  const _EmiCalculatorView();
+
+  @override
+  State<_EmiCalculatorView> createState() => _EmiCalculatorViewState();
+}
+
+class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
+  double _loanAmount = 500000;
+  double _interestRate = 10.5;
+  double _tenureYears = 5;
+  bool _isTenureInYears = true;
+
+  final _loanAmountCtrl = TextEditingController(text: '500000');
+  final _interestRateCtrl = TextEditingController(text: '10.5');
+  final _tenureCtrl = TextEditingController(text: '5');
+
+  @override
+  void initState() {
+    super.initState();
+    _recompute();
+  }
+
+  @override
+  void dispose() {
+    _loanAmountCtrl.dispose();
+    _interestRateCtrl.dispose();
+    _tenureCtrl.dispose();
+    super.dispose();
+  }
+
+  void _recompute() {
+    setState(() {});
+  }
+
+  double get _monthlyEmi {
+    final P = _loanAmount;
+    final r = (_interestRate / 12) / 100;
+    final n = _isTenureInYears ? (_tenureYears * 12) : _tenureYears;
+    if (P <= 0 || r <= 0 || n <= 0) return 0.0;
+    final emi = (P * r * pow(1 + r, n)) / (pow(1 + r, n) - 1);
+    return emi.isNaN || emi.isInfinite ? 0.0 : emi;
+  }
+
+  double get _totalPayment {
+    final n = _isTenureInYears ? (_tenureYears * 12) : _tenureYears;
+    return _monthlyEmi * n;
+  }
+
+  double get _totalInterest {
+    return _totalPayment - _loanAmount;
+  }
+
+  void _saveEmiCalculation() async {
+    final id = 'emi-${DateTime.now().millisecondsSinceEpoch}';
+    final summary = 'Loan: ₹${NumberFormat('#,##,###').format(_loanAmount)} at ${_interestRate}% for ${_tenureYears.toInt()} ${_isTenureInYears ? 'Yrs' : 'Mos'} ➔ EMI: ₹${NumberFormat('#,##,###').format(_monthlyEmi)}/mo';
+
+    await DatabaseHelper.instance.insertCalculatorHistory(
+      id: id,
+      calcType: 'emi',
+      title: 'EMI: ₹${NumberFormat('#,##,###').format(_loanAmount)} Loan',
+      summary: summary,
+      detailsJson: jsonEncode({
+        'loan_amount': _loanAmount,
+        'interest_rate': _interestRate,
+        'tenure': _tenureYears,
+        'is_years': _isTenureInYears,
+        'monthly_emi': _monthlyEmi,
+        'total_interest': _totalInterest,
+        'total_payment': _totalPayment,
+      }),
+    );
+
+    if (mounted) {
+      CustomToast.show(context, 'EMI calculation saved to history! 🏦');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).primaryColor;
+    final fmt = NumberFormat('#,##,###');
+
+    final principalShare = _totalPayment > 0 ? (_loanAmount / _totalPayment).clamp(0.0, 1.0) : 0.5;
+    final interestShare = 1.0 - principalShare;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Highlight EMI Result Card
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF00D09C), Color(0xFF059669)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF00D09C).withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'MONTHLY EMI',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.white70),
+                    ),
+                    IconButton(
+                      onPressed: _saveEmiCalculation,
+                      icon: const Icon(Icons.bookmark_add_outlined, color: Colors.white),
+                      tooltip: 'Save to History',
+                    ),
+                  ],
+                ),
+                Text(
+                  '₹${fmt.format(_monthlyEmi.round())}',
+                  style: GoogleFonts.outfit(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                const SizedBox(height: 16),
+                const Divider(color: Colors.white24, height: 1),
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    Column(
+                      children: [
+                        Text('Total Interest', style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
+                        const SizedBox(height: 2),
+                        Text('₹${fmt.format(_totalInterest.round())}', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                      ],
+                    ),
+                    Container(height: 24, width: 1, color: Colors.white24),
+                    Column(
+                      children: [
+                        Text('Total Amount', style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
+                        const SizedBox(height: 2),
+                        Text('₹${fmt.format(_totalPayment.round())}', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+
+          // Principal vs Interest Visual Ratio Bar
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF181B22) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(width: 10, height: 10, decoration: const BoxDecoration(color: Color(0xFF00D09C), shape: BoxShape.circle)),
+                        const SizedBox(width: 6),
+                        Text('Principal (${(principalShare * 100).toStringAsFixed(1)}%)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Container(width: 10, height: 10, decoration: const BoxDecoration(color: Color(0xFFFF6B6B), shape: BoxShape.circle)),
+                        const SizedBox(width: 6),
+                        Text('Interest (${(interestShare * 100).toStringAsFixed(1)}%)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: SizedBox(
+                    height: 12,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: (principalShare * 100).round().clamp(1, 99),
+                          child: Container(color: const Color(0xFF00D09C)),
+                        ),
+                        Expanded(
+                          flex: (interestShare * 100).round().clamp(1, 99),
+                          child: Container(color: const Color(0xFFFF6B6B)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+
+          // 1. Loan Amount Slider & Input
+          _buildInputCard(
+            title: 'Loan Amount',
+            valueText: '₹${fmt.format(_loanAmount.round())}',
+            sliderValue: _loanAmount.clamp(10000, 10000000),
+            min: 10000,
+            max: 10000000,
+            divisions: 100,
+            onSliderChanged: (val) {
+              setState(() {
+                _loanAmount = val;
+                _loanAmountCtrl.text = val.round().toString();
+              });
+            },
+            isDark: isDark,
+            presets: [50000, 100000, 500000, 1000000, 2500000, 5000000],
+            onPresetSelected: (val) {
+              setState(() {
+                _loanAmount = val.toDouble();
+                _loanAmountCtrl.text = val.toString();
+              });
+            },
+          ),
+          const SizedBox(height: 14),
+
+          // 2. Interest Rate Slider & Input
+          _buildInputCard(
+            title: 'Interest Rate (% p.a.)',
+            valueText: '${_interestRate.toStringAsFixed(1)} %',
+            sliderValue: _interestRate.clamp(1, 30),
+            min: 1,
+            max: 30,
+            divisions: 290,
+            onSliderChanged: (val) {
+              setState(() {
+                _interestRate = val;
+                _interestRateCtrl.text = val.toStringAsFixed(1);
+              });
+            },
+            isDark: isDark,
+            presets: [7.5, 8.5, 10.5, 12.0, 14.5, 18.0],
+            presetSuffix: '%',
+            onPresetSelected: (val) {
+              setState(() {
+                _interestRate = val.toDouble();
+                _interestRateCtrl.text = val.toString();
+              });
+            },
+          ),
+          const SizedBox(height: 14),
+
+          // 3. Tenure Slider & Input
+          _buildInputCard(
+            title: 'Loan Tenure',
+            valueText: '${_tenureYears.toInt()} ${_isTenureInYears ? 'Years' : 'Months'}',
+            sliderValue: _tenureYears.clamp(1, _isTenureInYears ? 30 : 360),
+            min: 1,
+            max: _isTenureInYears ? 30 : 360,
+            divisions: _isTenureInYears ? 29 : 359,
+            onSliderChanged: (val) {
+              setState(() {
+                _tenureYears = val;
+                _tenureCtrl.text = val.round().toString();
+              });
+            },
+            isDark: isDark,
+            headerWidget: Row(
+              children: [
+                ChoiceChip(
+                  label: const Text('Yr'),
+                  selected: _isTenureInYears,
+                  onSelected: (val) {
+                    if (val) {
+                      setState(() {
+                        _isTenureInYears = true;
+                        _tenureYears = 5;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(width: 6),
+                ChoiceChip(
+                  label: const Text('Mo'),
+                  selected: !_isTenureInYears,
+                  onSelected: (val) {
+                    if (val) {
+                      setState(() {
+                        _isTenureInYears = false;
+                        _tenureYears = 60;
+                      });
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputCard({
+    required String title,
+    required String valueText,
+    required double sliderValue,
+    required double min,
+    required double max,
+    required int divisions,
+    required ValueChanged<double> onSliderChanged,
+    required bool isDark,
+    Widget? headerWidget,
+    List<num>? presets,
+    String presetSuffix = '',
+    ValueChanged<num>? onPresetSelected,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF181B22) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(title, style: GoogleFonts.inter(fontSize: 13, color: Colors.grey)),
+              if (headerWidget != null) headerWidget,
+              Text(valueText, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF00D09C))),
+            ],
+          ),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: const Color(0xFF00D09C),
+              thumbColor: const Color(0xFF00D09C),
+              overlayColor: const Color(0xFF00D09C).withOpacity(0.2),
+            ),
+            child: Slider(
+              value: sliderValue,
+              min: min,
+              max: max,
+              divisions: divisions,
+              onChanged: onSliderChanged,
+            ),
+          ),
+          if (presets != null) ...[
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: presets.map((p) {
+                  final label = p >= 100000 ? '${(p / 100000).toStringAsFixed(p % 100000 == 0 ? 0 : 1)}L' : (p >= 1000 ? '${(p / 1000).toStringAsFixed(0)}k' : '$p$presetSuffix');
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6.0),
+                    child: ActionChip(
+                      label: Text(label, style: const TextStyle(fontSize: 11)),
+                      onPressed: () => onPresetSelected?.call(p),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB 4: DAILY FINANCIAL TOOLS (GST, Discount, SIP)
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _DailyFinancialToolsView extends StatefulWidget {
+  const _DailyFinancialToolsView();
+
+  @override
+  State<_DailyFinancialToolsView> createState() => _DailyFinancialToolsViewState();
+}
+
+class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
+  int _toolIndex = 0; // 0: GST, 1: Discount, 2: SIP
+
+  // GST State
+  final _gstAmountCtrl = TextEditingController(text: '1000');
+  double _gstRate = 18.0;
+  bool _isGstExclusive = true; // true: Add GST, false: Remove GST
+
+  // Discount State
+  final _originalPriceCtrl = TextEditingController(text: '2000');
+  final _discountPercentCtrl = TextEditingController(text: '20');
+
+  // SIP State
+  double _monthlySip = 5000;
+  double _expectedReturnRate = 12.0;
+  double _sipTenureYears = 10;
+
+  @override
+  void dispose() {
+    _gstAmountCtrl.dispose();
+    _originalPriceCtrl.dispose();
+    _discountPercentCtrl.dispose();
+    super.dispose();
+  }
+
+  void _saveToolCalculation(String type, String title, String summary, Map<String, dynamic> data) async {
+    final id = '$type-${DateTime.now().millisecondsSinceEpoch}';
+    await DatabaseHelper.instance.insertCalculatorHistory(
+      id: id,
+      calcType: type,
+      title: title,
+      summary: summary,
+      detailsJson: jsonEncode(data),
+    );
+    if (mounted) {
+      CustomToast.show(context, 'Calculation saved to history! ✨');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).primaryColor;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Tool Selector Chips
+          Row(
+            children: [
+              _buildToolChip('GST Tax', 0, Icons.receipt_long_outlined),
+              const SizedBox(width: 8),
+              _buildToolChip('Discount', 1, Icons.local_offer_outlined),
+              const SizedBox(width: 8),
+              _buildToolChip('SIP Wealth', 2, Icons.trending_up_rounded),
+            ],
+          ),
+          const SizedBox(height: 18),
+
+          if (_toolIndex == 0) _buildGstView(isDark),
+          if (_toolIndex == 1) _buildDiscountView(isDark),
+          if (_toolIndex == 2) _buildSipView(isDark),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToolChip(String label, int index, IconData icon) {
+    final isSelected = _toolIndex == index;
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() => _toolIndex = index),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF00D09C) : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: isSelected ? const Color(0xFF00D09C) : Colors.grey.withOpacity(0.3)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.grey),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12.5,
+                  color: isSelected ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 1. GST CALCULATOR VIEW
+  Widget _buildGstView(bool isDark) {
+    final base = double.tryParse(_gstAmountCtrl.text) ?? 0.0;
+    double gstAmount = 0.0;
+    double totalAmount = 0.0;
+    double netAmount = 0.0;
+
+    if (_isGstExclusive) {
+      // Add GST to base
+      gstAmount = (base * _gstRate) / 100.0;
+      totalAmount = base + gstAmount;
+      netAmount = base;
+    } else {
+      // GST is inclusive in base
+      netAmount = (base * 100.0) / (100.0 + _gstRate);
+      gstAmount = base - netAmount;
+      totalAmount = base;
+    }
+
+    final fmt = NumberFormat('#,##,###.##');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Result Card
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFF38BDF8), Color(0xFF0284C7)]),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('TOTAL AMOUNT (WITH GST)', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white70)),
+                  IconButton(
+                    onPressed: () => _saveToolCalculation(
+                      'gst',
+                      'GST Calculation (₹$base @ $_gstRate%)',
+                      'Total: ₹${fmt.format(totalAmount)} (Net: ₹${fmt.format(netAmount)}, GST: ₹${fmt.format(gstAmount)})',
+                      {'base': base, 'rate': _gstRate, 'is_exclusive': _isGstExclusive, 'gst': gstAmount, 'total': totalAmount},
+                    ),
+                    icon: const Icon(Icons.bookmark_add_outlined, color: Colors.white),
+                  ),
+                ],
+              ),
+              Text('₹${fmt.format(totalAmount)}', style: GoogleFonts.outfit(fontSize: 34, fontWeight: FontWeight.bold, color: Colors.white)),
+              const SizedBox(height: 14),
+              const Divider(color: Colors.white24),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  Column(
+                    children: [
+                      Text('Net Amount', style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
+                      Text('₹${fmt.format(netAmount)}', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                    ],
+                  ),
+                  Column(
+                    children: [
+                      Text('GST Amount (${_gstRate.toInt()}%)', style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
+                      Text('₹${fmt.format(gstAmount)}', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Inputs
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF181B22) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: _gstAmountCtrl,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+                decoration: const InputDecoration(labelText: 'Initial Amount (₹)', prefixText: '₹ '),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 16),
+
+              Text('GST Rate Slab (%):', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Row(
+                children: [5.0, 12.0, 18.0, 28.0].map((r) {
+                  final isSel = _gstRate == r;
+                  return Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 3.0),
+                      child: ChoiceChip(
+                        label: Text('${r.toInt()}%'),
+                        selected: isSel,
+                        onSelected: (val) {
+                          if (val) setState(() => _gstRate = r);
+                        },
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: RadioListTile<bool>(
+                      title: const Text('Add GST (+)', style: TextStyle(fontSize: 12.5)),
+                      value: true,
+                      groupValue: _isGstExclusive,
+                      onChanged: (val) => setState(() => _isGstExclusive = val!),
+                    ),
+                  ),
+                  Expanded(
+                    child: RadioListTile<bool>(
+                      title: const Text('Remove GST (-)', style: TextStyle(fontSize: 12.5)),
+                      value: false,
+                      groupValue: _isGstExclusive,
+                      onChanged: (val) => setState(() => _isGstExclusive = val!),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 2. DISCOUNT CALCULATOR VIEW
+  Widget _buildDiscountView(bool isDark) {
+    final orig = double.tryParse(_originalPriceCtrl.text) ?? 0.0;
+    final disc = double.tryParse(_discountPercentCtrl.text) ?? 0.0;
+
+    final saved = (orig * disc) / 100.0;
+    final finalPrice = orig - saved;
+    final fmt = NumberFormat('#,##,###.##');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFFE040FB), Color(0xFF9C27B0)]),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('FINAL DISCOUNTED PRICE', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white70)),
+                  IconButton(
+                    onPressed: () => _saveToolCalculation(
+                      'discount',
+                      'Discount: $disc% off on ₹$orig',
+                      'Final: ₹${fmt.format(finalPrice)} (You save ₹${fmt.format(saved)})',
+                      {'original': orig, 'discount_pct': disc, 'saved': saved, 'final': finalPrice},
+                    ),
+                    icon: const Icon(Icons.bookmark_add_outlined, color: Colors.white),
+                  ),
+                ],
+              ),
+              Text('₹${fmt.format(finalPrice)}', style: GoogleFonts.outfit(fontSize: 34, fontWeight: FontWeight.bold, color: Colors.white)),
+              const SizedBox(height: 14),
+              const Divider(color: Colors.white24),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  Column(
+                    children: [
+                      Text('Original Price', style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
+                      Text('₹${fmt.format(orig)}', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                    ],
+                  ),
+                  Column(
+                    children: [
+                      Text('You Save 🎉', style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
+                      Text('₹${fmt.format(saved)}', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF181B22) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0)),
+          ),
+          child: Column(
+            children: [
+              TextField(
+                controller: _originalPriceCtrl,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+                decoration: const InputDecoration(labelText: 'Original Price (₹)', prefixText: '₹ '),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _discountPercentCtrl,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+                decoration: const InputDecoration(labelText: 'Discount (% Off)', suffixText: ' %'),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 12),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [10, 15, 20, 25, 30, 40, 50, 70].map((d) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 6.0),
+                      child: ActionChip(
+                        label: Text('$d% off', style: const TextStyle(fontSize: 11)),
+                        onPressed: () {
+                          setState(() {
+                            _discountPercentCtrl.text = d.toString();
+                          });
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 3. SIP WEALTH CALCULATOR VIEW
+  Widget _buildSipView(bool isDark) {
+    final P = _monthlySip;
+    final i = (_expectedReturnRate / 12) / 100.0;
+    final n = _sipTenureYears * 12;
+
+    double maturity = 0.0;
+    if (i > 0 && n > 0) {
+      maturity = P * ((pow(1 + i, n) - 1) / i) * (1 + i);
+    }
+    final invested = P * n;
+    final wealthGained = maturity - invested;
+    final fmt = NumberFormat('#,##,###');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFD97706)]),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('TOTAL MATURITY VALUE', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white70)),
+                  IconButton(
+                    onPressed: () => _saveToolCalculation(
+                      'sip',
+                      'SIP: ₹$P/mo @ ${_expectedReturnRate}% for ${_sipTenureYears.toInt()} yrs',
+                      'Maturity: ₹${fmt.format(maturity.round())} (Wealth Gain: ₹${fmt.format(wealthGained.round())})',
+                      {'monthly': P, 'rate': _expectedReturnRate, 'years': _sipTenureYears, 'invested': invested, 'maturity': maturity},
+                    ),
+                    icon: const Icon(Icons.bookmark_add_outlined, color: Colors.white),
+                  ),
+                ],
+              ),
+              Text('₹${fmt.format(maturity.round())}', style: GoogleFonts.outfit(fontSize: 34, fontWeight: FontWeight.bold, color: Colors.white)),
+              const SizedBox(height: 14),
+              const Divider(color: Colors.white24),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  Column(
+                    children: [
+                      Text('Invested Amount', style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
+                      Text('₹${fmt.format(invested.round())}', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                    ],
+                  ),
+                  Column(
+                    children: [
+                      Text('Est. Returns 🚀', style: GoogleFonts.inter(fontSize: 11, color: Colors.white70)),
+                      Text('₹${fmt.format(wealthGained.round())}', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF181B22) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Monthly Investment', style: GoogleFonts.inter(fontSize: 13, color: Colors.grey)),
+                  Text('₹${fmt.format(_monthlySip.round())}', style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: const Color(0xFFF59E0B))),
+                ],
+              ),
+              Slider(
+                value: _monthlySip,
+                min: 500,
+                max: 100000,
+                divisions: 199,
+                activeColor: const Color(0xFFF59E0B),
+                onChanged: (val) => setState(() => _monthlySip = val),
+              ),
+              const SizedBox(height: 12),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Expected Return Rate (% p.a.)', style: GoogleFonts.inter(fontSize: 13, color: Colors.grey)),
+                  Text('${_expectedReturnRate.toStringAsFixed(1)} %', style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: const Color(0xFFF59E0B))),
+                ],
+              ),
+              Slider(
+                value: _expectedReturnRate,
+                min: 5,
+                max: 30,
+                divisions: 50,
+                activeColor: const Color(0xFFF59E0B),
+                onChanged: (val) => setState(() => _expectedReturnRate = val),
+              ),
+              const SizedBox(height: 12),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Time Period (Years)', style: GoogleFonts.inter(fontSize: 13, color: Colors.grey)),
+                  Text('${_sipTenureYears.toInt()} Years', style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: const Color(0xFFF59E0B))),
+                ],
+              ),
+              Slider(
+                value: _sipTenureYears,
+                min: 1,
+                max: 30,
+                divisions: 29,
+                activeColor: const Color(0xFFF59E0B),
+                onChanged: (val) => setState(() => _sipTenureYears = val),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB 5: CALCULATION HISTORY VIEW
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _CalculatorHistoryView extends StatefulWidget {
+  const _CalculatorHistoryView();
+
+  @override
+  State<_CalculatorHistoryView> createState() => _CalculatorHistoryViewState();
+}
+
+class _CalculatorHistoryViewState extends State<_CalculatorHistoryView> {
+  String _selectedFilter = 'all';
+  List<Map<String, dynamic>> _history = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    setState(() => _isLoading = true);
+    final list = await DatabaseHelper.instance.getCalculatorHistory(
+      type: _selectedFilter == 'all' ? null : _selectedFilter,
+    );
+    if (mounted) {
+      setState(() {
+        _history = list;
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _deleteItem(String id) async {
+    await DatabaseHelper.instance.deleteCalculatorHistory(id);
+    _loadHistory();
+    if (mounted) {
+      CustomToast.show(context, 'History item deleted.');
+    }
+  }
+
+  void _clearAll() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear Calculation History?'),
+        content: const Text('All saved calculations will be deleted permanently.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Clear All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await DatabaseHelper.instance.clearCalculatorHistory(
+        type: _selectedFilter == 'all' ? null : _selectedFilter,
+      );
+      _loadHistory();
+      if (mounted) {
+        CustomToast.show(context, 'Calculation history cleared.');
+      }
+    }
+  }
+
+  Color _getTypeColor(String type) {
+    switch (type) {
+      case 'market_voice':
+        return const Color(0xFF6366F1);
+      case 'market_unit':
+        return const Color(0xFF00D09C);
+      case 'emi':
+        return const Color(0xFF059669);
+      case 'gst':
+        return const Color(0xFF38BDF8);
+      case 'discount':
+        return const Color(0xFFE040FB);
+      case 'sip':
+        return const Color(0xFFF59E0B);
+      default:
+        return Colors.blueGrey;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      children: [
+        // Filter Bar
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildFilterChip('All', 'all'),
+                      const SizedBox(width: 6),
+                      _buildFilterChip('Mandi Voice', 'market_voice'),
+                      const SizedBox(width: 6),
+                      _buildFilterChip('Unit Rates', 'market_unit'),
+                      const SizedBox(width: 6),
+                      _buildFilterChip('EMI', 'emi'),
+                      const SizedBox(width: 6),
+                      _buildFilterChip('GST', 'gst'),
+                      const SizedBox(width: 6),
+                      _buildFilterChip('Discount', 'discount'),
+                      const SizedBox(width: 6),
+                      _buildFilterChip('SIP', 'sip'),
+                      const SizedBox(width: 6),
+                      _buildFilterChip('Standard', 'standard'),
+                    ],
+                  ),
+                ),
+              ),
+              if (_history.isNotEmpty)
+                IconButton(
+                  onPressed: _clearAll,
+                  icon: const Icon(Icons.delete_sweep_outlined, color: Colors.redAccent),
+                  tooltip: 'Clear History',
+                ),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+
+        // List
+        Expanded(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _history.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.history_toggle_off_rounded, size: 48, color: Colors.grey[400]),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No calculation history found',
+                            style: GoogleFonts.inter(fontSize: 14, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _history.length,
+                      itemBuilder: (ctx, idx) {
+                        final item = _history[idx];
+                        final type = item['calc_type']?.toString() ?? 'standard';
+                        final title = item['title']?.toString() ?? 'Calculation';
+                        final summary = item['summary']?.toString() ?? '';
+                        final dateStr = item['created_at']?.toString() ?? '';
+                        final color = _getTypeColor(type);
+
+                        DateTime? dt;
+                        try {
+                          dt = DateTime.parse(dateStr);
+                        } catch (_) {}
+
+                        final formattedDate = dt != null ? DateFormat('dd MMM yyyy, hh:mm a').format(dt) : dateStr;
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF181B22) : Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: color.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      type.replaceAll('_', ' ').toUpperCase(),
+                                      style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: color),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    formattedDate,
+                                    style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  IconButton(
+                                    icon: const Icon(Icons.close, size: 16, color: Colors.grey),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    onPressed: () => _deleteItem(item['id']),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                title,
+                                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                summary,
+                                style: GoogleFonts.inter(fontSize: 12.5, color: isDark ? Colors.grey[300] : Colors.grey[700]),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  InkWell(
+                                    onTap: () {
+                                      Clipboard.setData(ClipboardData(text: '$title\n$summary'));
+                                      CustomToast.show(context, 'Copied to clipboard 📋');
+                                    },
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.copy_rounded, size: 13, color: color),
+                                        const SizedBox(width: 4),
+                                        Text('Copy', style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: color)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterChip(String label, String value) {
+    final isSel = _selectedFilter == value;
+    return ChoiceChip(
+      label: Text(label, style: const TextStyle(fontSize: 11.5)),
+      selected: isSel,
+      onSelected: (val) {
+        if (val) {
+          setState(() => _selectedFilter = value);
+          _loadHistory();
+        }
+      },
+    );
+  }
+}
