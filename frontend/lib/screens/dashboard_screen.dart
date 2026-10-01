@@ -2241,7 +2241,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     subtitle: 'Import past bank statements or expenses from Excel, CSV or PDF',
                     onTap: () {
                       Navigator.of(ctx).pop();
-                      _showImportOptions(context);
+                      _proceedWithFilePicker(context);
                     },
                   ),
                   const SizedBox(height: 8),

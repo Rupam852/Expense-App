@@ -17,6 +17,7 @@ import '../models/split_bill.dart';
 import '../models/subscription_item.dart';
 import 'ai_config_service.dart';
 import 'notification_service.dart';
+import 'package:intl/intl.dart';
 
 class ExpenseProvider with ChangeNotifier {
   final _dbHelper = DatabaseHelper.instance;
@@ -810,8 +811,13 @@ class ExpenseProvider with ChangeNotifier {
         } catch (_) {}
       }
 
+      final now = DateTime.now();
+      final firstDay = DateTime(now.year, now.month, 1);
+      final lastDay = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+
       int importedCount = 0;
       int skippedDuplicatesCount = 0;
+      int skippedOtherMonthCount = 0;
       final startRow = 1; // Assume row 0 is header
 
       for (int i = startRow; i < rows.length; i++) {
@@ -907,6 +913,11 @@ class ExpenseProvider with ChangeNotifier {
           }
         }
 
+        // Current Month Session Rule: Only import transactions belonging to current active month
+        if (parsedDate.isBefore(firstDay) || parsedDate.isAfter(lastDay)) {
+          skippedOtherMonthCount++;
+          continue;
+        }
 
         // Parse amount (support negative values or removing currency symbols)
         final cleanAmtStr = rawAmount.replaceAll(RegExp(r'[^\d\.\-]'), '');
@@ -979,17 +990,27 @@ class ExpenseProvider with ChangeNotifier {
         notifyListeners();
         // Silent background sync after import
         triggerQuietSync();
-        if (skippedDuplicatesCount > 0) {
-          return '✅ $importedCount new transactions imported! ($skippedDuplicatesCount duplicates skipped)';
+        
+        final List<String> details = [];
+        if (skippedOtherMonthCount > 0) details.add('$skippedOtherMonthCount other month rows skipped');
+        if (skippedDuplicatesCount > 0) details.add('$skippedDuplicatesCount duplicates skipped');
+        
+        if (details.isNotEmpty) {
+          return '✅ $importedCount current month transactions imported! (${details.join(', ')})';
         }
-        return '✅ $importedCount transactions imported successfully!';
+        return '✅ $importedCount transactions imported for ${DateFormat('MMMM yyyy').format(now)}!';
+      } else if (skippedOtherMonthCount > 0 && skippedDuplicatesCount == 0) {
+        _syncErrorMessage = 'No transactions from current month (${DateFormat('MMMM yyyy').format(now)}) found ($skippedOtherMonthCount past/future month rows skipped).';
+        _isLoading = false;
+        notifyListeners();
+        return 'ℹ️ No transactions from current month (${DateFormat('MMMM yyyy').format(now)}) found ($skippedOtherMonthCount other month rows skipped).';
       } else if (skippedDuplicatesCount > 0) {
         _syncErrorMessage = 'All $skippedDuplicatesCount transactions already exist in the app.';
         _isLoading = false;
         notifyListeners();
         return 'ℹ️ All $skippedDuplicatesCount transactions were duplicate and already exist.';
       } else {
-        _syncErrorMessage = 'No valid transactions found in the file.';
+        _syncErrorMessage = 'No valid current month transactions found in the file.';
         _isLoading = false;
         notifyListeners();
         return null;
