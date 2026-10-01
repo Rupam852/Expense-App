@@ -16,50 +16,37 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('scroll', handleScroll);
   handleScroll();
 
-  // 2. Download APK & Privacy Policy Modals
+  // 2. Privacy Policy Modal Controls
   const privacyModal = document.getElementById('privacy-modal');
   const openPrivacyBtn = document.getElementById('open-privacy-btn');
   const openPrivacyFooter = document.getElementById('open-privacy-footer');
   const closePrivacyBtn = document.getElementById('close-privacy-btn');
 
-  const downloadModal = document.getElementById('download-modal');
-  const navDownloadTrigger = document.getElementById('nav-download-trigger');
-  const heroDownloadTrigger = document.getElementById('hero-download-trigger');
-  const ctaDownloadTrigger = document.getElementById('cta-download-trigger');
-  const closeDownloadBtn = document.getElementById('close-download-btn');
-
-  const openModal = (modal) => {
-    if (!modal) return;
-    modal.classList.add('active');
+  const openPrivacy = () => {
+    if (!privacyModal) return;
+    privacyModal.classList.add('active');
     document.body.style.overflow = 'hidden';
   };
 
-  const closeModal = (modal) => {
-    if (!modal) return;
-    modal.classList.remove('active');
+  const closePrivacy = () => {
+    if (!privacyModal) return;
+    privacyModal.classList.remove('active');
     document.body.style.overflow = '';
   };
 
-  if (openPrivacyBtn) openPrivacyBtn.addEventListener('click', () => openModal(privacyModal));
-  if (openPrivacyFooter) openPrivacyFooter.addEventListener('click', () => openModal(privacyModal));
-  if (closePrivacyBtn) closePrivacyBtn.addEventListener('click', () => closeModal(privacyModal));
+  if (openPrivacyBtn) openPrivacyBtn.addEventListener('click', openPrivacy);
+  if (openPrivacyFooter) openPrivacyFooter.addEventListener('click', openPrivacy);
+  if (closePrivacyBtn) closePrivacyBtn.addEventListener('click', closePrivacy);
 
-  if (navDownloadTrigger) navDownloadTrigger.addEventListener('click', () => openModal(downloadModal));
-  if (heroDownloadTrigger) heroDownloadTrigger.addEventListener('click', () => openModal(downloadModal));
-  if (ctaDownloadTrigger) ctaDownloadTrigger.addEventListener('click', () => openModal(downloadModal));
-  if (closeDownloadBtn) closeDownloadBtn.addEventListener('click', () => closeModal(downloadModal));
-
-  [privacyModal, downloadModal].forEach(modal => {
-    if (!modal) return;
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeModal(modal);
+  if (privacyModal) {
+    privacyModal.addEventListener('click', (e) => {
+      if (e.target === privacyModal) closePrivacy();
     });
-  });
+  }
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      if (privacyModal && privacyModal.classList.contains('active')) closeModal(privacyModal);
-      if (downloadModal && downloadModal.classList.contains('active')) closeModal(downloadModal);
+    if (e.key === 'Escape' && privacyModal && privacyModal.classList.contains('active')) {
+      closePrivacy();
     }
   });
 
