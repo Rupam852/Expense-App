@@ -7,7 +7,6 @@ import '../models/subscription_item.dart';
 import '../models/budget.dart';
 import '../models/expense.dart';
 import '../models/khata_entry.dart';
-import '../models/split_bill.dart';
 import 'app_update_service.dart';
 
 class NotificationService with ChangeNotifier {

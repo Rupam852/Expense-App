@@ -1425,12 +1425,11 @@ class DatabaseHelper {
     final db = await instance.database;
     if (payments.isEmpty) return;
 
-    // Sort descending by updated_at so the latest payment detail comes first
+    // Sort descending by sort_order / updated_at
     final sortedPayments = List<PaymentDetail>.from(payments)
-      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
     await db.transaction((txn) async {
-      // Clear out old local records so only the latest valid payment profile stays
       await txn.delete('payment_details');
       for (final pay in sortedPayments) {
         final map = pay.toMap();
@@ -1440,8 +1439,6 @@ class DatabaseHelper {
           map,
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
-        // Only keep the latest active profile in local DB
-        break;
       }
     });
   }

@@ -74,7 +74,15 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       
       // Load offline data and sync
       await expenseProvider.loadLocalData();
-      await expenseProvider.triggerQuietSync();
+      if (expenseProvider.expenses.isEmpty &&
+          expenseProvider.budgets.isEmpty &&
+          expenseProvider.khataEntries.isEmpty &&
+          expenseProvider.splitBills.isEmpty &&
+          expenseProvider.subscriptions.isEmpty) {
+        await expenseProvider.restoreFromCloud();
+      } else {
+        await expenseProvider.triggerQuietSync();
+      }
 
       // Navigate to AuthWrapper, resetting back stack so dashboard becomes root
       if (mounted) {

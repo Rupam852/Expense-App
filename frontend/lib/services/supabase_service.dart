@@ -259,38 +259,39 @@ class SupabaseService {
         .from('payment_details')
         .select()
         .eq('user_id', uid)
-        .order('updated_at', ascending: false);
+        .order('sort_order', ascending: true);
     return List<Map<String, dynamic>>.from(data);
   }
 
-  Future<void> upsertPaymentDetail(Map<String, dynamic> detail) async {
+  Future<void> upsertPaymentDetails(List<Map<String, dynamic>> details) async {
+    if (details.isEmpty) return;
     final uid = currentUser?.id;
     if (uid == null) return;
-    final copy = Map<String, dynamic>.from(detail);
-    copy['user_id'] = uid;
-    copy['updated_at'] = detail['updated_at'] ?? DateTime.now().toIso8601String();
-    copy.remove('is_synced');
-
-    // Clean up any older/stale payment_details rows for this user on Supabase
-    try {
-      final existing = await _client
-          .from('payment_details')
-          .select('id')
-          .eq('user_id', uid);
-      final existingIds = (existing as List)
-          .map((e) => e['id'] as String)
-          .where((id) => id != detail['id'])
-          .toList();
-      if (existingIds.isNotEmpty) {
-        await _client.from('payment_details').delete().filter('id', 'in', existingIds);
+    final rows = details.map((d) {
+      final copy = Map<String, dynamic>.from(d);
+      copy['user_id'] = uid;
+      copy['updated_at'] = d['updated_at'] ?? DateTime.now().toIso8601String();
+      if (copy['is_primary'] != null) {
+        copy['is_primary'] = copy['is_primary'] == 1 || copy['is_primary'] == true;
       }
-    } catch (e) {
-      print('[Sync] Cleaning old payment_details on Supabase: $e');
-    }
+      copy.remove('is_synced');
+      return copy;
+    }).toList();
 
-    final res = await _client.from('payment_details').upsert(copy).select('id');
-    if (res.isEmpty) {
-      throw Exception('Upsert failed: RLS policy or database restriction prevented writing to the payment_details table.');
+    await _client.from('payment_details').upsert(rows);
+  }
+
+  Future<void> upsertPaymentDetail(Map<String, dynamic> detail) async {
+    await upsertPaymentDetails([detail]);
+  }
+
+  Future<void> deletePaymentDetailOnServer(String id) async {
+    final uid = currentUser?.id;
+    if (uid == null) return;
+    try {
+      await _client.from('payment_details').delete().eq('id', id).eq('user_id', uid);
+    } catch (e) {
+      print('[Sync] deletePaymentDetailOnServer error: $e');
     }
   }
 

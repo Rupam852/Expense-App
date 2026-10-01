@@ -48,9 +48,17 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
     );
 
     // Auto-sync in background when session resumes (covers reinstall + cold start)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
-      expenseProvider.triggerQuietSync();
+      if (expenseProvider.expenses.isEmpty &&
+          expenseProvider.budgets.isEmpty &&
+          expenseProvider.khataEntries.isEmpty &&
+          expenseProvider.splitBills.isEmpty &&
+          expenseProvider.subscriptions.isEmpty) {
+        await expenseProvider.restoreFromCloud();
+      } else {
+        await expenseProvider.triggerQuietSync();
+      }
     });
   }
 

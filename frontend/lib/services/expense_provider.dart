@@ -57,6 +57,7 @@ class ExpenseProvider with ChangeNotifier {
   bool _isLoading = false;
   bool _isSyncing = false;
   String? _syncErrorMessage;
+  String? _lastSyncTime;
 
   DateTime _selectedMonthYear = DateTime(DateTime.now().year, DateTime.now().month);
 
@@ -161,6 +162,7 @@ class ExpenseProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isSyncing => _isSyncing;
   String? get syncErrorMessage => _syncErrorMessage;
+  String? get lastSyncTime => _lastSyncTime;
 
   DateTime get selectedMonthYear => _selectedMonthYear;
 
@@ -178,6 +180,8 @@ class ExpenseProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
+      final prefs = await SharedPreferences.getInstance();
+      _lastSyncTime = prefs.getString('last_sync_time');
       _expenses = await _dbHelper.getExpenses();
       _budgets = await _dbHelper.getBudgets();
       _paymentDetails = await _dbHelper.getPaymentDetails();
@@ -259,6 +263,7 @@ class ExpenseProvider with ChangeNotifier {
     await _dbHelper.deleteExpense(id);
     _expenses.removeWhere((e) => e.id == id);
     notifyListeners();
+    triggerQuietSync();
   }
 
   Future<void> restoreExpense(Expense expense) async {
@@ -289,6 +294,7 @@ class ExpenseProvider with ChangeNotifier {
       _expenses.removeWhere((e) => e.id == id);
     }
     notifyListeners();
+    triggerQuietSync();
   }
 
   // ──────────────────────────────────────────────────────
@@ -323,6 +329,7 @@ class ExpenseProvider with ChangeNotifier {
     await _dbHelper.deleteBudget(id);
     _budgets.removeWhere((b) => b.id == id);
     notifyListeners();
+    triggerQuietSync();
   }
 
   // ──────────────────────────────────────────────────────
@@ -397,6 +404,7 @@ class ExpenseProvider with ChangeNotifier {
     await _dbHelper.insertKhataEntry(entry);
     _khataEntries.insert(0, entry);
     notifyListeners();
+    triggerQuietSync();
   }
 
   Future<void> updateKhataEntry(KhataEntry entry) async {
@@ -405,6 +413,7 @@ class ExpenseProvider with ChangeNotifier {
     if (index != -1) {
       _khataEntries[index] = entry;
       notifyListeners();
+      triggerQuietSync();
     }
   }
 
@@ -417,6 +426,7 @@ class ExpenseProvider with ChangeNotifier {
         settledAt: isSettled ? DateTime.now() : null,
       );
       notifyListeners();
+      triggerQuietSync();
     }
   }
 
@@ -424,6 +434,7 @@ class ExpenseProvider with ChangeNotifier {
     await _dbHelper.deleteKhataEntry(id);
     _khataEntries.removeWhere((k) => k.id == id);
     notifyListeners();
+    triggerQuietSync();
   }
 
   // ──────────────────────────────────────────────────────
@@ -459,6 +470,7 @@ class ExpenseProvider with ChangeNotifier {
     await _dbHelper.insertSplitBill(bill);
     _splitBills.insert(0, bill);
     notifyListeners();
+    triggerQuietSync();
   }
 
   Future<void> updateSplitBill(SplitBill bill) async {
@@ -467,6 +479,7 @@ class ExpenseProvider with ChangeNotifier {
     if (index != -1) {
       _splitBills[index] = bill;
       notifyListeners();
+      triggerQuietSync();
     }
   }
 
@@ -488,6 +501,7 @@ class ExpenseProvider with ChangeNotifier {
       await _dbHelper.updateSplitBill(updatedBill);
       _splitBills[index] = updatedBill;
       notifyListeners();
+      triggerQuietSync();
     }
   }
 
@@ -495,6 +509,7 @@ class ExpenseProvider with ChangeNotifier {
     await _dbHelper.deleteSplitBill(id);
     _splitBills.removeWhere((b) => b.id == id);
     notifyListeners();
+    triggerQuietSync();
   }
 
   // ──────────────────────────────────────────────────────
@@ -535,6 +550,7 @@ class ExpenseProvider with ChangeNotifier {
     _subscriptions.sort((a, b) => a.nextRenewalDate.compareTo(b.nextRenewalDate));
     notifyListeners();
     NotificationService.instance.checkAndNotifyDueSubscriptions(_subscriptions);
+    triggerQuietSync();
   }
 
   Future<void> updateSubscription(SubscriptionItem item) async {
@@ -545,6 +561,7 @@ class ExpenseProvider with ChangeNotifier {
       _subscriptions.sort((a, b) => a.nextRenewalDate.compareTo(b.nextRenewalDate));
       notifyListeners();
       NotificationService.instance.checkAndNotifyDueSubscriptions(_subscriptions);
+      triggerQuietSync();
     }
   }
 
@@ -554,6 +571,7 @@ class ExpenseProvider with ChangeNotifier {
     if (index != -1) {
       _subscriptions[index] = _subscriptions[index].copyWith(isActive: isActive);
       notifyListeners();
+      triggerQuietSync();
     }
   }
 
@@ -579,6 +597,7 @@ class ExpenseProvider with ChangeNotifier {
         );
       }
       notifyListeners();
+      triggerQuietSync();
     }
   }
 
@@ -586,6 +605,7 @@ class ExpenseProvider with ChangeNotifier {
     await _dbHelper.deleteSubscription(id);
     _subscriptions.removeWhere((s) => s.id == id);
     notifyListeners();
+    triggerQuietSync();
   }
 
   // ──────────────────────────────────────────────────────
@@ -1096,6 +1116,7 @@ class ExpenseProvider with ChangeNotifier {
 
         // Deduplicate local cached expenses after pulling from Supabase
         await deduplicateExpenses(triggerSync: false);
+        _lastSyncTime = prefs.getString('last_sync_time');
       }
 
       _expenses = await _dbHelper.getExpenses();
@@ -1215,6 +1236,8 @@ class ExpenseProvider with ChangeNotifier {
         await _dbHelper.markKhataEntriesSynced(khataIds);
         await _dbHelper.markSubscriptionsSynced(subIds);
         await _dbHelper.markSplitBillsSynced(splitIds);
+
+        _lastSyncTime = prefs.getString('last_sync_time');
       } else {
         throw Exception('Cloud restoration returned empty database payload.');
       }
@@ -1250,6 +1273,7 @@ class ExpenseProvider with ChangeNotifier {
     await _dbHelper.clearAllData();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('last_sync_time');
+    _lastSyncTime = null;
     _expenses.clear();
     _budgets.clear();
     _paymentDetails.clear();

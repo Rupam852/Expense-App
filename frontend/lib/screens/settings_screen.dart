@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../services/user_provider.dart';
 import '../services/expense_provider.dart';
@@ -16,6 +17,114 @@ import 'notification_settings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
+
+  String _formatSyncTime(String isoString) {
+    try {
+      final dt = DateTime.parse(isoString).toLocal();
+      final now = DateTime.now();
+      final diff = now.difference(dt);
+      if (diff.inSeconds < 60) return 'Just now';
+      if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+      if (diff.inHours < 24) return '${diff.inHours}h ago';
+      return DateFormat('dd MMM yyyy, hh:mm a').format(dt);
+    } catch (_) {
+      return isoString;
+    }
+  }
+
+  void _showRestoreBackupDialog(BuildContext context, ExpenseProvider expenseProvider) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        bool isRestoring = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            return AlertDialog(
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: const Color(0xFF00D09C).withValues(alpha: 0.3),
+                ),
+              ),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00D09C).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.cloud_download_rounded, color: Color(0xFF00D09C), size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Restore Cloud Backup?',
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'This will pull your complete cloud backup from Supabase (Expenses, Budgets, Payment Accounts, Khata, Split Bills, Subscriptions) and restore it to this device.',
+                    style: GoogleFonts.inter(fontSize: 13, height: 1.4, color: isDark ? Colors.grey[300] : Colors.grey[700]),
+                  ),
+                  if (isRestoring) ...[
+                    const SizedBox(height: 20),
+                    const Center(
+                      child: CircularProgressIndicator(color: Color(0xFF00D09C)),
+                    ),
+                  ],
+                ],
+              ),
+              actionsPadding: const EdgeInsets.all(16),
+              actions: [
+                TextButton(
+                  onPressed: isRestoring ? null : () => Navigator.of(ctx).pop(),
+                  child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00D09C),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: isRestoring
+                      ? null
+                      : () async {
+                          setDialogState(() => isRestoring = true);
+                          final success = await expenseProvider.restoreFromCloud();
+                          if (ctx.mounted) {
+                            Navigator.of(ctx).pop();
+                            if (success) {
+                              CustomToast.show(
+                                context,
+                                'Cloud backup restored successfully! (${expenseProvider.expenses.length} expenses, ${expenseProvider.khataEntries.length} khata entries)',
+                              );
+                            } else {
+                              CustomToast.show(
+                                context,
+                                expenseProvider.syncErrorMessage ?? 'Failed to restore backup from cloud.',
+                                isError: true,
+                              );
+                            }
+                          }
+                        },
+                  child: Text('Restore Now', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 
   void _showEditProfileDialog(BuildContext context, UserProvider userProvider) {
     final nameController = TextEditingController(text: userProvider.userProfile?['name'] ?? '');
@@ -568,7 +677,101 @@ class SettingsScreen extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // 3. APPEARANCE & THEME SECTION
+                // 3. BACKUP & CLOUD SYNC SECTION
+                _buildSectionHeader('BACKUP & CLOUD SYNC', isDark),
+                const SizedBox(height: 8),
+                _buildSettingsCard(
+                  isDark: isDark,
+                  cardBg: cardBg,
+                  borderColor: borderColor,
+                  children: [
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00D09C).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          expenseProvider.isSyncing ? Icons.sync_rounded : Icons.cloud_done_rounded,
+                          color: const Color(0xFF00D09C),
+                          size: 22,
+                        ),
+                      ),
+                      title: Text(
+                        'Cloud Sync & Backup',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        expenseProvider.isSyncing
+                            ? 'Syncing data to cloud...'
+                            : (expenseProvider.lastSyncTime != null
+                                ? 'Last synced: ${_formatSyncTime(expenseProvider.lastSyncTime!)}'
+                                : 'Sync active (Auto-backup enabled)'),
+                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                      ),
+                      trailing: expenseProvider.isSyncing
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00D09C)),
+                            )
+                          : TextButton.icon(
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                backgroundColor: const Color(0xFF00D09C).withValues(alpha: 0.1),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              icon: const Icon(Icons.sync_rounded, size: 16, color: Color(0xFF00D09C)),
+                              label: Text(
+                                'Sync Now',
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF00D09C)),
+                              ),
+                              onPressed: () async {
+                                final success = await expenseProvider.triggerManualSync();
+                                if (context.mounted) {
+                                  if (success) {
+                                    CustomToast.show(context, 'Data synced to cloud successfully!');
+                                  } else {
+                                    CustomToast.show(
+                                      context,
+                                      expenseProvider.syncErrorMessage ?? 'Sync failed.',
+                                      isError: true,
+                                    );
+                                  }
+                                }
+                              },
+                            ),
+                    ),
+                    Divider(height: 1, color: borderColor),
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.blueAccent.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.cloud_download_rounded, color: Colors.blueAccent, size: 22),
+                      ),
+                      title: Text(
+                        'Restore Cloud Backup',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        'Restore all expenses, khata, split bills & accounts from cloud',
+                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                      ),
+                      trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+                      onTap: () => _showRestoreBackupDialog(context, expenseProvider),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // 4. APPEARANCE & THEME SECTION
                 _buildSectionHeader('APPEARANCE & THEME', isDark),
                 const SizedBox(height: 8),
                 _buildSettingsCard(
