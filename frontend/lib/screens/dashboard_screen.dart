@@ -37,6 +37,7 @@ import 'split_bill_screen.dart';
 import 'subscription_screen.dart';
 import 'trip_tag_screen.dart';
 import '../widgets/sms_expense_parser_dialog.dart';
+import '../widgets/export_statement_dialog.dart';
 
 String getCurrencySymbol(String currencyCode) {
   switch (currencyCode.toUpperCase()) {
@@ -2748,7 +2749,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         },
                       ),
 
-                      // Export Financial Ledger (Excel / CSV)
+                      // Export Financial Ledger (PDF / Excel / CSV)
                       ListTile(
                         contentPadding: const EdgeInsets.symmetric(horizontal: 4),
                         leading: Container(
@@ -2760,17 +2761,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: const Icon(Icons.file_download_outlined, color: Color(0xFF10B981), size: 22),
                         ),
                         title: Text(
-                          'Export Ledger (Excel / CSV)',
+                          'Export Ledger (PDF / Excel / CSV)',
                           style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
                         ),
                         subtitle: Text(
-                          'Download full transaction history statement to device',
+                          'Export monthly statement as PDF, Excel (.xlsx) or CSV',
                           style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
                         ),
                         trailing: const Icon(Icons.chevron_right, size: 20),
                         onTap: () {
                           Navigator.of(context).pop();
-                          _triggerCSVExport(context);
+                          ExportStatementDialog.show(context);
                         },
                       ),
 

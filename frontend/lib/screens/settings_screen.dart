@@ -20,6 +20,7 @@ import '../services/notification_service.dart';
 import 'app_update_screen.dart';
 import 'about_screen.dart';
 import 'notification_settings_screen.dart';
+import '../widgets/export_statement_dialog.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -68,7 +69,7 @@ class SettingsScreen extends StatelessWidget {
       final file = File('${dir.path}/$fileName');
       await file.writeAsString(csvString);
 
-      await SupabaseService.instance.saveFileToDownloads(
+      await SupabaseService.saveFileToDownloads(
         fileName: fileName,
         bytes: utf8.encode(csvString),
         mimeType: 'text/csv',
@@ -1037,15 +1038,15 @@ class SettingsScreen extends StatelessWidget {
                         child: const Icon(Icons.file_download_outlined, color: Color(0xFF10B981), size: 22),
                       ),
                       title: Text(
-                        'Export Financial Ledger (Excel / CSV)',
+                        'Export Financial Ledger (PDF / Excel / CSV)',
                         style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
                       ),
                       subtitle: Text(
-                        'Download complete expense history statement to device',
+                        'Download PDF, Excel (.xlsx) or CSV statements to phone',
                         style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
                       ),
                       trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
-                      onTap: () => _triggerCSVExport(context),
+                      onTap: () => ExportStatementDialog.show(context),
                     ),
                   ],
                 ),
