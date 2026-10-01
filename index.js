@@ -126,14 +126,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 7. Global Mouse Tracking for Background Spotlight (GPU-Accelerated requestAnimationFrame)
+  // 7. Global Mouse Tracking for Background Spotlight
   const spotlight = document.querySelector('.global-spotlight');
   if (spotlight) {
     let tick = false;
     document.addEventListener('mousemove', (e) => {
       if (!tick) {
         window.requestAnimationFrame(() => {
-          // Center the 600px spotlight circle on the mouse position
           const x = e.clientX - 300;
           const y = e.clientY - 300;
           spotlight.style.transform = `translate3d(${x}px, ${y}px, 0)`;
@@ -157,11 +156,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const particle = document.createElement('div');
     particle.classList.add('hero-particle');
     
-    // Randomize initial properties
-    const size = Math.random() * 6 + 3; // 3px to 9px
-    const left = Math.random() * 100; // 0% to 100%
-    const duration = Math.random() * 12 + 12; // 12s to 24s
-    const delay = Math.random() * -24; // Staggered delay to make particles active immediately
+    const size = Math.random() * 6 + 3;
+    const left = Math.random() * 100;
+    const duration = Math.random() * 12 + 12;
+    const delay = Math.random() * -24;
     
     particle.style.width = `${size}px`;
     particle.style.height = `${size}px`;
@@ -172,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
     container.appendChild(particle);
   }
 
-  // 9. Navbar Scroll Spy (Highlight active section)
+  // 9. Navbar Scroll Spy
   const spySections = document.querySelectorAll('section[id]');
   const navLinks = document.querySelectorAll('.nav-links a[href^="#"]');
   
@@ -201,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 10. Back to Top Button visibility & action
+  // 10. Back to Top Button
   const backToTopBtn = document.getElementById('back-to-top');
   if (backToTopBtn) {
     let scrollTick = false;
@@ -352,15 +350,15 @@ document.addEventListener('DOMContentLoaded', () => {
         osc.start();
         osc.stop(audioCtx.currentTime + 0.08);
       } else if (type === 'success') {
-        osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
-        osc.frequency.exponentialRampToValueAtTime(1046.50, audioCtx.currentTime + 0.06); // C6
+        osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1046.50, audioCtx.currentTime + 0.06);
         gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
         osc.start();
         osc.stop(audioCtx.currentTime + 0.06);
       }
     } catch (e) {
-      // Audio context failed / browser blocked autoplay
+      // Audio context error handle
     }
   };
 
@@ -373,145 +371,6 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => playHaptic('double'));
   });
 
-  // 13. Mobile App Simulator Interactive Logic
-  let simSpentTotal = 1914.00;
-  let simRecordsCount = 15;
-
-  const simSpentTotalEl = document.getElementById('sim-spent-total');
-  const simRecordsCountEl = document.getElementById('sim-records-count');
-  const simTxListEl = document.getElementById('sim-tx-list');
-  const simScanOverlay = document.getElementById('sim-scan-overlay');
-  const simSyncOverlay = document.getElementById('sim-sync-overlay');
-  const simSyncTextOverlay = document.getElementById('sim-sync-text-overlay');
-  const simCloudIcon = document.getElementById('sim-cloud-icon');
-  const simSyncTrigger = document.getElementById('sim-sync-trigger');
-
-  const formatCurrency = (val) => {
-    return '₹' + val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
-
-  const updateSimUI = () => {
-    if (simSpentTotalEl) simSpentTotalEl.textContent = formatCurrency(simSpentTotal);
-    if (simRecordsCountEl) simRecordsCountEl.textContent = simRecordsCount + ' Records';
-  };
-
-  const addManualExpense = () => {
-    const manualExpenses = [
-      { merchant: 'Tea Stall Chai', category: 'Food & dining', amount: 10.00, emoji: '🍕', iconType: 'food' },
-      { merchant: 'Lunch Thali Meal', category: 'Food & dining', amount: 120.00, emoji: '🍕', iconType: 'food' },
-      { merchant: 'Mobile Recharge', category: 'Services', amount: 399.00, emoji: '💼', iconType: 'services' },
-      { merchant: 'Stationery Notebooks', category: 'Others', amount: 85.00, emoji: '🛒', iconType: 'other' }
-    ];
-    
-    const randomItem = manualExpenses[Math.floor(Math.random() * manualExpenses.length)];
-    addSimTransaction(randomItem.merchant, randomItem.amount, randomItem.category, randomItem.iconType);
-  };
-
-  const addScanExpense = () => {
-    if (!simScanOverlay) return;
-    simScanOverlay.classList.add('active');
-    
-    let beepInterval = setInterval(() => playHaptic('beep'), 600);
-    
-    setTimeout(() => {
-      clearInterval(beepInterval);
-      simScanOverlay.classList.remove('active');
-      
-      const scanExpenses = [
-        { merchant: 'McDonalds Burger Deal', category: 'Food & dining', amount: 320.00, iconType: 'food' },
-        { merchant: 'Zudio T-Shirt', category: 'Shopping', amount: 499.00, iconType: 'other' },
-        { merchant: 'Auto Fare Ride', category: 'Services', amount: 90.00, iconType: 'services' },
-        { merchant: 'Medicines Apollo', category: 'Services', amount: 180.00, iconType: 'services' }
-      ];
-      
-      const randomItem = scanExpenses[Math.floor(Math.random() * scanExpenses.length)];
-      addSimTransaction(randomItem.merchant, randomItem.amount, randomItem.category, randomItem.iconType);
-      playHaptic('success');
-    }, 2500);
-  };
-
-  const addSimTransaction = (merchant, amount, category, iconType) => {
-    if (!simTxListEl) return;
-    simSpentTotal += amount;
-    simRecordsCount += 1;
-    
-    const newTx = document.createElement('div');
-    newTx.className = 'sim-tx-item';
-    
-    let iconHTML = '';
-    let bgClass = 'bg-orange-dim';
-    
-    if (iconType === 'services') {
-      bgClass = 'bg-blue-dim';
-      iconHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #3b82f6;"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`;
-    } else if (iconType === 'food') {
-      bgClass = 'bg-orange-dim';
-      iconHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #f97316;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`;
-    } else {
-      bgClass = 'bg-purple-dim';
-      iconHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #a78bfa;"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="12" y1="4" x2="12" y2="20"/></svg>`;
-    }
-    
-    let catClass = 'text-purple';
-    if (iconType === 'services') catClass = 'text-blue';
-    else if (iconType === 'food') catClass = 'text-orange';
-
-    newTx.innerHTML = `
-      <span class="sim-tx-category-icon ${bgClass}">
-        ${iconHTML}
-      </span>
-      <div class="sim-tx-details">
-        <h4 class="sim-tx-merchant">${merchant}</h4>
-        <span class="sim-tx-date"><span class="sim-tx-category ${catClass}">${category}</span> • Today</span>
-      </div>
-      <span class="sim-tx-value">₹${amount.toFixed(2)}</span>
-    `;
-    
-    if (simTxListEl.children.length >= 4) {
-      simTxListEl.removeChild(simTxListEl.lastElementChild);
-    }
-    simTxListEl.insertBefore(newTx, simTxListEl.firstChild);
-    
-    if (simCloudIcon && simSyncTrigger) {
-      simSyncTrigger.classList.add('syncing');
-      simCloudIcon.style.color = '#ef4444'; // Red/orange alert color for unsynced changes
-    }
-    
-    updateSimUI();
-  };
-
-  const syncSimDatabase = () => {
-    if (!simSyncOverlay) return;
-    simSyncOverlay.classList.add('active');
-    if (simSyncTrigger && simCloudIcon) {
-      simSyncTrigger.classList.add('syncing');
-      simCloudIcon.style.color = '#fbbf24'; // Yellow for syncing
-    }
-    
-    const steps = [
-      'Encrypting SQLite sandbox...',
-      'Opening secure Supabase tunnel...',
-      'Merging transaction branches...',
-      'Reconciliation complete!'
-    ];
-    
-    let currentStep = 0;
-    const interval = setInterval(() => {
-      if (currentStep < steps.length) {
-        if (simSyncTextOverlay) simSyncTextOverlay.textContent = steps[currentStep];
-        playHaptic('click');
-        currentStep++;
-      } else {
-        clearInterval(interval);
-        simSyncOverlay.classList.remove('active');
-        
-        if (simSyncTrigger && simCloudIcon) {
-          simSyncTrigger.classList.remove('syncing');
-          simCloudIcon.style.color = ''; // Reset to green
-        }
-        playHaptic('success');
-      }
-    }, 600);
   // 13. Mobile App Simulator Interactive Logic
   let simSpentTotal = 1914.00;
   let simRecordsCount = 15;
@@ -854,7 +713,6 @@ document.addEventListener('DOMContentLoaded', () => {
       playHaptic('success');
       aiTestBtn.disabled = true;
 
-      // Randomize realistic latencies
       if (latencyGemini) latencyGemini.textContent = `~${Math.floor(Math.random() * 80 + 380)}ms`;
       if (latencyDeepseek) latencyDeepseek.textContent = `~${Math.floor(Math.random() * 120 + 640)}ms`;
       if (latencyGroq) latencyGroq.textContent = `~${Math.floor(Math.random() * 50 + 160)}ms`;
@@ -880,4 +738,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-});
+});
