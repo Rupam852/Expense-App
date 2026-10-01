@@ -22,7 +22,6 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
   late String _selectedNvidiaModel;
   late String _primaryProvider;
   late String _secondaryProvider;
-  late String _responseLanguage;
 
   final TextEditingController _geminiKeyController = TextEditingController();
   final TextEditingController _nvidiaKeyController = TextEditingController();
@@ -80,7 +79,6 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
     _nvidiaKeyController.text = _aiService.nvidiaApiKey;
     _primaryProvider = _aiService.primaryProvider;
     _secondaryProvider = _aiService.secondaryProvider;
-    _responseLanguage = _aiService.responseLanguage;
 
     if (_isDefaultCooldownActive || _isCustomCooldownActive) {
       _startCooldownTicker();
@@ -187,8 +185,6 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
       secondaryProvider: _secondaryProvider,
       aiMode: 'custom',
     );
-
-    await _aiService.setResponseLanguage(_responseLanguage);
 
     setState(() {
       _isSaving = false;
@@ -730,64 +726,6 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
                   ],
                 ),
               ],
-
-              const SizedBox(height: 20),
-
-              // 3. Response Language Selector
-              _buildSectionHeader('AI ADVISOR RESPONSE LANGUAGE', isDark),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: borderColor),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Preferred conversational language for AI Financial Advisor and Voice explanations:',
-                      style: GoogleFonts.inter(fontSize: 12, color: Colors.grey, height: 1.4),
-                    ),
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF161920) : const Color(0xFFF1F4F9),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: borderColor),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _responseLanguage,
-                          isExpanded: true,
-                          dropdownColor: isDark ? const Color(0xFF1E232E) : Colors.white,
-                          items: const [
-                            DropdownMenuItem(value: 'English', child: Text('English (Default)')),
-                            DropdownMenuItem(value: 'Hinglish', child: Text('Hinglish (Hindi in English Script)')),
-                            DropdownMenuItem(value: 'Hindi', child: Text('Hindi (हिंदी)')),
-                            DropdownMenuItem(value: 'Bengali', child: Text('Bengali (বাংলা)')),
-                            DropdownMenuItem(value: 'Marathi', child: Text('Marathi (मराठी)')),
-                            DropdownMenuItem(value: 'Gujarati', child: Text('Gujarati (ગુજરાતી)')),
-                            DropdownMenuItem(value: 'Tamil', child: Text('Tamil (தமிழ்)')),
-                            DropdownMenuItem(value: 'Telugu', child: Text('Telugu (తెలుగు)')),
-                            DropdownMenuItem(value: 'Kannada', child: Text('Kannada (ಕನ್ನಡ)')),
-                            DropdownMenuItem(value: 'Malayalam', child: Text('Malayalam (മലയാളം)')),
-                            DropdownMenuItem(value: 'Punjabi', child: Text('Punjabi (ਪੰਜਾਬੀ)')),
-                          ],
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() => _responseLanguage = val);
-                              _aiService.setResponseLanguage(val);
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
 
               const SizedBox(height: 24),
             ],
