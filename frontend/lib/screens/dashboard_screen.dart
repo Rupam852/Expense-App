@@ -2323,14 +2323,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       },
     );
   }
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
 
   Widget _buildToolSectionHeader(String title, Color color) {
     return Text(
