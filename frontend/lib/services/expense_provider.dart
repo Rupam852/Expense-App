@@ -1037,12 +1037,10 @@ class ExpenseProvider with ChangeNotifier {
   }
 
   // ──────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────
   // SYNC (SQLite ↔ Supabase)
   // ──────────────────────────────────────────────────────
-  Future<bool> triggerQuietSync() async {
-    if (_isQuietSyncing || _isSyncing) return false;
-    _isQuietSyncing = true;
-
+  Future<bool> _performSync() async {
     try {
       if (await _checkIfGuest()) return false;
 
@@ -1118,6 +1116,7 @@ class ExpenseProvider with ChangeNotifier {
         await _dbHelper.syncDownSplitBills(serverSplits.map((sb) => SplitBill.fromMap(Map<String, dynamic>.from(sb))).toList());
 
         _lastSyncTime = prefs.getString('last_sync_time');
+        _syncErrorMessage = null;
       }
 
       _expenses = await _dbHelper.getExpenses();
@@ -1129,8 +1128,16 @@ class ExpenseProvider with ChangeNotifier {
       notifyListeners();
       return syncResult != null;
     } catch (e) {
-      print('[Sync] Quiet sync error (offline?): $e');
+      print('[Sync] Sync error: $e');
       return false;
+    }
+  }
+
+  Future<bool> triggerQuietSync() async {
+    if (_isQuietSyncing || _isSyncing) return false;
+    _isQuietSyncing = true;
+    try {
+      return await _performSync();
     } finally {
       _isQuietSyncing = false;
     }
@@ -1160,9 +1167,11 @@ class ExpenseProvider with ChangeNotifier {
         _syncErrorMessage = 'Cloud Sync is only available for registered accounts. Please log in.';
         return false;
       }
-      final success = await triggerQuietSync();
+      final success = await _performSync();
       if (!success) {
         _syncErrorMessage = 'Sync failed. Please check internet connection.';
+      } else {
+        _syncErrorMessage = null;
       }
       return success;
     } catch (e) {

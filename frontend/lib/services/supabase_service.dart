@@ -175,12 +175,22 @@ class SupabaseService {
     final uid = currentUser?.id;
     if (uid == null) return [];
     try {
-      var query = _client.from('expenses').select().eq('user_id', uid);
       if (lastSyncTime != null && lastSyncTime.isNotEmpty) {
-        query = query.gte('updated_at', lastSyncTime);
+        final data = await _client
+            .from('expenses')
+            .select()
+            .eq('user_id', uid)
+            .gte('updated_at', lastSyncTime)
+            .order('updated_at');
+        return List<Map<String, dynamic>>.from(data);
+      } else {
+        final data = await _client
+            .from('expenses')
+            .select()
+            .eq('user_id', uid)
+            .order('updated_at');
+        return List<Map<String, dynamic>>.from(data);
       }
-      final data = await query.order('updated_at');
-      return List<Map<String, dynamic>>.from(data);
     } catch (e) {
       print('[Supabase] fetchExpensesSince error: $e');
       return [];
@@ -532,12 +542,22 @@ class SupabaseService {
     final uid = currentUser?.id;
     if (uid == null) return [];
     try {
-      var query = _client.from('khata_entries').select().eq('user_id', uid);
       if (lastSyncTime != null && lastSyncTime.isNotEmpty) {
-        query = query.gte('updated_at', lastSyncTime);
+        final data = await _client
+            .from('khata_entries')
+            .select()
+            .eq('user_id', uid)
+            .gte('updated_at', lastSyncTime)
+            .order('updated_at');
+        return List<Map<String, dynamic>>.from(data);
+      } else {
+        final data = await _client
+            .from('khata_entries')
+            .select()
+            .eq('user_id', uid)
+            .order('updated_at');
+        return List<Map<String, dynamic>>.from(data);
       }
-      final data = await query.order('updated_at');
-      return List<Map<String, dynamic>>.from(data);
     } catch (e) {
       print('[Supabase] fetchKhataEntriesSince error: $e');
       return [];
@@ -598,12 +618,22 @@ class SupabaseService {
     final uid = currentUser?.id;
     if (uid == null) return [];
     try {
-      var query = _client.from('subscriptions').select().eq('user_id', uid);
       if (lastSyncTime != null && lastSyncTime.isNotEmpty) {
-        query = query.gte('updated_at', lastSyncTime);
+        final data = await _client
+            .from('subscriptions')
+            .select()
+            .eq('user_id', uid)
+            .gte('updated_at', lastSyncTime)
+            .order('updated_at');
+        return List<Map<String, dynamic>>.from(data);
+      } else {
+        final data = await _client
+            .from('subscriptions')
+            .select()
+            .eq('user_id', uid)
+            .order('updated_at');
+        return List<Map<String, dynamic>>.from(data);
       }
-      final data = await query.order('updated_at');
-      return List<Map<String, dynamic>>.from(data);
     } catch (e) {
       print('[Supabase] fetchSubscriptionsSince error: $e');
       return [];
@@ -665,12 +695,22 @@ class SupabaseService {
     final uid = currentUser?.id;
     if (uid == null) return [];
     try {
-      var query = _client.from('split_bills').select().eq('user_id', uid);
       if (lastSyncTime != null && lastSyncTime.isNotEmpty) {
-        query = query.gte('updated_at', lastSyncTime);
+        final data = await _client
+            .from('split_bills')
+            .select()
+            .eq('user_id', uid)
+            .gte('updated_at', lastSyncTime)
+            .order('updated_at');
+        return List<Map<String, dynamic>>.from(data);
+      } else {
+        final data = await _client
+            .from('split_bills')
+            .select()
+            .eq('user_id', uid)
+            .order('updated_at');
+        return List<Map<String, dynamic>>.from(data);
       }
-      final data = await query.order('updated_at');
-      return List<Map<String, dynamic>>.from(data);
     } catch (e) {
       print('[Supabase] fetchSplitBillsSince error: $e');
       return [];

@@ -1425,13 +1425,8 @@ class DatabaseHelper {
     final db = await instance.database;
     if (payments.isEmpty) return;
 
-    // Sort descending by sort_order / updated_at
-    final sortedPayments = List<PaymentDetail>.from(payments)
-      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-
     await db.transaction((txn) async {
-      await txn.delete('payment_details');
-      for (final pay in sortedPayments) {
+      for (final pay in payments) {
         final map = pay.toMap();
         map['is_synced'] = 1;
         await txn.insert(
