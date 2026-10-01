@@ -102,19 +102,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
     
     if (lastKnown != currentMonthStr) {
+      final parts = lastKnown.split('-');
+      String oldMonthLabel = lastKnown;
+      if (parts.length == 2) {
+        try {
+          final oldDate = DateTime(int.parse(parts[0]), int.parse(parts[1]));
+          oldMonthLabel = DateFormat('MMMM yyyy').format(oldDate);
+        } catch (_) {}
+      }
+
       // Month rolled over! Let's check if we have old expenses
       final oldTotal = expenseProvider.getOldExpensesTotal();
       if (oldTotal > 0) {
         if (!mounted) return false;
-        
-        final parts = lastKnown.split('-');
-        String oldMonthLabel = lastKnown;
-        if (parts.length == 2) {
-          try {
-            final oldDate = DateTime(int.parse(parts[0]), int.parse(parts[1]));
-            oldMonthLabel = DateFormat('MMMM yyyy').format(oldDate);
-          } catch (_) {}
-        }
 
         final currentMonthStart = DateTime(now.year, now.month);
         final oldExpenseIds = expenseProvider.expenses
@@ -125,9 +125,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _showMonthRolloverDialog(context, oldTotal, oldMonthLabel, oldExpenseIds, currentMonthStr);
         return true;
       } else {
-        // If there were no expenses in previous month, just update the stored month string
-        await prefs.setString('last_known_month_year', currentMonthStr);
-        return false;
+        // If there were no expenses in previous month, show clean Welcome New Month popup
+        if (!mounted) return false;
+        final newMonthLabel = DateFormat('MMMM yyyy').format(now);
+        _showZeroExpenseNewMonthDialog(context, oldMonthLabel, newMonthLabel, currentMonthStr);
+        return true;
       }
     }
     return false;
@@ -465,6 +467,106 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
               ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showZeroExpenseNewMonthDialog(
+    BuildContext context,
+    String oldMonthLabel,
+    String newMonthLabel,
+    String currentMonthStr,
+  ) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: const Color(0xFF00D09C).withValues(alpha: 0.2),
+            ),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00D09C).withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.rocket_launch_rounded, color: Color(0xFF00D09C), size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Welcome to $newMonthLabel! 🎉',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Naya mahina ($newMonthLabel) shuru ho gaya hai! Pichle mahine ($oldMonthLabel) me aapka koi kharcha record nahi tha.',
+                style: GoogleFonts.inter(fontSize: 13, height: 1.4),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00D09C).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF00D09C).withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle_outline_rounded, color: Color(0xFF00D09C), size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Aapka ledger fresh ₹0 se taiyar hai. Chaliye nayi tracking shuru karein!',
+                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actionsPadding: const EdgeInsets.all(16),
+          actions: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  Navigator.of(dialogCtx).pop();
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setString('last_known_month_year', currentMonthStr);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00D09C),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                label: Text(
+                  'Start New Month 🚀',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ),
             ),
           ],
         );
@@ -3084,7 +3186,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       },
     );
-
+  }
 
   @override
   Widget build(BuildContext context) {
