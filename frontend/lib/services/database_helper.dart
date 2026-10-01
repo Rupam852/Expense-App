@@ -260,7 +260,23 @@ class DatabaseHelper {
     await _initEncryptionKey();
     _database = await _initDB('expense_app.db');
     await _migrateDatabaseIfNecessary(_database!);
+    await _ensureColumnsExist(_database!);
     return _database!;
+  }
+
+  static Future<void> _ensureColumnsExist(Database db) async {
+    try {
+      await db.execute("ALTER TABLE payment_details ADD COLUMN name TEXT NOT NULL DEFAULT 'Primary UPI'");
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE payment_details ADD COLUMN is_primary INTEGER NOT NULL DEFAULT 0');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE payment_details ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0');
+    } catch (_) {}
+    try {
+      await db.execute("ALTER TABLE split_bills ADD COLUMN split_type TEXT NOT NULL DEFAULT 'equal'");
+    } catch (_) {}
   }
 
   Future<Database> _initDB(String filePath) async {
@@ -269,7 +285,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 9,
+      version: 10,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -393,7 +409,7 @@ class DatabaseHelper {
         print('Ai chat messages migration error: $e');
       }
     }
-    if (oldVersion < 9) {
+    if (oldVersion < 9 || oldVersion < 10) {
       try {
         await db.execute('''
           CREATE TABLE IF NOT EXISTS payment_details (
@@ -461,8 +477,11 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE payment_details (
         id TEXT PRIMARY KEY,
+        name TEXT NOT NULL DEFAULT 'Primary UPI',
         upi_id TEXT NOT NULL,
         qr_code_url TEXT,
+        is_primary INTEGER NOT NULL DEFAULT 0,
+        sort_order INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         is_synced INTEGER NOT NULL DEFAULT 0
@@ -547,21 +566,6 @@ class DatabaseHelper {
         timestamp TEXT NOT NULL,
         model_used TEXT,
         created_at TEXT NOT NULL
-      )
-    ''');
-
-    // 9. Payment Details SQLite Table
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS payment_details (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL DEFAULT 'Primary UPI',
-        upi_id TEXT NOT NULL,
-        qr_code_url TEXT,
-        is_primary INTEGER NOT NULL DEFAULT 0,
-        sort_order INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        is_synced INTEGER NOT NULL DEFAULT 0
       )
     ''');
   }
