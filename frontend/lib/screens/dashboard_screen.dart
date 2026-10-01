@@ -2147,6 +2147,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (ctx) {
         final isDark = Theme.of(ctx).brightness == Brightness.dark;
         final primaryColor = Theme.of(ctx).primaryColor;
+        final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
 
         return Container(
           decoration: BoxDecoration(
@@ -2189,7 +2190,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           color: primaryColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(Icons.apps_rounded, color: primaryColor, size: 20),
+                        child: Icon(Icons.widgets_rounded, color: primaryColor, size: 20),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -2197,11 +2198,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'All Smart Tools & Utilities',
+                              'More Options',
                               style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
                             ),
                             Text(
-                              'Quick shortcuts to all finance features',
+                              'Data export, smart utilities & ledger tools',
                               style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey),
                             ),
                           ],
@@ -2215,111 +2216,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // ─── 1. FINANCIAL TRACKERS ───
-                  _buildToolSectionHeader('FINANCIAL LEDGERS & TRACKERS', primaryColor),
+                  // ─── 1. STATEMENTS & DATA ───
+                  _buildToolSectionHeader('STATEMENTS & DATA', primaryColor),
                   const SizedBox(height: 10),
                   _buildToolTile(
                     ctx: ctx,
                     isDark: isDark,
-                    icon: Icons.menu_book_rounded,
-                    iconColor: Colors.amber,
-                    title: 'Khata Book',
-                    subtitle: 'Track money lent, borrowed & send WhatsApp reminders',
-                    onTap: () {
-                      Navigator.of(ctx).pop();
-                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const KhataScreen()));
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  _buildToolTile(
-                    ctx: ctx,
-                    isDark: isDark,
-                    icon: Icons.call_split_rounded,
-                    iconColor: const Color(0xFF6C63FF),
-                    title: 'Split Bills',
-                    subtitle: 'Split group expenses with friends & generate UPI QR',
-                    onTap: () {
-                      Navigator.of(ctx).pop();
-                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SplitBillScreen()));
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  _buildToolTile(
-                    ctx: ctx,
-                    isDark: isDark,
-                    icon: Icons.autorenew_rounded,
-                    iconColor: const Color(0xFFFF4081),
-                    title: 'Subscriptions & Bills',
-                    subtitle: 'Track recurring Netflix, Spotify & bill renewals',
-                    onTap: () {
-                      Navigator.of(ctx).pop();
-                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SubscriptionScreen()));
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  _buildToolTile(
-                    ctx: ctx,
-                    isDark: isDark,
-                    icon: Icons.tag_rounded,
-                    iconColor: const Color(0xFFE040FB),
-                    title: 'Trip & Event Tags',
-                    subtitle: 'Tag and monitor budgets for #Goa, #Wedding, #Diwali',
-                    onTap: () {
-                      Navigator.of(ctx).pop();
-                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TripTagScreen()));
-                    },
-                  ),
-
-                  const SizedBox(height: 22),
-
-                  // ─── 2. SMART AUTOMATION & AI ───
-                  _buildToolSectionHeader('SMART AUTOMATION & AI', primaryColor),
-                  const SizedBox(height: 10),
-                  _buildToolTile(
-                    ctx: ctx,
-                    isDark: isDark,
-                    icon: Icons.sms_outlined,
+                    icon: Icons.file_download_outlined,
                     iconColor: const Color(0xFF00D09C),
-                    title: 'Bank SMS Auto-Logger',
-                    subtitle: 'Automatically import and categorize debit/credit SMS',
+                    title: 'Export Ledger (PDF / Excel / CSV)',
+                    subtitle: 'Download your expense statements directly to phone storage',
                     onTap: () {
                       Navigator.of(ctx).pop();
-                      SmsExpenseParserDialog.show(context);
+                      ExportStatementDialog.show(context, expenses: expenseProvider.expenses);
                     },
                   ),
                   const SizedBox(height: 8),
                   _buildToolTile(
                     ctx: ctx,
                     isDark: isDark,
-                    icon: Icons.psychology_alt_rounded,
-                    iconColor: const Color(0xFF6366F1),
-                    title: 'GrowwAI Financial Advisor',
-                    subtitle: 'Live expense ledger analysis & smart money-saving advice',
+                    icon: Icons.file_upload_outlined,
+                    iconColor: const Color(0xFF38BDF8),
+                    title: 'Import Statements (PDF / Excel)',
+                    subtitle: 'Import past bank statements or expenses from Excel, CSV or PDF',
                     onTap: () {
                       Navigator.of(ctx).pop();
-                      if (!checkAndPromptAiConfig(context)) return;
-                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AiAdvisorScreen()));
+                      _showImportOptions(context);
                     },
                   ),
                   const SizedBox(height: 8),
-                  _buildToolTile(
-                    ctx: ctx,
-                    isDark: isDark,
-                    icon: Icons.tune_rounded,
-                    iconColor: const Color(0xFF0284C7),
-                    title: 'AI Engine Settings',
-                    subtitle: 'Configure Google Gemini & NVIDIA NIM API keys',
-                    onTap: () {
-                      Navigator.of(ctx).pop();
-                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AiConfigScreen()));
-                    },
-                  ),
-
-                  const SizedBox(height: 22),
-
-                  // ─── 3. STATEMENTS & INVOICES ───
-                  _buildToolSectionHeader('STATEMENTS & INVOICES', primaryColor),
-                  const SizedBox(height: 10),
                   _buildToolTile(
                     ctx: ctx,
                     isDark: isDark,
@@ -2332,6 +2257,72 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Navigator.of(context).push(MaterialPageRoute(builder: (_) => const InvoiceHistoryScreen()));
                     },
                   ),
+
+                  const SizedBox(height: 22),
+
+                  // ─── 2. SMART UTILITIES & AI ───
+                  _buildToolSectionHeader('SMART UTILITIES & AI', primaryColor),
+                  const SizedBox(height: 10),
+                  _buildToolTile(
+                    ctx: ctx,
+                    isDark: isDark,
+                    icon: Icons.tag_rounded,
+                    iconColor: const Color(0xFFE040FB),
+                    title: 'Trip & Event Tags',
+                    subtitle: 'Tag and monitor budgets for #Goa, #Wedding, #Diwali',
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TripTagScreen()));
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _buildToolTile(
+                    ctx: ctx,
+                    isDark: isDark,
+                    icon: Icons.sms_outlined,
+                    iconColor: const Color(0xFFF59E0B),
+                    title: 'Bank SMS Auto-Logger',
+                    subtitle: 'Scan and automatically import debit/credit SMS',
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      SmsExpenseParserDialog.show(context);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _buildToolTile(
+                    ctx: ctx,
+                    isDark: isDark,
+                    icon: Icons.psychology_alt_rounded,
+                    iconColor: const Color(0xFF6366F1),
+                    title: 'GrowwAI Financial Advisor',
+                    subtitle: 'AI expense ledger analysis & money-saving insights',
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      if (!checkAndPromptAiConfig(context)) return;
+                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AiAdvisorScreen()));
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _buildToolTile(
+                    ctx: ctx,
+                    isDark: isDark,
+                    icon: Icons.tune_rounded,
+                    iconColor: const Color(0xFF0284C7),
+                    title: 'AI Engine Configuration',
+                    subtitle: 'Configure Google Gemini & NVIDIA NIM API keys',
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AiConfigScreen()));
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
                 ],
               ),
             ),
@@ -3755,7 +3746,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(width: 8),
 
-                  // 4. More Tools (All Utilities Sheet)
+                  // 4. More Options (Data & Extra Utilities Sheet)
                   Expanded(
                     child: InkWell(
                       onTap: () => _showAllToolsModalSheet(context),
@@ -3774,11 +3765,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             CircleAvatar(
                               radius: 17,
                               backgroundColor: const Color(0xFF00D09C).withValues(alpha: 0.14),
-                              child: const Icon(Icons.grid_view_rounded, color: Color(0xFF00D09C), size: 17),
+                              child: const Icon(Icons.widgets_outlined, color: Color(0xFF00D09C), size: 17),
                             ),
                             const SizedBox(height: 7),
                             Text(
-                              'More Tools',
+                              'More Options',
                               style: GoogleFonts.inter(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
@@ -3789,7 +3780,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'All Utilities',
+                              'Extra Utilities',
                               style: GoogleFonts.inter(fontSize: 8.5, color: Colors.grey),
                               textAlign: TextAlign.center,
                             ),
