@@ -1138,6 +1138,7 @@ class ExpenseProvider with ChangeNotifier {
 
   Future<bool> _checkIfGuest() async {
     try {
+      if (_supabase.currentUser == null) return true;
       final prefs = await SharedPreferences.getInstance();
       final cachedProfileStr = prefs.getString('cached_user_profile');
       if (cachedProfileStr != null) {
@@ -1145,7 +1146,7 @@ class ExpenseProvider with ChangeNotifier {
         return cachedProfile['id'] == 'guest-user-uuid';
       }
     } catch (_) {}
-    return false;
+    return _supabase.currentUser == null;
   }
 
   Future<bool> triggerManualSync() async {
@@ -1161,11 +1162,11 @@ class ExpenseProvider with ChangeNotifier {
       }
       final success = await triggerQuietSync();
       if (!success) {
-        _syncErrorMessage = 'Sync failed. Please check internet connection or database setup.';
+        _syncErrorMessage = 'Sync failed. Please check internet connection.';
       }
       return success;
     } catch (e) {
-      _syncErrorMessage = 'Sync failed. Running in offline mode.';
+      _syncErrorMessage = 'Sync failed. Operating in offline mode.';
       return false;
     } finally {
       _isSyncing = false;

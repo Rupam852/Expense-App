@@ -157,24 +157,34 @@ class SupabaseService {
   Future<List<Map<String, dynamic>>> fetchExpenses() async {
     final uid = currentUser?.id;
     if (uid == null) return [];
-    final data = await _client
-        .from('expenses')
-        .select()
-        .eq('user_id', uid)
-        .eq('is_deleted', false)
-        .order('transaction_date', ascending: false);
-    return List<Map<String, dynamic>>.from(data);
+    try {
+      final data = await _client
+          .from('expenses')
+          .select()
+          .eq('user_id', uid)
+          .eq('is_deleted', false)
+          .order('transaction_date', ascending: false);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('[Supabase] fetchExpenses error: $e');
+      return [];
+    }
   }
 
   Future<List<Map<String, dynamic>>> fetchExpensesSince(String? lastSyncTime) async {
     final uid = currentUser?.id;
     if (uid == null) return [];
-    var query = _client.from('expenses').select().eq('user_id', uid);
-    if (lastSyncTime != null) {
-      query = query.gte('updated_at', lastSyncTime);
+    try {
+      var query = _client.from('expenses').select().eq('user_id', uid);
+      if (lastSyncTime != null && lastSyncTime.isNotEmpty) {
+        query = query.gte('updated_at', lastSyncTime);
+      }
+      final data = await query.order('updated_at');
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('[Supabase] fetchExpensesSince error: $e');
+      return [];
     }
-    final data = await query.order('updated_at');
-    return List<Map<String, dynamic>>.from(data);
   }
 
   Future<void> upsertExpenses(List<Map<String, dynamic>> expenses) async {
@@ -182,17 +192,21 @@ class SupabaseService {
     final uid = currentUser?.id;
     if (uid == null) return;
     final rows = expenses.map((e) {
-      final copy = Map<String, dynamic>.from(e);
-      copy['user_id'] = uid;
-      copy['updated_at'] = e['updated_at'] ?? DateTime.now().toIso8601String();
-      if (copy['is_recurring'] != null) {
-        copy['is_recurring'] = copy['is_recurring'] == 1 || copy['is_recurring'] == true;
-      }
-      if (copy['is_deleted'] != null) {
-        copy['is_deleted'] = copy['is_deleted'] == 1 || copy['is_deleted'] == true;
-      }
-      copy.remove('is_synced');
-      return copy;
+      return <String, dynamic>{
+        'id': e['id']?.toString(),
+        'user_id': uid,
+        'amount': (e['amount'] is num) ? (e['amount'] as num).toDouble() : (double.tryParse(e['amount']?.toString() ?? '0') ?? 0.0),
+        'currency': e['currency']?.toString() ?? 'INR',
+        'category': e['category']?.toString() ?? 'Others',
+        'description': e['description']?.toString() ?? '',
+        'transaction_date': e['transaction_date']?.toString() ?? DateTime.now().toIso8601String(),
+        'receipt_url': e['receipt_url']?.toString(),
+        'is_recurring': e['is_recurring'] == 1 || e['is_recurring'] == true,
+        'recurrence_period': e['recurrence_period']?.toString() ?? 'none',
+        'is_deleted': e['is_deleted'] == 1 || e['is_deleted'] == true,
+        'created_at': e['created_at']?.toString() ?? DateTime.now().toIso8601String(),
+        'updated_at': e['updated_at']?.toString() ?? DateTime.now().toIso8601String(),
+      };
     }).toList();
     await _client.from('expenses').upsert(rows);
   }
@@ -213,12 +227,17 @@ class SupabaseService {
   Future<List<Map<String, dynamic>>> fetchBudgets() async {
     final uid = currentUser?.id;
     if (uid == null) return [];
-    final data = await _client
-        .from('budgets')
-        .select()
-        .eq('user_id', uid)
-        .eq('is_deleted', false);
-    return List<Map<String, dynamic>>.from(data);
+    try {
+      final data = await _client
+          .from('budgets')
+          .select()
+          .eq('user_id', uid)
+          .eq('is_deleted', false);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('[Supabase] fetchBudgets error: $e');
+      return [];
+    }
   }
 
   Future<void> upsertBudgets(List<Map<String, dynamic>> budgets) async {
@@ -226,14 +245,16 @@ class SupabaseService {
     final uid = currentUser?.id;
     if (uid == null) return;
     final rows = budgets.map((b) {
-      final copy = Map<String, dynamic>.from(b);
-      copy['user_id'] = uid;
-      copy['updated_at'] = b['updated_at'] ?? DateTime.now().toIso8601String();
-      if (copy['is_deleted'] != null) {
-        copy['is_deleted'] = copy['is_deleted'] == 1 || copy['is_deleted'] == true;
-      }
-      copy.remove('is_synced');
-      return copy;
+      return <String, dynamic>{
+        'id': b['id']?.toString(),
+        'user_id': uid,
+        'category': b['category']?.toString() ?? 'Others',
+        'amount_limit': (b['amount_limit'] is num) ? (b['amount_limit'] as num).toDouble() : (double.tryParse(b['amount_limit']?.toString() ?? '0') ?? 0.0),
+        'month_year': b['month_year']?.toString() ?? '',
+        'is_deleted': b['is_deleted'] == 1 || b['is_deleted'] == true,
+        'created_at': b['created_at']?.toString() ?? DateTime.now().toIso8601String(),
+        'updated_at': b['updated_at']?.toString() ?? DateTime.now().toIso8601String(),
+      };
     }).toList();
     await _client.from('budgets').upsert(rows);
   }
@@ -249,12 +270,17 @@ class SupabaseService {
   Future<List<Map<String, dynamic>>> fetchPaymentDetails() async {
     final uid = currentUser?.id;
     if (uid == null) return [];
-    final data = await _client
-        .from('payment_details')
-        .select()
-        .eq('user_id', uid)
-        .order('sort_order', ascending: true);
-    return List<Map<String, dynamic>>.from(data);
+    try {
+      final data = await _client
+          .from('payment_details')
+          .select()
+          .eq('user_id', uid)
+          .order('sort_order', ascending: true);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('[Supabase] fetchPaymentDetails error: $e');
+      return [];
+    }
   }
 
   Future<void> upsertPaymentDetails(List<Map<String, dynamic>> details) async {
@@ -262,14 +288,17 @@ class SupabaseService {
     final uid = currentUser?.id;
     if (uid == null) return;
     final rows = details.map((d) {
-      final copy = Map<String, dynamic>.from(d);
-      copy['user_id'] = uid;
-      copy['updated_at'] = d['updated_at'] ?? DateTime.now().toIso8601String();
-      if (copy['is_primary'] != null) {
-        copy['is_primary'] = copy['is_primary'] == 1 || copy['is_primary'] == true;
-      }
-      copy.remove('is_synced');
-      return copy;
+      return <String, dynamic>{
+        'id': d['id']?.toString(),
+        'user_id': uid,
+        'name': d['name']?.toString() ?? 'Primary UPI',
+        'upi_id': d['upi_id']?.toString() ?? '',
+        'qr_code_url': d['qr_code_url']?.toString(),
+        'is_primary': d['is_primary'] == 1 || d['is_primary'] == true,
+        'sort_order': d['sort_order'] is int ? d['sort_order'] as int : (int.tryParse(d['sort_order']?.toString() ?? '0') ?? 0),
+        'created_at': d['created_at']?.toString() ?? DateTime.now().toIso8601String(),
+        'updated_at': d['updated_at']?.toString() ?? DateTime.now().toIso8601String(),
+      };
     }).toList();
 
     await _client.from('payment_details').upsert(rows);
@@ -354,12 +383,17 @@ class SupabaseService {
   Future<List<Map<String, dynamic>>> fetchInvoiceHistory() async {
     final uid = currentUser?.id;
     if (uid == null) return [];
-    final data = await _client
-        .from('invoice_history')
-        .select('id, file_name, month_year, storage_path, file_size_bytes, created_at, updated_at')
-        .eq('user_id', uid)
-        .order('created_at', ascending: false);
-    return List<Map<String, dynamic>>.from(data);
+    try {
+      final data = await _client
+          .from('invoice_history')
+          .select('id, file_name, month_year, storage_path, file_size_bytes, created_at, updated_at')
+          .eq('user_id', uid)
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('[Supabase] fetchInvoiceHistory error: $e');
+      return [];
+    }
   }
 
   Future<Map<String, dynamic>?> saveInvoiceToHistory({
@@ -370,30 +404,27 @@ class SupabaseService {
     final uid = currentUser?.id;
     if (uid == null) return null;
 
-    // 1. Check and enforce 15 invoices limit per user
     try {
       final existing = await _client
           .from('invoice_history')
           .select('id, storage_path, file_name')
           .eq('user_id', uid)
-          .order('created_at', ascending: true); // Oldest first
+          .order('created_at', ascending: true);
 
       if (existing.length >= 15) {
-        final deleteCount = existing.length - 14; // Bring count down to 14 so we can add 1 to make it 15
+        final deleteCount = existing.length - 14;
         for (int i = 0; i < deleteCount; i++) {
           final oldInvoice = existing[i];
           final oldId = oldInvoice['id'];
           final oldPath = oldInvoice['storage_path'] as String;
           final oldName = oldInvoice['file_name'] as String;
 
-          // A. Delete from Supabase Storage
           try {
             await _client.storage.from('invoices').remove([oldPath]);
           } catch (e) {
             print('[History Cleanup] Storage delete failed for $oldPath: $e');
           }
 
-          // B. Delete from local storage documents directory
           try {
             final dir = await getApplicationDocumentsDirectory();
             final localFile = File('${dir.path}/$oldName');
@@ -404,7 +435,6 @@ class SupabaseService {
             print('[History Cleanup] Local file delete failed for $oldName: $e');
           }
 
-          // C. Delete from Supabase Database
           try {
             await _client.from('invoice_history').delete().eq('id', oldId);
           } catch (e) {
@@ -420,14 +450,12 @@ class SupabaseService {
     final safeFileName = fileName.endsWith('.pdf') ? fileName : '$fileName.pdf';
     final storagePath = '$uid/${ts}_$safeFileName';
 
-    // Upload PDF to Supabase Storage
     await _client.storage.from('invoices').uploadBinary(
       storagePath,
       pdfBytes,
       fileOptions: const FileOptions(upsert: true, contentType: 'application/pdf'),
     );
 
-    // Insert metadata record
     final record = await _client.from('invoice_history').insert({
       'user_id': uid,
       'file_name': safeFileName,
@@ -486,24 +514,34 @@ class SupabaseService {
   Future<List<Map<String, dynamic>>> fetchKhataEntries() async {
     final uid = currentUser?.id;
     if (uid == null) return [];
-    final data = await _client
-        .from('khata_entries')
-        .select()
-        .eq('user_id', uid)
-        .eq('is_deleted', false)
-        .order('entry_date', ascending: false);
-    return List<Map<String, dynamic>>.from(data);
+    try {
+      final data = await _client
+          .from('khata_entries')
+          .select()
+          .eq('user_id', uid)
+          .eq('is_deleted', false)
+          .order('entry_date', ascending: false);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('[Supabase] fetchKhataEntries error: $e');
+      return [];
+    }
   }
 
   Future<List<Map<String, dynamic>>> fetchKhataEntriesSince(String? lastSyncTime) async {
     final uid = currentUser?.id;
     if (uid == null) return [];
-    var query = _client.from('khata_entries').select().eq('user_id', uid);
-    if (lastSyncTime != null) {
-      query = query.gte('updated_at', lastSyncTime);
+    try {
+      var query = _client.from('khata_entries').select().eq('user_id', uid);
+      if (lastSyncTime != null && lastSyncTime.isNotEmpty) {
+        query = query.gte('updated_at', lastSyncTime);
+      }
+      final data = await query.order('updated_at');
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('[Supabase] fetchKhataEntriesSince error: $e');
+      return [];
     }
-    final data = await query.order('updated_at');
-    return List<Map<String, dynamic>>.from(data);
   }
 
   Future<void> upsertKhataEntries(List<Map<String, dynamic>> entries) async {
@@ -511,17 +549,22 @@ class SupabaseService {
     final uid = currentUser?.id;
     if (uid == null) return;
     final rows = entries.map((e) {
-      final copy = Map<String, dynamic>.from(e);
-      copy['user_id'] = uid;
-      copy['updated_at'] = e['updated_at'] ?? DateTime.now().toIso8601String();
-      if (copy['is_settled'] != null) {
-        copy['is_settled'] = copy['is_settled'] == 1 || copy['is_settled'] == true;
-      }
-      if (copy['is_deleted'] != null) {
-        copy['is_deleted'] = copy['is_deleted'] == 1 || copy['is_deleted'] == true;
-      }
-      copy.remove('is_synced');
-      return copy;
+      return <String, dynamic>{
+        'id': e['id']?.toString(),
+        'user_id': uid,
+        'person_name': e['person_name']?.toString() ?? '',
+        'phone_number': e['phone_number']?.toString(),
+        'amount': (e['amount'] is num) ? (e['amount'] as num).toDouble() : (double.tryParse(e['amount']?.toString() ?? '0') ?? 0.0),
+        'type': e['type']?.toString() ?? 'GIVE',
+        'entry_date': e['entry_date']?.toString() ?? DateTime.now().toIso8601String(),
+        'due_date': e['due_date']?.toString(),
+        'note': e['note']?.toString(),
+        'is_settled': e['is_settled'] == 1 || e['is_settled'] == true,
+        'settled_at': e['settled_at']?.toString(),
+        'is_deleted': e['is_deleted'] == 1 || e['is_deleted'] == true,
+        'created_at': e['created_at']?.toString() ?? DateTime.now().toIso8601String(),
+        'updated_at': e['updated_at']?.toString() ?? DateTime.now().toIso8601String(),
+      };
     }).toList();
     await _client.from('khata_entries').upsert(rows);
   }
@@ -537,24 +580,34 @@ class SupabaseService {
   Future<List<Map<String, dynamic>>> fetchSubscriptions() async {
     final uid = currentUser?.id;
     if (uid == null) return [];
-    final data = await _client
-        .from('subscriptions')
-        .select()
-        .eq('user_id', uid)
-        .eq('is_deleted', false)
-        .order('next_renewal_date', ascending: true);
-    return List<Map<String, dynamic>>.from(data);
+    try {
+      final data = await _client
+          .from('subscriptions')
+          .select()
+          .eq('user_id', uid)
+          .eq('is_deleted', false)
+          .order('next_renewal_date', ascending: true);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('[Supabase] fetchSubscriptions error: $e');
+      return [];
+    }
   }
 
   Future<List<Map<String, dynamic>>> fetchSubscriptionsSince(String? lastSyncTime) async {
     final uid = currentUser?.id;
     if (uid == null) return [];
-    var query = _client.from('subscriptions').select().eq('user_id', uid);
-    if (lastSyncTime != null) {
-      query = query.gte('updated_at', lastSyncTime);
+    try {
+      var query = _client.from('subscriptions').select().eq('user_id', uid);
+      if (lastSyncTime != null && lastSyncTime.isNotEmpty) {
+        query = query.gte('updated_at', lastSyncTime);
+      }
+      final data = await query.order('updated_at');
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('[Supabase] fetchSubscriptionsSince error: $e');
+      return [];
     }
-    final data = await query.order('updated_at');
-    return List<Map<String, dynamic>>.from(data);
   }
 
   Future<void> upsertSubscriptions(List<Map<String, dynamic>> subscriptions) async {
@@ -562,20 +615,23 @@ class SupabaseService {
     final uid = currentUser?.id;
     if (uid == null) return;
     final rows = subscriptions.map((s) {
-      final copy = Map<String, dynamic>.from(s);
-      copy['user_id'] = uid;
-      copy['updated_at'] = s['updated_at'] ?? DateTime.now().toIso8601String();
-      if (copy['auto_renewal'] != null) {
-        copy['auto_renewal'] = copy['auto_renewal'] == 1 || copy['auto_renewal'] == true;
-      }
-      if (copy['is_active'] != null) {
-        copy['is_active'] = copy['is_active'] == 1 || copy['is_active'] == true;
-      }
-      if (copy['is_deleted'] != null) {
-        copy['is_deleted'] = copy['is_deleted'] == 1 || copy['is_deleted'] == true;
-      }
-      copy.remove('is_synced');
-      return copy;
+      return <String, dynamic>{
+        'id': s['id']?.toString(),
+        'user_id': uid,
+        'name': s['name']?.toString() ?? '',
+        'amount': (s['amount'] is num) ? (s['amount'] as num).toDouble() : (double.tryParse(s['amount']?.toString() ?? '0') ?? 0.0),
+        'billing_cycle': s['billing_cycle']?.toString() ?? 'monthly',
+        'next_renewal_date': s['next_renewal_date']?.toString() ?? DateTime.now().toIso8601String(),
+        'category': s['category']?.toString() ?? 'Subscription',
+        'auto_renewal': s['auto_renewal'] == 1 || s['auto_renewal'] == true,
+        'reminder_days_before': s['reminder_days_before'] is int ? s['reminder_days_before'] as int : (int.tryParse(s['reminder_days_before']?.toString() ?? '2') ?? 2),
+        'payment_method': s['payment_method']?.toString(),
+        'note': s['note']?.toString(),
+        'is_active': s['is_active'] == 1 || s['is_active'] == true,
+        'is_deleted': s['is_deleted'] == 1 || s['is_deleted'] == true,
+        'created_at': s['created_at']?.toString() ?? DateTime.now().toIso8601String(),
+        'updated_at': s['updated_at']?.toString() ?? DateTime.now().toIso8601String(),
+      };
     }).toList();
     await _client.from('subscriptions').upsert(rows);
   }
@@ -591,24 +647,34 @@ class SupabaseService {
   Future<List<Map<String, dynamic>>> fetchSplitBills() async {
     final uid = currentUser?.id;
     if (uid == null) return [];
-    final data = await _client
-        .from('split_bills')
-        .select()
-        .eq('user_id', uid)
-        .eq('is_deleted', false)
-        .order('bill_date', ascending: false);
-    return List<Map<String, dynamic>>.from(data);
+    try {
+      final data = await _client
+          .from('split_bills')
+          .select()
+          .eq('user_id', uid)
+          .eq('is_deleted', false)
+          .order('bill_date', ascending: false);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('[Supabase] fetchSplitBills error: $e');
+      return [];
+    }
   }
 
   Future<List<Map<String, dynamic>>> fetchSplitBillsSince(String? lastSyncTime) async {
     final uid = currentUser?.id;
     if (uid == null) return [];
-    var query = _client.from('split_bills').select().eq('user_id', uid);
-    if (lastSyncTime != null) {
-      query = query.gte('updated_at', lastSyncTime);
+    try {
+      var query = _client.from('split_bills').select().eq('user_id', uid);
+      if (lastSyncTime != null && lastSyncTime.isNotEmpty) {
+        query = query.gte('updated_at', lastSyncTime);
+      }
+      final data = await query.order('updated_at');
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('[Supabase] fetchSplitBillsSince error: $e');
+      return [];
     }
-    final data = await query.order('updated_at');
-    return List<Map<String, dynamic>>.from(data);
   }
 
   Future<void> upsertSplitBills(List<Map<String, dynamic>> splitBills) async {
@@ -616,14 +682,21 @@ class SupabaseService {
     final uid = currentUser?.id;
     if (uid == null) return;
     final rows = splitBills.map((b) {
-      final copy = Map<String, dynamic>.from(b);
-      copy['user_id'] = uid;
-      copy['updated_at'] = b['updated_at'] ?? DateTime.now().toIso8601String();
-      if (copy['is_deleted'] != null) {
-        copy['is_deleted'] = copy['is_deleted'] == 1 || copy['is_deleted'] == true;
-      }
-      copy.remove('is_synced');
-      return copy;
+      return <String, dynamic>{
+        'id': b['id']?.toString(),
+        'user_id': uid,
+        'title': b['title']?.toString() ?? '',
+        'total_amount': (b['total_amount'] is num) ? (b['total_amount'] as num).toDouble() : (double.tryParse(b['total_amount']?.toString() ?? '0') ?? 0.0),
+        'paid_by': b['paid_by']?.toString() ?? 'You',
+        'payer_upi_id': b['payer_upi_id']?.toString(),
+        'note': b['note']?.toString(),
+        'split_type': b['split_type']?.toString() ?? 'equal',
+        'participants_json': b['participants_json']?.toString() ?? '[]',
+        'bill_date': b['bill_date']?.toString() ?? DateTime.now().toIso8601String(),
+        'is_deleted': b['is_deleted'] == 1 || b['is_deleted'] == true,
+        'created_at': b['created_at']?.toString() ?? DateTime.now().toIso8601String(),
+        'updated_at': b['updated_at']?.toString() ?? DateTime.now().toIso8601String(),
+      };
     }).toList();
     await _client.from('split_bills').upsert(rows);
   }
@@ -658,28 +731,34 @@ class SupabaseService {
         return null;
       }
 
-      // 1. PUSH unsynced data to cloud in parallel with timeout
+      // 1. PUSH unsynced data to cloud in parallel with individual error protection
       await Future.wait([
-        if (unsyncedExpenses.isNotEmpty) upsertExpenses(unsyncedExpenses),
-        if (unsyncedBudgets.isNotEmpty) upsertBudgets(unsyncedBudgets),
-        if (unsyncedPaymentDetails.isNotEmpty) upsertPaymentDetails(unsyncedPaymentDetails),
-        if (unsyncedKhataEntries.isNotEmpty) upsertKhataEntries(unsyncedKhataEntries),
-        if (unsyncedSubscriptions.isNotEmpty) upsertSubscriptions(unsyncedSubscriptions),
-        if (unsyncedSplitBills.isNotEmpty) upsertSplitBills(unsyncedSplitBills),
-      ]).timeout(const Duration(seconds: 10));
+        if (unsyncedExpenses.isNotEmpty)
+          upsertExpenses(unsyncedExpenses).catchError((e) => print('[Sync Error] Expenses push failed: $e')),
+        if (unsyncedBudgets.isNotEmpty)
+          upsertBudgets(unsyncedBudgets).catchError((e) => print('[Sync Error] Budgets push failed: $e')),
+        if (unsyncedPaymentDetails.isNotEmpty)
+          upsertPaymentDetails(unsyncedPaymentDetails).catchError((e) => print('[Sync Error] PaymentDetails push failed: $e')),
+        if (unsyncedKhataEntries.isNotEmpty)
+          upsertKhataEntries(unsyncedKhataEntries).catchError((e) => print('[Sync Error] Khata push failed: $e')),
+        if (unsyncedSubscriptions.isNotEmpty)
+          upsertSubscriptions(unsyncedSubscriptions).catchError((e) => print('[Sync Error] Subscriptions push failed: $e')),
+        if (unsyncedSplitBills.isNotEmpty)
+          upsertSplitBills(unsyncedSplitBills).catchError((e) => print('[Sync Error] SplitBills push failed: $e')),
+      ]).timeout(const Duration(seconds: 12));
 
       // 2. PUSH batch deletes in parallel with timeout
       await Future.wait([
         if (deletedExpenseIds.isNotEmpty)
-          _client.from('expenses').delete().inFilter('id', deletedExpenseIds).eq('user_id', uid),
+          _client.from('expenses').delete().inFilter('id', deletedExpenseIds).eq('user_id', uid).catchError((e) => null),
         if (deletedBudgetIds.isNotEmpty)
-          _client.from('budgets').delete().inFilter('id', deletedBudgetIds).eq('user_id', uid),
+          _client.from('budgets').delete().inFilter('id', deletedBudgetIds).eq('user_id', uid).catchError((e) => null),
         if (deletedKhataIds.isNotEmpty)
-          _client.from('khata_entries').delete().inFilter('id', deletedKhataIds).eq('user_id', uid),
+          _client.from('khata_entries').delete().inFilter('id', deletedKhataIds).eq('user_id', uid).catchError((e) => null),
         if (deletedSubscriptionIds.isNotEmpty)
-          _client.from('subscriptions').delete().inFilter('id', deletedSubscriptionIds).eq('user_id', uid),
+          _client.from('subscriptions').delete().inFilter('id', deletedSubscriptionIds).eq('user_id', uid).catchError((e) => null),
         if (deletedSplitBillIds.isNotEmpty)
-          _client.from('split_bills').delete().inFilter('id', deletedSplitBillIds).eq('user_id', uid),
+          _client.from('split_bills').delete().inFilter('id', deletedSplitBillIds).eq('user_id', uid).catchError((e) => null),
       ]).timeout(const Duration(seconds: 8));
 
       // 3. PULL fresh server data concurrently with timeout
@@ -690,7 +769,7 @@ class SupabaseService {
         fetchKhataEntriesSince(lastSyncTime),
         fetchSubscriptionsSince(lastSyncTime),
         fetchSplitBillsSince(lastSyncTime),
-      ]).timeout(const Duration(seconds: 12));
+      ]).timeout(const Duration(seconds: 15));
 
       final serverExpenses = pullResults[0];
       final serverBudgets = pullResults[1];
