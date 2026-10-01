@@ -184,19 +184,10 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
         elevation: 0,
         backgroundColor: isDark ? const Color(0xFF181B22) : Colors.white,
         actions: [
-          Consumer<ExpenseProvider>(
-            builder: (context, provider, _) {
-              if (provider.paymentDetails.isEmpty) return const SizedBox.shrink();
-              return IconButton(
-                tooltip: 'Manage & Reorder',
-                icon: const Icon(Icons.tune_rounded),
-                onPressed: _openManageReorderSheet,
-              );
-            },
-          ),
+          // Clear + icon for adding new payment method (tune icon removed as requested)
           IconButton(
             tooltip: 'Add Payment Method',
-            icon: const Icon(Icons.add_rounded, color: Color(0xFF00D09C)),
+            icon: const Icon(Icons.add_rounded, color: Color(0xFF00D09C), size: 26),
             onPressed: () => _openAddEditSheet(),
           ),
         ],
@@ -215,14 +206,14 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Top Indicator & Quick Actions
+                // Top Header Row
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'SAVED PAYMENT CARDS (${items.length})',
+                        'SAVED CARDS (${items.length})',
                         style: GoogleFonts.outfit(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -230,28 +221,29 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
                           color: isDark ? Colors.grey[400] : Colors.grey[600],
                         ),
                       ),
-                      InkWell(
-                        onTap: _openManageReorderSheet,
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.sort_rounded, size: 14, color: primaryColor),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Manage Order',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: primaryColor,
+                      if (items.length > 1)
+                        InkWell(
+                          onTap: _openManageReorderSheet,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.swap_vert_rounded, size: 16, color: primaryColor),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Arrange Order',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryColor,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -281,68 +273,113 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
                 const SizedBox(height: 12),
 
                 // Pagination Dots & Counter
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(items.length, (i) {
-                    final isCurrent = i == _currentPage;
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 250),
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      width: isCurrent ? 20 : 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: isCurrent ? primaryColor : (isDark ? Colors.grey[700] : Colors.grey[300]),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    );
-                  }),
-                ),
-                const SizedBox(height: 6),
-                Center(
-                  child: Text(
-                    'Card ${_currentPage + 1} of ${items.length} (Swipe left/right)',
-                    style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                if (items.length > 1) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(items.length, (i) {
+                      final isCurrent = i == _currentPage;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        width: isCurrent ? 20 : 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: isCurrent ? primaryColor : (isDark ? Colors.grey[700] : Colors.grey[300]),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      );
+                    }),
                   ),
-                ),
+                  const SizedBox(height: 6),
+                  Center(
+                    child: Text(
+                      'Card ${_currentPage + 1} of ${items.length} (Swipe left/right)',
+                      style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                    ),
+                  ),
+                ],
 
                 const SizedBox(height: 24),
 
-                // Fast Action Buttons Section
+                // ──────────────────────────────────────────────────────────
+                // REDESIGNED ACTION BUTTONS (CLEAN, COMPACT & PREMIUM)
+                // ──────────────────────────────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
+                  child: Row(
                     children: [
-                      ElevatedButton.icon(
-                        onPressed: () => _openAddEditSheet(),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          elevation: 0,
-                        ),
-                        icon: const Icon(Icons.add_card_rounded, size: 20),
-                        label: Text(
-                          '+ Add Another Payment Method',
-                          style: GoogleFonts.outfit(fontSize: 14.5, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      OutlinedButton.icon(
-                        onPressed: _openManageReorderSheet,
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(
-                            color: isDark ? const Color(0xFF2C3242) : const Color(0xFFE2E8F0),
+                      // Primary Button: Add New Card
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => _openAddEditSheet(),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF00D09C), Color(0xFF00B084)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: primaryColor.withValues(alpha: isDark ? 0.25 : 0.2),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Add New Card',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 13),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                        icon: const Icon(Icons.format_list_bulleted_rounded, size: 18),
-                        label: Text(
-                          'View & Rearrange All Methods',
-                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
                         ),
                       ),
+                      if (items.length > 1) ...[
+                        const SizedBox(width: 12),
+                        // Secondary Button: Reorder & Manage
+                        InkWell(
+                          onTap: _openManageReorderSheet,
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E232E) : Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isDark ? const Color(0xFF2C3242) : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.swap_vert_rounded, size: 18, color: isDark ? Colors.white70 : Colors.black87),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Arrange',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.white70 : Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -708,6 +745,7 @@ class _AddEditPaymentSheetState extends State<_AddEditPaymentSheet> {
   final _upiController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
+  String _qrMode = 'generate'; // 'generate' (App auto-generates QR) or 'upload' (User picks image)
   String? _qrPath;
   bool _isPrimary = false;
   bool _isUploadingQr = false;
@@ -724,14 +762,20 @@ class _AddEditPaymentSheetState extends State<_AddEditPaymentSheet> {
   @override
   void initState() {
     super.initState();
+    final provider = Provider.of<ExpenseProvider>(context, listen: false);
+
     if (widget.existing != null) {
       _nameController.text = widget.existing!.name;
       _upiController.text = widget.existing!.upiId;
       _qrPath = widget.existing!.qrCodeUrl;
       _isPrimary = widget.existing!.isPrimary;
+      _qrMode = (_qrPath != null && _qrPath!.isNotEmpty) ? 'upload' : 'generate';
     } else {
       _nameController.text = 'Personal UPI';
-      _isPrimary = true;
+      // ONLY set isPrimary to true if there are ZERO payment methods yet.
+      // If one is already primary, default isPrimary to false (OFF) as requested!
+      _isPrimary = provider.paymentDetails.isEmpty;
+      _qrMode = 'generate';
     }
   }
 
@@ -796,10 +840,14 @@ class _AddEditPaymentSheetState extends State<_AddEditPaymentSheet> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
+    
+    // If auto-generate mode is selected, _qrPath is null (app auto-generates on the fly)
+    final finalQrPath = (_qrMode == 'upload') ? _qrPath : null;
+
     widget.onSave(
       _nameController.text.trim(),
       _upiController.text.trim(),
-      _qrPath,
+      finalQrPath,
       _isPrimary,
     );
     Navigator.of(context).pop();
@@ -809,6 +857,8 @@ class _AddEditPaymentSheetState extends State<_AddEditPaymentSheet> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = const Color(0xFF00D09C);
+    final cardBg = isDark ? const Color(0xFF1E222D) : const Color(0xFFF8FAFC);
+    final borderColor = isDark ? const Color(0xFF2C3242) : const Color(0xFFE2E8F0);
 
     return Container(
       padding: EdgeInsets.only(
@@ -884,6 +934,7 @@ class _AddEditPaymentSheetState extends State<_AddEditPaymentSheet> {
               // 2. UPI ID Input
               TextFormField(
                 controller: _upiController,
+                onChanged: (_) => setState(() {}),
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) return 'Please enter a valid UPI ID';
                   if (!val.contains('@')) return 'UPI ID must contain "@" (e.g. name@okaxis)';
@@ -898,41 +949,191 @@ class _AddEditPaymentSheetState extends State<_AddEditPaymentSheet> {
               ),
               const SizedBox(height: 16),
 
-              // 3. QR Image Options
+              // 3. QR Code Source Option (Auto-Generate vs Custom Upload)
+              Text(
+                'QR CODE SOURCE',
+                style: GoogleFonts.outfit(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.8,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 8),
+
               Row(
                 children: [
+                  // Option A: Auto-Generate QR (App generates dynamically)
                   Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _isUploadingQr ? null : _pickCustomQr,
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      icon: _isUploadingQr
-                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Icon(Icons.photo_library_outlined, size: 18),
-                      label: Text(
-                        _qrPath != null ? 'Change QR Image' : 'Upload QR Image',
-                        style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600),
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _qrMode = 'generate';
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: _qrMode == 'generate'
+                              ? primaryColor.withValues(alpha: isDark ? 0.2 : 0.1)
+                              : cardBg,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: _qrMode == 'generate' ? primaryColor : borderColor,
+                            width: _qrMode == 'generate' ? 1.5 : 1.0,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.qr_code_2_rounded,
+                              color: _qrMode == 'generate' ? primaryColor : Colors.grey,
+                              size: 22,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Auto-Generate QR',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.bold,
+                                color: _qrMode == 'generate' ? primaryColor : (isDark ? Colors.white70 : Colors.black87),
+                              ),
+                            ),
+                            Text(
+                              '(Recommended)',
+                              style: GoogleFonts.inter(fontSize: 10, color: Colors.grey),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                  if (_qrPath != null) ...[
-                    const SizedBox(width: 8),
-                    IconButton(
-                      tooltip: 'Remove Custom Image (Use Dynamic QR)',
-                      icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444)),
-                      onPressed: () {
-                        setState(() => _qrPath = null);
-                        CustomToast.show(context, 'Switched to Auto-Generated UPI QR');
+                  const SizedBox(width: 10),
+
+                  // Option B: Upload Custom QR Image
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _qrMode = 'upload';
+                        });
+                        if (_qrPath == null) _pickCustomQr();
                       },
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: _qrMode == 'upload'
+                              ? primaryColor.withValues(alpha: isDark ? 0.2 : 0.1)
+                              : cardBg,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: _qrMode == 'upload' ? primaryColor : borderColor,
+                            width: _qrMode == 'upload' ? 1.5 : 1.0,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.photo_library_outlined,
+                              color: _qrMode == 'upload' ? primaryColor : Colors.grey,
+                              size: 22,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Upload QR Image',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.bold,
+                                color: _qrMode == 'upload' ? primaryColor : (isDark ? Colors.white70 : Colors.black87),
+                              ),
+                            ),
+                            Text(
+                              _qrPath != null ? '(Image Selected)' : '(From Gallery)',
+                              style: GoogleFonts.inter(fontSize: 10, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ],
+                  ),
                 ],
               ),
+              const SizedBox(height: 12),
+
+              // Detail Section for the Selected Mode
+              if (_qrMode == 'generate') ...[
+                // Auto-generate notice
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF161A22) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.bolt_rounded, color: primaryColor, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'App will automatically generate a dynamic, high-resolution UPI QR code directly from your UPI ID.',
+                          style: GoogleFonts.inter(fontSize: 11.5, color: isDark ? Colors.grey[300] : Colors.grey[700]),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                // Upload image controls
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: cardBg,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: Row(
+                    children: [
+                      if (_qrPath != null) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: _qrPath!.startsWith('http')
+                              ? Image.network(_qrPath!, width: 44, height: 44, fit: BoxFit.cover)
+                              : Image.file(File(_qrPath!), width: 44, height: 44, fit: BoxFit.cover),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _qrPath != null ? 'Custom Image Attached' : 'No image chosen yet',
+                              style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              _qrPath != null ? 'Will be displayed on this card' : 'Tap choose image from gallery',
+                              style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: _isUploadingQr ? null : _pickCustomQr,
+                        icon: const Icon(Icons.image_search_rounded, size: 16),
+                        label: Text(_qrPath != null ? 'Change' : 'Choose'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
 
-              // 4. Primary Switch
+              // 4. Primary Switch (Intelligently toggled)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
@@ -1050,11 +1251,11 @@ class _ManagePaymentMethodsSheetState extends State<_ManagePaymentMethodsSheet> 
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Manage & Arrange Order',
+                    'Arrange Order & Sequence',
                     style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    'Drag items to change position or pick primary',
+                    'Drag items to change card order or tap star to set primary',
                     style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
                   ),
                 ],
