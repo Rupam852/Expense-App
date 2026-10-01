@@ -722,6 +722,15 @@ class DatabaseHelper {
     return result.map((json) => PaymentDetail.fromMap(json)).toList();
   }
 
+  Future<void> deletePaymentDetails() async {
+    final db = await instance.database;
+    final existing = await getPaymentDetails();
+    for (final p in existing) {
+      await recordDeletion('payment_details', p.id);
+    }
+    await db.delete('payment_details');
+  }
+
   // ================= KHATA / UDHAR CRUD =================
 
   Future<int> insertKhataEntry(KhataEntry entry) async {

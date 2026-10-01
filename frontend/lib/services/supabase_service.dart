@@ -294,6 +294,16 @@ class SupabaseService {
     }
   }
 
+  Future<void> deletePaymentDetailsOnServer() async {
+    final uid = currentUser?.id;
+    if (uid == null) return;
+    try {
+      await _client.from('payment_details').delete().eq('user_id', uid);
+    } catch (e) {
+      print('[Sync] deletePaymentDetailsOnServer error: $e');
+    }
+  }
+
   /// Upload QR code image to Supabase Storage and return public URL
   Future<String?> uploadQrCode(Uint8List bytes, String fileName) async {
     final uid = currentUser?.id;

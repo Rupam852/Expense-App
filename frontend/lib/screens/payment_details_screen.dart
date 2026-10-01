@@ -178,6 +178,58 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
     );
   }
 
+  void _confirmDeleteEntireProfile(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1E232E) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.delete_forever_rounded, color: Colors.red, size: 24),
+            const SizedBox(width: 8),
+            Text(
+              'Delete Payment Setup?',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 17),
+            ),
+          ],
+        ),
+        content: Text(
+          'Aapka UPI ID aur QR code dono permanently delete ho jayenge. Iske baad aapke statements me koi payment QR attach nahi hoga jab tak aap naya setup nahi karte.',
+          style: GoogleFonts.inter(fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+              await expenseProvider.deletePaymentDetails();
+              setState(() {
+                _upiController.clear();
+                _cachedQrPath = null;
+                _isEditing = false;
+              });
+              if (context.mounted) {
+                CustomToast.show(context, '🗑️ Payment profile completely removed!');
+              }
+            },
+            child: const Text('Delete Setup'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _saveDetails() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -224,8 +276,9 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
       appBar: AppBar(
         title: const Text('Repayments Setup'),
         actions: [
-          if (hasDetails && !_isEditing)
+          if (hasDetails && !_isEditing) ...[
             IconButton(
+              tooltip: 'Edit Setup',
               onPressed: () {
                 setState(() {
                   _isEditing = true;
@@ -235,6 +288,12 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
               },
               icon: const Icon(Icons.edit_outlined),
             ),
+            IconButton(
+              tooltip: 'Delete Setup',
+              onPressed: () => _confirmDeleteEntireProfile(context),
+              icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+            ),
+          ],
         ],
       ),
       body: SingleChildScrollView(
@@ -555,6 +614,21 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
                         textAlign: TextAlign.center,
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                OutlinedButton.icon(
+                  onPressed: () => _confirmDeleteEntireProfile(context),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red[400],
+                    side: BorderSide(color: Colors.red.withValues(alpha: 0.35)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(Icons.delete_forever_rounded, size: 18),
+                  label: Text(
+                    'Delete Entire Payment Setup',
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                 ),
               ],

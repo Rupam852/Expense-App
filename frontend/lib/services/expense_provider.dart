@@ -355,6 +355,17 @@ class ExpenseProvider with ChangeNotifier {
     triggerQuietSync();
   }
 
+  Future<void> deletePaymentDetails() async {
+    await _dbHelper.deletePaymentDetails();
+    _paymentDetails = [];
+    notifyListeners();
+
+    // Remove from cloud as well
+    try {
+      await _supabase.deletePaymentDetailsOnServer();
+    } catch (_) {}
+  }
+
   // ──────────────────────────────────────────────────────
   // KHATA / UDHAR (Borrow & Lend Ledger)
   // ──────────────────────────────────────────────────────
