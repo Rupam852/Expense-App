@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -22,6 +23,7 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
   bool _isFabOpen = false;
+  bool _isFabVisible = true;
   late AnimationController _fabAnimationController;
   late Animation<double> _expandAnimation;
   late Animation<double> _rotateAnimation;
@@ -127,158 +129,199 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
         if (_currentIndex > 0) {
           setState(() {
             _currentIndex = 0; // Seamlessly go back to Home tab
+            _isFabVisible = true;
           });
         }
       },
       child: Scaffold(
-        body: Stack(
-          children: [
-            IndexedStack(
-              index: _currentIndex,
-              children: _screens,
-            ),
-
-            // ══════════════════════════════════════════════════════
-            // BACKDROP OVERLAY (Dismisses FAB menu on tap anywhere)
-            // ══════════════════════════════════════════════════════
-            if (_currentIndex == 0 && _isFabOpen)
-              Positioned.fill(
-                child: GestureDetector(
-                  onTap: _closeFabMenu,
-                  behavior: HitTestBehavior.opaque,
-                  child: AnimatedBuilder(
-                    animation: _expandAnimation,
-                    builder: (context, child) {
-                      return Container(
-                        color: Colors.black.withValues(alpha: 0.55 * _expandAnimation.value),
-                      );
-                    },
-                  ),
-                ),
+        body: NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (_currentIndex == 0) {
+              if (notification is UserScrollNotification) {
+                if (notification.direction == ScrollDirection.reverse) {
+                  // User is scrolling DOWN -> smoothly hide floating buttons
+                  if (_isFabVisible && notification.metrics.pixels > 30) {
+                    setState(() {
+                      _isFabVisible = false;
+                      _closeFabMenu();
+                    });
+                  }
+                } else if (notification.direction == ScrollDirection.forward || notification.metrics.pixels <= 10) {
+                  // User is scrolling UP or reached top -> smoothly show floating buttons
+                  if (!_isFabVisible) {
+                    setState(() {
+                      _isFabVisible = true;
+                    });
+                  }
+                }
+              } else if (notification is ScrollUpdateNotification) {
+                if (notification.metrics.pixels <= 10 && !_isFabVisible) {
+                  setState(() {
+                    _isFabVisible = true;
+                  });
+                }
+              }
+            }
+            return false;
+          },
+          child: Stack(
+            children: [
+              IndexedStack(
+                index: _currentIndex,
+                children: _screens,
               ),
 
-            // ══════════════════════════════════════════════════════
-            // FLOATING GROWWAI CHAT BUTTON (Visible above + FAB on Home tab only)
-            // ══════════════════════════════════════════════════════
-            if (_currentIndex == 0)
-              Positioned(
-                right: 18,
-                bottom: 84, // Directly above the + FAB button
-                child: AnimatedBuilder(
-                  animation: _expandAnimation,
-                  builder: (context, child) {
-                    final chatScale = (1.0 - _expandAnimation.value).clamp(0.0, 1.0);
-                    if (chatScale == 0.0 || _isFabOpen) {
-                      return const SizedBox.shrink(); // Completely removed from hit testing when open
-                    }
-                    return IgnorePointer(
-                      ignoring: _isFabOpen,
-                      child: Transform.scale(
-                        scale: chatScale,
-                        alignment: Alignment.center,
-                        child: Opacity(
-                          opacity: chatScale,
-                          child: child,
-                        ),
-                      ),
-                    );
-                  },
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: _openAiAdvisorChat,
-                      borderRadius: BorderRadius.circular(28),
-                      child: Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: const Color(0xFF00D09C).withValues(alpha: 0.75),
-                            width: 1.8,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF00D09C).withValues(alpha: 0.35),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
+              // ══════════════════════════════════════════════════════
+              // BACKDROP OVERLAY (Dismisses FAB menu on tap anywhere)
+              // ══════════════════════════════════════════════════════
+              if (_currentIndex == 0 && _isFabOpen)
+                Positioned.fill(
+                  child: GestureDetector(
+                    onTap: _closeFabMenu,
+                    behavior: HitTestBehavior.opaque,
+                    child: AnimatedBuilder(
+                      animation: _expandAnimation,
+                      builder: (context, child) {
+                        return Container(
+                          color: Colors.black.withValues(alpha: 0.55 * _expandAnimation.value),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+
+              // ══════════════════════════════════════════════════════
+              // FLOATING GROWWAI CHAT BUTTON (Visible on Home tab only, Auto-hides on scroll down)
+              // ══════════════════════════════════════════════════════
+              if (_currentIndex == 0)
+                Positioned(
+                  right: 18,
+                  bottom: 84, // Directly above the + FAB button
+                  child: AnimatedScale(
+                    scale: (_isFabVisible && !_isFabOpen) ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 240),
+                    curve: Curves.easeInOutCubic,
+                    child: AnimatedOpacity(
+                      opacity: (_isFabVisible && !_isFabOpen) ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 240),
+                      child: AnimatedBuilder(
+                        animation: _expandAnimation,
+                        builder: (context, child) {
+                          final chatScale = (1.0 - _expandAnimation.value).clamp(0.0, 1.0);
+                          if (chatScale == 0.0 || _isFabOpen) {
+                            return const SizedBox.shrink(); // Completely removed from hit testing when open
+                          }
+                          return IgnorePointer(
+                            ignoring: _isFabOpen || !_isFabVisible,
+                            child: Transform.scale(
+                              scale: chatScale,
+                              alignment: Alignment.center,
+                              child: Opacity(
+                                opacity: chatScale,
+                                child: child,
+                              ),
                             ),
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
+                          );
+                        },
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: _openAiAdvisorChat,
+                            borderRadius: BorderRadius.circular(28),
+                            child: Container(
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: const Color(0xFF00D09C).withValues(alpha: 0.75),
+                                  width: 1.8,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF00D09C).withValues(alpha: 0.35),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.psychology_alt_rounded,
+                                  color: Color(0xFF00D09C),
+                                  size: 25,
+                                ),
+                              ),
                             ),
-                          ],
-                        ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.psychology_alt_rounded,
-                            color: Color(0xFF00D09C),
-                            size: 25,
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
 
-            // ══════════════════════════════════════════════════════
-            // SPEED DIAL POPUP ITEMS (Voice + Manual Entry on + click)
-            // ══════════════════════════════════════════════════════
-            if (_currentIndex == 0 && (_isFabOpen || _fabAnimationController.isAnimating))
-              Positioned(
-                right: 16,
-                bottom: 84, // Replaces chat button position and stacks upwards
-                child: AnimatedBuilder(
-                  animation: _expandAnimation,
-                  builder: (context, child) {
-                    return Opacity(
-                      opacity: _expandAnimation.value.clamp(0.0, 1.0),
-                      child: Transform.scale(
-                        scale: _expandAnimation.value.clamp(0.0, 1.0),
-                        alignment: Alignment.bottomRight,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // 1. AI Voice Entry Action
-                            _buildSpeedDialItem(
-                              context: context,
-                              isDark: isDark,
-                              label: 'AI Voice Entry',
-                              subtitle: 'Speak in any language',
-                              icon: Icons.mic_rounded,
-                              iconColor: Colors.white,
-                              gradientColors: const [Color(0xFF7C3AED), Color(0xFF6366F1)],
-                              onTap: _openVoiceExpenseDialog,
-                            ),
-                            const SizedBox(height: 12),
+              // ══════════════════════════════════════════════════════
+              // SPEED DIAL POPUP ITEMS (Voice + Manual Entry on + click)
+              // ══════════════════════════════════════════════════════
+              if (_currentIndex == 0 && (_isFabOpen || _fabAnimationController.isAnimating))
+                Positioned(
+                  right: 16,
+                  bottom: 84, // Replaces chat button position and stacks upwards
+                  child: AnimatedBuilder(
+                    animation: _expandAnimation,
+                    builder: (context, child) {
+                      return Opacity(
+                        opacity: _expandAnimation.value.clamp(0.0, 1.0),
+                        child: Transform.scale(
+                          scale: _expandAnimation.value.clamp(0.0, 1.0),
+                          alignment: Alignment.bottomRight,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // 1. AI Voice Entry Action
+                              _buildSpeedDialItem(
+                                context: context,
+                                isDark: isDark,
+                                label: 'AI Voice Entry',
+                                subtitle: 'Speak in any language',
+                                icon: Icons.mic_rounded,
+                                iconColor: Colors.white,
+                                gradientColors: const [Color(0xFF7C3AED), Color(0xFF6366F1)],
+                                onTap: _openVoiceExpenseDialog,
+                              ),
+                              const SizedBox(height: 12),
 
-                            // 2. Manual Typing Action
-                            _buildSpeedDialItem(
-                              context: context,
-                              isDark: isDark,
-                              label: 'Manual Entry',
-                              subtitle: 'Type amount & category',
-                              icon: Icons.edit_note_rounded,
-                              iconColor: Colors.black,
-                              gradientColors: const [Color(0xFF00D09C), Color(0xFF05B488)],
-                              onTap: _openQuickAddExpense,
-                            ),
-                          ],
+                              // 2. Manual Typing Action
+                              _buildSpeedDialItem(
+                                context: context,
+                                isDark: isDark,
+                                label: 'Manual Entry',
+                                subtitle: 'Type amount & category',
+                                icon: Icons.edit_note_rounded,
+                                iconColor: Colors.black,
+                                gradientColors: const [Color(0xFF00D09C), Color(0xFF05B488)],
+                                onTap: _openQuickAddExpense,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: _currentIndex,
@@ -287,6 +330,7 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
             HapticFeedback.selectionClick();
             setState(() {
               _currentIndex = index;
+              _isFabVisible = true;
             });
           },
           items: const [
@@ -318,17 +362,26 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
           ],
         ),
         floatingActionButton: _currentIndex == 0
-            ? FloatingActionButton(
-                onPressed: _toggleFabMenu,
-                tooltip: _isFabOpen ? 'Close Menu' : 'Add Expense',
-                elevation: _isFabOpen ? 8 : 4,
-                backgroundColor: _isFabOpen ? const Color(0xFFEF4444) : primaryColor,
-                foregroundColor: _isFabOpen ? Colors.white : Colors.black,
-                child: RotationTransition(
-                  turns: _rotateAnimation,
-                  child: const Icon(
-                    Icons.add,
-                    size: 28,
+            ? AnimatedScale(
+                scale: _isFabVisible ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 240),
+                curve: Curves.easeInOutCubic,
+                child: AnimatedOpacity(
+                  opacity: _isFabVisible ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 240),
+                  child: FloatingActionButton(
+                    onPressed: _isFabVisible ? _toggleFabMenu : null,
+                    tooltip: _isFabOpen ? 'Close Menu' : 'Add Expense',
+                    elevation: _isFabOpen ? 8 : 4,
+                    backgroundColor: _isFabOpen ? const Color(0xFFEF4444) : primaryColor,
+                    foregroundColor: _isFabOpen ? Colors.white : Colors.black,
+                    child: RotationTransition(
+                      turns: _rotateAnimation,
+                      child: const Icon(
+                        Icons.add,
+                        size: 28,
+                      ),
+                    ),
                   ),
                 ),
               )
