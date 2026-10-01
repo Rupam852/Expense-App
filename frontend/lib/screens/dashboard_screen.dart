@@ -2224,8 +2224,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     isDark: isDark,
                     icon: Icons.file_download_outlined,
                     iconColor: const Color(0xFF00D09C),
-                    title: 'Export Ledger (PDF / Excel / CSV)',
-                    subtitle: 'Download your expense statements directly to phone storage',
+                    title: 'Export Statement',
+                    subtitle: 'Download your statement as PDF, Excel (.xlsx), or CSV',
                     onTap: () {
                       Navigator.of(ctx).pop();
                       ExportStatementDialog.show(context, expenses: expenseProvider.expenses);
@@ -2237,8 +2237,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     isDark: isDark,
                     icon: Icons.file_upload_outlined,
                     iconColor: const Color(0xFF38BDF8),
-                    title: 'Import Statements (PDF / Excel)',
-                    subtitle: 'Import past bank statements or expenses from Excel, CSV or PDF',
+                    title: 'Import Statements',
+                    subtitle: 'Import current month expenses from Excel, CSV or PDF',
                     onTap: () {
                       Navigator.of(ctx).pop();
                       _proceedWithFilePicker(context);
@@ -2744,7 +2744,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: const Icon(Icons.file_download_outlined, color: Color(0xFF10B981), size: 22),
                         ),
                         title: Text(
-                          'Export Ledger (PDF / Excel / CSV)',
+                          'Export Statement',
                           style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
                         ),
                         subtitle: Text(
@@ -2770,7 +2770,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: const Icon(Icons.file_upload_outlined, color: Color(0xFF3B82F6), size: 22),
                         ),
                         title: Text(
-                          'Import Statements (PDF / Excel)',
+                          'Import Statements',
                           style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
                         ),
                         subtitle: Text(
