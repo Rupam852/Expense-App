@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/split_bill.dart';
+import '../models/payment_detail.dart';
 import '../services/expense_provider.dart';
 import '../widgets/custom_toast.dart';
 import '../widgets/payment_reminder_modal.dart';
@@ -646,6 +647,164 @@ class _AddSplitBillSheetState extends State<_AddSplitBillSheet> {
     });
   }
 
+  void _showPaymentAccountSelector(BuildContext context, List<PaymentDetail> paymentDetails) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const primaryColor = Color(0xFF00D09C);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1E232E) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Select Receiving UPI Account',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const PaymentDetailsScreen()),
+                        );
+                      },
+                      child: Text(
+                        '+ Manage',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: primaryColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: paymentDetails.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (c, idx) {
+                      final p = paymentDetails[idx];
+                      final isSelected = p.id == _selectedPaymentDetailId;
+
+                      return InkWell(
+                        onTap: () {
+                          setState(() {
+                            _selectedPaymentDetailId = p.id;
+                          });
+                          Navigator.pop(ctx);
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? primaryColor.withValues(alpha: isDark ? 0.2 : 0.1)
+                                : (isDark ? const Color(0xFF14171E) : const Color(0xFFF8FAFC)),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected ? primaryColor : (isDark ? Colors.white12 : Colors.black12),
+                              width: isSelected ? 1.5 : 1.0,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                                color: isSelected ? primaryColor : Colors.grey,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          p.name,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.bold,
+                                            color: isDark ? Colors.white : Colors.black87,
+                                          ),
+                                        ),
+                                        if (p.isPrimary) ...[
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: primaryColor.withValues(alpha: 0.2),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              'PRIMARY',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.bold,
+                                                color: primaryColor,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      p.upiId.isNotEmpty ? p.upiId : 'No UPI ID',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11.5,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (p.qrCodeUrl != null || p.upiId.isNotEmpty)
+                                Icon(Icons.qr_code_2_rounded, size: 20, color: isSelected ? primaryColor : Colors.grey),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _submit() {
     final title = _titleController.text.trim();
     final total = double.tryParse(_totalController.text.trim()) ?? 0.0;
@@ -997,43 +1156,111 @@ class _AddSplitBillSheetState extends State<_AddSplitBillSheet> {
                             ],
                           ),
                           const SizedBox(height: 8),
-                          DropdownButtonFormField<String>(
-                            value: paymentDetails.any((p) => p.id == _selectedPaymentDetailId)
-                                ? _selectedPaymentDetailId
-                                : paymentDetails.first.id,
-                            isExpanded: true,
-                            decoration: InputDecoration(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                            items: paymentDetails.map((p) {
-                              return DropdownMenuItem<String>(
-                                value: p.id,
-                                child: Row(
-                                  children: [
-                                    if (p.isPrimary)
-                                      Padding(
-                                        padding: const EdgeInsets.only(right: 6.0),
-                                        child: Icon(Icons.star_rounded, size: 16, color: primaryColor),
-                                      ),
-                                    Expanded(
-                                      child: Text(
-                                        '${p.name} (${p.upiId.isNotEmpty ? p.upiId : "No UPI"})',
-                                        overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
+                          Builder(
+                            builder: (context) {
+                              final selectedPayment = paymentDetails.where((p) => p.id == _selectedPaymentDetailId).firstOrNull ?? paymentDetails.first;
+
+                              return InkWell(
+                                onTap: () => _showPaymentAccountSelector(context, paymentDetails),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? const Color(0xFF14171E) : Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: primaryColor.withValues(alpha: 0.35), width: 1.2),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(7),
+                                        decoration: BoxDecoration(
+                                          color: primaryColor.withValues(alpha: 0.15),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          selectedPayment.isPrimary ? Icons.star_rounded : Icons.account_balance_wallet_rounded,
+                                          size: 17,
+                                          color: primaryColor,
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Flexible(
+                                                  child: Text(
+                                                    selectedPayment.name,
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 13,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: isDark ? Colors.white : Colors.black87,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                if (selectedPayment.isPrimary) ...[
+                                                  const SizedBox(width: 6),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                                    decoration: BoxDecoration(
+                                                      color: primaryColor.withValues(alpha: 0.2),
+                                                      borderRadius: BorderRadius.circular(4),
+                                                    ),
+                                                    child: Text(
+                                                      'PRIMARY',
+                                                      style: GoogleFonts.inter(
+                                                        fontSize: 8.5,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: primaryColor,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                            Text(
+                                              selectedPayment.upiId.isNotEmpty ? selectedPayment.upiId : 'No UPI ID',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 11,
+                                                color: Colors.grey,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: primaryColor.withValues(alpha: 0.12),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              'Change',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                                color: primaryColor,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 2),
+                                            const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: primaryColor),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               );
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() => _selectedPaymentDetailId = val);
-                              }
                             },
                           ),
                         ],
