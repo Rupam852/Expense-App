@@ -415,7 +415,7 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
               ),
               const SizedBox(height: 8),
               Text(
-                '📁 Download folder me check karein.',
+                '📁 Saved to Downloads folder.',
                 style: GoogleFonts.inter(fontSize: 11.5, color: const Color(0xFF10B981), fontWeight: FontWeight.w600),
               ),
             ],

@@ -217,7 +217,7 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Aapka account aur usse juda saara data (transactions, statement history, budgets, UPI settings) cloud database aur local storage se hamesha ke liye delete ho jayega.',
+                    'Your account and all associated data (transactions, statement history, budgets, UPI settings) will be permanently deleted from the cloud database and local storage.',
                     style: GoogleFonts.inter(fontSize: 13, height: 1.4),
                   ),
                   if (isDeleting) ...[

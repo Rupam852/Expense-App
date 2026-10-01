@@ -462,7 +462,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   icon: const Icon(Icons.cleaning_services_outlined),
                   label: Text(
-                    'Starting new month',
+                    'Start New Month',
                     style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
                   ),
                 ),
@@ -519,7 +519,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Naya mahina ($newMonthLabel) shuru ho gaya hai! Pichle mahine ($oldMonthLabel) me aapka koi kharcha record nahi tha.',
+                'A new month ($newMonthLabel) has started! You had no expenses recorded in $oldMonthLabel.',
                 style: GoogleFonts.inter(fontSize: 13, height: 1.4),
               ),
               const SizedBox(height: 12),
@@ -536,7 +536,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Aapka ledger fresh ₹0 se taiyar hai. Chaliye nayi tracking shuru karein!',
+                        'Your ledger is fresh at ₹0. Let\'s begin tracking your expenses!',
                         style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500),
                       ),
                     ),
@@ -1250,7 +1250,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _promptForPasswordAndImport(
             context,
             path,
-            initialError: importResult == 'InvalidPassword' ? 'Galat password. Dobara try karein.' : null,
+            initialError: importResult == 'InvalidPassword' ? 'Incorrect password. Please try again.' : null,
           );
         } else if (importResult == 'NoMatchingTransactions') {
           _showNoMatchingTransactionsDialog(context);
@@ -1303,7 +1303,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Aapka statement password-protected hai. Import karne ke liye kripya sahi password enter karein:',
+                    'Your statement is password-protected. Please enter the correct password to import:',
                     style: GoogleFonts.inter(fontSize: 13, height: 1.4),
                   ),
                   const SizedBox(height: 16),
@@ -1351,7 +1351,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     final enteredPassword = passwordController.text.trim();
                     if (enteredPassword.isEmpty) {
                       setStateDialog(() {
-                        currentError = 'Password khali nahi ho sakta!';
+                        currentError = 'Password cannot be empty!';
                       });
                       return;
                     }
@@ -1383,7 +1383,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         _promptForPasswordAndImport(
                           context,
                           path,
-                          initialError: 'Galat password. Dobara try karein.',
+                          initialError: 'Incorrect password. Please try again.',
                         );
                       } else if (result == 'NoMatchingTransactions') {
                         _showNoMatchingTransactionsDialog(context);
@@ -1466,7 +1466,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Aapke statement file mein current month ($currentMonthName $currentYear) ka koi transaction nahi mila.',
+                'No transactions found for the current month ($currentMonthName $currentYear) in your statement file.',
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -1475,7 +1475,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Grow App dynamic budget tracking ke liye sirf active month ke expense transactions ko hi accept karta hai. Kripya check karein ki aap sahi file upload kar rahe hain.',
+                'Grow Expense only accepts expense transactions for the active current month for dynamic budget tracking. Please verify that you are uploading the correct statement file.',
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   color: Colors.grey[600],
@@ -2123,7 +2123,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Receipt scan karne ke liye source choose karein. AI automatic details extract kar lega:',
+                'Choose a source to scan receipt. AI will automatically extract transaction details:',
                 style: GoogleFonts.inter(
                   fontSize: 13,
                   color: isDark ? Colors.grey[300] : Colors.grey[700],
@@ -3038,7 +3038,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Aapka account aur usse juda saara data (transactions, statement history, budgets, UPI settings) cloud database aur local storage se hamesha ke liye delete ho jayega.',
+                    'Your account and all associated data (transactions, statement history, budgets, UPI settings) will be permanently deleted from the cloud database and local storage.',
                     style: GoogleFonts.inter(fontSize: 13, height: 1.4),
                   ),
                   if (isDeleting) ...[

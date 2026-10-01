@@ -182,14 +182,14 @@ class NotificationSettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Dono scenarios test karein aapki selected language me:',
+                'Test both notification scenarios in your selected language:',
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   color: isDark ? Colors.grey[400] : Colors.grey[600],
                 ),
               ),
               const SizedBox(height: 16),
-              // Scenario A: Purane expenses the
+              // Scenario A: Had previous month expenses
               InkWell(
                 onTap: () async {
                   Navigator.of(ctx).pop();
@@ -216,7 +216,7 @@ class NotificationSettingsScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Scenario A: Purane Mahine Ke Expenses The',
+                              'Scenario A: Had Previous Month Expenses',
                               style: GoogleFonts.inter(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 13.5,
@@ -224,7 +224,7 @@ class NotificationSettingsScreen extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              'Content: "PDF invoice download karein aur new month shuru karein"',
+                              'Content: "Download PDF invoice & start new month"',
                               style: GoogleFonts.inter(
                                 fontSize: 11,
                                 color: primaryColor,
@@ -238,7 +238,7 @@ class NotificationSettingsScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              // Scenario B: 0 Expenses the
+              // Scenario B: 0 Expenses
               InkWell(
                 onTap: () async {
                   Navigator.of(ctx).pop();
@@ -264,7 +264,7 @@ class NotificationSettingsScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Scenario B: Koi Kharcha Nahi Tha (0 Expenses)',
+                              'Scenario B: Zero Expenses (0 Records)',
                               style: GoogleFonts.inter(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 13.5,
@@ -272,7 +272,7 @@ class NotificationSettingsScreen extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              'Content: "Naya mahina shuru ho chuka hai, fresh tracking shuru karein"',
+                              'Content: "Welcome to new month, start fresh tracking"',
                               style: GoogleFonts.inter(
                                 fontSize: 11,
                                 color: const Color(0xFF38BDF8),
