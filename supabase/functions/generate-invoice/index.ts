@@ -149,7 +149,13 @@ serve(async (req) => {
     let totalSum = 0.0
 
     for (const exp of expenses) {
-      if (currentY < 80) {
+      const descVal = (exp.description && exp.description.trim().length > 0) ? exp.description.trim() : 'N/A'
+      const descLines = wrapText(descVal, 235, helvetica, 9)
+      const lineHeight = 11.5
+      const contentHeight = Math.max(16, descLines.length * lineHeight)
+      const rowHeight = contentHeight + 10
+
+      if (currentY - rowHeight < 70) {
         page = pdfDoc.addPage([595, 842])
         drawHeader(page)
         // Table Header on new page
@@ -169,30 +175,39 @@ serve(async (req) => {
 
       const dateStr = formatDateDDMMYYYY(exp.transaction_date || exp.transactionDate)
       const amountNum = parseFloat(exp.amount) || 0.0
-      const amountStr = `${amountNum.toFixed(2)} ${exp.currency}`
+      const amountStr = `${amountNum.toFixed(2)} ${exp.currency || 'INR'}`
       
-      const rate = rates[exp.currency.toUpperCase() as keyof typeof rates] || 1.0
+      const rate = rates[(exp.currency || 'INR').toUpperCase() as keyof typeof rates] || 1.0
       const amountInINR = rate !== 0 ? (amountNum / rate) : amountNum
       totalSum += amountInINR
 
+      // Draw date and category aligned with top line of this row
       page.drawText(dateStr, { x: 50, y: currentY, size: 9, font: helvetica, color: textColor })
-      page.drawText(exp.category, { x: 140, y: currentY, size: 9, font: helvetica, color: textColor })
+      page.drawText(exp.category || 'Expense', { x: 140, y: currentY, size: 9, font: helvetica, color: textColor })
       
-      // Clean and truncate description
-      const descVal = exp.description || 'N/A'
-      const truncatedDesc = descVal.length > 35 ? descVal.substring(0, 32) + '...' : descVal
-      page.drawText(truncatedDesc, { x: 230, y: currentY, size: 9, font: helvetica, color: textColor })
+      // Draw all wrapped description lines without truncating
+      descLines.forEach((line: string, index: number) => {
+        page.drawText(line, {
+          x: 230,
+          y: currentY - (index * lineHeight),
+          size: 9,
+          font: helvetica,
+          color: textColor,
+        })
+      })
       
       page.drawText(amountStr, { x: 480, y: currentY, size: 9, font: helvetica, color: textColor })
 
+      const rowBottomY = currentY - (descLines.length > 1 ? (descLines.length - 1) * lineHeight : 0) - 6
+
       page.drawLine({
-        start: { x: 50, y: currentY - 5 },
-        end: { x: 545, y: currentY - 5 },
+        start: { x: 50, y: rowBottomY },
+        end: { x: 545, y: rowBottomY },
         thickness: 0.5,
-        color: rgb(0.95, 0.95, 0.95),
+        color: rgb(0.92, 0.94, 0.96),
       })
 
-      currentY -= 20
+      currentY = rowBottomY - 14
     }
 
     // Total section
@@ -271,3 +286,55 @@ function formatDateDDMMYYYY(dateInput: any): string {
   const yyyy = d.getFullYear()
   return `${dd}/${mm}/${yyyy}`
 }
+
+function wrapText(text: string, maxWidth: number, font: any, fontSize: number): string[] {
+  if (!text || text.trim() === '') return ['N/A']
+  
+  const paragraphs = text.split(/\r?\n/)
+  const resultLines: string[] = []
+
+  for (const para of paragraphs) {
+    if (para.trim() === '') {
+      resultLines.push('')
+      continue
+    }
+
+    const words = para.split(/\s+/)
+    let currentLine = ''
+
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word
+      const testWidth = font.widthOfTextAtSize(testLine, fontSize)
+
+      if (testWidth <= maxWidth) {
+        currentLine = testLine
+      } else {
+        if (currentLine) {
+          resultLines.push(currentLine)
+        }
+        // If single word is wider than maxWidth, break character by character
+        if (font.widthOfTextAtSize(word, fontSize) > maxWidth) {
+          let subWord = ''
+          for (const char of word) {
+            if (font.widthOfTextAtSize(subWord + char, fontSize) <= maxWidth) {
+              subWord += char
+            } else {
+              resultLines.push(subWord)
+              subWord = char
+            }
+          }
+          currentLine = subWord
+        } else {
+          currentLine = word
+        }
+      }
+    }
+
+    if (currentLine) {
+      resultLines.push(currentLine)
+    }
+  }
+
+  return resultLines.length > 0 ? resultLines : ['N/A']
+}
+

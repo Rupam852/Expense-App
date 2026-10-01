@@ -113,38 +113,48 @@ router.get('/generate', authenticateToken, async (req, res) => {
     }
 
     expensesRes.rows.forEach(exp => {
+      const descVal = (exp.description && exp.description.trim().length > 0) ? exp.description.trim() : 'N/A';
+      doc.fontSize(9);
+      const descHeight = doc.heightOfString(descVal, { width: 235 });
+      const rowHeight = Math.max(20, descHeight + 12);
+
       // If we are getting close to page end, start a new page
-      if (currentY > 700) {
+      if (currentY + rowHeight > 740) {
         doc.addPage();
         currentY = 50;
+        // Table Header
+        doc.fillColor('#718096').fontSize(10).font('Helvetica-Bold');
+        doc.text('Date', 50, currentY);
+        doc.text('Category', 140, currentY);
+        doc.text('Description', 230, currentY);
+        doc.text('Amount', 480, currentY, { width: 70, align: 'right' });
+        doc.strokeColor('#a0aec0').lineWidth(1.5).moveTo(50, currentY + 15).lineTo(550, currentY + 15).stroke();
+        currentY += 25;
       }
 
       const dateStr = new Date(exp.transaction_date).toLocaleDateString();
       const amountNum = parseFloat(exp.amount) || 0.0;
-      const amountStr = `${amountNum.toFixed(2)} ${exp.currency}`;
+      const amountStr = `${amountNum.toFixed(2)} ${exp.currency || 'INR'}`;
       
-      const rate = rates[exp.currency.toUpperCase()] || 1.0;
+      const rate = rates[(exp.currency || 'INR').toUpperCase()] || 1.0;
       const amountInINR = rate !== 0 ? (amountNum / rate) : amountNum;
       totalSum += amountInINR;
 
-      doc.fillColor('#2d3748').fontSize(9);
+      doc.fillColor('#2d3748').fontSize(9).font('Helvetica');
       doc.text(dateStr, 50, currentY);
-      doc.text(exp.category, 140, currentY);
-      
-      // Handle multi-line descriptions elegantly
-      const descVal = exp.description || 'N/A';
-      doc.text(descVal, 230, currentY, { width: 240, height: 25, ellipsis: true });
-      
+      doc.text(exp.category || 'Expense', 140, currentY);
+      doc.text(descVal, 230, currentY, { width: 235 });
       doc.text(amountStr, 480, currentY, { width: 70, align: 'right' });
 
       // Draw light divider lines under each row
+      const lineY = currentY + Math.max(14, descHeight) + 4;
       doc.strokeColor('#f1f5f9')
          .lineWidth(0.5)
-         .moveTo(50, currentY + 18)
-         .lineTo(550, currentY + 18)
+         .moveTo(50, lineY)
+         .lineTo(550, lineY)
          .stroke();
 
-      currentY += 25;
+      currentY = lineY + 8;
     });
 
     // -- Total Statement Summary --
