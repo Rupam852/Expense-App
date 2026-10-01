@@ -243,11 +243,14 @@ class _PaymentReminderModalState extends State<PaymentReminderModal> {
         }
         activePayment ??= provider.primaryPaymentDetail;
 
-        final effectiveUpiId = widget.customPayerUpiId != null && widget.customPayerUpiId!.isNotEmpty
-            ? widget.customPayerUpiId
+        final isCustomPayer = widget.customPayerUpiId != null && widget.customPayerUpiId!.trim().isNotEmpty;
+        final effectiveUpiId = isCustomPayer
+            ? widget.customPayerUpiId!.trim()
             : (activePayment?.upiId.isNotEmpty == true ? activePayment!.upiId : null);
 
-        final payeeName = userProvider.userProfile?['full_name']?.toString() ?? 'Grow Expense User';
+        final payeeName = isCustomPayer
+            ? widget.personName
+            : (userProvider.userProfile?['full_name']?.toString() ?? 'Grow Expense User');
         final hasPaymentMethod = effectiveUpiId != null && effectiveUpiId.trim().isNotEmpty;
         final shareMessage = _buildShareMessage(
           upiId: effectiveUpiId,
@@ -387,14 +390,14 @@ class _PaymentReminderModalState extends State<PaymentReminderModal> {
                 const SizedBox(height: 14),
 
                 // ──────────────────────────────────────────────────────────
-                // MULTI-ACCOUNT CHIP SELECTOR (IF MULTIPLE METHODS EXIST)
+                // MULTI-ACCOUNT CHIP SELECTOR (IF MULTIPLE METHODS EXIST AND NOT A CUSTOM PAYER)
                 // ──────────────────────────────────────────────────────────
-                if (paymentDetails.length > 1) ...[
+                if (!isCustomPayer && paymentDetails.length > 1) ...[
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'SELECT PAYMENT ACCOUNT',
+                        'SELECT RECEIVING ACCOUNT',
                         style: GoogleFonts.inter(
                           fontSize: 10.5,
                           fontWeight: FontWeight.bold,
@@ -485,7 +488,9 @@ class _PaymentReminderModalState extends State<PaymentReminderModal> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                activePayment?.name ?? 'UPI Payment Linked',
+                                isCustomPayer
+                                    ? '${widget.personName}\'s UPI'
+                                    : (activePayment?.name ?? 'UPI Payment Linked'),
                                 style: GoogleFonts.inter(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.bold,
@@ -507,9 +512,11 @@ class _PaymentReminderModalState extends State<PaymentReminderModal> {
                           onPressed: () => _showQrCodeDialog(
                             context: context,
                             upiId: effectiveUpiId,
-                            qrCodeUrl: activePayment?.qrCodeUrl,
+                            qrCodeUrl: isCustomPayer ? null : activePayment?.qrCodeUrl,
                             payeeName: payeeName,
-                            title: activePayment?.name ?? 'Payment QR',
+                            title: isCustomPayer
+                                ? '${widget.personName}\'s QR'
+                                : (activePayment?.name ?? 'Payment QR'),
                           ),
                           style: TextButton.styleFrom(
                             backgroundColor: primaryColor.withValues(alpha: 0.15),

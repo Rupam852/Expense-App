@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:qr_flutter/qr_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/split_bill.dart';
 import '../services/expense_provider.dart';
 import '../widgets/custom_toast.dart';
@@ -59,120 +57,6 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
             }
           }
         },
-      ),
-    );
-  }
-
-  void _showUpiQrDialog({
-    required String upiId,
-    required String payeeName,
-    required double amount,
-    required String billTitle,
-  }) {
-    final upiUri = 'upi://pay?pa=$upiId&pn=${Uri.encodeComponent(payeeName)}&am=${amount.toStringAsFixed(2)}&cu=INR&tn=${Uri.encodeComponent(billTitle)}';
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: isDark ? const Color(0xFF1E222D) : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.qr_code_2_rounded, color: Color(0xFF00D09C)),
-            const SizedBox(width: 10),
-            Text(
-              'Instant UPI Settlement',
-              style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Scan with GPay, PhonePe, Paytm or BHIM',
-              style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-              ),
-              child: QrImageView(
-                data: upiUri,
-                version: QrVersions.auto,
-                size: 200.0,
-                backgroundColor: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              _currencyFormat.format(amount),
-              style: GoogleFonts.outfit(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF00D09C),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Pay to: $upiId',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.grey[300] : Colors.grey[700],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _shareSplitOnWhatsApp({
-    required SplitBill bill,
-    required SplitParticipant participant,
-  }) async {
-    final shareAmt = _currencyFormat.format(participant.shareAmount);
-    final upiInfo = bill.payerUpiId != null && bill.payerUpiId!.isNotEmpty
-        ? '\n\n📱 Pay via UPI ID: ${bill.payerUpiId}'
-        : '';
-
-    final message = 'Hey ${participant.name}! 👋\n\n'
-        'Your share for "${bill.title}" is $shareAmt (Total bill: ${_currencyFormat.format(bill.totalAmount)}).'
-        '$upiInfo\n\nPlease settle whenever possible. Thanks! 🙏';
-
-    if (participant.phoneNumber != null && participant.phoneNumber!.trim().isNotEmpty) {
-      String cleanPhone = participant.phoneNumber!.replaceAll(RegExp(r'[^0-9+]'), '');
-      if (cleanPhone.startsWith('+')) {
-        cleanPhone = cleanPhone.substring(1);
-      } else if (cleanPhone.length == 10) {
-        cleanPhone = '91$cleanPhone'; // Default Indian country code
-      }
-      final whatsappUrl = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(message)}');
-      try {
-        if (await canLaunchUrl(whatsappUrl)) {
-          await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
-          return;
-        }
-      } catch (_) {}
-    }
-
-    // Fallback share sheet
-    await SharePlus.instance.share(
-      ShareParams(
-        text: message,
-        subject: 'Bill Split Share for ${bill.title}',
       ),
     );
   }
@@ -606,8 +490,12 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
                   onPressed: () {
                     PaymentReminderModal.show(
                       context: context,
-                      personName: 'Participants (${totalParts - settledParts} Pending)',
-                      amount: bill.pendingCollection > 0 ? bill.pendingCollection : bill.totalAmount,
+                      personName: bill.isPaidByMe
+                          ? 'Participants (${totalParts - settledParts} Pending)'
+                          : bill.paidBy,
+                      amount: bill.isPaidByMe
+                          ? (bill.pendingCollection > 0 ? bill.pendingCollection : bill.totalAmount)
+                          : (bill.myPendingToPay > 0 ? bill.myPendingToPay : bill.myShare),
                       titleOrNote: bill.title,
                       date: bill.billDate,
                       isKhata: false,
@@ -616,7 +504,7 @@ class _SplitBillScreenState extends State<SplitBillScreen> {
                   },
                   icon: const Icon(Icons.qr_code_2_rounded, size: 16, color: Color(0xFF00D09C)),
                   label: Text(
-                    'Collect Payment / QR',
+                    bill.isPaidByMe ? 'Collect Payment / QR' : 'Pay Payer (${bill.paidBy}) / QR',
                     style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF00D09C)),
                   ),
                 )
@@ -654,8 +542,14 @@ class _AddSplitBillSheetState extends State<_AddSplitBillSheet> {
   final _titleController = TextEditingController();
   final _totalController = TextEditingController();
   final _noteController = TextEditingController();
-  final _upiController = TextEditingController();
-  final _payerController = TextEditingController(text: 'You');
+  
+  // Paid By Mode: true = 'You', false = 'Other'
+  bool _isPaidByMe = true;
+  String? _selectedPaymentDetailId;
+  
+  // For Other Payer
+  final _otherPayerNameController = TextEditingController();
+  final _otherPayerUpiController = TextEditingController();
 
   final List<TextEditingController> _friendControllers = [];
   final List<TextEditingController> _customAmountControllers = [];
@@ -666,27 +560,46 @@ class _AddSplitBillSheetState extends State<_AddSplitBillSheet> {
   void initState() {
     super.initState();
     final provider = Provider.of<ExpenseProvider>(context, listen: false);
-    final userUpi = provider.paymentDetails.isNotEmpty ? provider.paymentDetails.first.upiId : '';
-    _upiController.text = userUpi;
+    if (provider.paymentDetails.isNotEmpty) {
+      _selectedPaymentDetailId = provider.primaryPaymentDetail?.id ?? provider.paymentDetails.first.id;
+    }
 
     if (widget.existingBill != null) {
       final b = widget.existingBill!;
       _titleController.text = b.title;
       _totalController.text = b.totalAmount.toStringAsFixed(0);
       _noteController.text = b.note ?? '';
-      _payerController.text = b.paidBy;
-      _upiController.text = b.payerUpiId ?? userUpi;
       _billDate = b.billDate;
       _splitType = b.splitType;
 
-      for (var p in b.participants) {
-        if (p.name.trim().toLowerCase() != 'you') {
-          _friendControllers.add(TextEditingController(text: p.name));
-          _customAmountControllers.add(TextEditingController(text: p.shareAmount.toStringAsFixed(0)));
+      if (b.isPaidByMe) {
+        _isPaidByMe = true;
+        final matched = provider.paymentDetails.where((p) => p.upiId == b.payerUpiId).firstOrNull;
+        if (matched != null) {
+          _selectedPaymentDetailId = matched.id;
+        }
+
+        for (var p in b.participants) {
+          if (p.name.trim().toLowerCase() != 'you') {
+            _friendControllers.add(TextEditingController(text: p.name));
+            _customAmountControllers.add(TextEditingController(text: p.shareAmount.toStringAsFixed(0)));
+          }
+        }
+      } else {
+        _isPaidByMe = false;
+        _otherPayerNameController.text = b.paidBy;
+        _otherPayerUpiController.text = b.payerUpiId ?? '';
+
+        for (var p in b.participants) {
+          if (p.name.trim().toLowerCase() != 'you' &&
+              p.name.trim().toLowerCase() != b.paidBy.trim().toLowerCase()) {
+            _friendControllers.add(TextEditingController(text: p.name));
+            _customAmountControllers.add(TextEditingController(text: p.shareAmount.toStringAsFixed(0)));
+          }
         }
       }
     } else {
-      // Default: add 2 empty friend fields
+      // Default: 1 empty friend field
       _friendControllers.add(TextEditingController(text: ''));
       _customAmountControllers.add(TextEditingController(text: '0'));
     }
@@ -697,8 +610,8 @@ class _AddSplitBillSheetState extends State<_AddSplitBillSheet> {
     _titleController.dispose();
     _totalController.dispose();
     _noteController.dispose();
-    _upiController.dispose();
-    _payerController.dispose();
+    _otherPayerNameController.dispose();
+    _otherPayerUpiController.dispose();
     for (var c in _friendControllers) {
       c.dispose();
     }
@@ -727,6 +640,7 @@ class _AddSplitBillSheetState extends State<_AddSplitBillSheet> {
   void _submit() {
     final title = _titleController.text.trim();
     final total = double.tryParse(_totalController.text.trim()) ?? 0.0;
+    final provider = Provider.of<ExpenseProvider>(context, listen: false);
 
     if (title.isEmpty) {
       CustomToast.show(context, 'Please enter a bill title', isError: true);
@@ -737,283 +651,619 @@ class _AddSplitBillSheetState extends State<_AddSplitBillSheet> {
       return;
     }
 
-    final friendNames = _friendControllers
-        .map((c) => c.text.trim())
-        .where((name) => name.isNotEmpty && name.toLowerCase() != 'you')
-        .toList();
+    if (_isPaidByMe) {
+      // Paid By You
+      final friendNames = _friendControllers
+          .map((c) => c.text.trim())
+          .where((name) => name.isNotEmpty && name.toLowerCase() != 'you')
+          .toList();
 
-    if (friendNames.isEmpty) {
-      CustomToast.show(context, 'Please add at least one friend to split with', isError: true);
-      return;
-    }
-
-    // Participants list (including 'You')
-    final List<SplitParticipant> participants = [];
-    final totalPeople = friendNames.length + 1;
-
-    if (_splitType == 'equal') {
-      final equalShare = total / totalPeople;
-      participants.add(SplitParticipant(name: 'You', shareAmount: equalShare));
-      for (var f in friendNames) {
-        participants.add(SplitParticipant(name: f, shareAmount: equalShare));
+      if (friendNames.isEmpty) {
+        CustomToast.show(context, 'Please add at least one friend to split with', isError: true);
+        return;
       }
+
+      final List<SplitParticipant> participants = [];
+      final totalPeople = friendNames.length + 1;
+
+      if (_splitType == 'equal') {
+        final equalShare = total / totalPeople;
+        participants.add(SplitParticipant(name: 'You', shareAmount: equalShare, isSettled: true));
+        for (var f in friendNames) {
+          participants.add(SplitParticipant(name: f, shareAmount: equalShare, isSettled: false));
+        }
+      } else {
+        double friendsTotal = 0.0;
+        for (int i = 0; i < friendNames.length; i++) {
+          final amt = double.tryParse(_customAmountControllers[i].text.trim()) ?? 0.0;
+          friendsTotal += amt;
+          participants.add(SplitParticipant(name: friendNames[i], shareAmount: amt, isSettled: false));
+        }
+        final myShare = (total - friendsTotal).clamp(0.0, total);
+        participants.insert(0, SplitParticipant(name: 'You', shareAmount: myShare, isSettled: true));
+      }
+
+      final selectedPayment = provider.paymentDetails.where((p) => p.id == _selectedPaymentDetailId).firstOrNull;
+      final payerUpi = selectedPayment?.upiId.isNotEmpty == true ? selectedPayment!.upiId : null;
+
+      final bill = SplitBill(
+        id: widget.existingBill?.id ?? '',
+        title: title,
+        totalAmount: total,
+        paidBy: 'You',
+        payerUpiId: payerUpi,
+        billDate: _billDate,
+        splitType: _splitType,
+        participants: participants,
+        note: _noteController.text.trim(),
+      );
+
+      widget.onSave(bill);
+      Navigator.of(context).pop();
     } else {
-      // Custom split
-      double friendsTotal = 0.0;
-      for (int i = 0; i < friendNames.length; i++) {
-        final amt = double.tryParse(_customAmountControllers[i].text.trim()) ?? 0.0;
-        friendsTotal += amt;
-        participants.add(SplitParticipant(name: friendNames[i], shareAmount: amt));
+      // Paid By Friend / Other
+      final payerName = _otherPayerNameController.text.trim();
+      if (payerName.isEmpty) {
+        CustomToast.show(context, 'Please enter payer name (who paid the bill)', isError: true);
+        return;
       }
-      final myShare = (total - friendsTotal).clamp(0.0, total);
-      participants.insert(0, SplitParticipant(name: 'You', shareAmount: myShare));
+
+      final payerUpi = _otherPayerUpiController.text.trim().isEmpty ? null : _otherPayerUpiController.text.trim();
+
+      final otherFriends = _friendControllers
+          .map((c) => c.text.trim())
+          .where((name) => name.isNotEmpty &&
+              name.toLowerCase() != 'you' &&
+              name.toLowerCase() != payerName.toLowerCase())
+          .toList();
+
+      final List<SplitParticipant> participants = [];
+      // Total people = Payer + You + Other Friends
+      final totalPeople = otherFriends.length + 2;
+
+      if (_splitType == 'equal') {
+        final equalShare = total / totalPeople;
+        participants.add(SplitParticipant(name: payerName, shareAmount: equalShare, isSettled: true));
+        participants.add(SplitParticipant(name: 'You', shareAmount: equalShare, isSettled: false));
+        for (var f in otherFriends) {
+          participants.add(SplitParticipant(name: f, shareAmount: equalShare, isSettled: false));
+        }
+      } else {
+        double friendsTotal = 0.0;
+        for (int i = 0; i < otherFriends.length; i++) {
+          final amt = double.tryParse(_customAmountControllers[i].text.trim()) ?? 0.0;
+          friendsTotal += amt;
+          participants.add(SplitParticipant(name: otherFriends[i], shareAmount: amt, isSettled: false));
+        }
+        final remainingTotal = (total - friendsTotal).clamp(0.0, total);
+        final halfRem = remainingTotal / 2;
+        participants.insert(0, SplitParticipant(name: payerName, shareAmount: halfRem, isSettled: true));
+        participants.insert(1, SplitParticipant(name: 'You', shareAmount: halfRem, isSettled: false));
+      }
+
+      final bill = SplitBill(
+        id: widget.existingBill?.id ?? '',
+        title: title,
+        totalAmount: total,
+        paidBy: payerName,
+        payerUpiId: payerUpi,
+        billDate: _billDate,
+        splitType: _splitType,
+        participants: participants,
+        note: _noteController.text.trim(),
+      );
+
+      widget.onSave(bill);
+      Navigator.of(context).pop();
     }
-
-    final bill = SplitBill(
-      id: widget.existingBill?.id ?? '',
-      title: title,
-      totalAmount: total,
-      paidBy: _payerController.text.trim().isEmpty ? 'You' : _payerController.text.trim(),
-      payerUpiId: _upiController.text.trim().isEmpty ? null : _upiController.text.trim(),
-      billDate: _billDate,
-      splitType: _splitType,
-      participants: participants,
-      note: _noteController.text.trim(),
-    );
-
-    widget.onSave(bill);
-    Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = const Color(0xFF00D09C);
+    final cardBg = isDark ? const Color(0xFF1E232E) : const Color(0xFFF8FAFC);
+    final borderColor = isDark ? const Color(0xFF2C3242) : const Color(0xFFE2E8F0);
 
-    return Container(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-        top: 24,
-        left: 20,
-        right: 20,
-      ),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF181B22) : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Consumer<ExpenseProvider>(
+      builder: (context, provider, _) {
+        final paymentDetails = provider.paymentDetails;
+        if (_selectedPaymentDetailId == null && paymentDetails.isNotEmpty) {
+          _selectedPaymentDetailId = provider.primaryPaymentDetail?.id ?? paymentDetails.first.id;
+        }
+
+        return Container(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            top: 24,
+            left: 20,
+            right: 20,
+          ),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF181B22) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      widget.existingBill == null ? 'Split New Bill' : 'Edit Split Bill',
+                      style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // Bill Title
+                TextField(
+                  controller: _titleController,
+                  decoration: InputDecoration(
+                    labelText: 'Bill Title *',
+                    hintText: 'e.g. Goa Dinner, Netflix Plan, Uber Ride',
+                    prefixIcon: const Icon(Icons.receipt_long_outlined),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Total Amount
+                TextField(
+                  controller: _totalController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: 'Total Bill Amount (₹) *',
+                    prefixIcon: const Icon(Icons.currency_rupee_rounded),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // ──────────────────────────────────────────────────────────
+                // WHO PAID THE BILL? (YOU VS OTHER CHIP TOGGLE)
+                // ──────────────────────────────────────────────────────────
                 Text(
-                  widget.existingBill == null ? 'Split New Bill' : 'Edit Split Bill',
-                  style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close_rounded),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-
-            // Title
-            TextField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                labelText: 'Bill Title *',
-                hintText: 'e.g. Goa Resort Dinner, Swiggy Party',
-                prefixIcon: const Icon(Icons.receipt_long_outlined),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Total Amount
-            TextField(
-              controller: _totalController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                labelText: 'Total Bill Amount (₹) *',
-                prefixIcon: const Icon(Icons.currency_rupee_rounded),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Who Paid & UPI ID
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _payerController,
-                    decoration: InputDecoration(
-                      labelText: 'Paid By',
-                      hintText: 'You or Name',
-                      prefixIcon: const Icon(Icons.person_outline),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
-                    controller: _upiController,
-                    decoration: InputDecoration(
-                      labelText: 'Payer UPI ID (For QR)',
-                      hintText: 'name@upi',
-                      prefixIcon: const Icon(Icons.qr_code_2_rounded),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (_upiController.text.trim().isEmpty) ...[
-              const SizedBox(height: 6),
-              InkWell(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const PaymentDetailsScreen()),
-                  );
-                },
-                child: Text(
-                  '💡 Tip: Set up your UPI in Payment Settings to auto-fill here',
+                  'WHO PAID THIS BILL?',
                   style: GoogleFonts.inter(
                     fontSize: 11,
-                    color: const Color(0xFF00D09C),
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey,
+                    letterSpacing: 0.5,
                   ),
                 ),
-              ),
-            ],
-            const SizedBox(height: 16),
+                const SizedBox(height: 8),
 
-            // Split Mode Toggle
-            Row(
-              children: [
-                Text(
-                  'Split Mode:',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
-                ),
-                const SizedBox(width: 12),
-                ChoiceChip(
-                  label: const Text('Equally'),
-                  selected: _splitType == 'equal',
-                  onSelected: (val) => setState(() => _splitType = 'equal'),
-                  selectedColor: const Color(0xFF00D09C).withValues(alpha: 0.2),
-                ),
-                const SizedBox(width: 8),
-                ChoiceChip(
-                  label: const Text('Custom Amounts'),
-                  selected: _splitType == 'custom',
-                  onSelected: (val) => setState(() => _splitType = 'custom'),
-                  selectedColor: const Color(0xFF00D09C).withValues(alpha: 0.2),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-
-            // Friends / Participants List
-            Text(
-              'SPLIT WITH (YOU + FRIENDS)',
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            ...List.generate(_friendControllers.length, (index) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: Row(
+                Row(
                   children: [
+                    // You Option
                     Expanded(
-                      flex: 3,
-                      child: TextField(
-                        controller: _friendControllers[index],
-                        decoration: InputDecoration(
-                          hintText: 'Friend Name ${index + 1}',
-                          prefixIcon: const Icon(Icons.person_outline, size: 18),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                      ),
-                    ),
-                    if (_splitType == 'custom') ...[
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 2,
-                        child: TextField(
-                          controller: _customAmountControllers[index],
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: InputDecoration(
-                            hintText: '₹ Share',
-                            prefixText: '₹',
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      child: GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _isPaidByMe = true);
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: _isPaidByMe
+                                ? primaryColor.withValues(alpha: isDark ? 0.25 : 0.15)
+                                : cardBg,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: _isPaidByMe ? primaryColor : borderColor,
+                              width: _isPaidByMe ? 1.6 : 1.0,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.person_rounded,
+                                size: 18,
+                                color: _isPaidByMe ? primaryColor : Colors.grey,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Paid by You',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: _isPaidByMe ? FontWeight.bold : FontWeight.w500,
+                                  color: _isPaidByMe
+                                      ? primaryColor
+                                      : (isDark ? Colors.white70 : Colors.black87),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                    ],
-                    if (_friendControllers.length > 1)
-                      IconButton(
-                        icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 20),
-                        onPressed: () => _removeFriendField(index),
+                    ),
+                    const SizedBox(width: 10),
+
+                    // Someone Else Option
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _isPaidByMe = false);
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: !_isPaidByMe
+                                ? const Color(0xFF6366F1).withValues(alpha: isDark ? 0.25 : 0.15)
+                                : cardBg,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: !_isPaidByMe ? const Color(0xFF6366F1) : borderColor,
+                              width: !_isPaidByMe ? 1.6 : 1.0,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.group_rounded,
+                                size: 18,
+                                color: !_isPaidByMe ? const Color(0xFF6366F1) : Colors.grey,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Someone Else',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: !_isPaidByMe ? FontWeight.bold : FontWeight.w500,
+                                  color: !_isPaidByMe
+                                      ? const Color(0xFF6366F1)
+                                      : (isDark ? Colors.white70 : Colors.black87),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
+                    ),
                   ],
                 ),
-              );
-            }),
+                const SizedBox(height: 14),
 
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: _addFriendField,
-                icon: const Icon(Icons.add_rounded, size: 16, color: Color(0xFF00D09C)),
-                label: Text(
-                  '+ Add Another Friend',
-                  style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.bold, color: const Color(0xFF00D09C)),
+                // ──────────────────────────────────────────────────────────
+                // CASE 1: PAID BY YOU -> SELECT FROM USER'S SAVED PAYMENT CARDS
+                // ──────────────────────────────────────────────────────────
+                if (_isPaidByMe) ...[
+                  if (paymentDetails.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.qr_code_2_rounded, size: 16, color: Color(0xFF00D09C)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'RECEIVING PAYMENT ACCOUNT',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              InkWell(
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (_) => const PaymentDetailsScreen()),
+                                  );
+                                },
+                                child: Text(
+                                  '+ Manage',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          DropdownButtonFormField<String>(
+                            value: paymentDetails.any((p) => p.id == _selectedPaymentDetailId)
+                                ? _selectedPaymentDetailId
+                                : paymentDetails.first.id,
+                            isExpanded: true,
+                            decoration: InputDecoration(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            items: paymentDetails.map((p) {
+                              return DropdownMenuItem<String>(
+                                value: p.id,
+                                child: Row(
+                                  children: [
+                                    if (p.isPrimary)
+                                      Padding(
+                                        padding: const EdgeInsets.only(right: 6.0),
+                                        child: Icon(Icons.star_rounded, size: 16, color: primaryColor),
+                                      ),
+                                    Expanded(
+                                      child: Text(
+                                        '${p.name} (${p.upiId.isNotEmpty ? p.upiId : "No UPI"})',
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() => _selectedPaymentDetailId = val);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else ...[
+                    // No Payment Accounts Set Up Yet
+                    InkWell(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const PaymentDetailsScreen()),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00D09C).withValues(alpha: isDark ? 0.12 : 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF00D09C).withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.add_card_rounded, color: Color(0xFF00D09C), size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Tap to add your UPI account for 1-tap QR collection',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: primaryColor,
+                                ),
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF00D09C)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ] else ...[
+                  // ──────────────────────────────────────────────────────────
+                  // CASE 2: PAID BY FRIEND / OTHER
+                  // ──────────────────────────────────────────────────────────
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: cardBg,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.person_pin_circle_rounded, size: 16, color: Color(0xFF6366F1)),
+                            const SizedBox(width: 6),
+                            Text(
+                              'PAYER DETAILS (WHO PAID?)',
+                              style: GoogleFonts.inter(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF6366F1),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: TextField(
+                                controller: _otherPayerNameController,
+                                decoration: InputDecoration(
+                                  labelText: 'Payer Name *',
+                                  hintText: 'e.g. Rahul',
+                                  prefixIcon: const Icon(Icons.person_outline, size: 18),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 3,
+                              child: TextField(
+                                controller: _otherPayerUpiController,
+                                decoration: InputDecoration(
+                                  labelText: 'Payer UPI ID',
+                                  hintText: 'name@upi',
+                                  prefixIcon: const Icon(Icons.qr_code_2_rounded, size: 18),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '💡 QR will be generated for this payer so everyone can pay them directly.',
+                          style: GoogleFonts.inter(fontSize: 10.5, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+
+                // Split Mode Toggle
+                Row(
+                  children: [
+                    Text(
+                      'Split Mode:',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                    const SizedBox(width: 12),
+                    ChoiceChip(
+                      label: const Text('Equally'),
+                      selected: _splitType == 'equal',
+                      onSelected: (val) => setState(() => _splitType = 'equal'),
+                      selectedColor: primaryColor.withValues(alpha: 0.2),
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: const Text('Custom Amounts'),
+                      selected: _splitType == 'custom',
+                      onSelected: (val) => setState(() => _splitType = 'custom'),
+                      selectedColor: primaryColor.withValues(alpha: 0.2),
+                    ),
+                  ],
                 ),
-              ),
-            ),
+                const SizedBox(height: 14),
 
-            const SizedBox(height: 12),
+                // Friends / Participants List Header
+                Text(
+                  _isPaidByMe
+                      ? 'SPLIT WITH (YOU + FRIENDS)'
+                      : 'OTHER FRIENDS SPLITTING WITH (YOU + PAYER)',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
 
-            // Note (Optional)
-            TextField(
-              controller: _noteController,
-              decoration: InputDecoration(
-                labelText: 'Note (Optional)',
-                hintText: 'e.g. Drinks paid separately',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-            const SizedBox(height: 20),
+                ...List.generate(_friendControllers.length, (index) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: TextField(
+                            controller: _friendControllers[index],
+                            decoration: InputDecoration(
+                              hintText: 'Friend Name ${index + 1}',
+                              prefixIcon: const Icon(Icons.person_outline, size: 18),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                        ),
+                        if (_splitType == 'custom') ...[
+                          const SizedBox(width: 8),
+                          Expanded(
+                            flex: 2,
+                            child: TextField(
+                              controller: _customAmountControllers[index],
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              decoration: InputDecoration(
+                                hintText: '₹ Share',
+                                prefixText: '₹',
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (_friendControllers.length > 1)
+                          IconButton(
+                            icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 20),
+                            onPressed: () => _removeFriendField(index),
+                          ),
+                      ],
+                    ),
+                  );
+                }),
 
-            // Save Button
-            ElevatedButton(
-              onPressed: _submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00D09C),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text(
-                widget.existingBill == null ? 'Save & Create Split' : 'Update Split Bill',
-                style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: _addFriendField,
+                    icon: const Icon(Icons.add_rounded, size: 16, color: Color(0xFF00D09C)),
+                    label: Text(
+                      '+ Add Another Friend',
+                      style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.bold, color: const Color(0xFF00D09C)),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Note (Optional)
+                TextField(
+                  controller: _noteController,
+                  decoration: InputDecoration(
+                    labelText: 'Note (Optional)',
+                    hintText: 'e.g. Dinner party, drinks included',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Save Button
+                ElevatedButton(
+                  onPressed: _submit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00D09C),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text(
+                    widget.existingBill == null ? 'Save & Create Split' : 'Update Split Bill',
+                    style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
