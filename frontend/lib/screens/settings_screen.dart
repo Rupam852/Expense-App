@@ -1,10 +1,16 @@
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:csv/csv.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../services/user_provider.dart';
 import '../services/expense_provider.dart';
 import '../services/ai_config_service.dart';
+import '../services/supabase_service.dart';
 import '../widgets/custom_toast.dart';
 import 'ai_config_screen.dart';
 import 'invoice_history_screen.dart';
@@ -29,6 +35,58 @@ class SettingsScreen extends StatelessWidget {
       return DateFormat('dd MMM yyyy, hh:mm a').format(dt);
     } catch (_) {
       return isoString;
+    }
+  }
+
+  void _triggerCSVExport(BuildContext context) async {
+    final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+    final expenses = expenseProvider.expenses;
+
+    if (expenses.isEmpty) {
+      CustomToast.show(context, 'No transaction logs to export.', isError: true);
+      return;
+    }
+
+    try {
+      final List<List<dynamic>> csvData = [
+        ['ID', 'Date', 'Category', 'Amount (INR)', 'Description', 'Recurring', 'Period'],
+        ...expenses.map((e) => [
+          e.id,
+          DateFormat('yyyy-MM-dd HH:mm:ss').format(e.transactionDate),
+          e.category,
+          e.amount,
+          e.description,
+          e.isRecurring ? 'Yes' : 'No',
+          e.recurrencePeriod,
+        ]),
+      ];
+
+      final csvString = const ListToCsvConverter().convert(csvData);
+      final fileName = 'Expense_Statement_${DateTime.now().millisecondsSinceEpoch}.csv';
+
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/$fileName');
+      await file.writeAsString(csvString);
+
+      await SupabaseService.instance.saveFileToDownloads(
+        fileName: fileName,
+        bytes: utf8.encode(csvString),
+        mimeType: 'text/csv',
+      );
+
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'text/csv')],
+        text: 'Here is my complete Expense Statement export.',
+        subject: 'Financial Statement Export',
+      );
+
+      if (context.mounted) {
+        CustomToast.show(context, 'Statement exported & saved to Downloads successfully!');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        CustomToast.show(context, 'Export failed: $e', isError: true);
+      }
     }
   }
 
@@ -966,6 +1024,28 @@ class SettingsScreen extends StatelessWidget {
                           MaterialPageRoute(builder: (_) => const PaymentDetailsScreen()),
                         );
                       },
+                    ),
+                    Divider(height: 1, color: borderColor),
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.file_download_outlined, color: Color(0xFF10B981), size: 22),
+                      ),
+                      title: Text(
+                        'Export Financial Ledger (Excel / CSV)',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        'Download complete expense history statement to device',
+                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                      ),
+                      trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+                      onTap: () => _triggerCSVExport(context),
                     ),
                   ],
                 ),

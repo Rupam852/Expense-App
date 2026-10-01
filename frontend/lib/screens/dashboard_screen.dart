@@ -2748,6 +2748,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         },
                       ),
 
+                      // Export Financial Ledger (Excel / CSV)
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.file_download_outlined, color: Color(0xFF10B981), size: 22),
+                        ),
+                        title: Text(
+                          'Export Ledger (Excel / CSV)',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                        ),
+                        subtitle: Text(
+                          'Download full transaction history statement to device',
+                          style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                        ),
+                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          _triggerCSVExport(context);
+                        },
+                      ),
+
+                      // Import Financial Statement (PDF / Excel / CSV)
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.file_upload_outlined, color: Color(0xFF3B82F6), size: 22),
+                        ),
+                        title: Text(
+                          'Import Statements (PDF / Excel)',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                        ),
+                        subtitle: Text(
+                          'Import Bank statement PDF, Excel or CSV spreadsheets',
+                          style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                        ),
+                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          _proceedWithFilePicker(context);
+                        },
+                      ),
+
                       const SizedBox(height: 8),
                       const Divider(),
                       const SizedBox(height: 8),
