@@ -80,6 +80,9 @@ class AiConfigService with ChangeNotifier {
   bool get hasPrimaryApiKey => _primaryProvider == 'gemini' 
       ? _geminiApiKey.trim().isNotEmpty 
       : _nvidiaApiKey.trim().isNotEmpty;
+  bool get hasSecondaryConfig => _secondaryProvider == 'gemini'
+      ? _geminiApiKey.trim().isNotEmpty
+      : _nvidiaApiKey.trim().isNotEmpty;
 
   // SharedPreferences Keys (Strictly local phone storage)
   static const String _keyGeminiModel = 'local_ai_gemini_model';

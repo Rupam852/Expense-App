@@ -25,7 +25,6 @@ class UserProvider with ChangeNotifier {
   bool _showSpendingPredictionInBudget = false; // Default OFF: only shown in Budgets if enabled
   String? _errorMessage;
   String? _userGeminiApiKey;
-  String? _userGeminiApiKeySecondary;
   bool _showApiKeyPrompt = false;
   bool _needsVerification = false;
   String? _unverifiedEmail;
@@ -39,7 +38,7 @@ class UserProvider with ChangeNotifier {
   bool get showSpendingPredictionInBudget => _showSpendingPredictionInBudget;
   String? get errorMessage => _errorMessage;
   String? get userGeminiApiKey => _userGeminiApiKey;
-  String? get userGeminiApiKeySecondary => _userGeminiApiKeySecondary;
+  String? get userGeminiApiKeySecondary => AiConfigService.instance.hasSecondaryConfig ? 'active' : null;
   bool get showApiKeyPrompt => _showApiKeyPrompt;
   bool get needsVerification => _needsVerification;
   String? get unverifiedEmail => _unverifiedEmail;
@@ -134,7 +133,6 @@ class UserProvider with ChangeNotifier {
       _showSpendingPredictionInBudget = prefs.getBool('show_spending_prediction_in_budget') ?? false;
 
       _userGeminiApiKey = prefs.getString('user_gemini_api_key');
-      _userGeminiApiKeySecondary = prefs.getString('user_gemini_api_key_secondary');
       final cachedProfileStr = prefs.getString('cached_user_profile');
       if (cachedProfileStr != null) {
         _userProfile = Map<String, dynamic>.from(json.decode(cachedProfileStr));
@@ -189,7 +187,6 @@ class UserProvider with ChangeNotifier {
         'name': profile?['name'] ?? user.userMetadata?['name'] ?? user.userMetadata?['full_name'] ?? 'User',
         'photo_url': profile?['photo_url'] ?? user.userMetadata?['avatar_url'],
         'gemini_api_key': profile?['gemini_api_key'],
-        'gemini_api_key_secondary': profile?['gemini_api_key_secondary'] ?? profile?['nvidia_api_key'],
         'nvidia_api_key': profile?['nvidia_api_key'],
         'gemini_model': profile?['gemini_model'],
         'nvidia_model': profile?['nvidia_model'],
@@ -206,14 +203,9 @@ class UserProvider with ChangeNotifier {
       // Cache Gemini keys locally
       final prefs = await SharedPreferences.getInstance();
       final key = _userProfile!['gemini_api_key']?.toString().trim();
-      final keySec = _userProfile!['gemini_api_key_secondary']?.toString().trim();
       if (key != null && key.isNotEmpty) {
         await prefs.setString('user_gemini_api_key', key);
         _userGeminiApiKey = key;
-      }
-      if (keySec != null && keySec.isNotEmpty) {
-        await prefs.setString('user_gemini_api_key_secondary', keySec);
-        _userGeminiApiKeySecondary = keySec;
       }
 
       await _saveProfileLocally();
@@ -418,7 +410,6 @@ class UserProvider with ChangeNotifier {
     required String name,
     String? photoUrl,
     String? geminiApiKey,
-    String? geminiApiKeySecondary,
   }) async {
     _isLoading = true;
     notifyListeners();
@@ -430,7 +421,6 @@ class UserProvider with ChangeNotifier {
         'name': name,
         if (photoUrl != null) 'photo_url': photoUrl,
         if (geminiApiKey != null) 'gemini_api_key': geminiApiKey,
-        if (geminiApiKeySecondary != null) 'gemini_api_key_secondary': geminiApiKeySecondary,
       };
       await _saveProfileLocally();
       notifyListeners();
@@ -441,7 +431,6 @@ class UserProvider with ChangeNotifier {
         'name': name,
         if (photoUrl != null) 'photo_url': photoUrl,
         if (geminiApiKey != null) 'gemini_api_key': geminiApiKey,
-        if (geminiApiKeySecondary != null) 'gemini_api_key_secondary': geminiApiKeySecondary,
       });
     } catch (e) {
       print('[UserProvider] Profile update deferred (offline): $e');
@@ -456,14 +445,9 @@ class UserProvider with ChangeNotifier {
   // 6. GEMINI KEY MANAGEMENT
   // ──────────────────────────────────────────────────────
   Future<void> saveUserGeminiApiKey(String? key) async {
-    await saveUserGeminiApiKeys(primary: key, secondary: _userGeminiApiKeySecondary);
-  }
-
-  Future<void> saveUserGeminiApiKeys({String? primary, String? secondary}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cleanPrimary = (primary == null || primary.trim().isEmpty) ? '' : primary.trim();
-      final cleanSecondary = (secondary == null || secondary.trim().isEmpty) ? '' : secondary.trim();
+      final cleanPrimary = (key == null || key.trim().isEmpty) ? '' : key.trim();
 
       if (cleanPrimary.isEmpty) {
         _userGeminiApiKey = null;
@@ -472,14 +456,6 @@ class UserProvider with ChangeNotifier {
         _userGeminiApiKey = cleanPrimary;
         await prefs.setString('user_gemini_api_key', cleanPrimary);
       }
-
-      if (cleanSecondary.isEmpty) {
-        _userGeminiApiKeySecondary = null;
-        await prefs.remove('user_gemini_api_key_secondary');
-      } else {
-        _userGeminiApiKeySecondary = cleanSecondary;
-        await prefs.setString('user_gemini_api_key_secondary', cleanSecondary);
-      }
       notifyListeners();
 
       if (_isAuthenticated) {
@@ -487,11 +463,10 @@ class UserProvider with ChangeNotifier {
           name: _userProfile?['name'] ?? 'User',
           photoUrl: _userProfile?['photo_url'],
           geminiApiKey: cleanPrimary,
-          geminiApiKeySecondary: cleanSecondary,
         );
       }
     } catch (e) {
-      print('[UserProvider] Error saving Gemini keys: $e');
+      print('[UserProvider] Error saving Gemini key: $e');
     }
   }
 
@@ -516,7 +491,6 @@ class UserProvider with ChangeNotifier {
 
     _userProfile = null;
     _userGeminiApiKey = null;
-    _userGeminiApiKeySecondary = null;
     _showApiKeyPrompt = false;
     _isAuthenticated = false;
     _isLoading = false;
@@ -546,7 +520,6 @@ class UserProvider with ChangeNotifier {
 
       _userProfile = null;
       _userGeminiApiKey = null;
-      _userGeminiApiKeySecondary = null;
       _showApiKeyPrompt = false;
       _isAuthenticated = false;
       _isLoading = false;
