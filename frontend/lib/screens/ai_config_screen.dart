@@ -16,10 +16,12 @@ class AiConfigScreen extends StatefulWidget {
 class _AiConfigScreenState extends State<AiConfigScreen> {
   final AiConfigService _aiService = AiConfigService.instance;
 
+  late String _aiMode; // 'default' or 'custom'
   late String _selectedGeminiModel;
   late String _selectedNvidiaModel;
   late String _primaryProvider;
   late String _secondaryProvider;
+  late String _responseLanguage;
 
   final TextEditingController _geminiKeyController = TextEditingController();
   final TextEditingController _nvidiaKeyController = TextEditingController();
@@ -31,12 +33,14 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
   @override
   void initState() {
     super.initState();
+    _aiMode = _aiService.aiMode;
     _selectedGeminiModel = _aiService.geminiModel;
     _selectedNvidiaModel = _aiService.nvidiaModel;
     _geminiKeyController.text = _aiService.geminiApiKey;
     _nvidiaKeyController.text = _aiService.nvidiaApiKey;
     _primaryProvider = _aiService.primaryProvider;
     _secondaryProvider = _aiService.secondaryProvider;
+    _responseLanguage = _aiService.responseLanguage;
   }
 
   @override
@@ -46,7 +50,17 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
     super.dispose();
   }
 
-  // Mutual switch logic for Primary Provider
+  // Safety check on exit
+  Future<bool> _handleWillPop() async {
+    // If in custom mode but no keys were entered, silently ensure default mode is active
+    if (_aiMode == 'custom') {
+      if (_geminiKeyController.text.trim().isEmpty && _nvidiaKeyController.text.trim().isEmpty) {
+        await _aiService.setAiMode('default');
+      }
+    }
+    return true;
+  }
+
   void _onSetPrimary(String provider) {
     setState(() {
       if (provider == 'gemini') {
@@ -64,6 +78,9 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
       _isSaving = true;
     });
 
+    final hasCustomKeys = _geminiKeyController.text.trim().isNotEmpty || _nvidiaKeyController.text.trim().isNotEmpty;
+    final finalMode = (_aiMode == 'custom' && hasCustomKeys) ? 'custom' : 'default';
+
     final success = await _aiService.saveCustomConfiguration(
       geminiModel: _selectedGeminiModel,
       geminiApiKey: _geminiKeyController.text,
@@ -71,22 +88,29 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
       nvidiaApiKey: _nvidiaKeyController.text,
       primaryProvider: _primaryProvider,
       secondaryProvider: _secondaryProvider,
+      aiMode: finalMode,
     );
 
+    await _aiService.setResponseLanguage(_responseLanguage);
+
     setState(() {
+      _aiMode = finalMode;
       _isSaving = false;
     });
 
     if (mounted) {
       if (success) {
-        CustomToast.show(context, 'AI Configuration saved to Phone Storage!');
+        if (finalMode == 'default' && _aiMode == 'custom' && !hasCustomKeys) {
+          CustomToast.show(context, 'No custom keys entered. Switched to Default Cloud AI.');
+        } else {
+          CustomToast.show(context, 'AI Configuration saved successfully!');
+        }
       } else {
         CustomToast.show(context, 'Failed to save configuration.', isError: true);
       }
     }
   }
 
-  // Trigger testing custom configuration
   Future<void> _checkConfigurationStatus() async {
     if (_geminiKeyController.text.trim().isEmpty && _nvidiaKeyController.text.trim().isEmpty) {
       CustomToast.show(
@@ -128,219 +152,508 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
     final cardBg = isDark ? const Color(0xFF1E232E) : Colors.white;
     final borderColor = isDark ? const Color(0xFF2C3242) : const Color(0xFFE5E9F0);
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF12141A) : const Color(0xFFF7F9FC),
-      appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF181B22) : Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black87),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(
-          'AI Configuration',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            color: isDark ? Colors.white : Colors.black87,
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          if (_aiMode == 'custom') {
+            if (_geminiKeyController.text.trim().isEmpty && _nvidiaKeyController.text.trim().isEmpty) {
+              _aiService.setAiMode('default');
+            }
+          }
+        }
+      },
+      child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF12141A) : const Color(0xFFF7F9FC),
+        appBar: AppBar(
+          backgroundColor: isDark ? const Color(0xFF181B22) : Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black87),
+            onPressed: () async {
+              await _handleWillPop();
+              if (context.mounted) Navigator.of(context).pop();
+            },
+          ),
+          title: Text(
+            'AI Configuration',
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
           ),
         ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 1. Info Banner
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: primaryColor.withOpacity(0.3)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.vpn_key_rounded, color: primaryColor, size: 22),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Personal API Keys Required',
-                          style: GoogleFonts.outfit(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'AI Receipt Scanning & Smart Categorization use your own API keys. All keys are stored strictly on your device (Phone Storage) and never uploaded to any remote server.',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            height: 1.4,
-                            color: isDark ? Colors.white70 : Colors.black87,
-                          ),
-                        ),
-                      ],
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 1. Mode Switcher (Default Server AI vs Custom Keys)
+              _buildSectionHeader('AI ENGINE MODE', isDark),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF181B22) : const Color(0xFFEAEFF8),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildModeTab(
+                        title: 'Default (Server Cloud AI)',
+                        subtitle: 'Free & Ready to Use',
+                        isSelected: _aiMode == 'default',
+                        icon: Icons.cloud_done_rounded,
+                        accentColor: primaryColor,
+                        isDark: isDark,
+                        onTap: () {
+                          setState(() => _aiMode = 'default');
+                        },
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildModeTab(
+                        title: 'Custom (My Own Keys)',
+                        subtitle: 'Personal API Quotas',
+                        isSelected: _aiMode == 'custom',
+                        icon: Icons.vpn_key_rounded,
+                        accentColor: const Color(0xFF3B82F6),
+                        isDark: isDark,
+                        onTap: () {
+                          setState(() => _aiMode = 'custom');
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-            // 2. Engine Role Selector (Primary ↔ Backup Failover)
-            _buildSectionHeader('PRIMARY ENGINE & BACKUP FAILOVER', isDark),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: borderColor),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Select which AI provider should process your scans first. If the primary fails, the backup will automatically take over.',
-                    style: GoogleFonts.inter(fontSize: 12, color: Colors.grey, height: 1.4),
+              // 2. Mode Explanation Card
+              if (_aiMode == 'default') ...[
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: primaryColor.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: primaryColor.withOpacity(0.25)),
                   ),
-                  const SizedBox(height: 14),
-                  Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: _buildEngineSelectCard(
-                          title: 'Google Gemini',
-                          isPrimary: _primaryProvider == 'gemini',
-                          isDark: isDark,
-                          accentColor: const Color(0xFF3B82F6),
-                          icon: Icons.auto_awesome_rounded,
-                          onTap: () => _onSetPrimary('gemini'),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: primaryColor.withOpacity(0.18),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.verified_rounded, color: primaryColor, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Server Cloud AI Active',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white : Colors.black87,
+                                  ),
+                                ),
+                                Text(
+                                  'Zero configuration required',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: primaryColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'You are connected to the official Cloud AI engine. Smart OCR Receipt Scanning, Multilingual Voice Expense Logging, Market Price Analyzer, and the Financial Advisor Chatbot work seamlessly out of the box.',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          height: 1.45,
+                          color: isDark ? Colors.white70 : Colors.black87,
                         ),
                       ),
+                      const SizedBox(height: 14),
+                      Divider(color: primaryColor.withOpacity(0.2), height: 1),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Icon(Icons.bolt_rounded, size: 16, color: Colors.amber[700]),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'If you experience traffic delays, switch to "Custom (My Own Keys)" anytime for dedicated personal quotas.',
+                              style: GoogleFonts.inter(
+                                fontSize: 11.5,
+                                color: isDark ? Colors.white60 : Colors.black54,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                // Custom Keys Info Banner
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3B82F6).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF3B82F6).withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.shield_outlined, color: Color(0xFF3B82F6), size: 22),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: _buildEngineSelectCard(
-                          title: 'NVIDIA NIM',
-                          isPrimary: _primaryProvider == 'nvidia',
-                          isDark: isDark,
-                          accentColor: const Color(0xFF10B981),
-                          icon: Icons.memory_rounded,
-                          onTap: () => _onSetPrimary('nvidia'),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Private Device Storage',
+                              style: GoogleFonts.outfit(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              'Your personal API keys are encrypted and saved strictly on your local phone storage.',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                height: 1.4,
+                                color: isDark ? Colors.white70 : Colors.black87,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
+                ),
 
-            const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
-            // 3. Google Gemini Setup Card
-            _buildSectionHeader('GOOGLE GEMINI CONFIGURATION', isDark),
-            const SizedBox(height: 8),
-            _buildProviderCard(
-              isDark: isDark,
-              cardBg: cardBg,
-              borderColor: borderColor,
-              providerName: 'Google Gemini',
-              accentColor: const Color(0xFF3B82F6),
-              icon: Icons.auto_awesome_rounded,
-              isPrimary: _primaryProvider == 'gemini',
-              selectedModel: _selectedGeminiModel,
-              availableModels: AiConfigService.availableGeminiModels,
-              onModelChanged: (val) {
-                if (val != null) setState(() => _selectedGeminiModel = val);
-              },
-              keyController: _geminiKeyController,
-              obscureKey: _obscureGeminiKey,
-              onToggleObscure: () => setState(() => _obscureGeminiKey = !_obscureGeminiKey),
-              helpUrl: 'https://aistudio.google.com/app/apikey',
-              helpText: 'Get free Gemini API Key → Google AI Studio',
-            ),
-
-            const SizedBox(height: 24),
-
-            // 4. NVIDIA NIM Setup Card
-            _buildSectionHeader('NVIDIA NIM CONFIGURATION', isDark),
-            const SizedBox(height: 8),
-            _buildProviderCard(
-              isDark: isDark,
-              cardBg: cardBg,
-              borderColor: borderColor,
-              providerName: 'NVIDIA NIM',
-              accentColor: const Color(0xFF10B981),
-              icon: Icons.memory_rounded,
-              isPrimary: _primaryProvider == 'nvidia',
-              selectedModel: _selectedNvidiaModel,
-              availableModels: AiConfigService.availableNvidiaModels,
-              onModelChanged: (val) {
-                if (val != null) setState(() => _selectedNvidiaModel = val);
-              },
-              keyController: _nvidiaKeyController,
-              obscureKey: _obscureNvidiaKey,
-              onToggleObscure: () => setState(() => _obscureNvidiaKey = !_obscureNvidiaKey),
-              helpUrl: 'https://build.nvidia.com',
-              helpText: 'Get free NVIDIA NIM Key (nvapi-...) → build.nvidia.com',
-            ),
-
-            const SizedBox(height: 32),
-
-            // 5. Action Buttons (Test & Save)
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _checkConfigurationStatus,
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: primaryColor),
-                      foregroundColor: primaryColor,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                    icon: const Icon(Icons.speed_rounded, size: 20),
-                    label: Text(
-                      'Test Keys',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
+                // Engine Priority Selector
+                _buildSectionHeader('CUSTOM ENGINE PRIORITY & FAILOVER', isDark),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: cardBg,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Select primary provider. The other provider will automatically serve as backup failover.',
+                        style: GoogleFonts.inter(fontSize: 12, color: Colors.grey, height: 1.4),
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildEngineSelectCard(
+                              title: 'Google Gemini',
+                              isPrimary: _primaryProvider == 'gemini',
+                              isDark: isDark,
+                              accentColor: const Color(0xFF3B82F6),
+                              icon: Icons.auto_awesome_rounded,
+                              onTap: () => _onSetPrimary('gemini'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildEngineSelectCard(
+                              title: 'NVIDIA NIM',
+                              isPrimary: _primaryProvider == 'nvidia',
+                              isDark: isDark,
+                              accentColor: const Color(0xFF10B981),
+                              icon: Icons.memory_rounded,
+                              onTap: () => _onSetPrimary('nvidia'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: ElevatedButton.icon(
-                    onPressed: _isSaving ? null : _saveConfiguration,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      foregroundColor: Colors.black87,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      elevation: 1,
+
+                const SizedBox(height: 20),
+
+                // Google Gemini Setup Card
+                _buildSectionHeader('GOOGLE GEMINI CONFIGURATION', isDark),
+                const SizedBox(height: 8),
+                _buildProviderCard(
+                  isDark: isDark,
+                  cardBg: cardBg,
+                  borderColor: borderColor,
+                  providerName: 'Google Gemini',
+                  accentColor: const Color(0xFF3B82F6),
+                  icon: Icons.auto_awesome_rounded,
+                  isPrimary: _primaryProvider == 'gemini',
+                  selectedModel: _selectedGeminiModel,
+                  availableModels: AiConfigService.availableGeminiModels,
+                  onModelChanged: (val) {
+                    if (val != null) setState(() => _selectedGeminiModel = val);
+                  },
+                  keyController: _geminiKeyController,
+                  obscureKey: _obscureGeminiKey,
+                  onToggleObscure: () => setState(() => _obscureGeminiKey = !_obscureGeminiKey),
+                  helpUrl: 'https://aistudio.google.com/app/apikey',
+                  helpText: 'Get free Gemini API Key → Google AI Studio',
+                ),
+
+                const SizedBox(height: 20),
+
+                // NVIDIA NIM Setup Card
+                _buildSectionHeader('NVIDIA NIM CONFIGURATION', isDark),
+                const SizedBox(height: 8),
+                _buildProviderCard(
+                  isDark: isDark,
+                  cardBg: cardBg,
+                  borderColor: borderColor,
+                  providerName: 'NVIDIA NIM',
+                  accentColor: const Color(0xFF10B981),
+                  icon: Icons.memory_rounded,
+                  isPrimary: _primaryProvider == 'nvidia',
+                  selectedModel: _selectedNvidiaModel,
+                  availableModels: AiConfigService.availableNvidiaModels,
+                  onModelChanged: (val) {
+                    if (val != null) setState(() => _selectedNvidiaModel = val);
+                  },
+                  keyController: _nvidiaKeyController,
+                  obscureKey: _obscureNvidiaKey,
+                  onToggleObscure: () => setState(() => _obscureNvidiaKey = !_obscureNvidiaKey),
+                  helpUrl: 'https://build.nvidia.com',
+                  helpText: 'Get free NVIDIA NIM Key (nvapi-...) → build.nvidia.com',
+                ),
+              ],
+
+              const SizedBox(height: 20),
+
+              // 3. Response Language Selector
+              _buildSectionHeader('AI ADVISOR RESPONSE LANGUAGE', isDark),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Preferred conversational language for AI Financial Advisor and Voice explanations:',
+                      style: GoogleFonts.inter(fontSize: 12, color: Colors.grey, height: 1.4),
                     ),
-                    icon: _isSaving
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black87),
-                          )
-                        : const Icon(Icons.save_rounded, size: 20),
-                    label: Text(
-                      _isSaving ? 'Saving...' : 'Save Configuration',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF161920) : const Color(0xFFF1F4F9),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _responseLanguage,
+                          isExpanded: true,
+                          dropdownColor: isDark ? const Color(0xFF1E232E) : Colors.white,
+                          items: const [
+                            DropdownMenuItem(value: 'English', child: Text('English (Default)')),
+                            DropdownMenuItem(value: 'Hinglish', child: Text('Hinglish (Hindi in English Script)')),
+                            DropdownMenuItem(value: 'Hindi', child: Text('Hindi (हिंदी)')),
+                            DropdownMenuItem(value: 'Bengali', child: Text('Bengali (বাংলা)')),
+                            DropdownMenuItem(value: 'Marathi', child: Text('Marathi (मराठी)')),
+                            DropdownMenuItem(value: 'Gujarati', child: Text('Gujarati (ગુજરાતી)')),
+                            DropdownMenuItem(value: 'Tamil', child: Text('Tamil (தமிழ்)')),
+                            DropdownMenuItem(value: 'Telugu', child: Text('Telugu (తెలుగు)')),
+                            DropdownMenuItem(value: 'Kannada', child: Text('Kannada (ಕನ್ನಡ)')),
+                            DropdownMenuItem(value: 'Malayalam', child: Text('Malayalam (മലയാളം)')),
+                            DropdownMenuItem(value: 'Punjabi', child: Text('Punjabi (ਪੰਜਾਬੀ)')),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() => _responseLanguage = val);
+                            }
+                          },
+                        ),
+                      ),
                     ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // 4. Action Buttons
+              if (_aiMode == 'custom') ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _checkConfigurationStatus,
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: primaryColor),
+                          foregroundColor: primaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        icon: const Icon(Icons.speed_rounded, size: 20),
+                        label: Text(
+                          'Test Keys',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        onPressed: _isSaving ? null : _saveConfiguration,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          foregroundColor: Colors.black87,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 1,
+                        ),
+                        icon: _isSaving
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black87),
+                              )
+                            : const Icon(Icons.save_rounded, size: 20),
+                        label: Text(
+                          _isSaving ? 'Saving...' : 'Save Configuration',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ] else ...[
+                ElevatedButton.icon(
+                  onPressed: _isSaving ? null : _saveConfiguration,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: Colors.black87,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 1,
+                  ),
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black87),
+                        )
+                      : const Icon(Icons.check_circle_rounded, size: 20),
+                  label: Text(
+                    _isSaving ? 'Saving...' : 'Save & Use Default AI',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
                   ),
                 ),
               ],
-            ),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModeTab({
+    required String title,
+    required String subtitle,
+    required bool isSelected,
+    required IconData icon,
+    required Color accentColor,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (isDark ? const Color(0xFF222836) : Colors.white)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: isSelected
+              ? Border.all(color: accentColor, width: 1.5)
+              : Border.all(color: Colors.transparent),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  )
+                ]
+              : [],
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: isSelected ? accentColor : (isDark ? Colors.white54 : Colors.black45),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                color: isSelected
+                    ? (isDark ? Colors.white : Colors.black87)
+                    : (isDark ? Colors.white60 : Colors.black54),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: isSelected ? accentColor : Colors.grey,
+              ),
+            ),
           ],
         ),
       ),

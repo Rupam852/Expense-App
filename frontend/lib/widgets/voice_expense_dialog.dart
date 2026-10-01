@@ -253,14 +253,19 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
       });
       HapticFeedback.lightImpact();
     } else {
+      final errorMsg = result['error']?.toString() ?? 'Could not parse expense. Please try again.';
       setState(() {
-        _statusMessage = result['error'] ?? 'Could not parse expense. Please try again.';
+        _statusMessage = errorMsg;
       });
-      CustomToast.show(
-        context,
-        result['error'] ?? 'AI Parsing failed. Try speaking clearly.',
-        isError: true,
-      );
+      if (aiService.isServerBusyError(errorMsg)) {
+        showAiServerBusyDialog(context, onRetry: () => _processVoiceInput(text));
+      } else {
+        CustomToast.show(
+          context,
+          errorMsg,
+          isError: true,
+        );
+      }
     }
   }
 

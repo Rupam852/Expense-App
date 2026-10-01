@@ -56,6 +56,7 @@ class AiConfigService with ChangeNotifier {
   ];
 
   // Configuration Fields
+  String _aiMode = 'default'; // 'default' (Server Cloud AI) | 'custom' (My Own Keys)
   String _geminiModel = 'gemini-2.5-flash';
   String _geminiApiKey = '';
   String _nvidiaModel = 'meta/llama-3.2-11b-vision-instruct';
@@ -64,9 +65,22 @@ class AiConfigService with ChangeNotifier {
   String _secondaryProvider = 'nvidia'; // 'nvidia' | 'gemini'
   String _responseLanguage = 'English'; // Default English
 
+  // Remote Server Default AI Configuration (Safely fetched from Supabase, never hardcoded in code)
+  String _defaultGeminiApiKey = '';
+  String _defaultNvidiaApiKey = '';
+  String _defaultPrimaryProvider = 'gemini';
+  String _defaultSecondaryProvider = 'nvidia';
+  String _defaultGeminiModel = 'gemini-2.5-flash';
+  String _defaultNvidiaModel = 'meta/llama-3.3-70b-instruct';
+  bool _isFetchingRemoteDefaults = false;
+
   bool _isInitialized = false;
 
   // Getters
+  String get aiMode => _aiMode;
+  bool get isCustomMode => _aiMode == 'custom';
+  bool get isDefaultMode => _aiMode == 'default';
+
   String get geminiModel => _geminiModel;
   String get geminiApiKey => _geminiApiKey;
   String get nvidiaModel => _nvidiaModel;
@@ -76,15 +90,55 @@ class AiConfigService with ChangeNotifier {
   String get responseLanguage => _responseLanguage;
   bool get isInitialized => _isInitialized;
 
-  bool get hasAnyApiKey => _geminiApiKey.trim().isNotEmpty || _nvidiaApiKey.trim().isNotEmpty;
-  bool get hasPrimaryApiKey => _primaryProvider == 'gemini' 
-      ? _geminiApiKey.trim().isNotEmpty 
-      : _nvidiaApiKey.trim().isNotEmpty;
-  bool get hasSecondaryConfig => _secondaryProvider == 'gemini'
-      ? _geminiApiKey.trim().isNotEmpty
-      : _nvidiaApiKey.trim().isNotEmpty;
+  // Effective Configuration (Seamlessly uses Custom when enabled and configured, otherwise uses Default Server AI)
+  String get effectiveGeminiApiKey {
+    if (isCustomMode && _geminiApiKey.trim().isNotEmpty) {
+      return _geminiApiKey.trim();
+    }
+    return _defaultGeminiApiKey.trim().isNotEmpty ? _defaultGeminiApiKey.trim() : _geminiApiKey.trim();
+  }
+
+  String get effectiveNvidiaApiKey {
+    if (isCustomMode && _nvidiaApiKey.trim().isNotEmpty) {
+      return _nvidiaApiKey.trim();
+    }
+    return _defaultNvidiaApiKey.trim().isNotEmpty ? _defaultNvidiaApiKey.trim() : _nvidiaApiKey.trim();
+  }
+
+  String get effectiveGeminiModel {
+    if (isCustomMode && _geminiModel.trim().isNotEmpty) {
+      return _geminiModel.trim();
+    }
+    return _defaultGeminiModel.trim().isNotEmpty ? _defaultGeminiModel.trim() : 'gemini-2.5-flash';
+  }
+
+  String get effectiveNvidiaModel {
+    if (isCustomMode && _nvidiaModel.trim().isNotEmpty) {
+      return _nvidiaModel.trim();
+    }
+    return _defaultNvidiaModel.trim().isNotEmpty ? _defaultNvidiaModel.trim() : 'meta/llama-3.2-11b-vision-instruct';
+  }
+
+  String get effectivePrimaryProvider {
+    if (isCustomMode) return _primaryProvider;
+    return _defaultPrimaryProvider;
+  }
+
+  String get effectiveSecondaryProvider {
+    if (isCustomMode) return _secondaryProvider;
+    return _defaultSecondaryProvider;
+  }
+
+  bool get hasAnyApiKey => effectiveGeminiApiKey.isNotEmpty || effectiveNvidiaApiKey.isNotEmpty;
+  bool get hasPrimaryApiKey => effectivePrimaryProvider == 'gemini' 
+      ? effectiveGeminiApiKey.isNotEmpty 
+      : effectiveNvidiaApiKey.isNotEmpty;
+  bool get hasSecondaryConfig => effectiveSecondaryProvider == 'gemini'
+      ? effectiveGeminiApiKey.isNotEmpty
+      : effectiveNvidiaApiKey.isNotEmpty;
 
   // SharedPreferences Keys (Strictly local phone storage)
+  static const String _keyAiMode = 'local_ai_mode';
   static const String _keyGeminiModel = 'local_ai_gemini_model';
   static const String _keyGeminiApiKey = 'local_ai_gemini_api_key';
   static const String _keyNvidiaModel = 'local_ai_nvidia_model';
@@ -96,7 +150,8 @@ class AiConfigService with ChangeNotifier {
   Future<void> _loadConfig() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _geminiModel = prefs.getString(_keyGeminiModel) ?? 'gemini-2.0-flash';
+      _aiMode = prefs.getString(_keyAiMode) ?? 'default';
+      _geminiModel = prefs.getString(_keyGeminiModel) ?? 'gemini-2.5-flash';
       _geminiApiKey = prefs.getString(_keyGeminiApiKey) ?? '';
       _nvidiaModel = prefs.getString(_keyNvidiaModel) ?? 'meta/llama-3.2-11b-vision-instruct';
       _nvidiaApiKey = prefs.getString(_keyNvidiaApiKey) ?? '';
@@ -115,11 +170,70 @@ class AiConfigService with ChangeNotifier {
 
       _isInitialized = true;
       notifyListeners();
+
+      // Silently fetch remote defaults from Supabase in background
+      fetchRemoteDefaultConfig();
     } catch (e) {
       debugPrint('[AiConfigService] Error loading local config: $e');
       _isInitialized = true;
       notifyListeners();
+      fetchRemoteDefaultConfig();
     }
+  }
+
+  /// Silently fetches the server default AI fallback keys from Supabase `app_remote_config` table
+  Future<void> fetchRemoteDefaultConfig({bool force = false}) async {
+    if (_isFetchingRemoteDefaults && !force) return;
+    _isFetchingRemoteDefaults = true;
+
+    try {
+      final url = Uri.parse('${SupabaseService.supabaseUrl}/rest/v1/app_remote_config?select=*');
+      final response = await http.get(
+        url,
+        headers: {
+          'apikey': SupabaseService.supabaseAnonKey,
+          'Authorization': 'Bearer ${SupabaseService.supabaseAnonKey}',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> list = json.decode(response.body);
+        for (final row in list) {
+          final key = row['key']?.toString();
+          final val = row['value']?.toString() ?? '';
+          if (key == 'default_gemini_api_key' && val.isNotEmpty) _defaultGeminiApiKey = val;
+          if (key == 'default_nvidia_api_key' && val.isNotEmpty) _defaultNvidiaApiKey = val;
+          if (key == 'default_primary_provider' && val.isNotEmpty) _defaultPrimaryProvider = val;
+          if (key == 'default_secondary_provider' && val.isNotEmpty) _defaultSecondaryProvider = val;
+          if (key == 'default_gemini_model' && val.isNotEmpty) _defaultGeminiModel = val;
+          if (key == 'default_nvidia_model' && val.isNotEmpty) _defaultNvidiaModel = val;
+        }
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('[AiConfigService] Error fetching remote default AI config from Supabase: $e');
+    } finally {
+      _isFetchingRemoteDefaults = false;
+    }
+  }
+
+  /// Switch AI Mode ('default' or 'custom') with automatic safety check
+  Future<void> setAiMode(String mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mode == 'custom') {
+      // If user tries to set custom but has 0 keys entered, keep on default
+      if (_geminiApiKey.trim().isEmpty && _nvidiaApiKey.trim().isEmpty) {
+        _aiMode = 'default';
+        await prefs.setString(_keyAiMode, 'default');
+      } else {
+        _aiMode = 'custom';
+        await prefs.setString(_keyAiMode, 'custom');
+      }
+    } else {
+      _aiMode = 'default';
+      await prefs.setString(_keyAiMode, 'default');
+    }
+    notifyListeners();
   }
 
   // Set AI response language
@@ -166,9 +280,10 @@ class AiConfigService with ChangeNotifier {
     required String nvidiaApiKey,
     required String primaryProvider,
     required String secondaryProvider,
+    String aiMode = 'custom',
   }) async {
     try {
-      _geminiModel = geminiModel.trim().isNotEmpty ? geminiModel.trim() : 'gemini-2.0-flash';
+      _geminiModel = geminiModel.trim().isNotEmpty ? geminiModel.trim() : 'gemini-2.5-flash';
       _geminiApiKey = geminiApiKey.trim();
       _nvidiaModel = nvidiaModel.trim().isNotEmpty ? nvidiaModel.trim() : 'meta/llama-3.2-11b-vision-instruct';
       _nvidiaApiKey = nvidiaApiKey.trim();
@@ -181,7 +296,15 @@ class AiConfigService with ChangeNotifier {
         _secondaryProvider = 'nvidia';
       }
 
+      // Automatically determine AI mode: if at least 1 key is present, set to custom; otherwise default
+      if (_geminiApiKey.isNotEmpty || _nvidiaApiKey.isNotEmpty) {
+        _aiMode = aiMode;
+      } else {
+        _aiMode = 'default';
+      }
+
       final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyAiMode, _aiMode);
       await prefs.setString(_keyGeminiModel, _geminiModel);
       await prefs.setString(_keyGeminiApiKey, _geminiApiKey);
       await prefs.setString(_keyNvidiaModel, _nvidiaModel);
@@ -211,6 +334,8 @@ class AiConfigService with ChangeNotifier {
       if (cloudGeminiKey != null && cloudGeminiKey.isNotEmpty) {
         _geminiApiKey = cloudGeminiKey;
         await prefs.setString(_keyGeminiApiKey, cloudGeminiKey);
+        _aiMode = 'custom';
+        await prefs.setString(_keyAiMode, 'custom');
         changed = true;
       }
 
@@ -218,6 +343,8 @@ class AiConfigService with ChangeNotifier {
       if (cloudNvidiaKey != null && cloudNvidiaKey.isNotEmpty) {
         _nvidiaApiKey = cloudNvidiaKey;
         await prefs.setString(_keyNvidiaApiKey, cloudNvidiaKey);
+        _aiMode = 'custom';
+        await prefs.setString(_keyAiMode, 'custom');
         changed = true;
       }
 
@@ -521,15 +648,16 @@ class AiConfigService with ChangeNotifier {
       return {
         'success': false,
         'error': 'No AI API Key found. Please add your Gemini or NVIDIA API Key in Settings → AI Configuration to use AI Receipt Scanning.',
+        'isServerBusy': false,
       };
     }
 
     // Execute with Primary Provider first
-    final primary = _primaryProvider;
-    final secondary = _secondaryProvider;
+    final primary = effectivePrimaryProvider;
+    final secondary = effectiveSecondaryProvider;
 
-    final primaryKey = primary == 'gemini' ? _geminiApiKey : _nvidiaApiKey;
-    final secondaryKey = secondary == 'gemini' ? _geminiApiKey : _nvidiaApiKey;
+    final primaryKey = primary == 'gemini' ? effectiveGeminiApiKey : effectiveNvidiaApiKey;
+    final secondaryKey = secondary == 'gemini' ? effectiveGeminiApiKey : effectiveNvidiaApiKey;
 
     Map<String, dynamic>? primaryResult;
     if (primaryKey.trim().isNotEmpty) {
@@ -559,15 +687,23 @@ class AiConfigService with ChangeNotifier {
         return secondaryResult;
       }
 
+      final isBusy = isServerBusyError(primaryResult?['error']) || isServerBusyError(secondaryResult['error']);
       return {
         'success': false,
-        'error': 'Both Primary ($primary) and Backup ($secondary) AI engines failed.\nPrimary: ${primaryResult?['error'] ?? 'No key'}\nBackup: ${secondaryResult['error']}',
+        'isServerBusy': isBusy,
+        'error': isBusy
+            ? 'Server AI is currently experiencing high traffic. Please try again in a moment or add your personal free API Key.'
+            : 'Both Primary ($primary) and Backup ($secondary) AI engines failed.\nPrimary: ${primaryResult?['error'] ?? 'No key'}\nBackup: ${secondaryResult['error']}',
       };
     }
 
+    final isBusy = isServerBusyError(primaryResult?['error']);
     return {
       'success': false,
-      'error': primaryResult?['error'] ?? 'Configured AI provider failed. Please check your API Key in Settings.',
+      'isServerBusy': isBusy,
+      'error': isBusy
+          ? 'Server AI is currently experiencing high traffic. Please try again in a moment or add your personal free API Key.'
+          : (primaryResult?['error'] ?? 'Configured AI provider failed. Please check your API Key in Settings.'),
     };
   }
 
@@ -619,12 +755,13 @@ JSON structure:
 }''';
 
     if (provider == 'gemini') {
-      if (_geminiApiKey.isEmpty) {
-        return {'success': false, 'error': 'Gemini API Key is missing. Please add it in Settings → AI Configuration.'};
+      final key = effectiveGeminiApiKey;
+      if (key.isEmpty) {
+        return {'success': false, 'error': 'Gemini API Key is missing.'};
       }
 
-      // Build model candidate list: user-selected model first, then all available Gemini models
-      final candidateModels = <String>[_geminiModel];
+      // Build model candidate list: user-selected/effective model first, then all available Gemini models
+      final candidateModels = <String>[effectiveGeminiModel];
       for (final m in availableGeminiModels) {
         if (!candidateModels.contains(m)) {
           candidateModels.add(m);
@@ -636,7 +773,7 @@ JSON structure:
         debugPrint('[AiConfigService] Attempting Gemini OCR with model: $model');
         try {
           final url = Uri.parse(
-            'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$_geminiApiKey',
+            'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$key',
           );
           final payload = {
             'contents': [
@@ -685,12 +822,13 @@ JSON structure:
 
       return {'success': false, 'error': 'All Gemini models failed ($lastGeminiError).'};
     } else if (provider == 'nvidia') {
-      if (_nvidiaApiKey.isEmpty) {
-        return {'success': false, 'error': 'NVIDIA API Key is missing. Please add it in Settings → AI Configuration.'};
+      final key = effectiveNvidiaApiKey;
+      if (key.isEmpty) {
+        return {'success': false, 'error': 'NVIDIA API Key is missing.'};
       }
 
-      // Build model candidate list: user-selected model first, then all available NVIDIA models
-      final candidateModels = <String>[_nvidiaModel];
+      // Build model candidate list: user-selected/effective model first, then all available NVIDIA models
+      final candidateModels = <String>[effectiveNvidiaModel];
       for (final m in availableNvidiaModels) {
         if (!candidateModels.contains(m)) {
           candidateModels.add(m);
@@ -771,11 +909,11 @@ JSON structure:
       };
     }
 
-    final primary = _primaryProvider;
-    final secondary = _secondaryProvider;
+    final primary = effectivePrimaryProvider;
+    final secondary = effectiveSecondaryProvider;
 
-    final primaryKey = primary == 'gemini' ? _geminiApiKey : _nvidiaApiKey;
-    final secondaryKey = secondary == 'gemini' ? _geminiApiKey : _nvidiaApiKey;
+    final primaryKey = primary == 'gemini' ? effectiveGeminiApiKey : effectiveNvidiaApiKey;
+    final secondaryKey = secondary == 'gemini' ? effectiveGeminiApiKey : effectiveNvidiaApiKey;
 
     Map<String, dynamic>? primaryResult;
     if (primaryKey.trim().isNotEmpty) {
@@ -878,11 +1016,12 @@ JSON format:
 }''';
 
     if (provider == 'gemini') {
-      if (_geminiApiKey.isEmpty) {
+      final geminiKey = effectiveGeminiApiKey;
+      if (geminiKey.isEmpty) {
         return {'success': false, 'error': 'Gemini API Key is missing. Please add it in Settings → AI Configuration.'};
       }
 
-      final candidateModels = <String>[_geminiModel];
+      final candidateModels = <String>[effectiveGeminiModel];
       for (final m in availableGeminiModels) {
         if (!candidateModels.contains(m)) {
           candidateModels.add(m);
@@ -894,7 +1033,7 @@ JSON format:
         debugPrint('[AiConfigService] Attempting Gemini Voice parsing with model: $model');
         try {
           final url = Uri.parse(
-            'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$_geminiApiKey',
+            'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$geminiKey',
           );
           final payload = {
             'contents': [
@@ -946,11 +1085,12 @@ JSON format:
     }
 
     if (provider == 'nvidia') {
-      if (_nvidiaApiKey.isEmpty) {
+      final nvidiaKey = effectiveNvidiaApiKey;
+      if (nvidiaKey.isEmpty) {
         return {'success': false, 'error': 'NVIDIA NIM API Key is missing. Please add it in Settings → AI Configuration.'};
       }
 
-      final candidateModels = <String>[_nvidiaModel];
+      final candidateModels = <String>[effectiveNvidiaModel];
       for (final m in availableNvidiaModels) {
         if (!candidateModels.contains(m)) {
           candidateModels.add(m);
@@ -978,7 +1118,7 @@ JSON format:
             url,
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': 'Bearer $_nvidiaApiKey',
+              'Authorization': 'Bearer $nvidiaKey',
             },
             body: json.encode(payload),
           ).timeout(const Duration(seconds: 25));
@@ -1029,11 +1169,11 @@ JSON format:
       };
     }
 
-    final primary = _primaryProvider;
-    final secondary = _secondaryProvider;
+    final primary = effectivePrimaryProvider;
+    final secondary = effectiveSecondaryProvider;
 
-    final primaryKey = primary == 'gemini' ? _geminiApiKey : _nvidiaApiKey;
-    final secondaryKey = secondary == 'gemini' ? _geminiApiKey : _nvidiaApiKey;
+    final primaryKey = primary == 'gemini' ? effectiveGeminiApiKey : effectiveNvidiaApiKey;
+    final secondaryKey = secondary == 'gemini' ? effectiveGeminiApiKey : effectiveNvidiaApiKey;
 
     Map<String, dynamic>? primaryResult;
     if (primaryKey.trim().isNotEmpty) {
@@ -1110,11 +1250,12 @@ $financialContextSummary
 4. If the user asks something outside personal finance or their expenses, politely steer the conversation back to their money management.''';
 
     if (provider == 'gemini') {
-      if (_geminiApiKey.isEmpty) {
+      final geminiKey = effectiveGeminiApiKey;
+      if (geminiKey.isEmpty) {
         return {'success': false, 'error': 'Gemini API Key is missing. Please add it in Settings → AI Configuration.'};
       }
 
-      final candidateModels = <String>[_geminiModel];
+      final candidateModels = <String>[effectiveGeminiModel];
       for (final m in availableGeminiModels) {
         if (!candidateModels.contains(m)) {
           candidateModels.add(m);
@@ -1158,7 +1299,7 @@ $financialContextSummary
         debugPrint('[AiConfigService] Attempting Gemini Financial Advisor with model: $model');
         try {
           final url = Uri.parse(
-            'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$_geminiApiKey',
+            'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$geminiKey',
           );
           final payload = {
             'contents': contents,
@@ -1203,11 +1344,12 @@ $financialContextSummary
     }
 
     if (provider == 'nvidia') {
-      if (_nvidiaApiKey.isEmpty) {
+      final nvidiaKey = effectiveNvidiaApiKey;
+      if (nvidiaKey.isEmpty) {
         return {'success': false, 'error': 'NVIDIA NIM API Key is missing. Please add it in Settings → AI Configuration.'};
       }
 
-      final candidateModels = <String>[_nvidiaModel];
+      final candidateModels = <String>[effectiveNvidiaModel];
       for (final m in availableNvidiaModels) {
         if (!candidateModels.contains(m)) {
           candidateModels.add(m);
@@ -1245,7 +1387,7 @@ $financialContextSummary
             url,
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': 'Bearer $_nvidiaApiKey',
+              'Authorization': 'Bearer $nvidiaKey',
             },
             body: json.encode(payload),
           ).timeout(const Duration(seconds: 30));
@@ -1304,8 +1446,8 @@ $financialContextSummary
       };
     }
 
-    final primary = _primaryProvider;
-    final secondary = _secondaryProvider;
+    final primary = effectivePrimaryProvider;
+    final secondary = effectiveSecondaryProvider;
 
     final primaryResult = await _invokeProviderForMarketVoice(
       provider: primary,
@@ -1411,11 +1553,12 @@ Return ONLY a valid single JSON object without markdown fences, backticks, or ot
 }''';
 
     if (provider == 'gemini') {
-      if (_geminiApiKey.isEmpty) {
+      final geminiKey = effectiveGeminiApiKey;
+      if (geminiKey.isEmpty) {
         return {'success': false, 'error': 'Gemini API Key is missing. Please add it in Settings → AI Configuration.'};
       }
 
-      final candidateModels = <String>[_geminiModel];
+      final candidateModels = <String>[effectiveGeminiModel];
       for (final m in availableGeminiModels) {
         if (!candidateModels.contains(m)) {
           candidateModels.add(m);
@@ -1427,7 +1570,7 @@ Return ONLY a valid single JSON object without markdown fences, backticks, or ot
         debugPrint('[AiConfigService] Attempting Gemini Market Voice with model: $model');
         try {
           final url = Uri.parse(
-            'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$_geminiApiKey',
+            'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$geminiKey',
           );
           final payload = {
             'contents': [
@@ -1477,11 +1620,12 @@ Return ONLY a valid single JSON object without markdown fences, backticks, or ot
     }
 
     if (provider == 'nvidia') {
-      if (_nvidiaApiKey.isEmpty) {
+      final nvidiaKey = effectiveNvidiaApiKey;
+      if (nvidiaKey.isEmpty) {
         return {'success': false, 'error': 'NVIDIA NIM API Key is missing. Please add it in Settings → AI Configuration.'};
       }
 
-      final candidateModels = <String>[_nvidiaModel];
+      final candidateModels = <String>[effectiveNvidiaModel];
       for (final m in availableNvidiaModels) {
         if (!candidateModels.contains(m)) {
           candidateModels.add(m);
@@ -1506,7 +1650,7 @@ Return ONLY a valid single JSON object without markdown fences, backticks, or ot
             url,
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': 'Bearer $_nvidiaApiKey',
+              'Authorization': 'Bearer $nvidiaKey',
             },
             body: json.encode(payload),
           ).timeout(const Duration(seconds: 30));
@@ -1532,3 +1676,20 @@ Return ONLY a valid single JSON object without markdown fences, backticks, or ot
 
     return {'success': false, 'error': 'Unknown provider: $provider'};
   }
+
+  /// Helper to check if an AI failure error was due to server busy / rate limit / quota exhaustion
+  bool isServerBusyError(dynamic error) {
+    if (error == null) return false;
+    final str = error.toString().toLowerCase();
+    return str.contains('429') ||
+        str.contains('quota') ||
+        str.contains('rate limit') ||
+        str.contains('resource_exhausted') ||
+        str.contains('overloaded') ||
+        str.contains('service unavailable') ||
+        str.contains('503') ||
+        str.contains('all gemini models failed') ||
+        str.contains('all nvidia nim models failed') ||
+        str.contains('both primary');
+  }
+}

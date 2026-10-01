@@ -243,11 +243,15 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
         modelUsed: result['modelUsed'],
       );
     } else {
+      final errorMsg = result['error']?.toString() ?? 'Failed to get response from AI. Please check your AI Configuration in Settings.';
       aiMsg = ChatMessage(
-        text: '⚠️ ${result['error'] ?? 'Failed to get response from AI. Please check your API key in Settings.'}',
+        text: '⚠️ $errorMsg',
         isUser: false,
         timestamp: DateTime.now(),
       );
+      if (aiService.isServerBusyError(errorMsg)) {
+        showAiServerBusyDialog(context, onRetry: () => _sendMessage(userQuestion: question));
+      }
     }
 
     setState(() {

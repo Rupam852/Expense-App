@@ -910,7 +910,12 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
       HapticFeedback.mediumImpact();
       CustomToast.show(context, 'Mandi rates parsed successfully! 🎉');
     } else {
-      CustomToast.show(context, result['error'] ?? 'Could not parse market voice.', isError: true);
+      final errorMsg = result['error']?.toString() ?? 'Could not parse market voice.';
+      if (aiService.isServerBusyError(errorMsg)) {
+        showAiServerBusyDialog(context, onRetry: () => _parseVoiceWithAi(text));
+      } else {
+        CustomToast.show(context, errorMsg, isError: true);
+      }
     }
   }
 

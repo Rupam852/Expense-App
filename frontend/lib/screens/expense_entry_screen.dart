@@ -169,11 +169,13 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   }
 
   void _showApiErrorDialog(BuildContext context, String actualError, UserProvider userProvider) {
-    final hasSecondary = userProvider.userGeminiApiKeySecondary != null &&
-        userProvider.userGeminiApiKeySecondary!.isNotEmpty;
-    final displayMessage = hasSecondary
-        ? actualError
-        : 'Your API fail.\n\nDetails: $actualError';
+    final aiService = AiConfigService.instance;
+    if (aiService.isServerBusyError(actualError)) {
+      showAiServerBusyDialog(context);
+      return;
+    }
+
+    final displayMessage = 'The AI service encountered an issue while scanning your receipt.\n\nDetails: $actualError';
 
     showDialog(
       context: context,
@@ -192,7 +194,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'API Processing Error',
+                  'AI Processing Error',
                   style: GoogleFonts.outfit(
                     fontWeight: FontWeight.bold,
                     fontSize: 20,
@@ -213,17 +215,15 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              if (!hasSecondary) ...[
-                const SizedBox(height: 16),
-                Text(
-                  'Tip: You can add an optional backup secondary API key in settings. If the primary key fails, the backup key will automatically keep the AI features working.',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                    height: 1.4,
-                  ),
+              const SizedBox(height: 16),
+              Text(
+                'Tip: You can configure your own personal API key in AI Configuration for faster responses and dedicated rate limits.',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  height: 1.4,
                 ),
-              ],
+              ),
             ],
           ),
           actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -235,24 +235,25 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                 style: GoogleFonts.inter(fontWeight: FontWeight.w600),
               ),
             ),
-            if (!hasSecondary)
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  _showGeminiKeyDialog(context, userProvider);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                child: Text(
-                  'Add Backup Key',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AiConfigScreen()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
+              child: Text(
+                'AI Settings',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              ),
+            ),
           ],
         );
       },
