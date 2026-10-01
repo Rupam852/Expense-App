@@ -693,51 +693,114 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       style: GoogleFonts.inter(fontSize: 13, height: 1.4),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            Share.shareXFiles([XFile(localPath)], text: 'Expense statement for $oldMonthLabel');
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                            foregroundColor: Theme.of(context).primaryColor,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00D09C).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF00D09C).withValues(alpha: 0.25)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.check_circle_rounded, color: Color(0xFF00D09C), size: 16),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Saved to Phone Downloads folder',
+                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF00D09C)),
+                                ),
+                              ),
+                            ],
                           ),
-                          icon: const Icon(Icons.share_outlined, size: 18),
-                          label: Text(
-                            'Share PDF',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Icon(Icons.cloud_done_rounded, color: Color(0xFF38BDF8), size: 16),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Backed up in Invoice History',
+                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF38BDF8)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Share.shareXFiles([XFile(localPath)], text: 'Expense statement for $oldMonthLabel');
+                            },
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            icon: const Icon(Icons.share_outlined, size: 16),
+                            label: Text(
+                              'Share PDF',
+                              style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12),
+                            ),
                           ),
                         ),
-                        ElevatedButton.icon(
-                          onPressed: () async {
-                            final result = await OpenFile.open(localPath);
-                            if (result.type != ResultType.done && context.mounted) {
-                              CustomToast.show(
-                                context,
-                                'Cannot open PDF: ${result.message}',
-                                isError: true,
-                              );
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).primaryColor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                          icon: const Icon(Icons.picture_as_pdf, size: 18),
-                          label: Text(
-                            'View Statement',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              final result = await OpenFile.open(localPath);
+                              if (result.type != ResultType.done && context.mounted) {
+                                CustomToast.show(
+                                  context,
+                                  'Cannot open PDF: ${result.message}',
+                                  isError: true,
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(context).primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              elevation: 0,
+                            ),
+                            icon: const Icon(Icons.picture_as_pdf, size: 16),
+                            label: Text(
+                              'View PDF',
+                              style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12),
+                            ),
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.of(dialogCtx).pop();
+                          _clearRolloverData(context, currentMonthStr);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00D09C),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          elevation: 0,
+                        ),
+                        icon: const Icon(Icons.cleaning_services_outlined, size: 18),
+                        label: Text(
+                          'Start New Month Now 🚀',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -2228,7 +2291,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     subtitle: 'Download your statement as PDF, Excel (.xlsx), or CSV',
                     onTap: () {
                       Navigator.of(ctx).pop();
-                      ExportStatementDialog.show(context, expenses: expenseProvider.expenses);
+                      ExportStatementDialog.show(context);
                     },
                   ),
                   const SizedBox(height: 8),
@@ -3021,343 +3084,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       },
     );
-  }
 
-  void _showSyncOptionsBottomSheet(BuildContext context, ExpenseProvider expenseProvider) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF181B22) : Colors.white,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(24),
-              topRight: Radius.circular(24),
-            ),
-            border: Border.all(
-              color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
-              width: 1,
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Cloud Sync Options',
-                style: GoogleFonts.outfit(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Apne offline data ko cloud par backup karein ya fir cloud backup ko phone mein restore karein.',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: Colors.grey,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              
-              // Premium Yellow Warning Box
-              Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF2C2415) : const Color(0xFFFFFDF5),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isDark ? const Color(0xFFF59E0B).withOpacity(0.2) : const Color(0xFFF59E0B).withOpacity(0.4),
-                  ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(
-                      Icons.warning_amber_rounded,
-                      color: Color(0xFFF59E0B),
-                      size: 20,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Manual Sync & Deletion Notice:',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? const Color(0xFFFBBF24) : const Color(0xFF78350F),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          _buildWarningBullet(
-                            isDark: isDark,
-                            title: 'No Auto-Sync on Delete: ',
-                            body: 'Deleting transactions locally will not update the cloud database automatically.',
-                          ),
-                          const SizedBox(height: 6),
-                          _buildWarningBullet(
-                            isDark: isDark,
-                            title: 'Database Merger: ',
-                            body: 'Tapping "Backup to Cloud" or pulling down to refresh on the home screen will merge your local database with the cloud.',
-                          ),
-                          const SizedBox(height: 6),
-                          _buildWarningBullet(
-                            isDark: isDark,
-                            title: 'Cloud Database Cleanup: ',
-                            body: 'During this manual merge, any transactions previously deleted on this device will be permanently removed from the cloud database as well.',
-                          ),
-                          const SizedBox(height: 6),
-                          _buildWarningBullet(
-                            isDark: isDark,
-                            title: 'Data Recovery Option: ',
-                            body: 'If you accidentally delete local transactions, you can still recover them by tapping "Restore from Cloud" before initiating a manual sync or refresh.',
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Option 1: Backup to Cloud (Upload Sync)
-              InkWell(
-                onTap: () async {
-                  Navigator.of(context).pop();
-                  final success = await expenseProvider.triggerManualSync();
-                  if (context.mounted) {
-                    CustomToast.show(
-                      context,
-                      success
-                          ? 'Backup successful!'
-                          : expenseProvider.syncErrorMessage ?? 'Sync failed.',
-                      isError: !success,
-                    );
-                  }
-                },
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: const Color(0xFF00D09C).withOpacity(0.2),
-                    ),
-                    color: const Color(0xFF00D09C).withOpacity(0.05),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF00D09C).withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.cloud_upload_outlined,
-                          color: Color(0xFF00D09C),
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Backup to Cloud',
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Local phone data ko cloud backup ke sath secure merge karein.',
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.chevron_right, color: Colors.grey),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              
-              // Option 2: Restore from Cloud (Download Import)
-              InkWell(
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _showRestoreConfirmation(context, expenseProvider);
-                },
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.blue.withOpacity(0.2),
-                    ),
-                    color: Colors.blue.withOpacity(0.05),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.cloud_download_outlined,
-                          color: Colors.blue,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Restore from Cloud',
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Phone ka local data clear karke cloud backup restore karein.',
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.chevron_right, color: Colors.grey),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showRestoreConfirmation(BuildContext context, ExpenseProvider expenseProvider) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    showDialog(
-      context: context,
-      builder: (dialogCtx) {
-        return AlertDialog(
-          backgroundColor: isDark ? const Color(0xFF181B22) : Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: BorderSide(
-              color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
-            ),
-          ),
-          title: Row(
-            children: [
-              const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 28),
-              const SizedBox(width: 12),
-              Text(
-                'Restore Cloud Backup?',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
-              ),
-            ],
-          ),
-          content: Text(
-            'Kya aap sure hain? Cloud backup download karne se aapka local phone data delete ho jayega aur cloud wala data overwrite ho jayega.',
-            style: GoogleFonts.inter(fontSize: 13, height: 1.4),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogCtx).pop(),
-              child: Text(
-                'Cancel',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.of(dialogCtx).pop(); // Dismiss confirmation dialog using dialog context safely
-                
-                setState(() {
-                  _isGlobalLoading = true;
-                  _globalLoadingMessage = 'Restoring from Cloud...';
-                });
-
-                bool success = false;
-                try {
-                  success = await expenseProvider.restoreFromCloud();
-                } catch (e) {
-                  print('Restore error: $e');
-                } finally {
-                  if (mounted) {
-                    setState(() {
-                      _isGlobalLoading = false;
-                    });
-                  }
-                }
-
-                if (context.mounted) {
-                  CustomToast.show(
-                    context,
-                    success 
-                        ? 'Backup restored successfully!' 
-                        : expenseProvider.syncErrorMessage ?? 'Restore failed.',
-                    isError: !success,
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text(
-                'Restore',
-                style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
