@@ -155,7 +155,7 @@ class _ReportIssueModalState extends State<ReportIssueModal> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = const Color(0xFF00D09C);
+    const primaryColor = Color(0xFF00D09C);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(

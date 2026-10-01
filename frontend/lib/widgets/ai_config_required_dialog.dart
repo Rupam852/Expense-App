@@ -18,7 +18,7 @@ bool checkAndPromptAiConfig(BuildContext context) {
 /// Shown if neither server remote config nor custom keys are available.
 void showAiConfigRequiredDialog(BuildContext context) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
-  final primaryColor = const Color(0xFF00D09C);
+  const primaryColor = Color(0xFF00D09C);
 
   showDialog(
     context: context,
@@ -155,7 +155,7 @@ void showAiConfigRequiredDialog(BuildContext context) {
 /// with option to Retry or Set their own free API key for instant responses.
 void showAiServerBusyDialog(BuildContext context, {VoidCallback? onRetry}) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
-  final primaryColor = const Color(0xFF00D09C);
+  const primaryColor = Color(0xFF00D09C);
 
   showDialog(
     context: context,
@@ -177,9 +177,9 @@ void showAiServerBusyDialog(BuildContext context, {VoidCallback? onRetry}) {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withOpacity(0.15),
+                      color: Colors.amber.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                      border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
