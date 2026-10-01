@@ -551,6 +551,9 @@ class _AddSplitBillSheetState extends State<_AddSplitBillSheet> {
   final _otherPayerNameController = TextEditingController();
   final _otherPayerUpiController = TextEditingController();
 
+  // For User's Own Share when Someone Else paid
+  final _myShareController = TextEditingController(text: '0');
+
   final List<TextEditingController> _friendControllers = [];
   final List<TextEditingController> _customAmountControllers = [];
   String _splitType = 'equal'; // 'equal' or 'custom'
@@ -590,6 +593,11 @@ class _AddSplitBillSheetState extends State<_AddSplitBillSheet> {
         _otherPayerNameController.text = b.paidBy;
         _otherPayerUpiController.text = b.payerUpiId ?? '';
 
+        final youParticipant = b.participants.where((p) => p.name.trim().toLowerCase() == 'you').firstOrNull;
+        if (youParticipant != null) {
+          _myShareController.text = youParticipant.shareAmount.toStringAsFixed(0);
+        }
+
         for (var p in b.participants) {
           if (p.name.trim().toLowerCase() != 'you' &&
               p.name.trim().toLowerCase() != b.paidBy.trim().toLowerCase()) {
@@ -612,6 +620,7 @@ class _AddSplitBillSheetState extends State<_AddSplitBillSheet> {
     _noteController.dispose();
     _otherPayerNameController.dispose();
     _otherPayerUpiController.dispose();
+    _myShareController.dispose();
     for (var c in _friendControllers) {
       c.dispose();
     }
@@ -718,7 +727,7 @@ class _AddSplitBillSheetState extends State<_AddSplitBillSheet> {
           .toList();
 
       final List<SplitParticipant> participants = [];
-      // Total people = Payer + You + Other Friends
+      // Total people = Payer + You + otherFriends
       final totalPeople = otherFriends.length + 2;
 
       if (_splitType == 'equal') {
@@ -729,16 +738,16 @@ class _AddSplitBillSheetState extends State<_AddSplitBillSheet> {
           participants.add(SplitParticipant(name: f, shareAmount: equalShare, isSettled: false));
         }
       } else {
+        final myShare = double.tryParse(_myShareController.text.trim()) ?? 0.0;
         double friendsTotal = 0.0;
         for (int i = 0; i < otherFriends.length; i++) {
           final amt = double.tryParse(_customAmountControllers[i].text.trim()) ?? 0.0;
           friendsTotal += amt;
           participants.add(SplitParticipant(name: otherFriends[i], shareAmount: amt, isSettled: false));
         }
-        final remainingTotal = (total - friendsTotal).clamp(0.0, total);
-        final halfRem = remainingTotal / 2;
-        participants.insert(0, SplitParticipant(name: payerName, shareAmount: halfRem, isSettled: true));
-        participants.insert(1, SplitParticipant(name: 'You', shareAmount: halfRem, isSettled: false));
+        final payerShare = (total - myShare - friendsTotal).clamp(0.0, total);
+        participants.insert(0, SplitParticipant(name: payerName, shareAmount: payerShare, isSettled: true));
+        participants.insert(1, SplitParticipant(name: 'You', shareAmount: myShare, isSettled: false));
       }
 
       final bill = SplitBill(
@@ -761,7 +770,7 @@ class _AddSplitBillSheetState extends State<_AddSplitBillSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = const Color(0xFF00D09C);
+    const primaryColor = Color(0xFF00D09C);
     final cardBg = isDark ? const Color(0xFF1E232E) : const Color(0xFFF8FAFC);
     final borderColor = isDark ? const Color(0xFF2C3242) : const Color(0xFFE2E8F0);
 
@@ -1167,7 +1176,7 @@ class _AddSplitBillSheetState extends State<_AddSplitBillSheet> {
                 Text(
                   _isPaidByMe
                       ? 'SPLIT WITH (YOU + FRIENDS)'
-                      : 'OTHER FRIENDS SPLITTING WITH (YOU + PAYER)',
+                      : 'PARTICIPANTS SPLITTING WITH (YOU + PAYER)',
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -1176,6 +1185,88 @@ class _AddSplitBillSheetState extends State<_AddSplitBillSheet> {
                   ),
                 ),
                 const SizedBox(height: 8),
+
+                // If Someone Else paid, explicitly show 'You (Me)' as auto-included participant
+                if (!_isPaidByMe) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6366F1).withValues(alpha: isDark ? 0.15 : 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 15,
+                          backgroundColor: const Color(0xFF6366F1).withValues(alpha: 0.2),
+                          child: const Icon(Icons.person_rounded, size: 16, color: Color(0xFF6366F1)),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'You (Me)',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF6366F1).withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'Auto-included (You owe payer)',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFF6366F1),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _splitType == 'equal'
+                                    ? 'Splits equally with payer & friends'
+                                    : 'Enter your share amount on right',
+                                style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (_splitType == 'custom') ...[
+                          const SizedBox(width: 8),
+                          SizedBox(
+                            width: 100,
+                            child: TextField(
+                              controller: _myShareController,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              decoration: InputDecoration(
+                                hintText: 'Your ₹',
+                                prefixText: '₹',
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
 
                 ...List.generate(_friendControllers.length, (index) {
                   return Padding(
@@ -1187,7 +1278,7 @@ class _AddSplitBillSheetState extends State<_AddSplitBillSheet> {
                           child: TextField(
                             controller: _friendControllers[index],
                             decoration: InputDecoration(
-                              hintText: 'Friend Name ${index + 1}',
+                              hintText: _isPaidByMe ? 'Friend Name ${index + 1}' : 'Extra Friend ${index + 1} (Optional)',
                               prefixIcon: const Icon(Icons.person_outline, size: 18),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -1210,7 +1301,7 @@ class _AddSplitBillSheetState extends State<_AddSplitBillSheet> {
                             ),
                           ),
                         ],
-                        if (_friendControllers.length > 1)
+                        if ((_isPaidByMe && _friendControllers.length > 1) || (!_isPaidByMe && _friendControllers.isNotEmpty))
                           IconButton(
                             icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 20),
                             onPressed: () => _removeFriendField(index),
