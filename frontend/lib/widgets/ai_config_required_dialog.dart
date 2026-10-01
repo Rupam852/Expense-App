@@ -44,7 +44,7 @@ void showAiConfigRequiredDialog(BuildContext context) {
                     border: Border.all(color: primaryColor.withValues(alpha: 0.3), width: 1.5),
                   ),
                   child: Icon(
-                    Icons.psychology_alt_rounded,
+                    Icons.auto_awesome_rounded,
                     color: primaryColor,
                     size: 34,
                   ),

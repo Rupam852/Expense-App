@@ -274,9 +274,9 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
                               ),
                               child: const Center(
                                 child: Icon(
-                                  Icons.psychology_alt_rounded,
+                                  Icons.chat_bubble_rounded,
                                   color: Color(0xFF00D09C),
-                                  size: 25,
+                                  size: 24,
                                 ),
                               ),
                             ),

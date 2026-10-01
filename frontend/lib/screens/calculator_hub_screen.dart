@@ -1703,7 +1703,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.psychology_alt_rounded, color: Colors.white, size: 24),
+                  const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 24),
                   const SizedBox(width: 8),
                   Text(
                     str.aiVoiceAnalyzer,

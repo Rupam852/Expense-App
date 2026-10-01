@@ -2472,7 +2472,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   _buildToolTile(
                     ctx: ctx,
                     isDark: isDark,
-                    icon: Icons.psychology_alt_rounded,
+                    icon: Icons.chat_bubble_rounded,
                     iconColor: const Color(0xFF6366F1),
                     title: 'GrowwAI Financial Advisor',
                     subtitle: 'AI expense ledger analysis & money-saving insights',
