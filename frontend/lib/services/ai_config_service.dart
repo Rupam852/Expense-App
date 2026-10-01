@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'supabase_service.dart';
 
 class ModelCheckResult {
   final String provider;
@@ -154,7 +155,7 @@ class AiConfigService with ChangeNotifier {
     notifyListeners();
   }
 
-  // Save all custom settings to Phone Storage
+  // Save all custom settings to Phone Storage & Cloud
   Future<bool> saveCustomConfiguration({
     required String geminiModel,
     required String geminiApiKey,
@@ -186,10 +187,91 @@ class AiConfigService with ChangeNotifier {
       await prefs.setString(_keySecondaryProvider, _secondaryProvider);
 
       notifyListeners();
+
+      // Automatically backup to Supabase Cloud profile
+      _backupToCloudQuietly();
+
       return true;
     } catch (e) {
       debugPrint('[AiConfigService] Error saving custom config: $e');
       return false;
+    }
+  }
+
+  /// Automatically sync AI config and keys from Supabase Cloud Profile on login / restore
+  Future<void> syncFromCloudProfile(Map<String, dynamic> profile) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      bool changed = false;
+
+      final cloudGeminiKey = profile['gemini_api_key']?.toString().trim();
+      if (cloudGeminiKey != null && cloudGeminiKey.isNotEmpty) {
+        _geminiApiKey = cloudGeminiKey;
+        await prefs.setString(_keyGeminiApiKey, cloudGeminiKey);
+        changed = true;
+      }
+
+      final cloudNvidiaKey = profile['nvidia_api_key']?.toString().trim();
+      if (cloudNvidiaKey != null && cloudNvidiaKey.isNotEmpty) {
+        _nvidiaApiKey = cloudNvidiaKey;
+        await prefs.setString(_keyNvidiaApiKey, cloudNvidiaKey);
+        changed = true;
+      }
+
+      final cloudGeminiModel = profile['gemini_model']?.toString().trim();
+      if (cloudGeminiModel != null && cloudGeminiModel.isNotEmpty) {
+        _geminiModel = cloudGeminiModel;
+        await prefs.setString(_keyGeminiModel, cloudGeminiModel);
+        changed = true;
+      }
+
+      final cloudNvidiaModel = profile['nvidia_model']?.toString().trim();
+      if (cloudNvidiaModel != null && cloudNvidiaModel.isNotEmpty) {
+        _nvidiaModel = cloudNvidiaModel;
+        await prefs.setString(_keyNvidiaModel, cloudNvidiaModel);
+        changed = true;
+      }
+
+      final cloudPrimary = profile['primary_provider']?.toString().trim();
+      if (cloudPrimary != null && (cloudPrimary == 'gemini' || cloudPrimary == 'nvidia')) {
+        _primaryProvider = cloudPrimary;
+        _secondaryProvider = cloudPrimary == 'gemini' ? 'nvidia' : 'gemini';
+        await prefs.setString(_keyPrimaryProvider, _primaryProvider);
+        await prefs.setString(_keySecondaryProvider, _secondaryProvider);
+        changed = true;
+      }
+
+      final cloudLang = profile['response_language']?.toString().trim();
+      if (cloudLang != null && cloudLang.isNotEmpty) {
+        _responseLanguage = cloudLang;
+        await prefs.setString(_keyResponseLanguage, cloudLang);
+        changed = true;
+      }
+
+      if (changed) {
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('[AiConfigService] Error syncing from cloud profile: $e');
+    }
+  }
+
+  /// Quietly sync AI configuration to Supabase Cloud profile
+  Future<void> _backupToCloudQuietly() async {
+    try {
+      final supabase = SupabaseService.instance;
+      if (supabase.currentUser != null) {
+        await supabase.upsertProfile({
+          'gemini_api_key': _geminiApiKey,
+          'nvidia_api_key': _nvidiaApiKey,
+          'gemini_model': _geminiModel,
+          'nvidia_model': _nvidiaModel,
+          'primary_provider': _primaryProvider,
+          'response_language': _responseLanguage,
+        });
+      }
+    } catch (e) {
+      debugPrint('[AiConfigService] Quiet cloud backup error: $e');
     }
   }
 

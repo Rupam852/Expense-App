@@ -189,9 +189,19 @@ class UserProvider with ChangeNotifier {
         'name': profile?['name'] ?? user.userMetadata?['name'] ?? user.userMetadata?['full_name'] ?? 'User',
         'photo_url': profile?['photo_url'] ?? user.userMetadata?['avatar_url'],
         'gemini_api_key': profile?['gemini_api_key'],
-        'gemini_api_key_secondary': profile?['gemini_api_key_secondary'],
+        'gemini_api_key_secondary': profile?['gemini_api_key_secondary'] ?? profile?['nvidia_api_key'],
+        'nvidia_api_key': profile?['nvidia_api_key'],
+        'gemini_model': profile?['gemini_model'],
+        'nvidia_model': profile?['nvidia_model'],
+        'primary_provider': profile?['primary_provider'],
+        'response_language': profile?['response_language'],
       };
       _isAuthenticated = true;
+
+      // Sync AI Keys & Configuration into AiConfigService
+      if (profile != null) {
+        await AiConfigService.instance.syncFromCloudProfile(profile);
+      }
 
       // Cache Gemini keys locally
       final prefs = await SharedPreferences.getInstance();
