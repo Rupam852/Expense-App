@@ -1608,6 +1608,25 @@ class DatabaseHelper {
     }).toList();
   }
 
+  Future<int> updateAiChatMessageText({
+    required String id,
+    required String text,
+  }) async {
+    try {
+      final db = await instance.database;
+      final encText = encryptVal(text);
+      return await db.update(
+        'ai_chat_messages',
+        {'text': encText},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    } catch (e) {
+      debugPrint('[DatabaseHelper] Error updating AI chat message text: $e');
+      return 0;
+    }
+  }
+
   Future<Map<String, dynamic>> getAiChatStats() async {
     try {
       final db = await instance.database;

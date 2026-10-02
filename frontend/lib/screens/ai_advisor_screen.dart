@@ -45,6 +45,7 @@ class AiActionProposal {
 }
 
 class ChatMessage {
+  final String id;
   final String text;
   final bool isUser;
   final DateTime timestamp;
@@ -52,14 +53,23 @@ class ChatMessage {
   AiActionProposal? actionProposal;
 
   ChatMessage({
+    String? id,
     required this.text,
     required this.isUser,
     required this.timestamp,
     this.modelUsed,
     this.actionProposal,
-  });
+  }) : id = id ?? '${timestamp.millisecondsSinceEpoch}_${isUser ? 'user' : 'ai'}';
+
+  String toRawText() {
+    if (actionProposal != null) {
+      return '$text\n<!--ACTION_INTENT:${json.encode(actionProposal!.toJson())}-->';
+    }
+    return text;
+  }
 
   static ChatMessage fromRawText({
+    String? id,
     required String rawText,
     required bool isUser,
     required DateTime timestamp,
@@ -67,6 +77,7 @@ class ChatMessage {
   }) {
     if (isUser) {
       return ChatMessage(
+        id: id,
         text: rawText,
         isUser: true,
         timestamp: timestamp,
@@ -90,6 +101,7 @@ class ChatMessage {
     }
 
     return ChatMessage(
+      id: id,
       text: cleanText,
       isUser: false,
       timestamp: timestamp,
@@ -156,6 +168,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
           for (var row in rows) {
             _messages.add(
               ChatMessage.fromRawText(
+                id: row['id']?.toString(),
                 rawText: row['text']?.toString() ?? '',
                 isUser: (row['is_user'] == 1),
                 timestamp: DateTime.tryParse(row['timestamp']?.toString() ?? '') ?? DateTime.now(),
@@ -453,9 +466,11 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
 
     ChatMessage aiMsg;
     String rawReply = '';
+    final aiMsgId = '${DateTime.now().millisecondsSinceEpoch}_ai';
     if (result['success'] == true && result['reply'] != null) {
       rawReply = result['reply'] as String;
       aiMsg = ChatMessage.fromRawText(
+        id: aiMsgId,
         rawText: rawReply,
         isUser: false,
         timestamp: DateTime.now(),
@@ -465,6 +480,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       final errorMsg = result['error']?.toString() ?? 'Failed to get response from AI. Please check your AI Configuration in Settings.';
       rawReply = '⚠️ $errorMsg';
       aiMsg = ChatMessage(
+        id: aiMsgId,
         text: rawReply,
         isUser: false,
         timestamp: DateTime.now(),
@@ -481,8 +497,8 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
 
     // Persist AI response in SQLite (preserving action metadata for persistence)
     await DatabaseHelper.instance.insertAiChatMessage(
-      id: '${DateTime.now().millisecondsSinceEpoch}_ai',
-      text: rawReply,
+      id: aiMsg.id,
+      text: aiMsg.toRawText(),
       isUser: false,
       timestamp: aiMsg.timestamp,
       modelUsed: aiMsg.modelUsed,
@@ -1349,6 +1365,12 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       setState(() {
         proposal.isExecuted = true;
       });
+
+      // Persist executed proposal state to SQLite so reopening chat/app remembers it
+      await DatabaseHelper.instance.updateAiChatMessageText(
+        id: msg.id,
+        text: msg.toRawText(),
+      );
     } catch (e) {
       debugPrint('[AiAdvisorScreen] Error executing AI action: $e');
       if (mounted) {
@@ -1560,11 +1582,15 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                 ),
                 const SizedBox(width: 8),
                 TextButton(
-                  onPressed: () {
+                  onPressed: () async {
                     HapticFeedback.lightImpact();
                     setState(() {
                       proposal.isDismissed = true;
                     });
+                    await DatabaseHelper.instance.updateAiChatMessageText(
+                      id: msg.id,
+                      text: msg.toRawText(),
+                    );
                   },
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.grey,
