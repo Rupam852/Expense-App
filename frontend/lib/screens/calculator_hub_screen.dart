@@ -1909,50 +1909,11 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
           const SizedBox(height: 14),
         ],
 
-        // Samples chips
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _buildSampleVoiceChip('“Ek kg begun 60 taka, potol 40 taka kilo, duto dim 16 taka”', isDark),
-              const SizedBox(width: 8),
-              _buildSampleVoiceChip('“Aloo 30 rs kilo, pyaaz 50 rs 2 kg, tamatar 40 rs 500g”', isDark),
-              const SizedBox(width: 8),
-              _buildSampleVoiceChip('“Adrak 20 rs 100g, mirchi 10 rs 50g, oil 160 rs litre”', isDark),
-              const SizedBox(width: 8),
-              _buildSampleVoiceChip('“Apple 180 per kg, banana 60 dozen, milk 64 per litre”', isDark),
-            ],
-          ),
-        ),
-        const SizedBox(height: 18),
-
         // Parsed AI Result Cards
         if (_aiParsedResult != null) ...[
           _buildAiParsedResultView(isDark),
         ],
       ],
-    );
-  }
-
-  Widget _buildSampleVoiceChip(String text, bool isDark) {
-    return InkWell(
-      onTap: () {
-        final clean = text.replaceAll('“', '').replaceAll('”', '');
-        _processMandiVoice(clean);
-      },
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E222D) : const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0)),
-        ),
-        child: Text(
-          text,
-          style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[300] : Colors.grey[700]),
-        ),
-      ),
     );
   }
 
