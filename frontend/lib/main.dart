@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'theme/groww_theme.dart';
 import 'services/user_provider.dart';
@@ -13,13 +15,25 @@ import 'widgets/custom_toast.dart';
 import 'services/supabase_service.dart';
 import 'services/notification_service.dart';
 
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  debugPrint('[FCM Background] Handling message: ${message.messageId}');
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Local Notifications
+  // Initialize Firebase
+  await Firebase.initializeApp();
+
+  // Register FCM Background Handler for closed/killed state notifications
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // Initialize Local Notifications & FCM foreground listeners
   await NotificationService.instance.initialize();
 
-  // Initialize Supabase (replaces Firebase)
+  // Initialize Supabase
   await Supabase.initialize(
     url: SupabaseService.supabaseUrl,
     anonKey: SupabaseService.supabaseAnonKey,

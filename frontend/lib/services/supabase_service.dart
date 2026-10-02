@@ -122,6 +122,22 @@ class SupabaseService {
     });
   }
 
+  /// Sync Firebase Cloud Messaging (FCM) push token to Supabase users_profile
+  Future<void> saveFcmToken(String token) async {
+    final uid = currentUser?.id;
+    if (uid == null || token.trim().isEmpty) return;
+    try {
+      await _client.from('users_profile').upsert({
+        'id': uid,
+        'fcm_token': token.trim(),
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+      print('[Supabase] FCM token synced successfully for user: $uid');
+    } catch (e) {
+      print('[Supabase] Error saving FCM token: $e');
+    }
+  }
+
   Future<void> deleteAccount() async {
     final uid = currentUser?.id;
     if (uid == null) return;

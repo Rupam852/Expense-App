@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/subscription_item.dart';
@@ -8,6 +10,7 @@ import '../models/budget.dart';
 import '../models/expense.dart';
 import '../models/khata_entry.dart';
 import 'app_update_service.dart';
+import 'supabase_service.dart';
 
 class NotificationService with ChangeNotifier {
   static final NotificationService instance = NotificationService._internal();
@@ -54,7 +57,10 @@ class NotificationService with ChangeNotifier {
   bool _appUpdatesEnabled = true;
   String _notificationLanguage = 'en'; // 'en', 'hi', 'bn', 'hinglish'
 
+  String? _fcmToken;
+
   // Getters
+  String? get fcmToken => _fcmToken;
   bool get masterEnabled => _masterEnabled;
   bool get budgetAlertsEnabled => _budgetAlertsEnabled;
   bool get subscriptionAlertsEnabled => _subscriptionAlertsEnabled;
@@ -96,6 +102,7 @@ class NotificationService with ChangeNotifier {
       _newMonthStartAlertsEnabled = prefs.getBool('notif_new_month_start_enabled') ?? true;
       _appUpdatesEnabled = prefs.getBool('notif_app_updates_enabled') ?? true;
       _notificationLanguage = prefs.getString('notif_language') ?? 'en';
+      _fcmToken = prefs.getString('cached_fcm_token');
       notifyListeners();
     } catch (e) {
       debugPrint('[NotificationService] Error loading preferences: $e');
@@ -178,6 +185,13 @@ class NotificationService with ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('notif_language', langCode);
+  }
+
+  /// Manually sync FCM token to Supabase for the current logged in user
+  Future<void> syncFcmTokenToCloud() async {
+    if (_fcmToken != null && _fcmToken!.isNotEmpty) {
+      await SupabaseService.instance.saveFcmToken(_fcmToken!);
+    }
   }
 
   Future<void> initialize() async {
@@ -263,9 +277,148 @@ class NotificationService with ChangeNotifier {
         }
       }
 
+      // Initialize Firebase Cloud Messaging
+      await _initFcm();
+
       _isInitialized = true;
     } catch (e) {
       debugPrint('[NotificationService] Initialization error: $e');
+    }
+  }
+
+  /// Initialize Firebase Cloud Messaging (FCM)
+  Future<void> _initFcm() async {
+    try {
+      final fcm = FirebaseMessaging.instance;
+
+      // Request FCM permission
+      final settings = await fcm.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
+      debugPrint('[NotificationService] FCM Authorization status: ${settings.authorizationStatus}');
+
+      // Get initial device FCM token
+      _fcmToken = await fcm.getToken();
+      if (_fcmToken != null) {
+        debugPrint('[NotificationService] FCM Device Token: $_fcmToken');
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_fcm_token', _fcmToken!);
+        await SupabaseService.instance.saveFcmToken(_fcmToken!);
+      }
+
+      // Listen for token refreshes
+      fcm.onTokenRefresh.listen((newToken) async {
+        _fcmToken = newToken;
+        debugPrint('[NotificationService] FCM Token refreshed: $newToken');
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_fcm_token', newToken);
+        await SupabaseService.instance.saveFcmToken(newToken);
+      });
+
+      // Handle Foreground FCM Messages
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        debugPrint('[NotificationService] Foreground FCM message received: ${message.messageId}');
+        _handleForegroundFcmMessage(message);
+      });
+
+      // Handle FCM notification taps when app is in background/resumed
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        debugPrint('[NotificationService] Notification opened from background: ${message.data}');
+        _handleFcmMessageClick(message);
+      });
+
+      // Check cold-boot launch from notification
+      final initialMessage = await fcm.getInitialMessage();
+      if (initialMessage != null) {
+        debugPrint('[NotificationService] Cold boot via notification: ${initialMessage.data}');
+        _handleFcmMessageClick(initialMessage);
+      }
+    } catch (e) {
+      debugPrint('[NotificationService] FCM initialization error: $e');
+    }
+  }
+
+  /// Display a heads-up local notification when FCM arrives in Foreground
+  void _handleForegroundFcmMessage(RemoteMessage message) {
+    if (!_masterEnabled) return;
+
+    final notification = message.notification;
+    final data = message.data;
+
+    final title = notification?.title ?? data['title'] ?? 'Grow Expense';
+    final body = notification?.body ?? data['body'] ?? '';
+    final channelId = data['channel_id'] ?? data['channelId'] ?? _generalChannelId;
+    final payload = data['payload'] ?? data['type'] ?? 'fcm_message';
+
+    String targetChannel = _generalChannelId;
+    String targetName = _generalChannelName;
+    String targetDesc = _generalChannelDescription;
+    Importance targetImportance = Importance.high;
+
+    if (channelId == _channelId || data['type'] == 'app_update') {
+      if (!_appUpdatesEnabled) return;
+      targetChannel = _channelId;
+      targetName = _channelName;
+      targetDesc = _channelDescription;
+    } else if (channelId == _subChannelId || data['type'] == 'subscription') {
+      if (!_subscriptionAlertsEnabled) return;
+      targetChannel = _subChannelId;
+      targetName = _subChannelName;
+      targetDesc = _subChannelDescription;
+      targetImportance = Importance.max;
+    } else if (channelId == _budgetChannelId || data['type'] == 'budget') {
+      if (!_budgetAlertsEnabled) return;
+      targetChannel = _budgetChannelId;
+      targetName = _budgetChannelName;
+      targetDesc = _budgetChannelDescription;
+    } else if (channelId == _khataChannelId || data['type'] == 'khata') {
+      if (!_khataAlertsEnabled) return;
+      targetChannel = _khataChannelId;
+      targetName = _khataChannelName;
+      targetDesc = _khataChannelDescription;
+    }
+
+    final bigTextStyleInformation = BigTextStyleInformation(
+      body,
+      htmlFormatBigText: false,
+      contentTitle: title,
+      htmlFormatContentTitle: false,
+      summaryText: targetName,
+      htmlFormatSummaryText: false,
+    );
+
+    final androidDetails = AndroidNotificationDetails(
+      targetChannel,
+      targetName,
+      channelDescription: targetDesc,
+      importance: targetImportance,
+      priority: Priority.high,
+      showWhen: true,
+      icon: '@mipmap/ic_launcher',
+      styleInformation: bigTextStyleInformation,
+      color: const Color(0xFF00D09C),
+    );
+
+    final notificationDetails = NotificationDetails(android: androidDetails);
+    final notificationId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+    _notificationsPlugin.show(
+      notificationId,
+      title,
+      body,
+      notificationDetails,
+      payload: payload,
+    );
+  }
+
+  /// Handle Notification Payload Clicks
+  void _handleFcmMessageClick(RemoteMessage message) async {
+    final type = message.data['type'] ?? message.data['payload'];
+    if (type == 'app_update') {
+      await AppUpdateService.instance.openDownloadLink();
     }
   }
 

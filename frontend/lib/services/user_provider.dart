@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'biometric_service.dart';
 import 'supabase_service.dart';
 import 'ai_config_service.dart';
+import 'notification_service.dart';
 
 class UserProvider with ChangeNotifier {
   final _supabase = SupabaseService.instance;
@@ -210,6 +211,8 @@ class UserProvider with ChangeNotifier {
       }
 
       await _saveProfileLocally();
+      // Sync device FCM token with user profile in Supabase
+      NotificationService.instance.syncFcmTokenToCloud();
       notifyListeners();
     } catch (e) {
       print('[UserProvider] Quiet profile fetch failed (offline?): $e');

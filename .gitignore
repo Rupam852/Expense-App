@@ -29,6 +29,8 @@ frontend/.dart_tool/
 # Firebase config files — NEVER commit these (contain API keys)
 google-services.json
 **/google-services.json
+*-firebase-adminsdk-*.json
+**/*-firebase-adminsdk-*.json
 **/android/.gradle
 **/android/local.properties
 
