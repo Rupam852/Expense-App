@@ -112,8 +112,62 @@ router.get('/generate', authenticateToken, async (req, res) => {
       console.warn('[PDF Invoice] Failed to fetch live exchange rates, using defaults:', err.message);
     }
 
+    function formatDesc(desc, maxLines = 3, maxCharsPerLine = 32) {
+      if (!desc || desc.trim().length === 0) return 'N/A';
+      const trimmed = desc.trim();
+      const paragraphs = trimmed.split(/\r?\n/);
+      const lines = [];
+      let hasMore = false;
+
+      for (const para of paragraphs) {
+        if (lines.length >= maxLines) {
+          hasMore = true;
+          break;
+        }
+        const words = para.split(/\s+/);
+        let currentLine = '';
+
+        for (const word of words) {
+          if (lines.length >= maxLines) {
+            hasMore = true;
+            break;
+          }
+          const testLine = currentLine ? `${currentLine} ${word}` : word;
+          if (testLine.length <= maxCharsPerLine) {
+            currentLine = testLine;
+          } else {
+            if (currentLine) {
+              lines.push(currentLine);
+              if (lines.length >= maxLines) {
+                hasMore = true;
+                currentLine = '';
+                break;
+              }
+            }
+            currentLine = word;
+          }
+        }
+        if (currentLine) {
+          if (lines.length < maxLines) {
+            lines.push(currentLine);
+          } else {
+            hasMore = true;
+          }
+        }
+      }
+
+      if (hasMore && lines.length > 0) {
+        const last = lines[lines.length - 1];
+        lines[lines.length - 1] = last.length > (maxCharsPerLine - 3)
+          ? `${last.substring(0, maxCharsPerLine - 3)}...`
+          : `${last}...`;
+      }
+
+      return lines.length > 0 ? lines.join('\n') : 'N/A';
+    }
+
     expensesRes.rows.forEach(exp => {
-      const descVal = (exp.description && exp.description.trim().length > 0) ? exp.description.trim() : 'N/A';
+      const descVal = formatDesc(exp.description);
       doc.fontSize(9);
       const descHeight = doc.heightOfString(descVal, { width: 235 });
       const rowHeight = Math.max(20, descHeight + 12);
