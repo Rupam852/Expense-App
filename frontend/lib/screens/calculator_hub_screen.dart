@@ -167,6 +167,24 @@ class CalcHubStrings {
   final String estReturns;
   final String totalFutureValue;
 
+  // History Tab & Filters
+  final String historyAll;
+  final String historyMandiVoice;
+  final String historyUnitRates;
+  final String historyEmi;
+  final String historyGst;
+  final String historyDiscount;
+  final String historySip;
+  final String historyStandard;
+  final String historyClearTitle;
+  final String historyClearConfirm;
+  final String historyClearAll;
+  final String historyNoRecords;
+  final String historyCopied;
+  final String historyCopy;
+  final String historyDeleted;
+  final String historyCleared;
+
   const CalcHubStrings({
     required this.hubTitle,
     required this.tabStandard,
@@ -223,6 +241,22 @@ class CalcHubStrings {
     required this.investedAmount,
     required this.estReturns,
     required this.totalFutureValue,
+    required this.historyAll,
+    required this.historyMandiVoice,
+    required this.historyUnitRates,
+    required this.historyEmi,
+    required this.historyGst,
+    required this.historyDiscount,
+    required this.historySip,
+    required this.historyStandard,
+    required this.historyClearTitle,
+    required this.historyClearConfirm,
+    required this.historyClearAll,
+    required this.historyNoRecords,
+    required this.historyCopied,
+    required this.historyCopy,
+    required this.historyDeleted,
+    required this.historyCleared,
   });
 
   static CalcHubStrings of(String langCode) {
@@ -283,6 +317,22 @@ class CalcHubStrings {
         investedAmount: 'বিনিয়োগকৃত অর্থ',
         estReturns: 'আনুমানিক লাভ',
         totalFutureValue: 'মোট ভবিষ্যৎ মূল্য',
+        historyAll: 'সব',
+        historyMandiVoice: 'মান্ডি ভয়েস',
+        historyUnitRates: 'একক দর',
+        historyEmi: 'ইএমআই',
+        historyGst: 'জিএসটি',
+        historyDiscount: 'ছাড়',
+        historySip: 'এসআইপি',
+        historyStandard: 'সাধারণ',
+        historyClearTitle: 'হিসাবের ইতিহাস মুছবেন?',
+        historyClearConfirm: 'সমস্ত সংরক্ষিত হিসাব স্থায়ীভাবে মুছে যাবে।',
+        historyClearAll: 'সব মুছুন',
+        historyNoRecords: 'কোনো হিসাবের ইতিহাস পাওয়া যায়নি',
+        historyCopied: 'ক্লিপবোর্ডে কপি করা হয়েছে 📋',
+        historyCopy: 'কপি',
+        historyDeleted: 'হিসাব মুছে ফেলা হয়েছে।',
+        historyCleared: 'হিসাবের ইতিহাস মুছে ফেলা হয়েছে।',
       );
     } else if (langCode.startsWith('hi') || langCode == 'hinglish') {
       return const CalcHubStrings(
@@ -341,6 +391,22 @@ class CalcHubStrings {
         investedAmount: 'निवेश की गई राशि',
         estReturns: 'अनुमानित रिटर्न',
         totalFutureValue: 'कुल भविष्य मूल्य',
+        historyAll: 'सभी',
+        historyMandiVoice: 'मंडी वॉइस',
+        historyUnitRates: 'इकाई दर',
+        historyEmi: 'ईएमआई',
+        historyGst: 'जीएसटी',
+        historyDiscount: 'छूट',
+        historySip: 'एसआईपी',
+        historyStandard: 'साधारण',
+        historyClearTitle: 'हिसाब का इतिहास हटाएं?',
+        historyClearConfirm: 'सभी सहेजे गए हिसाब स्थायी रूप से हटा दिए जाएंगे।',
+        historyClearAll: 'सभी हटाएं',
+        historyNoRecords: 'कोई हिसाब का इतिहास नहीं मिला',
+        historyCopied: 'क्लिपबोर्ड पर कॉपी किया गया 📋',
+        historyCopy: 'कॉपी',
+        historyDeleted: 'हिसाब हटा दिया गया।',
+        historyCleared: 'हिसाब का इतिहास हटा दिया गया।',
       );
     }
 
@@ -400,6 +466,22 @@ class CalcHubStrings {
       investedAmount: 'Invested Amount',
       estReturns: 'Est. Returns',
       totalFutureValue: 'Total Future Value',
+      historyAll: 'All',
+      historyMandiVoice: 'Mandi Voice',
+      historyUnitRates: 'Unit Rates',
+      historyEmi: 'EMI',
+      historyGst: 'GST',
+      historyDiscount: 'Discount',
+      historySip: 'SIP',
+      historyStandard: 'Standard',
+      historyClearTitle: 'Clear Calculation History?',
+      historyClearConfirm: 'All saved calculations will be deleted permanently.',
+      historyClearAll: 'Clear All',
+      historyNoRecords: 'No calculation history found',
+      historyCopied: 'Copied to clipboard 📋',
+      historyCopy: 'Copy',
+      historyDeleted: 'History item deleted.',
+      historyCleared: 'Calculation history cleared.',
     );
   }
 }
@@ -3209,26 +3291,26 @@ class _CalculatorHistoryViewState extends State<_CalculatorHistoryView> {
     }
   }
 
-  void _deleteItem(String id) async {
+  void _deleteItem(String id, CalcHubStrings str) async {
     await DatabaseHelper.instance.deleteCalculatorHistory(id);
     _loadHistory();
     if (mounted) {
-      CustomToast.show(context, 'History item deleted.');
+      CustomToast.show(context, str.historyDeleted);
     }
   }
 
-  void _clearAll() async {
+  void _clearAll(CalcHubStrings str) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Clear Calculation History?'),
-        content: const Text('All saved calculations will be deleted permanently.'),
+        title: Text(str.historyClearTitle),
+        content: Text(str.historyClearConfirm),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(str.cancel)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Clear All'),
+            child: Text(str.historyClearAll),
           ),
         ],
       ),
@@ -3240,7 +3322,7 @@ class _CalculatorHistoryViewState extends State<_CalculatorHistoryView> {
       );
       _loadHistory();
       if (mounted) {
-        CustomToast.show(context, 'Calculation history cleared.');
+        CustomToast.show(context, str.historyCleared);
       }
     }
   }
@@ -3267,6 +3349,7 @@ class _CalculatorHistoryViewState extends State<_CalculatorHistoryView> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final str = CalcHubStrings.of(widget.langCode);
 
     return Column(
       children: [
@@ -3280,30 +3363,30 @@ class _CalculatorHistoryViewState extends State<_CalculatorHistoryView> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _buildFilterChip('All', 'all'),
+                      _buildFilterChip(str.historyAll, 'all'),
                       const SizedBox(width: 6),
-                      _buildFilterChip('Mandi Voice', 'market_voice'),
+                      _buildFilterChip(str.historyMandiVoice, 'market_voice'),
                       const SizedBox(width: 6),
-                      _buildFilterChip('Unit Rates', 'market_unit'),
+                      _buildFilterChip(str.historyUnitRates, 'market_unit'),
                       const SizedBox(width: 6),
-                      _buildFilterChip('EMI', 'emi'),
+                      _buildFilterChip(str.historyEmi, 'emi'),
                       const SizedBox(width: 6),
-                      _buildFilterChip('GST', 'gst'),
+                      _buildFilterChip(str.historyGst, 'gst'),
                       const SizedBox(width: 6),
-                      _buildFilterChip('Discount', 'discount'),
+                      _buildFilterChip(str.historyDiscount, 'discount'),
                       const SizedBox(width: 6),
-                      _buildFilterChip('SIP', 'sip'),
+                      _buildFilterChip(str.historySip, 'sip'),
                       const SizedBox(width: 6),
-                      _buildFilterChip('Standard', 'standard'),
+                      _buildFilterChip(str.historyStandard, 'standard'),
                     ],
                   ),
                 ),
               ),
               if (_history.isNotEmpty)
                 IconButton(
-                  onPressed: _clearAll,
+                  onPressed: () => _clearAll(str),
                   icon: const Icon(Icons.delete_sweep_outlined, color: Colors.redAccent),
-                  tooltip: 'Clear History',
+                  tooltip: str.historyClearAll,
                 ),
             ],
           ),
@@ -3322,7 +3405,7 @@ class _CalculatorHistoryViewState extends State<_CalculatorHistoryView> {
                           Icon(Icons.history_toggle_off_rounded, size: 48, color: Colors.grey[400]),
                           const SizedBox(height: 12),
                           Text(
-                            'No calculation history found',
+                            str.historyNoRecords,
                             style: GoogleFonts.inter(fontSize: 14, color: Colors.grey),
                           ),
                         ],
@@ -3380,7 +3463,7 @@ class _CalculatorHistoryViewState extends State<_CalculatorHistoryView> {
                                     icon: const Icon(Icons.close, size: 16, color: Colors.grey),
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(),
-                                    onPressed: () => _deleteItem(item['id']),
+                                    onPressed: () => _deleteItem(item['id'], str),
                                   ),
                                 ],
                               ),
@@ -3401,13 +3484,13 @@ class _CalculatorHistoryViewState extends State<_CalculatorHistoryView> {
                                   InkWell(
                                     onTap: () {
                                       Clipboard.setData(ClipboardData(text: '$title\n$summary'));
-                                      CustomToast.show(context, 'Copied to clipboard 📋');
+                                      CustomToast.show(context, str.historyCopied);
                                     },
                                     child: Row(
                                       children: [
                                         Icon(Icons.copy_rounded, size: 13, color: color),
                                         const SizedBox(width: 4),
-                                        Text('Copy', style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: color)),
+                                        Text(str.historyCopy, style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: color)),
                                       ],
                                     ),
                                   ),
