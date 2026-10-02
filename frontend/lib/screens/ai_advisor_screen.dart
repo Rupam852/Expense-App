@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -9,23 +10,92 @@ import '../services/ai_config_service.dart';
 import '../services/database_helper.dart';
 import '../services/expense_provider.dart';
 import '../models/expense.dart';
-import '../models/budget.dart';
+import '../models/split_bill.dart';
 import '../widgets/ai_config_required_dialog.dart';
 import '../widgets/custom_toast.dart';
 import 'ai_config_screen.dart';
+
+class AiActionProposal {
+  final String actionType; // 'ADD_EXPENSE', 'SET_BUDGET', 'ADD_KHATA', 'ADD_SPLIT'
+  final Map<String, dynamic> data;
+  bool isExecuted;
+  bool isDismissed;
+
+  AiActionProposal({
+    required this.actionType,
+    required this.data,
+    this.isExecuted = false,
+    this.isDismissed = false,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'type': actionType,
+    'data': data,
+    'isExecuted': isExecuted,
+    'isDismissed': isDismissed,
+  };
+
+  factory AiActionProposal.fromJson(Map<String, dynamic> json) => AiActionProposal(
+    actionType: json['type']?.toString() ?? json['actionType']?.toString() ?? '',
+    data: Map<String, dynamic>.from(json['data'] ?? {}),
+    isExecuted: json['isExecuted'] == true,
+    isDismissed: json['isDismissed'] == true,
+  );
+}
 
 class ChatMessage {
   final String text;
   final bool isUser;
   final DateTime timestamp;
   final String? modelUsed;
+  AiActionProposal? actionProposal;
 
   ChatMessage({
     required this.text,
     required this.isUser,
     required this.timestamp,
     this.modelUsed,
+    this.actionProposal,
   });
+
+  static ChatMessage fromRawText({
+    required String rawText,
+    required bool isUser,
+    required DateTime timestamp,
+    String? modelUsed,
+  }) {
+    if (isUser) {
+      return ChatMessage(
+        text: rawText,
+        isUser: true,
+        timestamp: timestamp,
+        modelUsed: modelUsed,
+      );
+    }
+
+    AiActionProposal? proposal;
+    String cleanText = rawText;
+
+    final match = RegExp(r'<!--ACTION_INTENT:(.*?)-->', dotAll: true).firstMatch(rawText);
+    if (match != null) {
+      try {
+        final jsonStr = match.group(1)?.trim() ?? '';
+        final map = json.decode(jsonStr) as Map<String, dynamic>;
+        proposal = AiActionProposal.fromJson(map);
+        cleanText = rawText.replaceAll(match.group(0)!, '').trim();
+      } catch (e) {
+        debugPrint('[ChatMessage] Error parsing ACTION_INTENT: $e');
+      }
+    }
+
+    return ChatMessage(
+      text: cleanText,
+      isUser: false,
+      timestamp: timestamp,
+      modelUsed: modelUsed,
+      actionProposal: proposal,
+    );
+  }
 }
 
 class AiAdvisorScreen extends StatefulWidget {
@@ -60,11 +130,13 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
   ];
 
   final List<String> _suggestedPrompts = [
+    '➕ ₹500 petrol kharcha add karo',
+    '🎯 Set Food budget to ₹5,000',
+    '📖 Rahul ko ₹1,000 udhar diya khate me likho',
+    '👥 Split ₹1,500 dinner with Aman and Rohit',
     '🍕 Food & Dining pe kitna kharcha hua?',
     '💡 Main har mahine ₹3,000 kaise bachaun?',
     '📊 Mera sabse bada kharcha kaunsa hai?',
-    '⚠️ Kaunse category me overspend ho raha hai?',
-    '📈 Summarize my spending habits this month',
   ];
 
   @override
@@ -82,8 +154,8 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
           _messages.clear();
           for (var row in rows) {
             _messages.add(
-              ChatMessage(
-                text: row['text']?.toString() ?? '',
+              ChatMessage.fromRawText(
+                rawText: row['text']?.toString() ?? '',
                 isUser: (row['is_user'] == 1),
                 timestamp: DateTime.tryParse(row['timestamp']?.toString() ?? '') ?? DateTime.now(),
                 modelUsed: row['model_used']?.toString(),
@@ -105,7 +177,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     setState(() {
       _messages.add(
         ChatMessage(
-          text: 'Namaste! 👋 Main aapka **GrowwAI Financial Advisor** hoon.\n\nMai aapke live expense ledger aur budgets ko analyze karke accurate answers aur smart money-saving tips de sakta hoon.\n\nNeeche diye gaye suggestions par tap karein ya mic/text se sawaal poochein!',
+          text: 'Namaste! 👋 Main aapka **GrowwAI Autonomous Financial Agent** hoon.\n\nMai aapke ledger ko analyze karne ke sath-sath:\n• 💳 **Expenses add kar sakta hoon** (e.g. "Add ₹350 for lunch")\n• 🎯 **Budgets set kar sakta hoon** (e.g. "Set Groceries budget to ₹6000")\n• 📖 **Khata / Udhar record kar sakta hoon** (e.g. "Raju ko ₹1500 udhar diya")\n• 👥 **Group Bills split kar sakta hoon** (e.g. "Split ₹1200 with Amit and Rahul")\n\nAap bol kar ya likh kar command de sakte hain!',
           isUser: false,
           timestamp: DateTime.now(),
         ),
@@ -235,17 +307,20 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     if (!mounted) return;
 
     ChatMessage aiMsg;
+    String rawReply = '';
     if (result['success'] == true && result['reply'] != null) {
-      aiMsg = ChatMessage(
-        text: result['reply'],
+      rawReply = result['reply'] as String;
+      aiMsg = ChatMessage.fromRawText(
+        rawText: rawReply,
         isUser: false,
         timestamp: DateTime.now(),
         modelUsed: result['modelUsed'],
       );
     } else {
       final errorMsg = result['error']?.toString() ?? 'Failed to get response from AI. Please check your AI Configuration in Settings.';
+      rawReply = '⚠️ $errorMsg';
       aiMsg = ChatMessage(
-        text: '⚠️ $errorMsg',
+        text: rawReply,
         isUser: false,
         timestamp: DateTime.now(),
       );
@@ -259,10 +334,10 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       _messages.add(aiMsg);
     });
 
-    // Persist AI response in SQLite
+    // Persist AI response in SQLite (preserving action metadata for persistence)
     await DatabaseHelper.instance.insertAiChatMessage(
       id: '${DateTime.now().millisecondsSinceEpoch}_ai',
-      text: aiMsg.text,
+      text: rawReply,
       isUser: false,
       timestamp: aiMsg.timestamp,
       modelUsed: aiMsg.modelUsed,
@@ -898,8 +973,12 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                         color: Colors.white,
                       ),
                     )
-                  else
+                  else ...[
                     _buildAiFormattedContent(msg.text, isDark, primaryColor),
+                    if (msg.actionProposal != null) ...[
+                      _buildActionProposalCard(msg, msg.actionProposal!, isDark, primaryColor),
+                    ],
+                  ],
                   const SizedBox(height: 5),
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -933,6 +1012,383 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _executeActionProposal(ChatMessage msg, AiActionProposal proposal) async {
+    final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+    HapticFeedback.mediumImpact();
+
+    try {
+      switch (proposal.actionType) {
+        case 'ADD_EXPENSE':
+          final amount = double.tryParse(proposal.data['amount'].toString()) ?? 0.0;
+          final category = proposal.data['category']?.toString() ?? 'General';
+          final description = proposal.data['description']?.toString() ?? category;
+
+          await expenseProvider.addExpense(
+            amount: amount,
+            category: category,
+            description: description,
+            date: DateTime.now(),
+            currency: 'INR',
+          );
+          if (mounted) {
+            CustomToast.show(context, 'Expense ₹${amount.toStringAsFixed(0)} added & synced to Cloud! ☁️');
+          }
+          break;
+
+        case 'SET_BUDGET':
+          final category = proposal.data['category']?.toString() ?? 'Others';
+          final amountLimit = double.tryParse(proposal.data['amountLimit'].toString()) ?? 0.0;
+          final monthYear = DateFormat('yyyy-MM').format(DateTime.now());
+
+          await expenseProvider.setBudget(
+            category: category,
+            amountLimit: amountLimit,
+            monthYear: monthYear,
+          );
+          if (mounted) {
+            CustomToast.show(context, '$category Budget set to ₹${amountLimit.toStringAsFixed(0)} & synced! ☁️');
+          }
+          break;
+
+        case 'ADD_KHATA':
+          final personName = proposal.data['personName']?.toString() ?? 'Friend';
+          final amount = double.tryParse(proposal.data['amount'].toString()) ?? 0.0;
+          final type = proposal.data['type']?.toString().toLowerCase() == 'borrowed' ? 'borrowed' : 'lent';
+          final note = proposal.data['note']?.toString();
+
+          await expenseProvider.addKhataEntry(
+            personName: personName,
+            amount: amount,
+            type: type,
+            entryDate: DateTime.now(),
+            note: note != null && note.isNotEmpty ? note : null,
+          );
+          if (mounted) {
+            CustomToast.show(context, 'Khata: $personName (₹${amount.toStringAsFixed(0)}) recorded! 📖');
+          }
+          break;
+
+        case 'ADD_SPLIT':
+          final title = proposal.data['title']?.toString() ?? 'Group Expense';
+          final totalAmount = double.tryParse(proposal.data['totalAmount'].toString()) ?? 0.0;
+          final rawParts = (proposal.data['participants'] as List?)?.map((p) => p.toString().trim()).where((p) => p.isNotEmpty).toList() ?? ['You', 'Friend'];
+
+          final count = rawParts.length;
+          final perPerson = count > 0 ? (totalAmount / count) : totalAmount;
+
+          final participants = rawParts.map((name) {
+            final isUser = name.toLowerCase() == 'you' || name.toLowerCase() == 'me';
+            return SplitParticipant(
+              name: name,
+              shareAmount: perPerson,
+              isSettled: isUser,
+              settledAt: isUser ? DateTime.now() : null,
+            );
+          }).toList();
+
+          await expenseProvider.addSplitBill(
+            title: title,
+            totalAmount: totalAmount,
+            paidBy: 'You',
+            billDate: DateTime.now(),
+            splitType: 'equal',
+            participants: participants,
+            note: proposal.data['note']?.toString(),
+          );
+          if (mounted) {
+            CustomToast.show(context, 'Split bill "$title" created for $count members! 👥');
+          }
+          break;
+      }
+
+      setState(() {
+        proposal.isExecuted = true;
+      });
+    } catch (e) {
+      debugPrint('[AiAdvisorScreen] Error executing AI action: $e');
+      if (mounted) {
+        CustomToast.show(context, 'Failed to perform action: $e', isError: true);
+      }
+    }
+  }
+
+  Widget _buildActionProposalCard(ChatMessage msg, AiActionProposal proposal, bool isDark, Color primaryColor) {
+    IconData actionIcon;
+    Color actionColor;
+    String actionTitle;
+    String badgeText;
+
+    switch (proposal.actionType) {
+      case 'ADD_EXPENSE':
+        actionIcon = Icons.receipt_long_rounded;
+        actionColor = const Color(0xFF00D09C);
+        badgeText = 'EXPENSE ACTION';
+        final amt = double.tryParse(proposal.data['amount']?.toString() ?? '0') ?? 0.0;
+        actionTitle = 'Add Expense • ₹${amt.toStringAsFixed(0)}';
+        break;
+      case 'SET_BUDGET':
+        actionIcon = Icons.pie_chart_rounded;
+        actionColor = const Color(0xFF38BDF8);
+        badgeText = 'BUDGET ACTION';
+        final amt = double.tryParse(proposal.data['amountLimit']?.toString() ?? '0') ?? 0.0;
+        final cat = proposal.data['category']?.toString() ?? 'Category';
+        actionTitle = 'Set $cat Budget • ₹${amt.toStringAsFixed(0)}';
+        break;
+      case 'ADD_KHATA':
+        actionIcon = Icons.menu_book_rounded;
+        actionColor = const Color(0xFFF59E0B);
+        badgeText = 'KHATA ACTION';
+        final amt = double.tryParse(proposal.data['amount']?.toString() ?? '0') ?? 0.0;
+        final isLent = proposal.data['type']?.toString().toLowerCase() != 'borrowed';
+        actionTitle = 'Khata (${isLent ? 'Lent' : 'Borrowed'}) • ₹${amt.toStringAsFixed(0)}';
+        break;
+      case 'ADD_SPLIT':
+        actionIcon = Icons.call_split_rounded;
+        actionColor = const Color(0xFF818CF8);
+        badgeText = 'SPLIT ACTION';
+        final amt = double.tryParse(proposal.data['totalAmount']?.toString() ?? '0') ?? 0.0;
+        actionTitle = 'Split Bill • ₹${amt.toStringAsFixed(0)}';
+        break;
+      default:
+        actionIcon = Icons.bolt_rounded;
+        actionColor = primaryColor;
+        badgeText = 'AI ACTION';
+        actionTitle = 'Proposed Action';
+    }
+
+    if (proposal.isDismissed) {
+      return Container(
+        margin: const EdgeInsets.only(top: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E2430) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.close_rounded, size: 14, color: Colors.grey[500]),
+            const SizedBox(width: 6),
+            Text(
+              'Action proposal dismissed',
+              style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[500], fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF12161F) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: proposal.isExecuted ? const Color(0xFF00D09C) : actionColor.withValues(alpha: 0.4),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (proposal.isExecuted ? const Color(0xFF00D09C) : actionColor).withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Badge
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: actionColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(actionIcon, size: 12, color: actionColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      badgeText,
+                      style: GoogleFonts.inter(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.bold,
+                        color: actionColor,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              if (proposal.isExecuted)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00D09C).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.cloud_done_rounded, size: 12, color: Color(0xFF00D09C)),
+                      const SizedBox(width: 4),
+                      Text(
+                        'SYNCED',
+                        style: GoogleFonts.inter(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF00D09C),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Title
+          Text(
+            actionTitle,
+            style: GoogleFonts.outfit(
+              fontSize: 14.5,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // Details breakdown
+          _buildProposalDetails(proposal, isDark),
+          const SizedBox(height: 10),
+
+          // Action Buttons
+          if (proposal.isExecuted)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF00D09C).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.check_circle_rounded, color: Color(0xFF00D09C), size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Recorded in Database & Cloud Synced ☁️',
+                    style: GoogleFonts.inter(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF00D09C),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _executeActionProposal(msg, proposal),
+                    icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
+                    label: Text(
+                      'Confirm & Execute',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: actionColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    setState(() {
+                      proposal.isDismissed = true;
+                    });
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.grey,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  ),
+                  child: Text(
+                    'Dismiss',
+                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProposalDetails(AiActionProposal proposal, bool isDark) {
+    final data = proposal.data;
+    final textStyle = GoogleFonts.inter(
+      fontSize: 12,
+      color: isDark ? Colors.grey[300] : Colors.grey[700],
+    );
+
+    switch (proposal.actionType) {
+      case 'ADD_EXPENSE':
+        final cat = data['category']?.toString() ?? 'General';
+        final desc = data['description']?.toString() ?? cat;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('• Category: $cat', style: textStyle),
+            if (desc != cat && desc.isNotEmpty) Text('• Note: $desc', style: textStyle),
+          ],
+        );
+
+      case 'SET_BUDGET':
+        final cat = data['category']?.toString() ?? 'Others';
+        return Text('• Category: $cat (Active Month)', style: textStyle);
+
+      case 'ADD_KHATA':
+        final person = data['personName']?.toString() ?? 'Friend';
+        final isLent = data['type']?.toString().toLowerCase() != 'borrowed';
+        final note = data['note']?.toString();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('• Person: $person', style: textStyle),
+            Text('• Status: ${isLent ? "You will get money" : "You will pay"}', style: textStyle),
+            if (note != null && note.isNotEmpty) Text('• Note: $note', style: textStyle),
+          ],
+        );
+
+      case 'ADD_SPLIT':
+        final title = data['title']?.toString() ?? 'Group Bill';
+        final parts = (data['participants'] as List?)?.map((e) => e.toString()).toList() ?? [];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('• Bill: $title', style: textStyle),
+            if (parts.isNotEmpty) Text('• Split between: ${parts.join(', ')}', style: textStyle),
+          ],
+        );
+
+      default:
+        return const SizedBox.shrink();
+    }
   }
 
   // Formatted RichText & Markdown renderer removing raw * and ** and LaTeX artifacts
