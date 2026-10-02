@@ -81,6 +81,12 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
     setState(() => _isExporting = true);
 
     try {
+      final sortedExpenses = List<Expense>.from(filteredExpenses)..sort((a, b) {
+        final dateCmp = a.transactionDate.compareTo(b.transactionDate);
+        if (dateCmp != 0) return dateCmp;
+        return a.createdAt.compareTo(b.createdAt);
+      });
+
       final rangeLabel = _getRangeLabel(selectedMonth).replaceAll(' ', '_').replaceAll(',', '');
       final timeStamp = DateFormat('yyyyMMdd_HHmm').format(DateTime.now());
       Uint8List fileBytes;
@@ -91,19 +97,19 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
         case ExportFormat.pdf:
           fileName = 'Expense_Statement_${rangeLabel}_$timeStamp.pdf';
           mimeType = 'application/pdf';
-          fileBytes = await _generatePdfBytes(filteredExpenses, _getRangeLabel(selectedMonth));
+          fileBytes = await _generatePdfBytes(sortedExpenses, _getRangeLabel(selectedMonth));
           break;
 
         case ExportFormat.excel:
           fileName = 'Expense_Ledger_${rangeLabel}_$timeStamp.xlsx';
           mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-          fileBytes = await _generateExcelBytes(filteredExpenses, _getRangeLabel(selectedMonth));
+          fileBytes = await _generateExcelBytes(sortedExpenses, _getRangeLabel(selectedMonth));
           break;
 
         case ExportFormat.csv:
           fileName = 'Expense_Statement_${rangeLabel}_$timeStamp.csv';
           mimeType = 'text/csv';
-          fileBytes = _generateCsvBytes(filteredExpenses);
+          fileBytes = _generateCsvBytes(sortedExpenses);
           break;
       }
 
