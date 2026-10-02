@@ -1598,6 +1598,8 @@ class DatabaseHelper {
 
   // ================= CALCULATOR HISTORY CRUD =================
 
+  static const int maxCalculatorHistoryLimit = 50;
+
   Future<int> insertCalculatorHistory({
     required String id,
     required String calcType, // 'standard', 'market_unit', 'market_voice', 'emi', 'discount', 'gst', 'sip'
@@ -1606,7 +1608,7 @@ class DatabaseHelper {
     required String detailsJson,
   }) async {
     final db = await instance.database;
-    return await db.insert(
+    final res = await db.insert(
       'calculator_history',
       {
         'id': id,
@@ -1618,6 +1620,26 @@ class DatabaseHelper {
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+
+    // Auto-limit: purge oldest records if exceeding maxCalculatorHistoryLimit
+    await _enforceCalculatorHistoryLimit(db, limit: maxCalculatorHistoryLimit);
+
+    return res;
+  }
+
+  Future<void> _enforceCalculatorHistoryLimit(Database db, {int limit = maxCalculatorHistoryLimit}) async {
+    try {
+      await db.execute('''
+        DELETE FROM calculator_history
+        WHERE id NOT IN (
+          SELECT id FROM calculator_history
+          ORDER BY created_at DESC
+          LIMIT ?
+        )
+      ''', [limit]);
+    } catch (e) {
+      // Keep silent for background purge
+    }
   }
 
   Future<List<Map<String, dynamic>>> getCalculatorHistory({String? type}) async {
@@ -1630,7 +1652,7 @@ class DatabaseHelper {
       where: where,
       whereArgs: whereArgs,
       orderBy: 'created_at DESC',
-      limit: 100,
+      limit: maxCalculatorHistoryLimit,
     );
   }
 
