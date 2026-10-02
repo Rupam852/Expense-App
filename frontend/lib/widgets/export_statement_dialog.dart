@@ -18,8 +18,6 @@ import '../widgets/custom_toast.dart';
 
 enum ExportFormat { pdf, excel, csv }
 
-enum ExportTimeRange { thisMonth, lastMonth, allTime, customRange }
-
 class ExportStatementDialog extends StatefulWidget {
   const ExportStatementDialog({super.key});
 
@@ -38,64 +36,28 @@ class ExportStatementDialog extends StatefulWidget {
 
 class _ExportStatementDialogState extends State<ExportStatementDialog> {
   ExportFormat _selectedFormat = ExportFormat.pdf;
-  ExportTimeRange _selectedRange = ExportTimeRange.thisMonth;
   bool _isExporting = false;
-  DateTimeRange? _customDateRange;
 
-  List<Expense> _getFilteredExpenses(List<Expense> allExpenses) {
-    final now = DateTime.now();
-    switch (_selectedRange) {
-      case ExportTimeRange.thisMonth:
-        return allExpenses.where((e) {
-          return e.transactionDate.year == now.year && e.transactionDate.month == now.month;
-        }).toList();
-
-      case ExportTimeRange.lastMonth:
-        final prevMonth = DateTime(now.year, now.month - 1, 1);
-        return allExpenses.where((e) {
-          return e.transactionDate.year == prevMonth.year && e.transactionDate.month == prevMonth.month;
-        }).toList();
-
-      case ExportTimeRange.allTime:
-        return allExpenses;
-
-      case ExportTimeRange.customRange:
-        if (_customDateRange == null) return allExpenses;
-        final start = DateTime(_customDateRange!.start.year, _customDateRange!.start.month, _customDateRange!.start.day);
-        final end = DateTime(_customDateRange!.end.year, _customDateRange!.end.month, _customDateRange!.end.day, 23, 59, 59);
-        return allExpenses.where((e) {
-          return e.transactionDate.isAfter(start.subtract(const Duration(seconds: 1))) &&
-              e.transactionDate.isBefore(end.add(const Duration(seconds: 1)));
-        }).toList();
-    }
+  List<Expense> _getFilteredExpenses(List<Expense> allExpenses, DateTime selectedMonth) {
+    return allExpenses.where((e) {
+      return e.transactionDate.year == selectedMonth.year && e.transactionDate.month == selectedMonth.month;
+    }).toList();
   }
 
-  String _getRangeLabel() {
-    final now = DateTime.now();
-    switch (_selectedRange) {
-      case ExportTimeRange.thisMonth:
-        return DateFormat('MMMM yyyy').format(now);
-      case ExportTimeRange.lastMonth:
-        final prevMonth = DateTime(now.year, now.month - 1, 1);
-        return DateFormat('MMMM yyyy').format(prevMonth);
-      case ExportTimeRange.allTime:
-        return 'All Time History';
-      case ExportTimeRange.customRange:
-        if (_customDateRange == null) return 'Custom Date Range';
-        return '${DateFormat('dd MMM').format(_customDateRange!.start)} - ${DateFormat('dd MMM yyyy').format(_customDateRange!.end)}';
-    }
+  String _getRangeLabel(DateTime selectedMonth) {
+    return DateFormat('MMMM yyyy').format(selectedMonth);
   }
 
-  Future<void> _handleExport(List<Expense> filteredExpenses) async {
+  Future<void> _handleExport(List<Expense> filteredExpenses, DateTime selectedMonth) async {
     if (filteredExpenses.isEmpty) {
-      CustomToast.show(context, 'No transactions found for the selected period.', isError: true);
+      CustomToast.show(context, 'No transactions found for ${DateFormat('MMMM yyyy').format(selectedMonth)}.', isError: true);
       return;
     }
 
     setState(() => _isExporting = true);
 
     try {
-      final rangeLabel = _getRangeLabel().replaceAll(' ', '_').replaceAll(',', '');
+      final rangeLabel = _getRangeLabel(selectedMonth).replaceAll(' ', '_').replaceAll(',', '');
       final timeStamp = DateFormat('yyyyMMdd_HHmm').format(DateTime.now());
       Uint8List fileBytes;
       String fileName;
@@ -105,13 +67,13 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
         case ExportFormat.pdf:
           fileName = 'Expense_Statement_${rangeLabel}_$timeStamp.pdf';
           mimeType = 'application/pdf';
-          fileBytes = await _generatePdfBytes(filteredExpenses, _getRangeLabel());
+          fileBytes = await _generatePdfBytes(filteredExpenses, _getRangeLabel(selectedMonth));
           break;
 
         case ExportFormat.excel:
           fileName = 'Expense_Ledger_${rangeLabel}_$timeStamp.xlsx';
           mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-          fileBytes = await _generateExcelBytes(filteredExpenses, _getRangeLabel());
+          fileBytes = await _generateExcelBytes(filteredExpenses, _getRangeLabel(selectedMonth));
           break;
 
         case ExportFormat.csv:
@@ -459,9 +421,11 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = const Color(0xFF00D09C);
     final expenseProvider = Provider.of<ExpenseProvider>(context);
+    final selectedMonth = expenseProvider.selectedMonthYear;
     final allExpenses = expenseProvider.expenses;
-    final filteredExpenses = _getFilteredExpenses(allExpenses);
+    final filteredExpenses = _getFilteredExpenses(allExpenses, selectedMonth);
     final totalAmount = filteredExpenses.fold(0.0, (sum, e) => sum + e.amount);
+    final monthLabel = _getRangeLabel(selectedMonth);
 
     return Container(
       decoration: BoxDecoration(
@@ -509,7 +473,7 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
                           style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          'Download PDF, Excel or CSV to phone',
+                          'Download $monthLabel ledger to phone',
                           style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey),
                         ),
                       ],
@@ -521,61 +485,49 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
 
-              // 1. Time Range Selector
-              Text(
-                '1. SELECT TIME PERIOD',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.8,
-                  color: primaryColor,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _buildRangeChip(ExportTimeRange.thisMonth, 'This Month (${DateFormat('MMM').format(DateTime.now())})', isDark),
-                  _buildRangeChip(ExportTimeRange.lastMonth, 'Last Month', isDark),
-                  _buildRangeChip(ExportTimeRange.allTime, 'All Time', isDark),
-                  _buildRangeChip(ExportTimeRange.customRange, 'Custom Range...', isDark),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Summary Banner
+              // Active Month Summary Card
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF1E2433) : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isDark ? const Color(0xFF2A344A) : const Color(0xFFE2E8F0),
                   ),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _getRangeLabel(),
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                        Text(
-                          '${filteredExpenses.length} transactions included',
-                          style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey),
-                        ),
-                      ],
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: primaryColor.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.calendar_month_rounded, color: primaryColor, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            monthLabel,
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${filteredExpenses.length} transactions included',
+                            style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
                     ),
                     Text(
                       '₹${NumberFormat('#,##,##0').format(totalAmount)}',
                       style: GoogleFonts.outfit(
-                        fontSize: 18,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: const Color(0xFF10B981),
                       ),
@@ -583,11 +535,11 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
                   ],
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
 
-              // 2. Format Selector
+              // Choose Format Header
               Text(
-                '2. CHOOSE EXPORT FORMAT',
+                'CHOOSE EXPORT FORMAT',
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -640,7 +592,7 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
 
               // Export Confirm Button
               ElevatedButton(
-                onPressed: _isExporting ? null : () => _handleExport(filteredExpenses),
+                onPressed: _isExporting ? null : () => _handleExport(filteredExpenses, selectedMonth),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
                   foregroundColor: Colors.black,
@@ -660,7 +612,7 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
                           const Icon(Icons.download_rounded, size: 20, color: Colors.black),
                           const SizedBox(width: 8),
                           Text(
-                            'Confirm & Export to Downloads',
+                            'Download $monthLabel Statement',
                             style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -670,49 +622,6 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildRangeChip(ExportTimeRange range, String label, bool isDark) {
-    final isSelected = _selectedRange == range;
-    return ChoiceChip(
-      label: Text(
-        label,
-        style: GoogleFonts.inter(
-          fontSize: 12,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-          color: isSelected ? Colors.black : (isDark ? Colors.white70 : Colors.black87),
-        ),
-      ),
-      selected: isSelected,
-      selectedColor: const Color(0xFF00D09C),
-      backgroundColor: isDark ? const Color(0xFF1E232E) : Colors.grey[200],
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      onSelected: (selected) async {
-        if (!selected) return;
-        if (range == ExportTimeRange.customRange) {
-          final picked = await showDateRangePicker(
-            context: context,
-            firstDate: DateTime(2020),
-            lastDate: DateTime.now().add(const Duration(days: 365)),
-            initialDateRange: _customDateRange ??
-                DateTimeRange(
-                  start: DateTime.now().subtract(const Duration(days: 30)),
-                  end: DateTime.now(),
-                ),
-          );
-          if (picked != null) {
-            setState(() {
-              _customDateRange = picked;
-              _selectedRange = ExportTimeRange.customRange;
-            });
-          }
-        } else {
-          setState(() {
-            _selectedRange = range;
-          });
-        }
-      },
     );
   }
 
