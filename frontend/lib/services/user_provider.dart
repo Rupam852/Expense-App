@@ -39,6 +39,7 @@ class UserProvider with ChangeNotifier {
   bool get showSpendingPredictionInBudget => _showSpendingPredictionInBudget;
   String? get errorMessage => _errorMessage;
   String? get userGeminiApiKey => _userGeminiApiKey;
+  String? get userNvidiaApiKey => _userProfile?['nvidia_api_key'];
   String? get userGeminiApiKeySecondary => AiConfigService.instance.hasSecondaryConfig ? 'active' : null;
   bool get showApiKeyPrompt => _showApiKeyPrompt;
   bool get needsVerification => _needsVerification;
@@ -414,6 +415,12 @@ class UserProvider with ChangeNotifier {
     required String name,
     String? photoUrl,
     String? geminiApiKey,
+    String? nvidiaApiKey,
+    String? aiMode,
+    String? geminiModel,
+    String? nvidiaModel,
+    String? primaryProvider,
+    String? responseLanguage,
   }) async {
     _isLoading = true;
     notifyListeners();
@@ -425,6 +432,12 @@ class UserProvider with ChangeNotifier {
         'name': name,
         if (photoUrl != null) 'photo_url': photoUrl,
         if (geminiApiKey != null) 'gemini_api_key': geminiApiKey,
+        if (nvidiaApiKey != null) 'nvidia_api_key': nvidiaApiKey,
+        if (aiMode != null) 'ai_mode': aiMode,
+        if (geminiModel != null) 'gemini_model': geminiModel,
+        if (nvidiaModel != null) 'nvidia_model': nvidiaModel,
+        if (primaryProvider != null) 'primary_provider': primaryProvider,
+        if (responseLanguage != null) 'response_language': responseLanguage,
       };
       await _saveProfileLocally();
       notifyListeners();
@@ -435,6 +448,12 @@ class UserProvider with ChangeNotifier {
         'name': name,
         if (photoUrl != null) 'photo_url': photoUrl,
         if (geminiApiKey != null) 'gemini_api_key': geminiApiKey,
+        if (nvidiaApiKey != null) 'nvidia_api_key': nvidiaApiKey,
+        if (aiMode != null) 'ai_mode': aiMode,
+        if (geminiModel != null) 'gemini_model': geminiModel,
+        if (nvidiaModel != null) 'nvidia_model': nvidiaModel,
+        if (primaryProvider != null) 'primary_provider': primaryProvider,
+        if (responseLanguage != null) 'response_language': responseLanguage,
       });
     } catch (e) {
       print('[UserProvider] Profile update deferred (offline): $e');
@@ -446,7 +465,7 @@ class UserProvider with ChangeNotifier {
   }
 
   // ──────────────────────────────────────────────────────
-  // 6. GEMINI KEY MANAGEMENT
+  // 6. GEMINI & NVIDIA KEY MANAGEMENT
   // ──────────────────────────────────────────────────────
   Future<void> saveUserGeminiApiKey(String? key) async {
     try {
@@ -471,6 +490,21 @@ class UserProvider with ChangeNotifier {
       }
     } catch (e) {
       print('[UserProvider] Error saving Gemini key: $e');
+    }
+  }
+
+  Future<void> saveUserNvidiaApiKey(String? key) async {
+    try {
+      final clean = (key == null || key.trim().isEmpty) ? '' : key.trim();
+      if (_isAuthenticated) {
+        await updateProfile(
+          name: _userProfile?['name'] ?? 'User',
+          photoUrl: _userProfile?['photo_url'],
+          nvidiaApiKey: clean,
+        );
+      }
+    } catch (e) {
+      print('[UserProvider] Error saving NVIDIA key: $e');
     }
   }
 

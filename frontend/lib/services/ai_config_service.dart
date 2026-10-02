@@ -418,6 +418,7 @@ class AiConfigService with ChangeNotifier {
           'primary_provider': _primaryProvider,
           'response_language': _responseLanguage,
         });
+        debugPrint('[AiConfigService] AI profile (NVIDIA & Gemini) synced to Supabase successfully for user ${supabase.currentUser!.id}');
       }
     } catch (e) {
       debugPrint('[AiConfigService] Quiet cloud backup error: $e');
