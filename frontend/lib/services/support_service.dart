@@ -1,7 +1,5 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -118,22 +116,8 @@ class SupportService {
     try {
       final client = Supabase.instance.client;
       await client.functions.invoke('report-issue', body: payload);
-    } catch (_) {
-      try {
-        final backendUrls = [
-          'https://expense-app-backend-2cwr.onrender.com/auth/report-issue',
-          'http://localhost:5000/auth/report-issue',
-          'http://10.0.2.2:5000/auth/report-issue',
-        ];
-        for (final url in backendUrls) {
-          final res = await http.post(
-            Uri.parse(url),
-            headers: {'Content-Type': 'application/json'},
-            body: json.encode(payload),
-          ).timeout(const Duration(seconds: 4));
-          if (res.statusCode == 200 || res.statusCode == 201) break;
-        }
-      } catch (_) {}
+    } catch (e) {
+      debugPrint('[SupportService] Silent cloud backup failed: $e');
     }
   }
 
