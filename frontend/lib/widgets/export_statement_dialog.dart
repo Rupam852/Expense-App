@@ -41,20 +41,28 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
   bool _isExporting = false;
 
   List<Expense> _getFilteredExpenses(List<Expense> allExpenses, DateTime selectedMonth) {
-    final monthExpenses = allExpenses.where((e) {
-      return e.transactionDate.year == selectedMonth.year && e.transactionDate.month == selectedMonth.month;
-    }).toList();
-
+    List<Expense> filtered;
     if (_isCustomRange && _customDateRange != null) {
       final start = DateTime(_customDateRange!.start.year, _customDateRange!.start.month, _customDateRange!.start.day);
       final end = DateTime(_customDateRange!.end.year, _customDateRange!.end.month, _customDateRange!.end.day, 23, 59, 59);
-      return monthExpenses.where((e) {
+      filtered = allExpenses.where((e) {
         return e.transactionDate.isAfter(start.subtract(const Duration(seconds: 1))) &&
             e.transactionDate.isBefore(end.add(const Duration(seconds: 1)));
       }).toList();
+    } else {
+      filtered = allExpenses.where((e) {
+        return e.transactionDate.year == selectedMonth.year && e.transactionDate.month == selectedMonth.month;
+      }).toList();
     }
 
-    return monthExpenses;
+    // Sort chronologically: Oldest date first -> Newest date last (tiebreaker: createdAt ASC)
+    filtered.sort((a, b) {
+      final dateCmp = a.transactionDate.compareTo(b.transactionDate);
+      if (dateCmp != 0) return dateCmp;
+      return a.createdAt.compareTo(b.createdAt);
+    });
+
+    return filtered;
   }
 
   String _getRangeLabel(DateTime selectedMonth) {

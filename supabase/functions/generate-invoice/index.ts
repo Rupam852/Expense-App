@@ -33,7 +33,10 @@ serve(async (req) => {
       expenses.sort((a: any, b: any) => {
         const dateA = new Date(a.transaction_date || a.transactionDate || 0).getTime()
         const dateB = new Date(b.transaction_date || b.transactionDate || 0).getTime()
-        return dateB - dateA
+        if (dateA !== dateB) return dateA - dateB
+        const createdA = new Date(a.created_at || a.createdAt || 0).getTime()
+        const createdB = new Date(b.created_at || b.createdAt || 0).getTime()
+        return createdA - createdB
       })
     } else {
       if (!expense_ids || !Array.isArray(expense_ids) || expense_ids.length === 0) {
@@ -43,13 +46,14 @@ serve(async (req) => {
         })
       }
 
-      // Fetch Selected Expenses from DB
+      // Fetch Selected Expenses from DB (Oldest to Newest chronological)
       const { data: dbExpenses, error: expensesError } = await supabaseClient
         .from('expenses')
         .select('*')
         .in('id', expense_ids)
         .eq('is_deleted', false)
-        .order('transaction_date', { ascending: false })
+        .order('transaction_date', { ascending: true })
+        .order('created_at', { ascending: true })
 
       if (expensesError) throw expensesError
       expenses = dbExpenses || []

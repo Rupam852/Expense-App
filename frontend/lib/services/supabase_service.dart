@@ -378,10 +378,16 @@ class SupabaseService {
       return null;
     }
     try {
+      final sortedExpenses = List<Expense>.from(expenses)..sort((a, b) {
+        final dateCmp = a.transactionDate.compareTo(b.transactionDate);
+        if (dateCmp != 0) return dateCmp;
+        return a.createdAt.compareTo(b.createdAt);
+      });
+
       final response = await _client.functions.invoke(
         'generate-invoice',
         body: {
-          'expenses': expenses.map((e) => e.toMap()).toList(),
+          'expenses': sortedExpenses.map((e) => e.toMap()).toList(),
           'month_year': monthYear,
         },
       );
