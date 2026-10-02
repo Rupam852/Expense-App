@@ -1064,18 +1064,18 @@ class _MarketPriceCalculatorView extends StatefulWidget {
 class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> {
   int _modeIndex = 0; // 0: Manual Unit Calc, 1: AI Mandi Voice Rate Analyzer
 
-  // Manual Unit State
-  final _itemNameCtrl = TextEditingController(text: 'Tomato (Tamatar)');
-  final _basePriceCtrl = TextEditingController(text: '40');
-  final _baseQuantityCtrl = TextEditingController(text: '1');
+  // Manual Unit State (Starts Fresh & Empty)
+  final _itemNameCtrl = TextEditingController();
+  final _basePriceCtrl = TextEditingController();
+  final _baseQuantityCtrl = TextEditingController();
   String _selectedUnit = 'kg'; // 'kg', 'g', 'litre', 'ml', 'dozen', 'piece'
 
   // Custom Target Calc Box
-  final _customQuantityCtrl = TextEditingController(text: '250');
+  final _customQuantityCtrl = TextEditingController();
   String _customQuantityUnit = 'g';
   double _customResultPrice = 0.0;
 
-  final _customBudgetCtrl = TextEditingController(text: '50');
+  final _customBudgetCtrl = TextEditingController();
   String _customResultQuantity = '';
 
   // AI Voice State
@@ -1496,6 +1496,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
                       style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
                       decoration: InputDecoration(
                         labelText: str.basePrice,
+                        hintText: 'e.g. 40',
                         prefixText: '₹ ',
                       ),
                       onChanged: (_) => _recomputeManualRates(),
@@ -1514,6 +1515,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       decoration: InputDecoration(
                         labelText: str.forQty,
+                        hintText: 'e.g. 1',
                       ),
                       onChanged: (_) => _recomputeManualRates(),
                     ),
@@ -1624,6 +1626,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       decoration: InputDecoration(
                         labelText: '${str.wantToBuy} ($_customQuantityUnit)',
+                        hintText: 'e.g. 250',
                         prefixIcon: const Icon(Icons.scale_rounded, size: 18),
                       ),
                       onChanged: (_) => _recomputeManualRates(),
@@ -1640,7 +1643,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
                         border: Border.all(color: const Color(0xFF00D09C).withOpacity(0.3)),
                       ),
                       child: Text(
-                        '₹${_customResultPrice.toStringAsFixed(2)}',
+                        _customResultPrice > 0 ? '₹${_customResultPrice.toStringAsFixed(2)}' : '₹0.00',
                         style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: const Color(0xFF00D09C)),
                         textAlign: TextAlign.center,
                       ),
@@ -1659,6 +1662,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       decoration: InputDecoration(
                         labelText: str.budgetLabel,
+                        hintText: 'e.g. 50',
                         prefixIcon: const Icon(Icons.currency_rupee_rounded, size: 18),
                       ),
                       onChanged: (_) => _recomputeManualRates(),
@@ -1675,7 +1679,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
                         border: Border.all(color: const Color(0xFF38BDF8).withOpacity(0.3)),
                       ),
                       child: Text(
-                        _customResultQuantity,
+                        _customResultQuantity.isNotEmpty ? _customResultQuantity : '-',
                         style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: const Color(0xFF38BDF8)),
                         textAlign: TextAlign.center,
                       ),
@@ -2072,14 +2076,14 @@ class _EmiCalculatorView extends StatefulWidget {
 }
 
 class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
-  double _loanAmount = 500000;
-  double _interestRate = 10.5;
-  double _tenureYears = 5;
+  double _loanAmount = 0;
+  double _interestRate = 0;
+  double _tenureYears = 0;
   bool _isTenureInYears = true;
 
-  final _loanAmountCtrl = TextEditingController(text: '500000');
-  final _interestRateCtrl = TextEditingController(text: '10.5');
-  final _tenureCtrl = TextEditingController(text: '5');
+  final _loanAmountCtrl = TextEditingController();
+  final _interestRateCtrl = TextEditingController();
+  final _tenureCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -2360,28 +2364,28 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
           // 1. Loan Amount Slider & Input (Interactive on tap + granular smooth slider + milestone dots)
           _buildInputCard(
             title: str.loanAmount,
-            valueText: '₹${fmt.format(_loanAmount.round())}',
-            sliderValue: _loanAmount.clamp(10000, 5000000),
-            min: 10000,
+            valueText: _loanAmount > 0 ? '₹${fmt.format(_loanAmount.round())}' : 'Tap to enter (e.g. ₹5,00,000)',
+            sliderValue: _loanAmount > 0 ? _loanAmount.clamp(10000, 5000000) : 0,
+            min: 0,
             max: 5000000,
             onSliderChanged: (val) {
               final stepped = (val / 10000).round() * 10000.0;
               setState(() {
-                _loanAmount = stepped < 10000 ? 10000 : stepped;
-                _loanAmountCtrl.text = _loanAmount.round().toString();
+                _loanAmount = stepped;
+                _loanAmountCtrl.text = _loanAmount > 0 ? _loanAmount.round().toString() : '';
               });
             },
             onValueTap: () {
               _showEditValueDialog(
                 title: str.enterAmount,
-                initialValue: _loanAmount.round().toString(),
+                initialValue: _loanAmount > 0 ? _loanAmount.round().toString() : '',
                 suffix: '₹',
-                min: 1000,
+                min: 0,
                 max: 100000000,
                 onSubmitted: (val) {
                   setState(() {
                     _loanAmount = val;
-                    _loanAmountCtrl.text = val.round().toString();
+                    _loanAmountCtrl.text = val > 0 ? val.round().toString() : '';
                   });
                 },
               );
@@ -2400,28 +2404,28 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
           // 2. Interest Rate Slider & Input (Interactive on tap + milestone dots)
           _buildInputCard(
             title: str.interestRatePa,
-            valueText: '${_interestRate.toStringAsFixed(1)} %',
-            sliderValue: _interestRate.clamp(1, 30),
-            min: 1,
+            valueText: _interestRate > 0 ? '${_interestRate.toStringAsFixed(1)} %' : 'Tap to enter (e.g. 10.5%)',
+            sliderValue: _interestRate > 0 ? _interestRate.clamp(1, 30) : 0,
+            min: 0,
             max: 30,
             onSliderChanged: (val) {
               final stepped = (val * 10).round() / 10.0;
               setState(() {
                 _interestRate = stepped;
-                _interestRateCtrl.text = stepped.toStringAsFixed(1);
+                _interestRateCtrl.text = stepped > 0 ? stepped.toStringAsFixed(1) : '';
               });
             },
             onValueTap: () {
               _showEditValueDialog(
                 title: str.enterRate,
-                initialValue: _interestRate.toStringAsFixed(1),
+                initialValue: _interestRate > 0 ? _interestRate.toStringAsFixed(1) : '',
                 suffix: '%',
-                min: 0.1,
+                min: 0.0,
                 max: 50.0,
                 onSubmitted: (val) {
                   setState(() {
                     _interestRate = val;
-                    _interestRateCtrl.text = val.toStringAsFixed(1);
+                    _interestRateCtrl.text = val > 0 ? val.toStringAsFixed(1) : '';
                   });
                 },
               );
@@ -2441,27 +2445,27 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
           // 3. Tenure Slider & Input (Interactive on tap + milestone dots)
           _buildInputCard(
             title: str.loanTenure,
-            valueText: '${_tenureYears.toInt()} ${_isTenureInYears ? str.years : str.months}',
-            sliderValue: _tenureYears.clamp(1, _isTenureInYears ? 30 : 360),
-            min: 1,
+            valueText: _tenureYears > 0 ? '${_tenureYears.toInt()} ${_isTenureInYears ? str.years : str.months}' : 'Tap to enter (e.g. 5 ${_isTenureInYears ? str.years : str.months})',
+            sliderValue: _tenureYears > 0 ? _tenureYears.clamp(1, _isTenureInYears ? 30 : 360) : 0,
+            min: 0,
             max: _isTenureInYears ? 30 : 360,
             onSliderChanged: (val) {
               setState(() {
                 _tenureYears = val.roundToDouble();
-                _tenureCtrl.text = _tenureYears.round().toString();
+                _tenureCtrl.text = _tenureYears > 0 ? _tenureYears.round().toString() : '';
               });
             },
             onValueTap: () {
               _showEditValueDialog(
                 title: str.enterTenure,
-                initialValue: _tenureYears.round().toString(),
+                initialValue: _tenureYears > 0 ? _tenureYears.round().toString() : '',
                 suffix: _isTenureInYears ? str.years : str.months,
-                min: 1,
+                min: 0,
                 max: _isTenureInYears ? 50 : 600,
                 onSubmitted: (val) {
                   setState(() {
                     _tenureYears = val;
-                    _tenureCtrl.text = val.round().toString();
+                    _tenureCtrl.text = val > 0 ? val.round().toString() : '';
                   });
                 },
               );
@@ -2480,26 +2484,24 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
             headerWidget: Row(
               children: [
                 ChoiceChip(
-                  label: Text(_isTenureInYears ? 'Yr' : 'Yr'),
+                  label: const Text('Yr'),
                   selected: _isTenureInYears,
                   onSelected: (val) {
                     if (val) {
                       setState(() {
                         _isTenureInYears = true;
-                        _tenureYears = 5;
                       });
                     }
                   },
                 ),
                 const SizedBox(width: 6),
                 ChoiceChip(
-                  label: Text(!_isTenureInYears ? 'Mo' : 'Mo'),
+                  label: const Text('Mo'),
                   selected: !_isTenureInYears,
                   onSelected: (val) {
                     if (val) {
                       setState(() {
                         _isTenureInYears = false;
-                        _tenureYears = 60;
                       });
                     }
                   },
@@ -2727,17 +2729,17 @@ class _DailyFinancialToolsView extends StatefulWidget {
 class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
   int _toolIndex = 0; // 0: GST, 1: Discount, 2: SIP
 
-  // GST State
-  final _gstAmountCtrl = TextEditingController(text: '1000');
+  // GST State (Starts Fresh & Empty)
+  final _gstAmountCtrl = TextEditingController();
   double _gstRate = 18.0;
   bool _isGstExclusive = true; // true: Add GST, false: Remove GST
 
-  // Discount State
-  final _originalPriceCtrl = TextEditingController(text: '2000');
-  final _discountPercentCtrl = TextEditingController(text: '20');
+  // Discount State (Starts Fresh & Empty)
+  final _originalPriceCtrl = TextEditingController();
+  final _discountPercentCtrl = TextEditingController();
 
-  // SIP State
-  double _monthlySip = 5000;
+  // SIP State (Starts Fresh & Empty)
+  double _monthlySip = 0;
   double _expectedReturnRate = 12.0;
   double _sipTenureYears = 10;
 
@@ -2919,7 +2921,11 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
                 controller: _gstAmountCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
-                decoration: const InputDecoration(labelText: 'Initial Amount (₹)', prefixText: '₹ '),
+                decoration: const InputDecoration(
+                  labelText: 'Initial Amount (₹)',
+                  hintText: 'e.g. 1000',
+                  prefixText: '₹ ',
+                ),
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 16),
@@ -3046,7 +3052,11 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
                 controller: _originalPriceCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
-                decoration: InputDecoration(labelText: str.originalPrice, prefixText: '₹ '),
+                decoration: InputDecoration(
+                  labelText: str.originalPrice,
+                  hintText: 'e.g. 2000',
+                  prefixText: '₹ ',
+                ),
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 14),
@@ -3054,7 +3064,11 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
                 controller: _discountPercentCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
-                decoration: InputDecoration(labelText: str.discountPercent, suffixText: ' %'),
+                decoration: InputDecoration(
+                  labelText: str.discountPercent,
+                  hintText: 'e.g. 20',
+                  suffixText: ' %',
+                ),
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 12),
@@ -3090,11 +3104,11 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
     final n = _sipTenureYears * 12;
 
     double maturity = 0.0;
-    if (i > 0 && n > 0) {
+    if (i > 0 && n > 0 && P > 0) {
       maturity = P * ((pow(1 + i, n) - 1) / i) * (1 + i);
     }
     final invested = P * n;
-    final wealthGained = maturity - invested;
+    final wealthGained = maturity > invested ? maturity - invested : 0.0;
     final fmt = NumberFormat('#,##,###');
 
     return Column(
@@ -3163,14 +3177,17 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(str.monthlySip, style: GoogleFonts.inter(fontSize: 13, color: Colors.grey)),
-                  Text('₹${fmt.format(_monthlySip.round())}', style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: const Color(0xFFF59E0B))),
+                  Text(
+                    _monthlySip > 0 ? '₹${fmt.format(_monthlySip.round())}' : '₹0 (Slide to set)',
+                    style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: const Color(0xFFF59E0B)),
+                  ),
                 ],
               ),
               Slider(
-                value: _monthlySip,
-                min: 500,
+                value: _monthlySip.clamp(0, 100000),
+                min: 0,
                 max: 100000,
-                divisions: 199,
+                divisions: 200,
                 activeColor: const Color(0xFFF59E0B),
                 onChanged: (val) => setState(() => _monthlySip = val),
               ),
