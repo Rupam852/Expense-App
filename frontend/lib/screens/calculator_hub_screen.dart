@@ -2909,10 +2909,6 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
     String presetSuffix = '',
     ValueChanged<num>? onPresetSelected,
   }) {
-    final milestoneList = presets != null
-        ? presets.map((p) => p.toDouble()).toList()
-        : <double>[];
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -2965,14 +2961,7 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
               thumbColor: const Color(0xFF00D09C),
               overlayColor: const Color(0xFF00D09C).withOpacity(0.15),
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 9),
-              trackShape: _MilestoneSliderTrackShape(
-                milestones: milestoneList,
-                min: min,
-                max: max,
-                inactiveMilestoneColor: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                activeMilestoneColor: Colors.white.withOpacity(0.7),
-                milestoneRadius: 2.2,
-              ),
+              trackShape: const RoundedRectSliderTrackShape(),
             ),
             child: Slider(
               value: sliderValue,
@@ -3005,92 +2994,6 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
         ],
       ),
     );
-  }
-}
-
-/// Custom Slider Track Shape that paints clean milestone landmark dots aligned with preset chips
-class _MilestoneSliderTrackShape extends RoundedRectSliderTrackShape {
-  final List<double> milestones;
-  final double min;
-  final double max;
-  final Color? activeMilestoneColor;
-  final Color? inactiveMilestoneColor;
-  final double milestoneRadius;
-
-  const _MilestoneSliderTrackShape({
-    required this.milestones,
-    required this.min,
-    required this.max,
-    this.activeMilestoneColor,
-    this.inactiveMilestoneColor,
-    this.milestoneRadius = 2.2,
-  });
-
-  @override
-  void paint(
-    PaintingContext context,
-    Offset offset, {
-    required RenderBox parentBox,
-    required SliderThemeData sliderTheme,
-    required Animation<double> enableAnimation,
-    required TextDirection textDirection,
-    required Offset thumbCenter,
-    Offset? secondaryOffset,
-    bool isDiscrete = false,
-    bool isEnabled = false,
-    double additionalActiveTrackHeight = 0,
-  }) {
-    // 1. Base track rendering
-    super.paint(
-      context,
-      offset,
-      parentBox: parentBox,
-      sliderTheme: sliderTheme,
-      enableAnimation: enableAnimation,
-      textDirection: textDirection,
-      thumbCenter: thumbCenter,
-      secondaryOffset: secondaryOffset,
-      isDiscrete: isDiscrete,
-      isEnabled: isEnabled,
-      additionalActiveTrackHeight: additionalActiveTrackHeight,
-    );
-
-    if (milestones.isEmpty || max <= min) return;
-
-    // 2. Paint clean milestone dots directly along the track
-    final Rect trackRect = getPreferredRect(
-      parentBox: parentBox,
-      offset: offset,
-      sliderTheme: sliderTheme,
-      isEnabled: isEnabled,
-      isDiscrete: isDiscrete,
-    );
-
-    final Paint inactiveDotPaint = Paint()
-      ..color = inactiveMilestoneColor ?? (sliderTheme.inactiveTrackColor ?? Colors.grey).withOpacity(0.8)
-      ..style = PaintingStyle.fill;
-
-    final Paint activeDotPaint = Paint()
-      ..color = activeMilestoneColor ?? Colors.white.withOpacity(0.7)
-      ..style = PaintingStyle.fill;
-
-    final double trackWidth = trackRect.width;
-    final double startX = trackRect.left;
-    final double centerY = trackRect.center.dy;
-
-    for (final m in milestones) {
-      final double fraction = ((m - min) / (max - min)).clamp(0.0, 1.0);
-      final double dotX = startX + (trackWidth * fraction);
-
-      // Avoid drawing right under the thumb knob
-      if ((dotX - thumbCenter.dx).abs() <= 7) continue;
-
-      if (dotX < thumbCenter.dx) {
-        context.canvas.drawCircle(Offset(dotX, centerY), milestoneRadius * 0.8, activeDotPaint);
-      } else {
-        context.canvas.drawCircle(Offset(dotX, centerY), milestoneRadius, inactiveDotPaint);
-      }
-    }
   }
 }
 
