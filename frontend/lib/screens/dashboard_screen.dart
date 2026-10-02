@@ -2633,34 +2633,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Text(
-                              'Financial Calculators Hub',
-                              style: GoogleFonts.outfit(
-                                fontSize: 14.5,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white : const Color(0xFF0F172A),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                              decoration: BoxDecoration(
-                                color: primaryColor.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                'ALL-IN-1',
-                                style: GoogleFonts.inter(
-                                  fontSize: 8.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: primaryColor,
-                                  letterSpacing: 0.4,
-                                ),
-                              ),
-                            ),
-                          ],
+                        Text(
+                          'Financial Calculators Hub',
+                          style: GoogleFonts.outfit(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          ),
                         ),
                         const SizedBox(height: 2),
                         Text(
