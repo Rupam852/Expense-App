@@ -439,7 +439,7 @@ class BackupScopeStrings {
       title: 'Backup & Privacy Scope',
       subtitle: 'Know exactly what gets backed up to cloud vs stored privately on device',
       tabBackup: 'Backed Up (Cloud)',
-      tabNoBackup: 'Not Backed Up (Local Only)',
+      tabNoBackup: 'No Backup (Local)',
       backupHeaderTitle: 'Secure Cloud Backup',
       backupHeaderDesc: 'Synced to your private Supabase cloud account. Seamlessly restored when you log in on any device.',
       noBackupHeaderTitle: '100% Local & Device-Private',
@@ -722,28 +722,54 @@ class _BackupScopeScreenState extends State<BackupScopeScreen> with SingleTicker
               ),
               labelColor: Colors.white,
               unselectedLabelColor: isDark ? Colors.grey[400] : Colors.grey[700],
-              labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
-              unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
+              labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12.5),
+              unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12.5),
               dividerColor: Colors.transparent,
               tabs: [
                 Tab(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.cloud_done_rounded, size: 16),
-                      const SizedBox(width: 6),
-                      Text(str.tabBackup),
-                    ],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.cloud_done_rounded, size: 15),
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              str.tabBackup,
+                              maxLines: 1,
+                              style: const TextStyle(letterSpacing: -0.2),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 Tab(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.phonelink_lock_rounded, size: 16),
-                      const SizedBox(width: 6),
-                      Text(str.tabNoBackup),
-                    ],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.phonelink_lock_rounded, size: 15),
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              str.tabNoBackup,
+                              maxLines: 1,
+                              style: const TextStyle(letterSpacing: -0.2),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
