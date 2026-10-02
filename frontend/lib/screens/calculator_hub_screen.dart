@@ -2314,14 +2314,13 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
           ),
           const SizedBox(height: 18),
 
-          // 1. Loan Amount Slider & Input (Interactive on tap + granular smooth slider)
+          // 1. Loan Amount Slider & Input (Interactive on tap + granular smooth slider + milestone dots)
           _buildInputCard(
             title: str.loanAmount,
             valueText: '₹${fmt.format(_loanAmount.round())}',
             sliderValue: _loanAmount.clamp(10000, 5000000),
             min: 10000,
             max: 5000000,
-            divisions: 499,
             onSliderChanged: (val) {
               final stepped = (val / 10000).round() * 10000.0;
               setState(() {
@@ -2355,18 +2354,18 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
           ),
           const SizedBox(height: 14),
 
-          // 2. Interest Rate Slider & Input (Interactive on tap)
+          // 2. Interest Rate Slider & Input (Interactive on tap + milestone dots)
           _buildInputCard(
             title: str.interestRatePa,
             valueText: '${_interestRate.toStringAsFixed(1)} %',
             sliderValue: _interestRate.clamp(1, 30),
             min: 1,
             max: 30,
-            divisions: 290,
             onSliderChanged: (val) {
+              final stepped = (val * 10).round() / 10.0;
               setState(() {
-                _interestRate = val;
-                _interestRateCtrl.text = val.toStringAsFixed(1);
+                _interestRate = stepped;
+                _interestRateCtrl.text = stepped.toStringAsFixed(1);
               });
             },
             onValueTap: () {
@@ -2396,18 +2395,17 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
           ),
           const SizedBox(height: 14),
 
-          // 3. Tenure Slider & Input (Interactive on tap)
+          // 3. Tenure Slider & Input (Interactive on tap + milestone dots)
           _buildInputCard(
             title: str.loanTenure,
             valueText: '${_tenureYears.toInt()} ${_isTenureInYears ? str.years : str.months}',
             sliderValue: _tenureYears.clamp(1, _isTenureInYears ? 30 : 360),
             min: 1,
             max: _isTenureInYears ? 30 : 360,
-            divisions: _isTenureInYears ? 29 : 359,
             onSliderChanged: (val) {
               setState(() {
-                _tenureYears = val;
-                _tenureCtrl.text = val.round().toString();
+                _tenureYears = val.roundToDouble();
+                _tenureCtrl.text = _tenureYears.round().toString();
               });
             },
             onValueTap: () {
@@ -2426,6 +2424,16 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
               );
             },
             isDark: isDark,
+            presets: _isTenureInYears
+                ? [1, 3, 5, 10, 15, 20, 25, 30]
+                : [6, 12, 24, 36, 60, 120, 240, 360],
+            presetSuffix: _isTenureInYears ? ' Yr' : ' Mo',
+            onPresetSelected: (val) {
+              setState(() {
+                _tenureYears = val.toDouble();
+                _tenureCtrl.text = val.toInt().toString();
+              });
+            },
             headerWidget: Row(
               children: [
                 ChoiceChip(
@@ -2467,15 +2475,19 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
     required double sliderValue,
     required double min,
     required double max,
-    required int divisions,
     required ValueChanged<double> onSliderChanged,
     required bool isDark,
+    int? divisions,
     VoidCallback? onValueTap,
     Widget? headerWidget,
     List<num>? presets,
     String presetSuffix = '',
     ValueChanged<num>? onPresetSelected,
   }) {
+    final milestoneList = presets != null
+        ? presets.map((p) => p.toDouble()).toList()
+        : <double>[];
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -2528,10 +2540,13 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
               thumbColor: const Color(0xFF00D09C),
               overlayColor: const Color(0xFF00D09C).withOpacity(0.15),
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 9),
-              trackShape: _DottedSliderTrackShape(
-                dotCount: 16,
-                dotColor: isDark ? const Color(0xFF4A5568) : const Color(0xFF94A3B8),
-                dotRadius: 1.8,
+              trackShape: _MilestoneSliderTrackShape(
+                milestones: milestoneList,
+                min: min,
+                max: max,
+                inactiveMilestoneColor: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                activeMilestoneColor: Colors.white.withOpacity(0.7),
+                milestoneRadius: 2.2,
               ),
             ),
             child: Slider(
@@ -2548,7 +2563,9 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: presets.map((p) {
-                  final label = p >= 100000 ? '${(p / 100000).toStringAsFixed(p % 100000 == 0 ? 0 : 1)}L' : (p >= 1000 ? '${(p / 1000).toStringAsFixed(0)}k' : '$p$presetSuffix');
+                  final label = p >= 100000
+                      ? '${(p / 100000).toStringAsFixed(p % 100000 == 0 ? 0 : 1)}L'
+                      : (p >= 1000 ? '${(p / 1000).toStringAsFixed(0)}k' : '$p$presetSuffix');
                   return Padding(
                     padding: const EdgeInsets.only(right: 6.0),
                     child: ActionChip(
@@ -2566,16 +2583,22 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
   }
 }
 
-/// Custom Slider Track Shape that paints subtle tick dots directly inside the slider bar track
-class _DottedSliderTrackShape extends RoundedRectSliderTrackShape {
-  final int dotCount;
-  final Color? dotColor;
-  final double dotRadius;
+/// Custom Slider Track Shape that paints clean milestone landmark dots aligned with preset chips
+class _MilestoneSliderTrackShape extends RoundedRectSliderTrackShape {
+  final List<double> milestones;
+  final double min;
+  final double max;
+  final Color? activeMilestoneColor;
+  final Color? inactiveMilestoneColor;
+  final double milestoneRadius;
 
-  const _DottedSliderTrackShape({
-    this.dotCount = 16,
-    this.dotColor,
-    this.dotRadius = 1.8,
+  const _MilestoneSliderTrackShape({
+    required this.milestones,
+    required this.min,
+    required this.max,
+    this.activeMilestoneColor,
+    this.inactiveMilestoneColor,
+    this.milestoneRadius = 2.2,
   });
 
   @override
@@ -2607,7 +2630,9 @@ class _DottedSliderTrackShape extends RoundedRectSliderTrackShape {
       additionalActiveTrackHeight: additionalActiveTrackHeight,
     );
 
-    // 2. Paint subtle dots directly inside the inactive slider track
+    if (milestones.isEmpty || max <= min) return;
+
+    // 2. Paint clean milestone dots directly along the track
     final Rect trackRect = getPreferredRect(
       parentBox: parentBox,
       offset: offset,
@@ -2616,18 +2641,29 @@ class _DottedSliderTrackShape extends RoundedRectSliderTrackShape {
       isDiscrete: isDiscrete,
     );
 
-    final Paint dotPaint = Paint()
-      ..color = dotColor ?? (sliderTheme.inactiveTrackColor ?? Colors.grey).withOpacity(0.6)
+    final Paint inactiveDotPaint = Paint()
+      ..color = inactiveMilestoneColor ?? (sliderTheme.inactiveTrackColor ?? Colors.grey).withOpacity(0.8)
+      ..style = PaintingStyle.fill;
+
+    final Paint activeDotPaint = Paint()
+      ..color = activeMilestoneColor ?? Colors.white.withOpacity(0.7)
       ..style = PaintingStyle.fill;
 
     final double trackWidth = trackRect.width;
     final double startX = trackRect.left;
     final double centerY = trackRect.center.dy;
 
-    for (int i = 0; i <= dotCount; i++) {
-      final double dotX = startX + (trackWidth / dotCount) * i;
-      if (dotX > thumbCenter.dx + 8 && dotX < trackRect.right - 2) {
-        context.canvas.drawCircle(Offset(dotX, centerY), dotRadius, dotPaint);
+    for (final m in milestones) {
+      final double fraction = ((m - min) / (max - min)).clamp(0.0, 1.0);
+      final double dotX = startX + (trackWidth * fraction);
+
+      // Avoid drawing right under the thumb knob
+      if ((dotX - thumbCenter.dx).abs() <= 7) continue;
+
+      if (dotX < thumbCenter.dx) {
+        context.canvas.drawCircle(Offset(dotX, centerY), milestoneRadius * 0.8, activeDotPaint);
+      } else {
+        context.canvas.drawCircle(Offset(dotX, centerY), milestoneRadius, inactiveDotPaint);
       }
     }
   }
