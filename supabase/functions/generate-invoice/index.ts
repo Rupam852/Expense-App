@@ -287,13 +287,18 @@ function formatDateDDMMYYYY(dateInput: any): string {
   return `${dd}/${mm}/${yyyy}`
 }
 
-function wrapText(text: string, maxWidth: number, font: any, fontSize: number): string[] {
+function wrapText(text: string, maxWidth: number, font: any, fontSize: number, maxLines: number = 3): string[] {
   if (!text || text.trim() === '') return ['N/A']
   
   const paragraphs = text.split(/\r?\n/)
   const resultLines: string[] = []
+  let hasMore = false
 
   for (const para of paragraphs) {
+    if (resultLines.length >= maxLines) {
+      hasMore = true
+      break
+    }
     if (para.trim() === '') {
       resultLines.push('')
       continue
@@ -303,6 +308,11 @@ function wrapText(text: string, maxWidth: number, font: any, fontSize: number): 
     let currentLine = ''
 
     for (const word of words) {
+      if (resultLines.length >= maxLines) {
+        hasMore = true
+        break
+      }
+
       const testLine = currentLine ? `${currentLine} ${word}` : word
       const testWidth = font.widthOfTextAtSize(testLine, fontSize)
 
@@ -311,6 +321,11 @@ function wrapText(text: string, maxWidth: number, font: any, fontSize: number): 
       } else {
         if (currentLine) {
           resultLines.push(currentLine)
+          if (resultLines.length >= maxLines) {
+            hasMore = true
+            currentLine = ''
+            break
+          }
         }
         // If single word is wider than maxWidth, break character by character
         if (font.widthOfTextAtSize(word, fontSize) > maxWidth) {
@@ -320,6 +335,11 @@ function wrapText(text: string, maxWidth: number, font: any, fontSize: number): 
               subWord += char
             } else {
               resultLines.push(subWord)
+              if (resultLines.length >= maxLines) {
+                hasMore = true
+                subWord = ''
+                break
+              }
               subWord = char
             }
           }
@@ -331,8 +351,22 @@ function wrapText(text: string, maxWidth: number, font: any, fontSize: number): 
     }
 
     if (currentLine) {
-      resultLines.push(currentLine)
+      if (resultLines.length < maxLines) {
+        resultLines.push(currentLine)
+      } else {
+        hasMore = true
+      }
     }
+  }
+
+  // If text exceeded maxLines, append ellipsis '...' to the last line
+  if (hasMore && resultLines.length > 0) {
+    const lastIndex = resultLines.length - 1
+    let lastLine = resultLines[lastIndex]
+    while (lastLine.length > 0 && font.widthOfTextAtSize(lastLine + '...', fontSize) > maxWidth) {
+      lastLine = lastLine.slice(0, -1).trim()
+    }
+    resultLines[lastIndex] = lastLine.length > 0 ? `${lastLine}...` : '...'
   }
 
   return resultLines.length > 0 ? resultLines : ['N/A']

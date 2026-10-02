@@ -265,7 +265,7 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
                 return [
                   DateFormat('dd MMM yyyy').format(e.transactionDate),
                   e.category,
-                  e.description.isEmpty ? '-' : e.description,
+                  _formatDescriptionForPdf(e.description),
                   e.isRecurring ? 'Yes (${e.recurrencePeriod})' : 'No',
                   'Rs. ${e.amount.toStringAsFixed(2)}',
                 ];
@@ -327,6 +327,64 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
     );
 
     return pdf.save();
+  }
+
+  /// Formats long description into maximum 2-3 lines with ellipsis if it overflows
+  String _formatDescriptionForPdf(String desc) {
+    final trimmed = desc.trim();
+    if (trimmed.isEmpty) return '-';
+
+    final paragraphs = trimmed.split(RegExp(r'\r?\n'));
+    final List<String> lines = [];
+    bool hasMore = false;
+    const maxLines = 3;
+    const maxCharsPerLine = 28;
+
+    for (final para in paragraphs) {
+      if (lines.length >= maxLines) {
+        hasMore = true;
+        break;
+      }
+      final words = para.split(RegExp(r'\s+'));
+      String currentLine = '';
+
+      for (final word in words) {
+        if (lines.length >= maxLines) {
+          hasMore = true;
+          break;
+        }
+        final testLine = currentLine.isEmpty ? word : '$currentLine $word';
+        if (testLine.length <= maxCharsPerLine) {
+          currentLine = testLine;
+        } else {
+          if (currentLine.isNotEmpty) {
+            lines.add(currentLine);
+            if (lines.length >= maxLines) {
+              hasMore = true;
+              currentLine = '';
+              break;
+            }
+          }
+          currentLine = word;
+        }
+      }
+      if (currentLine.isNotEmpty) {
+        if (lines.length < maxLines) {
+          lines.add(currentLine);
+        } else {
+          hasMore = true;
+        }
+      }
+    }
+
+    if (hasMore && lines.isNotEmpty) {
+      final last = lines.last;
+      lines[lines.length - 1] = last.length > (maxCharsPerLine - 3)
+          ? '${last.substring(0, maxCharsPerLine - 3)}...'
+          : '$last...';
+    }
+
+    return lines.join('\n');
   }
 
   // ────────────────────────────────────────────────────────────
