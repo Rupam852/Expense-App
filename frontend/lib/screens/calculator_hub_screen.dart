@@ -1291,24 +1291,33 @@ class _StandardCalculatorViewState extends State<_StandardCalculatorView> {
     return Expanded(
       flex: isWide ? 2 : 1,
       child: Padding(
-        padding: const EdgeInsets.all(4.0),
+        padding: const EdgeInsets.all(5.0),
         child: InkWell(
           onTap: () => _onBtnTap(label),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           child: Container(
-            height: 56,
+            height: 68,
             decoration: BoxDecoration(
               color: bg ?? defaultBg,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(
                 color: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0),
               ),
+              boxShadow: bg != null
+                  ? [
+                      BoxShadow(
+                        color: bg.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ]
+                  : null,
             ),
             alignment: Alignment.center,
             child: Text(
               label,
               style: GoogleFonts.outfit(
-                fontSize: 22,
+                fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: fg ?? defaultFg,
               ),
@@ -1325,23 +1334,23 @@ class _StandardCalculatorViewState extends State<_StandardCalculatorView> {
     final opColor = const Color(0xFF00D09C);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16.0, 6.0, 16.0, 10.0),
+      padding: const EdgeInsets.fromLTRB(16.0, 10.0, 16.0, 24.0),
       child: Column(
         children: [
-          // Display Screen Card (Clean, compact, starts immediately from top)
+          // Display Screen Card (Spacious, bold, pro display)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF181B22) : Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
-                  blurRadius: 10,
+                  color: Colors.black.withOpacity(isDark ? 0.25 : 0.05),
+                  blurRadius: 14,
                   offset: const Offset(0, 4),
                 ),
               ],
@@ -1354,20 +1363,21 @@ class _StandardCalculatorViewState extends State<_StandardCalculatorView> {
                   Text(
                     _expression,
                     style: GoogleFonts.firaCode(
-                      fontSize: 15,
+                      fontSize: 17,
                       color: isDark ? Colors.grey[400] : Colors.grey[600],
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 6),
                 ],
                 Text(
                   _result,
                   style: GoogleFonts.outfit(
-                    fontSize: 38,
+                    fontSize: 46,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF00D09C),
+                    letterSpacing: -0.5,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -1375,7 +1385,7 @@ class _StandardCalculatorViewState extends State<_StandardCalculatorView> {
               ],
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
 
           // Keypad Rows
           Row(
