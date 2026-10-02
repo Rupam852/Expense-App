@@ -57,14 +57,11 @@ class SupportService {
     formattedBody.writeln('════════════════════════════════════════');
     formattedBody.writeln('(Sent automatically via Grow Expense App)');
 
-    // 2. Build mailto URI targeting rupambairagya08@gmail.com
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: developerEmail,
-      queryParameters: {
-        'subject': '[Grow Expense Report] $category - $cleanName',
-        'body': formattedBody.toString(),
-      },
+    // 2. Build standard percent-encoded mailto URI (prevents '+' symbols in Gmail)
+    final subject = '[Grow Expense Report] $category - $cleanName';
+    final body = formattedBody.toString();
+    final Uri emailUri = Uri.parse(
+      'mailto:$developerEmail?subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}',
     );
 
     bool launchedEmailApp = false;
