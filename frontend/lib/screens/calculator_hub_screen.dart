@@ -964,12 +964,6 @@ Future<void> showCalcLanguagePickerSheet({
                           ),
                         ],
                       ),
-                      subtitle: Text(
-                        item.sampleHint,
-                        style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[400]),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
                       trailing: isSelected
                           ? const Icon(Icons.check_circle_rounded, color: Color(0xFF00D09C), size: 22)
                           : null,
