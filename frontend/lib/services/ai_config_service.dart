@@ -345,13 +345,24 @@ class AiConfigService with ChangeNotifier {
         changed = true;
       }
 
-      // Respect local AI mode preference first; if not set locally, fall back to cloud profile mode
+      // Restore AI Mode: if cloud has an active choice ('custom' or 'default'), restore it; otherwise default to 'default'
+      final cloudMode = profile['ai_mode']?.toString().trim();
       final localMode = prefs.getString(_keyAiMode);
-      if (localMode != null && localMode.isNotEmpty) {
-        _aiMode = localMode;
-      } else if (profile['ai_mode'] != null && profile['ai_mode'].toString().trim().isNotEmpty) {
-        _aiMode = profile['ai_mode'].toString().trim();
+      if (cloudMode != null && (cloudMode == 'custom' || cloudMode == 'default')) {
+        _aiMode = cloudMode;
         await prefs.setString(_keyAiMode, _aiMode);
+        changed = true;
+      } else if (localMode != null && localMode.isNotEmpty) {
+        _aiMode = localMode;
+      } else {
+        _aiMode = 'default';
+        await prefs.setString(_keyAiMode, 'default');
+      }
+
+      // Safety check: if mode is custom but user has no keys, safely fallback to default
+      if (_aiMode == 'custom' && _geminiApiKey.isEmpty && _nvidiaApiKey.isEmpty) {
+        _aiMode = 'default';
+        await prefs.setString(_keyAiMode, 'default');
         changed = true;
       }
 

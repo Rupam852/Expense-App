@@ -186,6 +186,7 @@ class UserProvider with ChangeNotifier {
         'email': user.email,
         'name': profile?['name'] ?? user.userMetadata?['name'] ?? user.userMetadata?['full_name'] ?? 'User',
         'photo_url': profile?['photo_url'] ?? user.userMetadata?['avatar_url'],
+        'ai_mode': profile?['ai_mode'] ?? 'default',
         'gemini_api_key': profile?['gemini_api_key'],
         'nvidia_api_key': profile?['nvidia_api_key'],
         'gemini_model': profile?['gemini_model'],
