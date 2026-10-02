@@ -91,6 +91,13 @@ class DatabaseHelper {
       final decrypted = crypter.decrypt64(cipherText, iv: iv);
       return decrypted;
     } catch (e) {
+      // Secondary fallback using static salt in case key was rotated or initialized differently
+      try {
+        final staticKey = enc.Key.fromUtf8('groww_secure_app_salt_32_bytes_k');
+        final staticIV = enc.IV.fromUtf8('groww_sec_iv_16b');
+        final staticCrypter = enc.Encrypter(enc.AES(staticKey, mode: enc.AESMode.cbc));
+        return staticCrypter.decrypt64(cipherText, iv: staticIV);
+      } catch (_) {}
       // Return plaintext if decryption fails (self-healing for legacy/plaintext rows)
       return cipherText;
     }
@@ -285,6 +292,18 @@ class DatabaseHelper {
           title TEXT NOT NULL,
           summary TEXT NOT NULL,
           details_json TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        )
+      ''');
+    } catch (_) {}
+    try {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS ai_chat_messages (
+          id TEXT PRIMARY KEY,
+          text TEXT NOT NULL,
+          is_user INTEGER NOT NULL,
+          timestamp TEXT NOT NULL,
+          model_used TEXT,
           created_at TEXT NOT NULL
         )
       ''');
