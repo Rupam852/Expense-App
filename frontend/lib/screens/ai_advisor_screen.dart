@@ -554,33 +554,106 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
   }
 
   Future<void> _confirmClearChat() async {
+    final stats = await DatabaseHelper.instance.getAiChatStats();
+    final count = stats['count'] as int? ?? _messages.where((m) => m.isUser || m.text.isNotEmpty).length;
+    final formattedSize = stats['formattedSize'] as String? ?? '0 KB';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (!mounted) return;
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: isDark ? const Color(0xFF181B22) : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: isDark ? const Color(0xFF2E384D) : const Color(0xFFE2E8F0),
+          ),
+        ),
         title: Row(
           children: [
-            const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 24),
-            const SizedBox(width: 8),
-            Text('Clear Chat History?', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18)),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.redAccent.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Clear Chat History?',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
           ],
         ),
-        content: Text(
-          'All your saved conversation messages will be deleted from your phone. This cannot be undone.',
-          style: GoogleFonts.inter(fontSize: 13.5, height: 1.4),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Chat Storage Info Card
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E2430) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF2E384D) : const Color(0xFFE2E8F0),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.storage_rounded, size: 22, color: Color(0xFF00D09C)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Stored Chat Size: $formattedSize',
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$count saved messages on this device',
+                          style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey[500]),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'All your AI conversations, suggestions, and action intents will be permanently wiped from local phone storage. This action cannot be undone.',
+              style: GoogleFonts.inter(fontSize: 12.5, height: 1.45, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+            ),
+          ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+            child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.grey)),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Colors.redAccent,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text('Clear History', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+            child: Text(
+              'Clear History ($formattedSize)',
+              style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -593,7 +666,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
         _addInitialWelcomeMessage();
       });
       if (mounted) {
-        CustomToast.show(context, 'Chat history cleared successfully');
+        CustomToast.show(context, 'Chat history cleared successfully ($formattedSize freed)');
       }
     }
   }
@@ -795,35 +868,61 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                     const SizedBox(height: 22),
 
                     // Section 3: Delete / Clear Chat History Button
-                    InkWell(
-                      onTap: () {
-                        Navigator.of(ctx).pop();
-                        _confirmClearChat();
-                      },
-                      borderRadius: BorderRadius.circular(14),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.redAccent.withValues(alpha: 0.1),
+                    FutureBuilder<Map<String, dynamic>>(
+                      future: DatabaseHelper.instance.getAiChatStats(),
+                      builder: (context, snapshot) {
+                        final sizeStr = snapshot.data?['formattedSize'] ?? '0 KB';
+                        final count = snapshot.data?['count'] ?? 0;
+                        return InkWell(
+                          onTap: () {
+                            Navigator.of(ctx).pop();
+                            _confirmClearChat();
+                          },
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent, size: 20),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Clear All Chat History',
-                              style: GoogleFonts.inter(
-                                color: Colors.redAccent,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13.5,
-                              ),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.redAccent.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
                             ),
-                          ],
-                        ),
-                      ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Clear All Chat History',
+                                      style: GoogleFonts.inter(
+                                        color: Colors.redAccent,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.redAccent.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    '$sizeStr ($count)',
+                                    style: GoogleFonts.inter(
+                                      color: Colors.redAccent,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 11.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),

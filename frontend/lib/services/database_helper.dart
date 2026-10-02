@@ -1540,8 +1540,9 @@ class DatabaseHelper {
     );
   }
 
-  // Clear entire local databases for user sign-out safety
-  Future<void> clearAllData() async {
+  // Clears only cloud-synchronized tables during cloud restore/pull.
+  // Preserves 100% local-only tables like `ai_chat_messages` and `calculator_history`.
+  Future<void> clearSyncTables() async {
     final db = await instance.database;
     await db.delete('expenses');
     await db.delete('budgets');
@@ -1550,7 +1551,22 @@ class DatabaseHelper {
     try { await db.delete('khata_entries'); } catch (_) {}
     try { await db.delete('split_bills'); } catch (_) {}
     try { await db.delete('subscriptions'); } catch (_) {}
-    try { await db.delete('ai_chat_messages'); } catch (_) {}
+  }
+
+  // Clear entire local databases for user sign-out safety
+  Future<void> clearAllData({bool preserveLocalChatAndCalc = false}) async {
+    final db = await instance.database;
+    await db.delete('expenses');
+    await db.delete('budgets');
+    await db.delete('payment_details');
+    await db.delete('deleted_records');
+    try { await db.delete('khata_entries'); } catch (_) {}
+    try { await db.delete('split_bills'); } catch (_) {}
+    try { await db.delete('subscriptions'); } catch (_) {}
+    if (!preserveLocalChatAndCalc) {
+      try { await db.delete('ai_chat_messages'); } catch (_) {}
+      try { await db.delete('calculator_history'); } catch (_) {}
+    }
   }
 
   // ================= AI CHAT MESSAGES CRUD =================
@@ -1589,6 +1605,35 @@ class DatabaseHelper {
       decryptedRow['text'] = decryptVal(row['text']?.toString() ?? '');
       return decryptedRow;
     }).toList();
+  }
+
+  Future<Map<String, dynamic>> getAiChatStats() async {
+    try {
+      final db = await instance.database;
+      final result = await db.rawQuery('SELECT COUNT(*) as count, TOTAL(LENGTH(text)) as text_bytes FROM ai_chat_messages');
+      final count = Sqflite.firstIntValue(result) ?? 0;
+      final textBytes = ((result.first['text_bytes'] as num?)?.toInt() ?? 0);
+      final totalBytes = count > 0 ? (textBytes + (count * 128)) : 0;
+      return {
+        'count': count,
+        'bytes': totalBytes,
+        'formattedSize': formatBytes(totalBytes),
+      };
+    } catch (e) {
+      debugPrint('[DatabaseHelper] Error calculating AI chat stats: $e');
+      return {
+        'count': 0,
+        'bytes': 0,
+        'formattedSize': '0 KB',
+      };
+    }
+  }
+
+  static String formatBytes(int bytes) {
+    if (bytes <= 0) return '0 B';
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(2)} MB';
   }
 
   Future<int> clearAiChatMessages() async {

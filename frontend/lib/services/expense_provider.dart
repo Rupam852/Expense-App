@@ -1249,8 +1249,8 @@ class ExpenseProvider with ChangeNotifier {
       );
 
       if (syncResult != null) {
-        // Clear local database safely only after cloud payload is verified
-        await _dbHelper.clearAllData();
+        // Clear local synchronized tables safely only after cloud payload is verified (preserves local chat)
+        await _dbHelper.clearSyncTables();
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('last_sync_time');
 
