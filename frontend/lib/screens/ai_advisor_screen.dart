@@ -935,9 +935,10 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     );
   }
 
-  // Formatted RichText & Markdown renderer removing raw * and **
+  // Formatted RichText & Markdown renderer removing raw * and ** and LaTeX artifacts
   Widget _buildAiFormattedContent(String text, bool isDark, Color primaryColor) {
-    final lines = text.split('\n');
+    final sanitizedText = AiConfigService.sanitizeLatexMath(text);
+    final lines = sanitizedText.split('\n');
     final List<Widget> widgets = [];
     final baseStyle = GoogleFonts.inter(
       fontSize: 13.5,

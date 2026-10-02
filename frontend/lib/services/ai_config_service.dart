@@ -1357,6 +1357,11 @@ ${_responseLanguage == 'Punjabi' ? '- Use Punjabi language in Gurmukhi script (�
 ### USER'S LIVE FINANCIAL LEDGER CONTEXT:
 $financialContextSummary
 
+### CRITICAL FORMATTING & MATHEMATICAL EXPRESSION RULE:
+- NEVER EVER output LaTeX formatting, MathJax, or TeX syntax (such as \$\$, \$, \\frac, \\text, \\times, \\div, \\cdot, \\left, \\right, etc.).
+- ALWAYS write all calculations, quantities, and equations in simple, human-friendly plain text (e.g. "6 kg ÷ 2 = 3 kg", "₹120 / 2 = ₹60", "₹50 × 3 = ₹150").
+- Use clean formatting with simple bullet points and bold numbers/amounts (e.g. **₹4,500**) only.
+
 ### GUIDELINES:
 1. Always reference the user's ACTUAL expense numbers and categories from the provided context when answering.
 2. Be concise, punchy, and use structured bullets and bold figures (e.g. **₹4,500**) for clarity.
@@ -1439,7 +1444,8 @@ $financialContextSummary
                 final replyText = parts[0]['text']?.toString() ?? '';
                 if (replyText.trim().isNotEmpty) {
                   debugPrint('[AiConfigService] Gemini Financial Advisor model $model succeeded!');
-                  return {'success': true, 'reply': replyText.trim(), 'modelUsed': model};
+                  final cleaned = sanitizeLatexMath(replyText.trim());
+                  return {'success': true, 'reply': cleaned, 'modelUsed': model};
                 }
               }
             }
@@ -1511,7 +1517,8 @@ $financialContextSummary
             final replyText = resJson['choices']?[0]?['message']?['content']?.toString() ?? '';
             if (replyText.trim().isNotEmpty) {
               debugPrint('[AiConfigService] NVIDIA Advisor model $model succeeded!');
-              return {'success': true, 'reply': replyText.trim(), 'modelUsed': model};
+              final cleaned = sanitizeLatexMath(replyText.trim());
+              return {'success': true, 'reply': cleaned, 'modelUsed': model};
             }
             lastNvidiaError = 'Model $model returned empty reply';
           } else {
@@ -1817,5 +1824,45 @@ Return ONLY a valid single JSON object without markdown fences, backticks, or ot
         str.contains('all gemini models failed') ||
         str.contains('all nvidia nim models failed') ||
         str.contains('both primary');
+  }
+
+  /// Sanitizes any raw LaTeX math artifacts (e.g. \frac, \text, $$, $) into clean, human-readable plain text
+  static String sanitizeLatexMath(String text) {
+    if (text.isEmpty) return text;
+
+    String cleaned = text;
+
+    // 1. Replace \text{...} with inner content
+    cleaned = cleaned.replaceAllMapped(RegExp(r'\\text\{([^}]*)\}'), (m) => m.group(1) ?? '');
+
+    // 2. Replace \frac{A}{B} with A / B (up to 4 passes for nested)
+    for (int i = 0; i < 4; i++) {
+      cleaned = cleaned.replaceAllMapped(RegExp(r'\\frac\{([^{}]+)\}\{([^{}]+)\}'), (m) {
+        final num = m.group(1)?.trim() ?? '';
+        final den = m.group(2)?.trim() ?? '';
+        return '$num / $den';
+      });
+    }
+
+    // 3. Replace common math symbols & commands
+    cleaned = cleaned.replaceAll(r'\times', '×');
+    cleaned = cleaned.replaceAll(r'\cdot', '×');
+    cleaned = cleaned.replaceAll(r'\div', '÷');
+    cleaned = cleaned.replaceAll(r'\pm', '±');
+    cleaned = cleaned.replaceAll(r'\approx', '≈');
+    cleaned = cleaned.replaceAll(r'\le', '≤');
+    cleaned = cleaned.replaceAll(r'\ge', '≥');
+    cleaned = cleaned.replaceAll(r'\neq', '≠');
+    cleaned = cleaned.replaceAll(r'\left', '');
+    cleaned = cleaned.replaceAll(r'\right', '');
+
+    // 4. Remove $$ and $ math block delimiters
+    cleaned = cleaned.replaceAll(RegExp(r'\$\$'), '');
+    cleaned = cleaned.replaceAll(RegExp(r'(?<!\\)\$'), '');
+
+    // 5. Clean up any double spaces resulting from replacements
+    cleaned = cleaned.replaceAll(RegExp(r'[ \t]+'), ' ');
+
+    return cleaned.trim();
   }
 }
