@@ -36,15 +36,31 @@ class ExportStatementDialog extends StatefulWidget {
 
 class _ExportStatementDialogState extends State<ExportStatementDialog> {
   ExportFormat _selectedFormat = ExportFormat.pdf;
+  bool _isCustomRange = false;
+  DateTimeRange? _customDateRange;
   bool _isExporting = false;
 
   List<Expense> _getFilteredExpenses(List<Expense> allExpenses, DateTime selectedMonth) {
-    return allExpenses.where((e) {
+    final monthExpenses = allExpenses.where((e) {
       return e.transactionDate.year == selectedMonth.year && e.transactionDate.month == selectedMonth.month;
     }).toList();
+
+    if (_isCustomRange && _customDateRange != null) {
+      final start = DateTime(_customDateRange!.start.year, _customDateRange!.start.month, _customDateRange!.start.day);
+      final end = DateTime(_customDateRange!.end.year, _customDateRange!.end.month, _customDateRange!.end.day, 23, 59, 59);
+      return monthExpenses.where((e) {
+        return e.transactionDate.isAfter(start.subtract(const Duration(seconds: 1))) &&
+            e.transactionDate.isBefore(end.add(const Duration(seconds: 1)));
+      }).toList();
+    }
+
+    return monthExpenses;
   }
 
   String _getRangeLabel(DateTime selectedMonth) {
+    if (_isCustomRange && _customDateRange != null) {
+      return '${DateFormat('dd MMM').format(_customDateRange!.start)} - ${DateFormat('dd MMM yyyy').format(_customDateRange!.end)}';
+    }
     return DateFormat('MMMM yyyy').format(selectedMonth);
   }
 
@@ -485,7 +501,147 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
+
+              // Active Month Date Range Filter (Full Month vs Custom Days inside month)
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        if (_isCustomRange) {
+                          setState(() {
+                            _isCustomRange = false;
+                          });
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: !_isCustomRange
+                              ? primaryColor
+                              : (isDark ? const Color(0xFF1E2433) : const Color(0xFFF1F5F9)),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: !_isCustomRange
+                                ? primaryColor
+                                : (isDark ? const Color(0xFF2A344A) : const Color(0xFFE2E8F0)),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.calendar_month_rounded,
+                              size: 16,
+                              color: !_isCustomRange ? Colors.black : (isDark ? Colors.white70 : Colors.black87),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Full Month',
+                              style: GoogleFonts.inter(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.bold,
+                                color: !_isCustomRange ? Colors.black : (isDark ? Colors.white70 : Colors.black87),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () async {
+                        final monthStart = DateTime(selectedMonth.year, selectedMonth.month, 1);
+                        final monthEnd = DateTime(selectedMonth.year, selectedMonth.month + 1, 0);
+
+                        final picked = await showDateRangePicker(
+                          context: context,
+                          firstDate: monthStart,
+                          lastDate: monthEnd,
+                          initialDateRange: _customDateRange ??
+                              DateTimeRange(
+                                start: monthStart,
+                                end: DateTime.now().isBefore(monthEnd) ? DateTime.now() : monthEnd,
+                              ),
+                          helpText: 'Select range in ${DateFormat('MMMM yyyy').format(selectedMonth)}',
+                          builder: (context, child) {
+                            return Theme(
+                              data: isDark
+                                  ? ThemeData.dark().copyWith(
+                                      colorScheme: const ColorScheme.dark(
+                                        primary: Color(0xFF00D09C),
+                                        onPrimary: Colors.black,
+                                        surface: Color(0xFF1A1F2C),
+                                      ),
+                                    )
+                                  : ThemeData.light().copyWith(
+                                      colorScheme: const ColorScheme.light(
+                                        primary: Color(0xFF00D09C),
+                                        onPrimary: Colors.white,
+                                      ),
+                                    ),
+                              child: child!,
+                            );
+                          },
+                        );
+
+                        if (picked != null) {
+                          setState(() {
+                            _customDateRange = picked;
+                            _isCustomRange = true;
+                          });
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: _isCustomRange
+                              ? primaryColor
+                              : (isDark ? const Color(0xFF1E2433) : const Color(0xFFF1F5F9)),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _isCustomRange
+                                ? primaryColor
+                                : (isDark ? const Color(0xFF2A344A) : const Color(0xFFE2E8F0)),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.date_range_rounded,
+                              size: 16,
+                              color: _isCustomRange ? Colors.black : (isDark ? Colors.white70 : Colors.black87),
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                _isCustomRange && _customDateRange != null
+                                    ? '${DateFormat('dd MMM').format(_customDateRange!.start)} - ${DateFormat('dd MMM').format(_customDateRange!.end)}'
+                                    : 'Custom Days',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: _isCustomRange ? Colors.black : (isDark ? Colors.white70 : Colors.black87),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
 
               // Active Month Summary Card
               Container(
@@ -505,7 +661,7 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
                         color: primaryColor.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.calendar_month_rounded, color: primaryColor, size: 20),
+                      child: Icon(Icons.receipt_long_rounded, color: primaryColor, size: 20),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -514,7 +670,7 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
                         children: [
                           Text(
                             monthLabel,
-                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
                           ),
                           const SizedBox(height: 2),
                           Text(
