@@ -557,9 +557,8 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     final stats = await DatabaseHelper.instance.getAiChatStats();
     final count = stats['count'] as int? ?? _messages.where((m) => m.isUser || m.text.isNotEmpty).length;
     final formattedSize = stats['formattedSize'] as String? ?? '0 KB';
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     if (!mounted) return;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final confirm = await showDialog<bool>(
       context: context,
