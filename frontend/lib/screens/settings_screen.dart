@@ -12,6 +12,7 @@ import 'payment_details_screen.dart';
 import '../services/app_update_service.dart';
 import 'app_update_screen.dart';
 import 'about_screen.dart';
+import 'backup_scope_screen.dart';
 import 'notification_settings_screen.dart';
 import '../widgets/report_issue_modal.dart';
 
@@ -753,6 +754,32 @@ class SettingsScreen extends StatelessWidget {
                       ),
                       trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
                       onTap: () => _showRestoreBackupDialog(context, expenseProvider),
+                    ),
+                    Divider(height: 1, color: borderColor),
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00D09C).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.shield_outlined, color: Color(0xFF00D09C), size: 22),
+                      ),
+                      title: Text(
+                        'What Gets Backed Up?',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        'See what data is synced to cloud vs stored privately on device',
+                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                      ),
+                      trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const BackupScopeScreen()),
+                        );
+                      },
                     ),
                   ],
                 ),
