@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../services/ai_config_service.dart';
 import '../services/database_helper.dart';
@@ -167,9 +168,153 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       } else {
         _addInitialWelcomeMessage();
       }
+
+      // Check for month rollover prompt
+      await _checkMonthRolloverPrompt();
     } catch (e) {
       debugPrint('[AiAdvisorScreen] Error loading chat history: $e');
       _addInitialWelcomeMessage();
+    }
+  }
+
+  Future<void> _checkMonthRolloverPrompt() async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final currentMonthKey = DateFormat('yyyy-MM').format(now);
+    final monthName = DateFormat('MMMM yyyy').format(now);
+    final lastSeenMonth = prefs.getString('last_seen_chat_month');
+
+    if (lastSeenMonth == null) {
+      await prefs.setString('last_seen_chat_month', currentMonthKey);
+      return;
+    }
+
+    if (lastSeenMonth != currentMonthKey && _messages.isNotEmpty) {
+      // Check if there are past messages from a different month
+      final hasPastMessages = _messages.any((m) {
+        final monthKey = DateFormat('yyyy-MM').format(m.timestamp);
+        return monthKey != currentMonthKey;
+      });
+
+      if (hasPastMessages && mounted) {
+        await _showNewMonthChatDialog(currentMonthKey, monthName, prefs);
+      } else {
+        await prefs.setString('last_seen_chat_month', currentMonthKey);
+      }
+    }
+  }
+
+  Future<void> _showNewMonthChatDialog(String currentMonthKey, String monthName, SharedPreferences prefs) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).primaryColor;
+
+    final startFresh = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1E2430) : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: primaryColor.withValues(alpha: 0.2),
+          ),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: primaryColor.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF00D09C), size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'New Month, Fresh Start! 🗓️',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 17),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'A new month ($monthName) has started! Would you like to clear previous months\' conversation and start fresh for $monthName?',
+              style: GoogleFonts.inter(
+                fontSize: 13.5,
+                height: 1.45,
+                color: isDark ? Colors.grey[300] : Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: primaryColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline_rounded, size: 16, color: primaryColor),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Your saved expenses and budgets are always 100% safe in History.',
+                      style: GoogleFonts.inter(fontSize: 11.5, color: primaryColor),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    foregroundColor: Colors.grey,
+                  ),
+                  child: const Text('Keep Old Chat', style: TextStyle(fontWeight: FontWeight.w600)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00D09C),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Start Fresh 🚀', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    await prefs.setString('last_seen_chat_month', currentMonthKey);
+
+    if (startFresh == true && mounted) {
+      await DatabaseHelper.instance.clearAiChatMessages();
+      setState(() {
+        _messages.clear();
+      });
+      _addInitialWelcomeMessage();
+      CustomToast.show(context, 'Started fresh chat for $monthName! ✨');
     }
   }
 
