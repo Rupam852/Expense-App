@@ -1,7 +1,9 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/expense.dart';
@@ -368,10 +370,10 @@ class SupabaseService {
   }
 
   // ══════════════════════════════════════════════════════
-  // INVOICE GENERATION (Edge Function)
+  // INVOICE GENERATION (Local PDF Generator)
   // ══════════════════════════════════════════════════════
 
-  /// Call Edge Function to generate PDF invoice — returns PDF bytes
+  /// Generates PDF invoice bytes with chronological sorting and wrapped descriptions
   Future<Uint8List?> generateInvoicePdf(List<Expense> expenses, {String? monthYear}) async {
     if (expenses.isEmpty) {
       print('[Invoice] No expenses provided. Aborting PDF generation.');
@@ -384,28 +386,195 @@ class SupabaseService {
         return a.createdAt.compareTo(b.createdAt);
       });
 
-      final response = await _client.functions.invoke(
-        'generate-invoice',
-        body: {
-          'expenses': sortedExpenses.map((e) => e.toMap()).toList(),
-          'month_year': monthYear,
-        },
+      final pdf = pw.Document();
+      final double total = sortedExpenses.fold(0.0, (sum, e) => sum + e.amount);
+      final periodLabel = monthYear != null ? _monthLabel(monthYear) : 'Custom Selection';
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          header: (pw.Context context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          'EXPENSE INVOICE',
+                          style: pw.TextStyle(
+                            fontSize: 20,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.teal800,
+                          ),
+                        ),
+                        pw.SizedBox(height: 2),
+                        pw.Text(
+                          'Period: $periodLabel',
+                          style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
+                        ),
+                      ],
+                    ),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      children: [
+                        pw.Text(
+                          'Total: Rs. ${total.toStringAsFixed(2)}',
+                          style: pw.TextStyle(
+                            fontSize: 15,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.teal900,
+                          ),
+                        ),
+                        pw.Text(
+                          '${sortedExpenses.length} Transactions',
+                          style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                pw.Divider(thickness: 1.5, color: PdfColors.teal800),
+                pw.SizedBox(height: 8),
+              ],
+            );
+          },
+          build: (pw.Context context) {
+            return [
+              pw.TableHelper.fromTextArray(
+                headers: ['Date', 'Category', 'Description', 'Recurring', 'Amount (INR)'],
+                data: sortedExpenses.map((e) {
+                  return [
+                    DateFormat('dd MMM yyyy').format(e.transactionDate),
+                    e.category,
+                    _formatDescriptionForPdf(e.description),
+                    e.isRecurring ? 'Yes (${e.recurrencePeriod})' : 'No',
+                    'Rs. ${e.amount.toStringAsFixed(2)}',
+                  ];
+                }).toList(),
+                headerStyle: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.white,
+                  fontSize: 10,
+                ),
+                headerDecoration: const pw.BoxDecoration(
+                  color: PdfColors.teal800,
+                ),
+                cellStyle: const pw.TextStyle(fontSize: 9),
+                cellAlignment: pw.Alignment.centerLeft,
+                cellAlignments: {
+                  4: pw.Alignment.centerRight,
+                },
+                rowDecoration: const pw.BoxDecoration(
+                  border: pw.Border(
+                    bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+                  ),
+                ),
+              ),
+              pw.SizedBox(height: 16),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.end,
+                children: [
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: pw.BoxDecoration(
+                      color: PdfColors.teal50,
+                      borderRadius: pw.BorderRadius.circular(6),
+                      border: pw.Border.all(color: PdfColors.teal800),
+                    ),
+                    child: pw.Text(
+                      'Grand Total: Rs. ${total.toStringAsFixed(2)}',
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 13,
+                        color: PdfColors.teal900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ];
+          },
+          footer: (pw.Context context) {
+            return pw.Container(
+              alignment: pw.Alignment.centerRight,
+              margin: const pw.EdgeInsets.only(top: 10),
+              child: pw.Text(
+                'Page ${context.pageNumber} of ${context.pagesCount}  •  Generated by Expense App',
+                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
+              ),
+            );
+          },
+        ),
       );
-      if (response.data != null) {
-        if (response.data is Map) {
-          final data = response.data as Map;
-          if (data['success'] == true && data['pdf_base64'] != null) {
-            return base64Decode(data['pdf_base64'] as String);
-          }
-        }
-        if (response.data is Uint8List) return response.data as Uint8List;
-        if (response.data is List) return Uint8List.fromList(List<int>.from(response.data as List));
-      }
-      return null;
+
+      return await pdf.save();
     } catch (e) {
-      print('[Invoice] Edge Function error: $e');
+      print('[Invoice] Local PDF generation error: $e');
       return null;
     }
+  }
+
+  /// Formats long description into maximum 2-3 lines with ellipsis if it overflows
+  static String _formatDescriptionForPdf(String desc) {
+    final trimmed = desc.trim();
+    if (trimmed.isEmpty) return '-';
+
+    final paragraphs = trimmed.split(RegExp(r'\r?\n'));
+    final List<String> lines = [];
+    bool hasMore = false;
+    const maxLines = 3;
+    const maxCharsPerLine = 28;
+
+    for (final para in paragraphs) {
+      if (lines.length >= maxLines) {
+        hasMore = true;
+        break;
+      }
+      final words = para.split(RegExp(r'\s+'));
+      String currentLine = '';
+
+      for (final word in words) {
+        if (lines.length >= maxLines) {
+          hasMore = true;
+          break;
+        }
+        final testLine = currentLine.isEmpty ? word : '$currentLine $word';
+        if (testLine.length <= maxCharsPerLine) {
+          currentLine = testLine;
+        } else {
+          if (currentLine.isNotEmpty) {
+            lines.add(currentLine);
+            if (lines.length >= maxLines) {
+              hasMore = true;
+              currentLine = '';
+              break;
+            }
+          }
+          currentLine = word;
+        }
+      }
+      if (currentLine.isNotEmpty) {
+        if (lines.length < maxLines) {
+          lines.add(currentLine);
+        } else {
+          hasMore = true;
+        }
+      }
+    }
+
+    if (hasMore && lines.isNotEmpty) {
+      final last = lines.last;
+      lines[lines.length - 1] = last.length > (maxCharsPerLine - 3)
+          ? '${last.substring(0, maxCharsPerLine - 3)}...'
+          : '$last...';
+    }
+
+    return lines.join('\n');
   }
 
   // ══════════════════════════════════════════════════════
