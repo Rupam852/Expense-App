@@ -637,13 +637,15 @@ class _CalculatorHubScreenState extends State<CalculatorHubScreen>
         ],
         bottom: TabBar(
           controller: _tabController,
-          isScrollable: true,
+          isScrollable: false,
           labelColor: const Color(0xFF00D09C),
           unselectedLabelColor: isDark ? Colors.grey[400] : Colors.grey[600],
           indicatorColor: const Color(0xFF00D09C),
           indicatorWeight: 3,
-          labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
-          unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 13),
+          indicatorSize: TabBarIndicatorSize.label,
+          labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+          labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 11),
+          unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 11),
           tabs: [
             Tab(icon: const Icon(Icons.calculate_outlined, size: 20), text: str.tabStandard),
             Tab(icon: const Icon(Icons.shopping_basket_outlined, size: 20), text: str.tabMarket),
