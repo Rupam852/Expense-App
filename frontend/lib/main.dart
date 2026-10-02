@@ -21,8 +21,13 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint('[FCM Background] Handling message: ${message.messageId}');
 }
 
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Attach global navigator key to NotificationService for 1-tap deep link navigation
+  NotificationService.instance.navigatorKey = appNavigatorKey;
 
   // Initialize Firebase
   await Firebase.initializeApp();
@@ -59,6 +64,7 @@ class GrowExpenseApp extends StatelessWidget {
     return Consumer<UserProvider>(
       builder: (context, userProvider, _) {
         return MaterialApp(
+          navigatorKey: appNavigatorKey,
           title: 'Grow Expense',
           debugShowCheckedModeBanner: false,
           theme: GrowwTheme.lightTheme,

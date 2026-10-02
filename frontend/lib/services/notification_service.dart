@@ -9,6 +9,15 @@ import '../models/subscription_item.dart';
 import '../models/budget.dart';
 import '../models/expense.dart';
 import '../models/khata_entry.dart';
+import '../screens/app_update_screen.dart';
+import '../screens/subscription_screen.dart';
+import '../screens/khata_screen.dart';
+import '../screens/split_bill_screen.dart';
+import '../screens/expense_entry_screen.dart';
+import '../screens/budget_screen.dart';
+import '../screens/analytics_screen.dart';
+import '../screens/invoice_screen.dart';
+import '../screens/invoice_history_screen.dart';
 import 'app_update_service.dart';
 import 'supabase_service.dart';
 
@@ -19,6 +28,8 @@ class NotificationService with ChangeNotifier {
   }
 
   factory NotificationService() => instance;
+
+  GlobalKey<NavigatorState>? navigatorKey;
 
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
@@ -213,9 +224,7 @@ class NotificationService with ChangeNotifier {
       await _notificationsPlugin.initialize(
         initSettings,
         onDidReceiveNotificationResponse: (NotificationResponse response) async {
-          if (response.payload == 'app_update') {
-            await AppUpdateService.instance.openDownloadLink();
-          }
+          handleNotificationPayload(response.payload);
         },
       );
 
@@ -414,11 +423,63 @@ class NotificationService with ChangeNotifier {
     );
   }
 
-  /// Handle Notification Payload Clicks
+  /// Handle Notification Payload Clicks from Firebase Cloud Messaging
   void _handleFcmMessageClick(RemoteMessage message) async {
-    final type = message.data['type'] ?? message.data['payload'];
-    if (type == 'app_update') {
-      await AppUpdateService.instance.openDownloadLink();
+    final payload = message.data['type'] ?? message.data['payload'] ?? message.data['channel_id'];
+    handleNotificationPayload(payload?.toString());
+  }
+
+  /// Global Deep Linking Handler for ALL notification types
+  void handleNotificationPayload(String? payload) {
+    if (payload == null || payload.isEmpty) return;
+    debugPrint('[NotificationService] Handling notification click with payload: $payload');
+
+    final context = navigatorKey?.currentContext;
+    if (context == null) {
+      debugPrint('[NotificationService] Navigator context not available yet for payload: $payload');
+      return;
+    }
+
+    try {
+      if (payload == 'app_update') {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => const AppUpdateScreen()),
+        );
+      } else if (payload.startsWith('subscription')) {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => const SubscriptionScreen()),
+        );
+      } else if (payload.startsWith('khata')) {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => const KhataScreen()),
+        );
+      } else if (payload.startsWith('split_bill')) {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => const SplitBillScreen()),
+        );
+      } else if (payload == 'daily_reminder') {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => const ExpenseEntryScreen()),
+        );
+      } else if (payload.startsWith('budget')) {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => const BudgetScreen()),
+        );
+      } else if (payload == 'monthly_report') {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
+        );
+      } else if (payload == 'month_end_reminder') {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => const InvoiceScreen()),
+        );
+      } else if (payload == 'new_month_start') {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => const InvoiceHistoryScreen()),
+        );
+      }
+    } catch (e) {
+      debugPrint('[NotificationService] Error navigating to screen for payload $payload: $e');
     }
   }
 
