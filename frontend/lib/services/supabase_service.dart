@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -7,6 +8,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/expense.dart';
+import 'database_helper.dart';
 
 /// Central Supabase service — replaces the old ApiService + SyncService
 class SupabaseService {
@@ -373,7 +375,8 @@ class SupabaseService {
   // INVOICE GENERATION (Local PDF Generator)
   // ══════════════════════════════════════════════════════
 
-  /// Generates PDF invoice bytes with chronological sorting and wrapped descriptions
+  /// Generates PDF invoice bytes with chronological sorting, wrapped descriptions,
+  /// issuer info, repayment UPI ID, and official Grow Expense styling.
   Future<Uint8List?> generateInvoicePdf(List<Expense> expenses, {String? monthYear}) async {
     if (expenses.isEmpty) {
       print('[Invoice] No expenses provided. Aborting PDF generation.');
@@ -386,127 +389,234 @@ class SupabaseService {
         return a.createdAt.compareTo(b.createdAt);
       });
 
+      // Fetch user profile info
+      String userName = 'User';
+      String userEmail = '';
+      try {
+        final profile = await fetchProfile();
+        final user = currentUser;
+        userName = profile?['name'] ?? user?.userMetadata?['name'] ?? user?.userMetadata?['full_name'] ?? 'User';
+        userEmail = user?.email ?? profile?['email'] ?? '';
+      } catch (_) {
+        final user = currentUser;
+        userName = user?.userMetadata?['name'] ?? user?.userMetadata?['full_name'] ?? 'User';
+        userEmail = user?.email ?? '';
+      }
+
+      // If still default, try SharedPreferences cached profile
+      if (userName == 'User' || userEmail.isEmpty) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final cachedStr = prefs.getString('cached_user_profile');
+          if (cachedStr != null) {
+            final cached = json.decode(cachedStr) as Map<String, dynamic>;
+            if (userName == 'User' && cached['name'] != null) {
+              userName = cached['name'].toString();
+            }
+            if (userEmail.isEmpty && cached['email'] != null) {
+              userEmail = cached['email'].toString();
+            }
+          }
+        } catch (_) {}
+      }
+
+      // Fetch primary or only UPI ID from local SQLite database
+      String upiId = '';
+      try {
+        final paymentDetails = await DatabaseHelper.instance.getPaymentDetails();
+        if (paymentDetails.isNotEmpty) {
+          final primary = paymentDetails.firstWhere(
+            (p) => p.isPrimary,
+            orElse: () => paymentDetails.first,
+          );
+          upiId = primary.upiId.trim();
+        }
+      } catch (_) {}
+
       final pdf = pw.Document();
       final double total = sortedExpenses.fold(0.0, (sum, e) => sum + e.amount);
-      final periodLabel = monthYear != null ? _monthLabel(monthYear) : 'Custom Selection';
+      final issueDateStr = DateFormat('dd/MM/yyyy').format(DateTime.now());
+      final mintColor = PdfColor.fromHex('#00D09C');
 
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(32),
+          margin: const pw.EdgeInsets.all(36),
           header: (pw.Context context) {
             return pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
+                // Top Brand Title
+                pw.Text(
+                  'GROW EXPENSE',
+                  style: pw.TextStyle(
+                    fontSize: 22,
+                    fontWeight: pw.FontWeight.bold,
+                    color: mintColor,
+                  ),
+                ),
+                pw.SizedBox(height: 2),
+                pw.Text(
+                  'Official Reimbursement & Billing Statement',
+                  style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+                ),
+                pw.SizedBox(height: 8),
+                pw.Divider(thickness: 0.8, color: PdfColors.grey300),
+                pw.SizedBox(height: 8),
+
+                // Issuer & Payment Info Row
                 pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
+                    // Left Column: Issued By, Email, Date of Issue
                     pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text(
-                          'EXPENSE INVOICE',
-                          style: pw.TextStyle(
-                            fontSize: 20,
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.teal800,
+                        pw.RichText(
+                          text: pw.TextSpan(
+                            children: [
+                              pw.TextSpan(
+                                text: 'Issued By: ',
+                                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: PdfColors.black),
+                              ),
+                              pw.TextSpan(
+                                text: userName,
+                                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: PdfColors.black),
+                              ),
+                            ],
                           ),
                         ),
+                        if (userEmail.isNotEmpty) ...[
+                          pw.SizedBox(height: 2),
+                          pw.Text(
+                            'Email: $userEmail',
+                            style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey800),
+                          ),
+                        ],
                         pw.SizedBox(height: 2),
                         pw.Text(
-                          'Period: $periodLabel',
-                          style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
+                          'Date of Issue: $issueDateStr',
+                          style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey800),
                         ),
                       ],
                     ),
+
+                    // Right Column: UPI ID for Repayment
                     pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.end,
                       children: [
-                        pw.Text(
-                          'Total: Rs. ${total.toStringAsFixed(2)}',
-                          style: pw.TextStyle(
-                            fontSize: 15,
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.teal900,
+                        pw.RichText(
+                          text: pw.TextSpan(
+                            children: [
+                              pw.TextSpan(
+                                text: 'UPI ID for Repayment: ',
+                                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: PdfColors.black),
+                              ),
+                              pw.TextSpan(
+                                text: upiId,
+                                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: PdfColors.black),
+                              ),
+                            ],
                           ),
-                        ),
-                        pw.Text(
-                          '${sortedExpenses.length} Transactions',
-                          style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
                         ),
                       ],
                     ),
                   ],
                 ),
-                pw.Divider(thickness: 1.5, color: PdfColors.teal800),
-                pw.SizedBox(height: 8),
+                pw.SizedBox(height: 14),
               ],
             );
           },
           build: (pw.Context context) {
             return [
               pw.TableHelper.fromTextArray(
-                headers: ['Date', 'Category', 'Description', 'Recurring', 'Amount (INR)'],
+                headers: ['Date', 'Category', 'Description', 'Recurring', 'Amount'],
                 data: sortedExpenses.map((e) {
                   return [
-                    DateFormat('dd MMM yyyy').format(e.transactionDate),
+                    DateFormat('dd/MM/yyyy').format(e.transactionDate),
                     e.category,
                     _formatDescriptionForPdf(e.description),
                     e.isRecurring ? 'Yes (${e.recurrencePeriod})' : 'No',
-                    'Rs. ${e.amount.toStringAsFixed(2)}',
+                    '${e.amount.toStringAsFixed(2)} INR',
                   ];
                 }).toList(),
                 headerStyle: pw.TextStyle(
                   fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.white,
-                  fontSize: 10,
+                  color: PdfColors.grey900,
+                  fontSize: 9.5,
                 ),
                 headerDecoration: const pw.BoxDecoration(
-                  color: PdfColors.teal800,
+                  border: pw.Border(
+                    bottom: pw.BorderSide(color: PdfColors.grey400, width: 1),
+                  ),
                 ),
-                cellStyle: const pw.TextStyle(fontSize: 9),
+                cellStyle: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey900),
                 cellAlignment: pw.Alignment.centerLeft,
                 cellAlignments: {
                   4: pw.Alignment.centerRight,
                 },
                 rowDecoration: const pw.BoxDecoration(
                   border: pw.Border(
-                    bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+                    bottom: pw.BorderSide(color: PdfColors.grey200, width: 0.5),
                   ),
                 ),
               ),
-              pw.SizedBox(height: 16),
+              pw.SizedBox(height: 14),
+
+              // Total Expenses Section with Mint Accent Underline
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.end,
                 children: [
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: pw.BoxDecoration(
-                      color: PdfColors.teal50,
-                      borderRadius: pw.BorderRadius.circular(6),
-                      border: pw.Border.all(color: PdfColors.teal800),
-                    ),
-                    child: pw.Text(
-                      'Grand Total: Rs. ${total.toStringAsFixed(2)}',
-                      style: pw.TextStyle(
-                        fontWeight: pw.FontWeight.bold,
-                        fontSize: 13,
-                        color: PdfColors.teal900,
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Container(
+                        width: 180,
+                        height: 2,
+                        color: mintColor,
                       ),
-                    ),
+                      pw.SizedBox(height: 6),
+                      pw.Row(
+                        mainAxisSize: pw.MainAxisSize.min,
+                        children: [
+                          pw.Text(
+                            'Total Expenses:   ',
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 11,
+                              color: PdfColors.black,
+                            ),
+                          ),
+                          pw.Text(
+                            '${total.toStringAsFixed(2)} INR',
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 11.5,
+                              color: mintColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ],
               ),
             ];
           },
           footer: (pw.Context context) {
-            return pw.Container(
-              alignment: pw.Alignment.centerRight,
-              margin: const pw.EdgeInsets.only(top: 10),
-              child: pw.Text(
-                'Page ${context.pageNumber} of ${context.pagesCount}  •  Generated by Expense App',
-                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
-              ),
+            return pw.Column(
+              children: [
+                pw.Divider(thickness: 0.5, color: PdfColors.grey300),
+                pw.SizedBox(height: 4),
+                pw.Container(
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    'Generated instantly by Grow Expense App. For any discrepancies, contact issuer above.',
+                    style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey600),
+                  ),
+                ),
+              ],
             );
           },
         ),
