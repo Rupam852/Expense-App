@@ -30,7 +30,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
   double _totalLenaHai = 0.0;
   double _totalDenaHai = 0.0;
 
-  String _filterPeriod = 'Today'; // Today, This Week, This Month, All Time
+  String _filterPeriod = 'This Month'; // Today, This Week, This Month, All Time
 
   @override
   void initState() {
@@ -55,8 +55,10 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
         start = DateTime(start.year, start.month, start.day);
       } else if (_filterPeriod == 'This Month') {
         start = DateTime(now.year, now.month, 1);
+        end = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
       } else {
         start = DateTime(2020, 1, 1);
+        end = DateTime(2099, 12, 31, 23, 59, 59);
       }
 
       final metrics = await DatabaseHelper.instance.getBusinessMetrics(start: start, end: end);

@@ -16,6 +16,7 @@ import 'expense_entry_screen.dart';
 import 'add_business_sale_screen.dart';
 import 'ai_advisor_screen.dart';
 import '../widgets/voice_expense_dialog.dart';
+import '../widgets/monthly_rollover_dialog.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -61,6 +62,11 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
         await expenseProvider.restoreFromCloud();
       } else {
         await expenseProvider.triggerQuietSync();
+      }
+
+      // Check and trigger smart dual-mode Monthly Rollover if new month started
+      if (mounted) {
+        await MonthlyRolloverDialog.checkAndShowRollover(context);
       }
     });
   }
