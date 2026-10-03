@@ -436,6 +436,34 @@ class _MonthlyRolloverModalState extends State<_MonthlyRolloverModal> {
                   textAlign: TextAlign.center,
                 ),
               ),
+
+            // ── 3. SAFETY & ARCHIVAL GUARANTEE BADGE ────────────────
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.shield_outlined, size: 16, color: Color(0xFF3B82F6)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'All your past transactions are 100% safely archived in your database & cloud. You can view or export past months anytime from the month selector.',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: isDark ? Colors.blue.shade200 : const Color(0xFF1D4ED8),
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
