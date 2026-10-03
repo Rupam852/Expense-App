@@ -96,6 +96,19 @@ class UserProvider with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('app_working_mode', isBusiness ? 'business' : 'personal');
+
+      if (_userProfile != null) {
+        _userProfile!['app_mode'] = isBusiness ? 'business' : 'personal';
+        await _saveProfileLocally();
+      }
+
+      if (_isAuthenticated) {
+        _supabase.upsertProfile({
+          'app_mode': isBusiness ? 'business' : 'personal',
+        }).catchError((e) {
+          debugPrint('[UserProvider] Error syncing app_mode to cloud: $e');
+        });
+      }
     } catch (e) {
       debugPrint('[UserProvider] Error saving app mode: $e');
     }
@@ -199,12 +212,20 @@ class UserProvider with ChangeNotifier {
       final user = _supabase.currentUser;
       if (user == null) return;
 
+      final prefs = await SharedPreferences.getInstance();
+      final cloudAppMode = profile?['app_mode']?.toString().trim();
+      if (cloudAppMode != null && (cloudAppMode == 'business' || cloudAppMode == 'personal')) {
+        _isBusinessMode = cloudAppMode == 'business';
+        await prefs.setString('app_working_mode', cloudAppMode);
+      }
+
       _userProfile = {
         'id': user.id,
         'email': user.email,
         'name': profile?['name'] ?? user.userMetadata?['name'] ?? user.userMetadata?['full_name'] ?? 'User',
         'photo_url': profile?['photo_url'] ?? user.userMetadata?['avatar_url'],
         'ai_mode': profile?['ai_mode'] ?? 'default',
+        'app_mode': cloudAppMode ?? (prefs.getString('app_working_mode') ?? 'personal'),
         'gemini_api_key': profile?['gemini_api_key'],
         'nvidia_api_key': profile?['nvidia_api_key'],
         'gemini_model': profile?['gemini_model'],
@@ -220,7 +241,6 @@ class UserProvider with ChangeNotifier {
       }
 
       // Cache Gemini keys locally
-      final prefs = await SharedPreferences.getInstance();
       final key = _userProfile!['gemini_api_key']?.toString().trim();
       if (key != null && key.isNotEmpty) {
         await prefs.setString('user_gemini_api_key', key);
@@ -433,6 +453,7 @@ class UserProvider with ChangeNotifier {
     String? geminiApiKey,
     String? nvidiaApiKey,
     String? aiMode,
+    String? appMode,
     String? geminiModel,
     String? nvidiaModel,
     String? primaryProvider,
@@ -450,6 +471,7 @@ class UserProvider with ChangeNotifier {
         if (geminiApiKey != null) 'gemini_api_key': geminiApiKey,
         if (nvidiaApiKey != null) 'nvidia_api_key': nvidiaApiKey,
         if (aiMode != null) 'ai_mode': aiMode,
+        if (appMode != null) 'app_mode': appMode,
         if (geminiModel != null) 'gemini_model': geminiModel,
         if (nvidiaModel != null) 'nvidia_model': nvidiaModel,
         if (primaryProvider != null) 'primary_provider': primaryProvider,
@@ -466,6 +488,7 @@ class UserProvider with ChangeNotifier {
         if (geminiApiKey != null) 'gemini_api_key': geminiApiKey,
         if (nvidiaApiKey != null) 'nvidia_api_key': nvidiaApiKey,
         if (aiMode != null) 'ai_mode': aiMode,
+        if (appMode != null) 'app_mode': appMode,
         if (geminiModel != null) 'gemini_model': geminiModel,
         if (nvidiaModel != null) 'nvidia_model': nvidiaModel,
         if (primaryProvider != null) 'primary_provider': primaryProvider,

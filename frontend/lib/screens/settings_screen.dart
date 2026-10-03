@@ -592,68 +592,242 @@ class SettingsScreen extends StatelessWidget {
                   cardBg: cardBg,
                   borderColor: userProvider.isBusinessMode 
                       ? const Color(0xFF00D09C).withOpacity(0.4) 
-                      : borderColor,
+                      : const Color(0xFF3B82F6).withOpacity(0.4),
                   children: [
-                    SwitchListTile(
-                      activeColor: primaryColor,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      secondary: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: userProvider.isBusinessMode
-                                ? const [Color(0xFF00D09C), Color(0xFF059669)]
-                                : const [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          userProvider.isBusinessMode ? Icons.storefront_rounded : Icons.person_rounded,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                      ),
-                      title: Row(
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            userProvider.isBusinessMode ? 'Business Mode' : 'Personal Mode',
-                            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: (userProvider.isBusinessMode ? const Color(0xFF00D09C) : const Color(0xFF3B82F6)).withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              userProvider.isBusinessMode ? 'BUSINESS' : 'PERSONAL',
-                              style: GoogleFonts.inter(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: userProvider.isBusinessMode ? const Color(0xFF00D09C) : const Color(0xFF3B82F6),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'ACTIVE PROFILE',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                  letterSpacing: 0.8,
+                                ),
                               ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: (userProvider.isBusinessMode
+                                          ? const Color(0xFF00D09C)
+                                          : const Color(0xFF3B82F6))
+                                      .withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: (userProvider.isBusinessMode
+                                            ? const Color(0xFF00D09C)
+                                            : const Color(0xFF3B82F6))
+                                        .withOpacity(0.3),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: userProvider.isBusinessMode
+                                            ? const Color(0xFF00D09C)
+                                            : const Color(0xFF3B82F6),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      userProvider.isBusinessMode ? 'BUSINESS MODE' : 'PERSONAL MODE',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: userProvider.isBusinessMode
+                                            ? const Color(0xFF00D09C)
+                                            : const Color(0xFF3B82F6),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+
+                          // Dual Mode Segmented Selector Pills
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF131720) : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                // Personal Pill
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      if (userProvider.isBusinessMode) {
+                                        userProvider.toggleAppMode(false);
+                                        CustomToast.show(context, 'Switched to Personal Mode 👤');
+                                      }
+                                    },
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 200),
+                                      padding: const EdgeInsets.symmetric(vertical: 11),
+                                      decoration: BoxDecoration(
+                                        gradient: !userProvider.isBusinessMode
+                                            ? const LinearGradient(
+                                                colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                                              )
+                                            : null,
+                                        color: !userProvider.isBusinessMode ? null : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(10),
+                                        boxShadow: !userProvider.isBusinessMode
+                                            ? [
+                                                BoxShadow(
+                                                  color: const Color(0xFF3B82F6).withOpacity(0.3),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ]
+                                            : null,
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.person_rounded,
+                                            size: 18,
+                                            color: !userProvider.isBusinessMode
+                                                ? Colors.white
+                                                : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                                          ),
+                                          const SizedBox(width: 7),
+                                          Text(
+                                            'Personal',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.bold,
+                                              color: !userProvider.isBusinessMode
+                                                  ? Colors.white
+                                                  : (isDark ? Colors.grey[400] : Colors.grey[700]),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                const SizedBox(width: 4),
+
+                                // Business Pill
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      if (!userProvider.isBusinessMode) {
+                                        userProvider.toggleAppMode(true);
+                                        CustomToast.show(context, 'Switched to Business Mode 🏢');
+                                      }
+                                    },
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 200),
+                                      padding: const EdgeInsets.symmetric(vertical: 11),
+                                      decoration: BoxDecoration(
+                                        gradient: userProvider.isBusinessMode
+                                            ? const LinearGradient(
+                                                colors: [Color(0xFF00D09C), Color(0xFF059669)],
+                                              )
+                                            : null,
+                                        color: userProvider.isBusinessMode ? null : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(10),
+                                        boxShadow: userProvider.isBusinessMode
+                                            ? [
+                                                BoxShadow(
+                                                  color: const Color(0xFF00D09C).withOpacity(0.3),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ]
+                                            : null,
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.storefront_rounded,
+                                            size: 18,
+                                            color: userProvider.isBusinessMode
+                                                ? Colors.white
+                                                : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                                          ),
+                                          const SizedBox(width: 7),
+                                          Text(
+                                            'Business',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.bold,
+                                              color: userProvider.isBusinessMode
+                                                  ? Colors.white
+                                                  : (isDark ? Colors.grey[400] : Colors.grey[700]),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          // Dynamic Descriptive Caption
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: (userProvider.isBusinessMode
+                                      ? const Color(0xFF00D09C)
+                                      : const Color(0xFF3B82F6))
+                                  .withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  userProvider.isBusinessMode
+                                      ? Icons.info_outline_rounded
+                                      : Icons.verified_user_outlined,
+                                  size: 15,
+                                  color: userProvider.isBusinessMode
+                                      ? const Color(0xFF00D09C)
+                                      : const Color(0xFF3B82F6),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    userProvider.isBusinessMode
+                                        ? 'Sales billing, GST invoices, customer Udhar Khata & Business Net Profit enabled.'
+                                        : 'Personal budgeting, daily expenses, subscriptions & trip tags enabled.',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11.5,
+                                      color: isDark ? Colors.grey[300] : Colors.grey[800],
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                      subtitle: Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          userProvider.isBusinessMode
-                              ? 'Sales, GST Invoices, Customer Udhar Khata & Net Profit enabled.'
-                              : 'Personal budgeting, daily expenses, subscriptions & trip tags enabled.',
-                          style: GoogleFonts.inter(fontSize: 11.5, color: isDark ? Colors.grey[400] : Colors.grey[600]),
-                        ),
-                      ),
-                      value: userProvider.isBusinessMode,
-                      onChanged: (val) {
-                        userProvider.toggleAppMode(val);
-                        CustomToast.show(
-                          context,
-                          val ? 'Switched to Business Mode 🏢' : 'Switched to Personal Mode 👤',
-                        );
-                      },
                     ),
                   ],
                 ),
