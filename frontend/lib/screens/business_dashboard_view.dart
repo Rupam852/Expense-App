@@ -181,359 +181,361 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
     final netProfit = totalSales - _todayExpenses;
     final marginPercent = totalSales > 0 ? ((netProfit / totalSales) * 100) : 0.0;
 
-    return RefreshIndicator(
-      onRefresh: _loadDashboardData,
-      child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        children: [
-          // ── TOP BUSINESS HEADER & MODE SWITCHER ───────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: InkWell(
-                  onTap: _showEditBusinessProfileDialog,
-                  borderRadius: BorderRadius.circular(10),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.storefront_rounded, color: primaryColor, size: 22),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    _businessProfile.businessName,
-                                    style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                const Icon(Icons.edit, size: 14, color: Colors.grey),
-                              ],
-                            ),
-                            Text(
-                              '🏢 Business Mode Active',
-                              style: GoogleFonts.inter(fontSize: 11.5, color: primaryColor, fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Mode Toggle Pill
-              GestureDetector(
-                onTap: () async {
-                  HapticFeedback.mediumImpact();
-                  await userProvider.toggleAppMode(false); // Switch to Personal Mode
-                  CustomToast.show(context, 'Switched to 🟢 Personal Mode');
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF00D09C).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFF00D09C).withOpacity(0.4)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF00D09C),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Switch to Personal',
-                        style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: const Color(0xFF00D09C)),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // ── PERIOD SELECTOR CHIPS ─────────────────────────
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: ['Today', 'This Week', 'This Month', 'All Time'].map((p) {
-                final isSelected = _filterPeriod == p;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(p, style: TextStyle(fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-                    selected: isSelected,
-                    selectedColor: primaryColor.withOpacity(0.2),
-                    onSelected: (val) {
-                      if (val) {
-                        setState(() => _filterPeriod = p);
-                        _loadDashboardData();
-                      }
-                    },
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 14),
-
-          // ── HERO METRICS CARDS ─────────────────────────────
-          Row(
-            children: [
-              // Sales (Cash-in)
-              Expanded(
-                child: _buildMetricCard(
-                  isDark: isDark,
-                  title: 'Sales ($_filterPeriod)',
-                  amount: '₹${totalSales.toStringAsFixed(0)}',
-                  subtitle: '${_metrics['saleCount']?.toInt() ?? 0} bills generated',
-                  icon: Icons.trending_up_rounded,
-                  iconColor: Colors.greenAccent.shade700,
-                  accentColor: Colors.greenAccent.shade700,
-                ),
-              ),
-              const SizedBox(width: 10),
-              // Expenses (Cash-out)
-              Expanded(
-                child: GestureDetector(
-                  onTap: () async {
-                    HapticFeedback.lightImpact();
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const ExpenseEntryScreen(initialLedgerType: 'business'),
-                      ),
-                    );
-                    _loadDashboardData();
-                  },
-                  child: _buildMetricCard(
-                    isDark: isDark,
-                    title: 'Business Expense',
-                    amount: '₹${_todayExpenses.toStringAsFixed(0)}',
-                    subtitle: 'Tap to log (+)',
-                    icon: Icons.trending_down_rounded,
-                    iconColor: Colors.orangeAccent,
-                    accentColor: Colors.orangeAccent,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          // Net Profit & Margin Card
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: netProfit >= 0
-                    ? [const Color(0xFF1E3A8A), const Color(0xFF1E293B)]
-                    : [const Color(0xFF7F1D1D), const Color(0xFF1E293B)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: netProfit >= 0 ? Colors.blue.withOpacity(0.3) : Colors.red.withOpacity(0.3),
-              ),
-            ),
-            child: Row(
+    return SafeArea(
+      child: RefreshIndicator(
+        onRefresh: _loadDashboardData,
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          children: [
+            // ── TOP BUSINESS HEADER & MODE SWITCHER ───────────
+            Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'NET PROFIT & MARGIN',
-                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white70, letterSpacing: 0.8),
+                Expanded(
+                  child: InkWell(
+                    onTap: _showEditBusinessProfileDialog,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: primaryColor.withOpacity(0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.storefront_rounded, color: primaryColor, size: 22),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      _businessProfile.businessName,
+                                      style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.edit, size: 14, color: Colors.grey),
+                                ],
+                              ),
+                              Text(
+                                '🏢 Business Mode Active',
+                                style: GoogleFonts.inter(fontSize: 11.5, color: primaryColor, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '₹${netProfit.toStringAsFixed(2)}',
-                      style: GoogleFonts.outfit(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: netProfit >= 0 ? const Color(0xFF4ADE80) : const Color(0xFFF87171),
-                      ),
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black26,
-                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
-                    '${marginPercent.toStringAsFixed(1)}% Margin',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: netProfit >= 0 ? const Color(0xFF4ADE80) : const Color(0xFFF87171),
+                ),
+
+                // Mode Toggle Pill
+                GestureDetector(
+                  onTap: () async {
+                    HapticFeedback.mediumImpact();
+                    await userProvider.toggleAppMode(false); // Switch to Personal Mode
+                    CustomToast.show(context, 'Switched to 🟢 Personal Mode');
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00D09C).withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFF00D09C).withOpacity(0.4)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF00D09C),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Switch to Personal',
+                          style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: const Color(0xFF00D09C)),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 14),
+            const SizedBox(height: 16),
 
-          // ── KHATA DUES (LENA HAI / DENA HAI) ───────────────
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.green.withOpacity(0.3)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.arrow_downward_rounded, size: 16, color: Colors.green),
-                          const SizedBox(width: 4),
-                          Text('To Receive (Lena Hai)', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '₹${_totalLenaHai.toStringAsFixed(0)}',
-                        style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.green),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.arrow_upward_rounded, size: 16, color: Colors.redAccent),
-                          const SizedBox(width: 4),
-                          Text('To Pay (Dena Hai)', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '₹${_totalDenaHai.toStringAsFixed(0)}',
-                        style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.redAccent),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-
-          // ── QUICK ACTIONS GRID ─────────────────────────────
-          Text('Business Quick Actions', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              _buildActionButton(
-                label: '➕ New Sale',
-                icon: Icons.point_of_sale_rounded,
-                color: primaryColor,
-                onTap: () async {
-                  final res = await Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const AddBusinessSaleScreen()),
+            // ── PERIOD SELECTOR CHIPS ─────────────────────────
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: ['Today', 'This Week', 'This Month', 'All Time'].map((p) {
+                  final isSelected = _filterPeriod == p;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(p, style: TextStyle(fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                      selected: isSelected,
+                      selectedColor: primaryColor.withOpacity(0.2),
+                      onSelected: (val) {
+                        if (val) {
+                          setState(() => _filterPeriod = p);
+                          _loadDashboardData();
+                        }
+                      },
+                    ),
                   );
-                  if (res == true) _loadDashboardData();
-                },
+                }).toList(),
               ),
-              const SizedBox(width: 8),
-              _buildActionButton(
-                label: '🧾 Invoices',
-                icon: Icons.receipt_long_rounded,
-                color: const Color(0xFF8B5CF6),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const InvoiceScreen()),
-                ),
-              ),
-              const SizedBox(width: 8),
-              _buildActionButton(
-                label: '📖 Khata Book',
-                icon: Icons.menu_book_rounded,
-                color: const Color(0xFFF59E0B),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const KhataScreen()),
-                ),
-              ),
-              const SizedBox(width: 8),
-              _buildActionButton(
-                label: '🛒 Mandi Calc',
-                icon: Icons.calculate_rounded,
-                color: const Color(0xFF10B981),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const CalculatorHubScreen(initialTabIndex: 1)),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
+            ),
+            const SizedBox(height: 14),
 
-          // ── RECENT SALES & INVOICES LIST ───────────────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Recent Sales & Invoices', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
-              if (_sales.isNotEmpty)
-                Text('${_sales.length} records', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey)),
-            ],
-          ),
-          const SizedBox(height: 10),
+            // ── HERO METRICS CARDS ─────────────────────────────
+            Row(
+              children: [
+                // Sales (Cash-in)
+                Expanded(
+                  child: _buildMetricCard(
+                    isDark: isDark,
+                    title: 'Sales ($_filterPeriod)',
+                    amount: '₹${totalSales.toStringAsFixed(0)}',
+                    subtitle: '${_metrics['saleCount']?.toInt() ?? 0} bills generated',
+                    icon: Icons.trending_up_rounded,
+                    iconColor: Colors.greenAccent.shade700,
+                    accentColor: Colors.greenAccent.shade700,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // Expenses (Cash-out)
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () async {
+                      HapticFeedback.lightImpact();
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const ExpenseEntryScreen(initialLedgerType: 'business'),
+                        ),
+                      );
+                      _loadDashboardData();
+                    },
+                    child: _buildMetricCard(
+                      isDark: isDark,
+                      title: 'Business Expense',
+                      amount: '₹${_todayExpenses.toStringAsFixed(0)}',
+                      subtitle: 'Tap to log (+)',
+                      icon: Icons.trending_down_rounded,
+                      iconColor: Colors.orangeAccent,
+                      accentColor: Colors.orangeAccent,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
 
-          if (_sales.isEmpty)
+            // Net Profit & Margin Card
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
-              alignment: Alignment.center,
-              child: Column(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: netProfit >= 0
+                      ? [const Color(0xFF1E3A8A), const Color(0xFF1E293B)]
+                      : [const Color(0xFF7F1D1D), const Color(0xFF1E293B)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: netProfit >= 0 ? Colors.blue.withOpacity(0.3) : Colors.red.withOpacity(0.3),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(Icons.receipt_outlined, size: 48, color: Colors.grey.withOpacity(0.5)),
-                  const SizedBox(height: 8),
-                  Text('No Sales Recorded Yet', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 4),
-                  Text('Tap "+ New Sale" above to record your first customer bill!', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'NET PROFIT & MARGIN',
+                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white70, letterSpacing: 0.8),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '₹${netProfit.toStringAsFixed(2)}',
+                        style: GoogleFonts.outfit(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: netProfit >= 0 ? const Color(0xFF4ADE80) : const Color(0xFFF87171),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black26,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${marginPercent.toStringAsFixed(1)}% Margin',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: netProfit >= 0 ? const Color(0xFF4ADE80) : const Color(0xFFF87171),
+                      ),
+                    ),
+                  ),
                 ],
               ),
-            )
-          else
-            ..._sales.map((sale) => _buildSaleTile(sale: sale, isDark: isDark, primaryColor: primaryColor)),
-        ],
+            ),
+            const SizedBox(height: 14),
+
+            // ── KHATA DUES (LENA HAI / DENA HAI) ───────────────
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.green.withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.arrow_downward_rounded, size: 16, color: Colors.green),
+                            const SizedBox(width: 4),
+                            Text('To Receive (Lena Hai)', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '₹${_totalLenaHai.toStringAsFixed(0)}',
+                          style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.green),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.arrow_upward_rounded, size: 16, color: Colors.redAccent),
+                            const SizedBox(width: 4),
+                            Text('To Pay (Dena Hai)', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '₹${_totalDenaHai.toStringAsFixed(0)}',
+                          style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.redAccent),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+
+            // ── QUICK ACTIONS GRID ─────────────────────────────
+            Text('Business Quick Actions', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                _buildActionButton(
+                  label: '➕ New Sale',
+                  icon: Icons.point_of_sale_rounded,
+                  color: primaryColor,
+                  onTap: () async {
+                    final res = await Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AddBusinessSaleScreen()),
+                    );
+                    if (res == true) _loadDashboardData();
+                  },
+                ),
+                const SizedBox(width: 8),
+                _buildActionButton(
+                  label: '🧾 Invoices',
+                  icon: Icons.receipt_long_rounded,
+                  color: const Color(0xFF8B5CF6),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const InvoiceScreen()),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _buildActionButton(
+                  label: '📖 Khata Book',
+                  icon: Icons.menu_book_rounded,
+                  color: const Color(0xFFF59E0B),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const KhataScreen()),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _buildActionButton(
+                  label: '🛒 Mandi Calc',
+                  icon: Icons.calculate_rounded,
+                  color: const Color(0xFF10B981),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const CalculatorHubScreen(initialTabIndex: 1)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // ── RECENT SALES & INVOICES LIST ───────────────────
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Recent Sales & Invoices', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
+                if (_sales.isNotEmpty)
+                  Text('${_sales.length} records', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey)),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            if (_sales.isEmpty)
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+                alignment: Alignment.center,
+                child: Column(
+                  children: [
+                    Icon(Icons.receipt_outlined, size: 48, color: Colors.grey.withOpacity(0.5)),
+                    const SizedBox(height: 8),
+                    Text('No Sales Recorded Yet', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 4),
+                    Text('Tap "+ New Sale" above to record your first customer bill!', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center),
+                  ],
+                ),
+              )
+            else
+              ..._sales.map((sale) => _buildSaleTile(sale: sale, isDark: isDark, primaryColor: primaryColor)),
+          ],
+        ),
       ),
     );
   }
