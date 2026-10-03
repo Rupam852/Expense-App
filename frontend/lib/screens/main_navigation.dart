@@ -118,38 +118,54 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
     ];
   }
 
-  void _openQuickAddExpense() {
+  void _openQuickAddExpense() async {
     _closeFabMenu();
     final isBusiness = Provider.of<UserProvider>(context, listen: false).isBusinessMode;
-    Navigator.of(context).push(
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => ExpenseEntryScreen(initialLedgerType: isBusiness ? 'business' : 'personal'),
       ),
     );
+    if (mounted) {
+      Provider.of<ExpenseProvider>(context, listen: false).loadLocalData();
+      setState(() {});
+    }
   }
 
-  void _openNewBusinessSale() {
+  void _openNewBusinessSale() async {
     _closeFabMenu();
-    Navigator.of(context).push(
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const AddBusinessSaleScreen(),
       ),
     );
+    if (mounted) {
+      Provider.of<ExpenseProvider>(context, listen: false).loadLocalData();
+      setState(() {});
+    }
   }
 
-  void _openOcrScanner() {
+  void _openOcrScanner() async {
     _closeFabMenu();
     final isBusiness = Provider.of<UserProvider>(context, listen: false).isBusinessMode;
-    Navigator.of(context).push(
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => ExpenseEntryScreen(openCameraScanner: true, initialLedgerType: isBusiness ? 'business' : 'personal'),
       ),
     );
+    if (mounted) {
+      Provider.of<ExpenseProvider>(context, listen: false).loadLocalData();
+      setState(() {});
+    }
   }
 
-  void _openVoiceExpenseDialog() {
+  void _openVoiceExpenseDialog() async {
     _closeFabMenu();
-    VoiceExpenseDialog.show(context);
+    await VoiceExpenseDialog.show(context);
+    if (mounted) {
+      Provider.of<ExpenseProvider>(context, listen: false).loadLocalData();
+      setState(() {});
+    }
   }
 
   bool _isFabVisible = true;

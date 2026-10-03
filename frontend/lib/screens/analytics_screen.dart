@@ -31,6 +31,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     _loadData();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadData();
+  }
+
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     final userProvider = Provider.of<UserProvider>(context, listen: false);

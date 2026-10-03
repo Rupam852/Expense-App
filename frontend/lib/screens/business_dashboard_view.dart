@@ -50,6 +50,12 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
     _loadDashboardData();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadDashboardData(isQuiet: true);
+  }
+
   Future<void> _loadDashboardData({bool isQuiet = false}) async {
     if (!isQuiet) {
       setState(() => _isLoading = true);
@@ -742,10 +748,10 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                   icon: Icons.point_of_sale_rounded,
                   color: primaryColor,
                   onTap: () async {
-                    final res = await Navigator.of(context).push(
+                    await Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const AddBusinessSaleScreen()),
                     );
-                    if (res == true) _loadDashboardData();
+                    _loadDashboardData(isQuiet: true);
                   },
                 ),
                 const SizedBox(width: 8),
@@ -753,27 +759,36 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                   label: '🧾 Invoices',
                   icon: Icons.receipt_long_rounded,
                   color: const Color(0xFF8B5CF6),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const InvoiceScreen()),
-                  ),
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const InvoiceScreen()),
+                    );
+                    _loadDashboardData(isQuiet: true);
+                  },
                 ),
                 const SizedBox(width: 8),
                 _buildActionButton(
                   label: '📖 Khata Book',
                   icon: Icons.menu_book_rounded,
                   color: const Color(0xFFF59E0B),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const KhataScreen()),
-                  ),
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const KhataScreen()),
+                    );
+                    _loadDashboardData(isQuiet: true);
+                  },
                 ),
                 const SizedBox(width: 8),
                 _buildActionButton(
                   label: '🛒 Mandi Calc',
                   icon: Icons.calculate_rounded,
                   color: const Color(0xFF10B981),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const CalculatorHubScreen(initialTabIndex: 1)),
-                  ),
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const CalculatorHubScreen(initialTabIndex: 1)),
+                    );
+                    _loadDashboardData(isQuiet: true);
+                  },
                 ),
               ],
             ),

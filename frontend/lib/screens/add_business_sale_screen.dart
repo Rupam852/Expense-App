@@ -372,6 +372,12 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
 
       await DatabaseHelper.instance.insertBusinessSale(sale);
 
+      if (mounted) {
+        final expProvider = Provider.of<ExpenseProvider>(context, listen: false);
+        expProvider.loadLocalData();
+        expProvider.triggerQuietSync();
+      }
+
       // Auto-add to Customer Khata if there is a pending balance
       if (_balanceDue > 0 && _autoAddToKhata && custName.isNotEmpty && custName != 'Walk-in Customer') {
         try {
