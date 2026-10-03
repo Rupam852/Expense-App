@@ -20,9 +20,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   bool _isLoading = false;
   
   // Business Analytics state
+  List<BusinessSale> _allBusinessSales = [];
   List<BusinessSale> _businessSales = [];
   List<Expense> _businessExpenses = [];
-  Map<String, dynamic> _businessMetrics = {};
   String _businessTimeFilter = 'This Month'; // 'Today', 'This Week', 'This Month', 'All Time'
 
   @override
@@ -78,13 +78,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         e.transactionDate.isBefore(end.add(const Duration(seconds: 1)))
       ).toList();
 
-      final metrics = await DatabaseHelper.instance.getBusinessMetrics(start: start, end: end);
-
       if (mounted) {
         setState(() {
+          _allBusinessSales = allSales;
           _businessSales = periodSales;
           _businessExpenses = periodExpenses;
-          _businessMetrics = metrics;
         });
       }
     } catch (e) {
@@ -215,18 +213,21 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     final cardBg = isDark ? const Color(0xFF1E232E) : Colors.white;
     final borderColor = isDark ? const Color(0xFF2C3242) : const Color(0xFFE2E8F0);
 
-    final totalSales = (_businessMetrics['total_sales'] as num?)?.toDouble() ?? 0.0;
-    final totalCollected = (_businessMetrics['total_collected'] as num?)?.toDouble() ?? 0.0;
-    final totalDue = (_businessMetrics['total_due'] as num?)?.toDouble() ?? 0.0;
+    double totalSales = 0.0;
+    double totalCollected = 0.0;
+    double totalDue = 0.0;
+    double totalGoodsCost = 0.0;
+
+    for (var s in _businessSales) {
+      totalSales += s.finalAmount;
+      totalCollected += s.paidAmount;
+      totalDue += s.balanceDue;
+      totalGoodsCost += s.totalPurchaseCost;
+    }
     
     double totalExpenses = 0.0;
     for (var e in _businessExpenses) {
       totalExpenses += e.amount;
-    }
-
-    double totalGoodsCost = 0.0;
-    for (var s in _businessSales) {
-      totalGoodsCost += s.totalPurchaseCost;
     }
 
     final netProfit = totalGoodsCost > 0
@@ -237,7 +238,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     // Payment Mode Breakdown
     final Map<String, double> paymentModeSums = {};
     for (var s in _businessSales) {
-      paymentModeSums[s.paymentMode] = (paymentModeSums[s.paymentMode] ?? 0.0) + s.grandTotal;
+      final mode = (s.paymentMode != null && s.paymentMode!.trim().isNotEmpty) ? s.paymentMode! : 'Cash';
+      paymentModeSums[mode] = (paymentModeSums[mode] ?? 0.0) + s.finalAmount;
     }
 
     final List<PieChartSectionData> paymentSections = [];
@@ -248,7 +250,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           PieChartSectionData(
             color: _getPaymentModeColor(mode),
             value: sum,
-            title: '${pct.toInt()}%',
+            title: '${pct.toStringAsFixed(0)}%',
             radius: 46,
             titleStyle: GoogleFonts.outfit(
               fontSize: 11,
@@ -278,9 +280,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       final queryStr = DateFormat('yyyy-MM-dd').format(date);
       last7DaysStr.add(dateStr);
 
-      final dayTotal = _businessSales.where((s) =>
+      final dayTotal = _allBusinessSales.where((s) =>
         DateFormat('yyyy-MM-dd').format(s.saleDate) == queryStr
-      ).fold<double>(0.0, (acc, s) => acc + s.grandTotal);
+      ).fold<double>(0.0, (acc, s) => acc + s.finalAmount);
 
       barGroups.add(
         BarChartGroupData(
