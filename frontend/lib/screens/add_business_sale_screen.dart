@@ -833,7 +833,8 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
         ));
       }
 
-      final custName = _isWalkIn ? 'Walk-in Customer' : _customerNameController.text.trim();
+      final enteredName = _customerNameController.text.trim();
+      final custName = enteredName.isNotEmpty ? enteredName : 'Walk-in Customer';
       final custPhone = _isWalkIn ? '' : _customerPhoneController.text.trim();
 
       final sale = BusinessSale(
@@ -1405,9 +1406,20 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                       ],
                     ),
                   ] else ...[
+                    TextFormField(
+                      controller: _customerNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Customer Name (Optional)',
+                        hintText: 'e.g. Rahul, Pooja (Defaults to Walk-in Customer)',
+                        prefixIcon: Icon(Icons.person_outline),
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (val) => setState(() {}),
+                    ),
+                    const SizedBox(height: 6),
                     Text(
-                      '⚡ Walk-in / Cash Counter Customer (No contact required)',
-                      style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+                      '⚡ Name will print on Invoice. Leave empty to use "Walk-in Customer".',
+                      style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
                     ),
                   ],
                 ],
