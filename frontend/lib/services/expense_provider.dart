@@ -1325,12 +1325,15 @@ class ExpenseProvider with ChangeNotifier {
         unsyncedSubscriptions: [],
         unsyncedSplitBills: [],
         unsyncedBusinessSales: [],
+        unsyncedBusinessItems: [],
         deletedExpenseIds: [],
         deletedBudgetIds: [],
+        deletedPaymentDetailIds: [],
         deletedKhataIds: [],
         deletedSubscriptionIds: [],
         deletedSplitBillIds: [],
         deletedBusinessSaleIds: [],
+        deletedBusinessItemIds: [],
         lastSyncTime: null,
       );
 
@@ -1347,6 +1350,7 @@ class ExpenseProvider with ChangeNotifier {
         final List<dynamic> serverSubs = syncResult['subscriptions'] ?? [];
         final List<dynamic> serverSplits = syncResult['splitBills'] ?? [];
         final List<dynamic> serverBusinessSales = syncResult['businessSales'] ?? [];
+        final List<dynamic> serverBusinessItems = syncResult['businessItems'] ?? [];
         final Map<String, dynamic>? serverBusinessProf = syncResult['businessProfile'] as Map<String, dynamic>?;
 
         // Insert fetched items into local database
@@ -1357,6 +1361,7 @@ class ExpenseProvider with ChangeNotifier {
         await _dbHelper.syncDownSubscriptions(serverSubs.map((s) => SubscriptionItem.fromMap(Map<String, dynamic>.from(s))).toList());
         await _dbHelper.syncDownSplitBills(serverSplits.map((sb) => SplitBill.fromMap(Map<String, dynamic>.from(sb))).toList());
         await _dbHelper.syncDownBusinessSales(serverBusinessSales.map((bs) => BusinessSale.fromMap(Map<String, dynamic>.from(bs))).toList());
+        await _dbHelper.syncDownBusinessItems(serverBusinessItems.map((bi) => BusinessItem.fromMap(Map<String, dynamic>.from(bi))).toList());
         if (serverBusinessProf != null) {
           await _dbHelper.syncDownBusinessProfile(BusinessProfile.fromMap(serverBusinessProf));
         }
@@ -1369,6 +1374,7 @@ class ExpenseProvider with ChangeNotifier {
         final subIds = serverSubs.map((s) => s['id'] as String).toList();
         final splitIds = serverSplits.map((sb) => sb['id'] as String).toList();
         final businessSaleIds = serverBusinessSales.map((bs) => bs['id'] as String).toList();
+        final businessItemIds = serverBusinessItems.map((bi) => bi['id'] as String).toList();
         await _dbHelper.markExpensesSynced(expenseIds);
         await _dbHelper.markBudgetsSynced(budgetIds);
         await _dbHelper.markPaymentDetailsSynced(paymentIds);
@@ -1376,6 +1382,7 @@ class ExpenseProvider with ChangeNotifier {
         await _dbHelper.markSubscriptionsSynced(subIds);
         await _dbHelper.markSplitBillsSynced(splitIds);
         await _dbHelper.markBusinessSalesSynced(businessSaleIds);
+        await _dbHelper.markBusinessItemsSynced(businessItemIds);
 
         _lastSyncTime = prefs.getString('last_sync_time');
 
@@ -1386,6 +1393,7 @@ class ExpenseProvider with ChangeNotifier {
         _khataEntries = await _dbHelper.getKhataEntries();
         _subscriptions = await _dbHelper.getSubscriptions();
         _splitBills = await _dbHelper.getSplitBills();
+        _businessItems = await _dbHelper.getBusinessItems();
         return true;
       } else {
         _syncErrorMessage = 'Cloud backup restore failed. Please check your internet connection.';
