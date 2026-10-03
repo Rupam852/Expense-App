@@ -15,6 +15,8 @@ import '../models/payment_detail.dart';
 import '../models/khata_entry.dart';
 import '../models/split_bill.dart';
 import '../models/subscription_item.dart';
+import '../models/business_sale.dart';
+import '../models/business_profile.dart';
 import 'ai_config_service.dart';
 import 'notification_service.dart';
 import 'package:intl/intl.dart';
@@ -1104,6 +1106,8 @@ class ExpenseProvider with ChangeNotifier {
       final unsyncedKhata = await _dbHelper.getUnsyncedKhataEntries();
       final unsyncedSubs = await _dbHelper.getUnsyncedSubscriptions();
       final unsyncedSplits = await _dbHelper.getUnsyncedSplitBills();
+      final unsyncedBusinessSales = await _dbHelper.getUnsyncedBusinessSales();
+      final unsyncedBusinessProfile = (await _dbHelper.getBusinessProfile()).toMap();
       final unsyncedDeletes = await _dbHelper.getUnsyncedDeletions();
       final prefs = await SharedPreferences.getInstance();
       final lastSync = prefs.getString('last_sync_time');
@@ -1132,6 +1136,10 @@ class ExpenseProvider with ChangeNotifier {
           .where((d) => d['table_name'] == 'split_bills')
           .map((d) => d['id'] as String)
           .toList();
+      final deletedBusinessSaleIds = unsyncedDeletes
+          .where((d) => d['table_name'] == 'business_sales')
+          .map((d) => d['id'] as String)
+          .toList();
 
       final syncResult = await _supabase.sync(
         unsyncedExpenses: unsyncedExps,
@@ -1140,12 +1148,15 @@ class ExpenseProvider with ChangeNotifier {
         unsyncedKhataEntries: unsyncedKhata,
         unsyncedSubscriptions: unsyncedSubs,
         unsyncedSplitBills: unsyncedSplits,
+        unsyncedBusinessSales: unsyncedBusinessSales,
+        unsyncedBusinessProfile: unsyncedBusinessProfile,
         deletedExpenseIds: deletedExpIds,
         deletedBudgetIds: deletedBudIds,
         deletedPaymentDetailIds: deletedPayIds,
         deletedKhataIds: deletedKhataIds,
         deletedSubscriptionIds: deletedSubIds,
         deletedSplitBillIds: deletedSplitIds,
+        deletedBusinessSaleIds: deletedBusinessSaleIds,
         lastSyncTime: lastSync,
       );
 
@@ -1157,6 +1168,7 @@ class ExpenseProvider with ChangeNotifier {
         await _dbHelper.markKhataEntriesSynced(unsyncedKhata.map((k) => k['id'] as String).toList());
         await _dbHelper.markSubscriptionsSynced(unsyncedSubs.map((s) => s['id'] as String).toList());
         await _dbHelper.markSplitBillsSynced(unsyncedSplits.map((sb) => sb['id'] as String).toList());
+        await _dbHelper.markBusinessSalesSynced(unsyncedBusinessSales.map((bs) => bs['id'] as String).toList());
         await _dbHelper.clearSyncedDeletions(unsyncedDeletes.map((d) => d['id'] as String).toList());
 
         // Extract server data returned from the sync payload
@@ -1166,6 +1178,8 @@ class ExpenseProvider with ChangeNotifier {
         final List<dynamic> serverKhata = syncResult['khataEntries'] ?? [];
         final List<dynamic> serverSubs = syncResult['subscriptions'] ?? [];
         final List<dynamic> serverSplits = syncResult['splitBills'] ?? [];
+        final List<dynamic> serverBusinessSales = syncResult['businessSales'] ?? [];
+        final Map<String, dynamic>? serverBusinessProf = syncResult['businessProfile'] as Map<String, dynamic>?;
 
         await _dbHelper.syncDownExpenses(serverExpenses.map((e) => Expense.fromMap(Map<String, dynamic>.from(e))).toList());
         await _dbHelper.syncDownBudgets(serverBudgets.map((b) => Budget.fromMap(Map<String, dynamic>.from(b))).toList());
@@ -1173,6 +1187,10 @@ class ExpenseProvider with ChangeNotifier {
         await _dbHelper.syncDownKhataEntries(serverKhata.map((k) => KhataEntry.fromMap(Map<String, dynamic>.from(k))).toList());
         await _dbHelper.syncDownSubscriptions(serverSubs.map((s) => SubscriptionItem.fromMap(Map<String, dynamic>.from(s))).toList());
         await _dbHelper.syncDownSplitBills(serverSplits.map((sb) => SplitBill.fromMap(Map<String, dynamic>.from(sb))).toList());
+        await _dbHelper.syncDownBusinessSales(serverBusinessSales.map((bs) => BusinessSale.fromMap(Map<String, dynamic>.from(bs))).toList());
+        if (serverBusinessProf != null) {
+          await _dbHelper.syncDownBusinessProfile(BusinessProfile.fromMap(serverBusinessProf));
+        }
 
         _lastSyncTime = prefs.getString('last_sync_time');
         _syncErrorMessage = null;
@@ -1262,11 +1280,13 @@ class ExpenseProvider with ChangeNotifier {
         unsyncedKhataEntries: [],
         unsyncedSubscriptions: [],
         unsyncedSplitBills: [],
+        unsyncedBusinessSales: [],
         deletedExpenseIds: [],
         deletedBudgetIds: [],
         deletedKhataIds: [],
         deletedSubscriptionIds: [],
         deletedSplitBillIds: [],
+        deletedBusinessSaleIds: [],
         lastSyncTime: null,
       );
 
@@ -1282,6 +1302,8 @@ class ExpenseProvider with ChangeNotifier {
         final List<dynamic> serverKhata = syncResult['khataEntries'] ?? [];
         final List<dynamic> serverSubs = syncResult['subscriptions'] ?? [];
         final List<dynamic> serverSplits = syncResult['splitBills'] ?? [];
+        final List<dynamic> serverBusinessSales = syncResult['businessSales'] ?? [];
+        final Map<String, dynamic>? serverBusinessProf = syncResult['businessProfile'] as Map<String, dynamic>?;
 
         // Insert fetched items into local database
         await _dbHelper.syncDownExpenses(serverExpenses.map((e) => Expense.fromMap(Map<String, dynamic>.from(e))).toList());
@@ -1290,6 +1312,10 @@ class ExpenseProvider with ChangeNotifier {
         await _dbHelper.syncDownKhataEntries(serverKhata.map((k) => KhataEntry.fromMap(Map<String, dynamic>.from(k))).toList());
         await _dbHelper.syncDownSubscriptions(serverSubs.map((s) => SubscriptionItem.fromMap(Map<String, dynamic>.from(s))).toList());
         await _dbHelper.syncDownSplitBills(serverSplits.map((sb) => SplitBill.fromMap(Map<String, dynamic>.from(sb))).toList());
+        await _dbHelper.syncDownBusinessSales(serverBusinessSales.map((bs) => BusinessSale.fromMap(Map<String, dynamic>.from(bs))).toList());
+        if (serverBusinessProf != null) {
+          await _dbHelper.syncDownBusinessProfile(BusinessProfile.fromMap(serverBusinessProf));
+        }
 
         // Mark all restored items as synced in SQLite
         final expenseIds = serverExpenses.map((e) => e['id'] as String).toList();
@@ -1298,12 +1324,14 @@ class ExpenseProvider with ChangeNotifier {
         final khataIds = serverKhata.map((k) => k['id'] as String).toList();
         final subIds = serverSubs.map((s) => s['id'] as String).toList();
         final splitIds = serverSplits.map((sb) => sb['id'] as String).toList();
+        final businessSaleIds = serverBusinessSales.map((bs) => bs['id'] as String).toList();
         await _dbHelper.markExpensesSynced(expenseIds);
         await _dbHelper.markBudgetsSynced(budgetIds);
         await _dbHelper.markPaymentDetailsSynced(paymentIds);
         await _dbHelper.markKhataEntriesSynced(khataIds);
         await _dbHelper.markSubscriptionsSynced(subIds);
         await _dbHelper.markSplitBillsSynced(splitIds);
+        await _dbHelper.markBusinessSalesSynced(businessSaleIds);
 
         _lastSyncTime = prefs.getString('last_sync_time');
 

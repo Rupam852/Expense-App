@@ -2083,6 +2083,46 @@ class DatabaseHelper {
     );
   }
 
+  Future<List<Map<String, dynamic>>> getUnsyncedBusinessSales() async {
+    final db = await instance.database;
+    return await db.query('business_sales', where: 'is_synced = 0');
+  }
+
+  Future<void> markBusinessSalesSynced(List<String> ids) async {
+    final db = await instance.database;
+    if (ids.isEmpty) return;
+    await db.update(
+      'business_sales',
+      {'is_synced': 1},
+      where: 'id IN (${ids.map((_) => '?').join(', ')})',
+      whereArgs: ids,
+    );
+  }
+
+  Future<void> syncDownBusinessSales(List<BusinessSale> sales) async {
+    final db = await instance.database;
+    await db.transaction((txn) async {
+      for (final s in sales) {
+        final map = s.toMap();
+        map['is_synced'] = 1;
+        await txn.insert(
+          'business_sales',
+          map,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
+  }
+
+  Future<void> syncDownBusinessProfile(BusinessProfile profile) async {
+    final db = await instance.database;
+    await db.insert(
+      'business_profile',
+      profile.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
   // ── BUSINESS AGGREGATED METRICS ───────────────────────────
   Future<Map<String, double>> getBusinessMetrics({DateTime? start, DateTime? end}) async {
     final db = await instance.database;

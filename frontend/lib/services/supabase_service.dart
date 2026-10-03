@@ -234,6 +234,7 @@ class SupabaseService {
         'receipt_url': e['receipt_url']?.toString(),
         'is_recurring': e['is_recurring'] == 1 || e['is_recurring'] == true,
         'recurrence_period': e['recurrence_period']?.toString() ?? 'none',
+        'ledger_type': e['ledger_type']?.toString() ?? 'personal',
         'is_deleted': e['is_deleted'] == 1 || e['is_deleted'] == true,
         'created_at': e['created_at']?.toString() ?? DateTime.now().toIso8601String(),
         'updated_at': e['updated_at']?.toString() ?? DateTime.now().toIso8601String(),
@@ -1050,6 +1051,123 @@ class SupabaseService {
   }
 
   // ══════════════════════════════════════════════════════
+  // BUSINESS PROFILE (Cloud Backup)
+  // ══════════════════════════════════════════════════════
+
+  Future<Map<String, dynamic>?> fetchBusinessProfile() async {
+    final uid = currentUser?.id;
+    if (uid == null) return null;
+    try {
+      final data = await _client
+          .from('business_profile')
+          .select()
+          .eq('user_id', uid)
+          .maybeSingle();
+      return data;
+    } catch (e) {
+      print('[Supabase] fetchBusinessProfile error: $e');
+      return null;
+    }
+  }
+
+  Future<void> upsertBusinessProfile(Map<String, dynamic> profile) async {
+    final uid = currentUser?.id;
+    if (uid == null) return;
+    try {
+      await _client.from('business_profile').upsert({
+        'id': profile['id']?.toString() ?? 'default_business',
+        'user_id': uid,
+        'business_name': profile['business_name']?.toString() ?? 'My Business',
+        'address': profile['address']?.toString(),
+        'phone': profile['phone']?.toString(),
+        'gstin': profile['gstin']?.toString(),
+        'upi_id': profile['upi_id']?.toString(),
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      print('[Supabase] upsertBusinessProfile error: $e');
+    }
+  }
+
+  // ══════════════════════════════════════════════════════
+  // BUSINESS SALES (Cloud Backup)
+  // ══════════════════════════════════════════════════════
+
+  Future<List<Map<String, dynamic>>> fetchBusinessSales() async {
+    final uid = currentUser?.id;
+    if (uid == null) return [];
+    try {
+      final data = await _client
+          .from('business_sales')
+          .select()
+          .eq('user_id', uid)
+          .order('sale_date', ascending: false);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('[Supabase] fetchBusinessSales error: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchBusinessSalesSince(String? lastSyncTime) async {
+    final uid = currentUser?.id;
+    if (uid == null) return [];
+    try {
+      if (lastSyncTime != null && lastSyncTime.isNotEmpty) {
+        final data = await _client
+            .from('business_sales')
+            .select()
+            .eq('user_id', uid)
+            .gte('updated_at', lastSyncTime)
+            .order('updated_at');
+        return List<Map<String, dynamic>>.from(data);
+      } else {
+        final data = await _client
+            .from('business_sales')
+            .select()
+            .eq('user_id', uid)
+            .order('updated_at');
+        return List<Map<String, dynamic>>.from(data);
+      }
+    } catch (e) {
+      print('[Supabase] fetchBusinessSalesSince error: $e');
+      return [];
+    }
+  }
+
+  Future<void> upsertBusinessSales(List<Map<String, dynamic>> sales) async {
+    if (sales.isEmpty) return;
+    final uid = currentUser?.id;
+    if (uid == null) return;
+    final rows = sales.map((s) {
+      return <String, dynamic>{
+        'id': s['id']?.toString(),
+        'user_id': uid,
+        'customer_name': s['customer_name']?.toString() ?? '',
+        'customer_phone': s['customer_phone']?.toString(),
+        'invoice_no': s['invoice_no']?.toString(),
+        'sale_date': s['sale_date']?.toString() ?? DateTime.now().toIso8601String(),
+        'subtotal': (s['subtotal'] is num) ? (s['subtotal'] as num).toDouble() : (double.tryParse(s['subtotal']?.toString() ?? '0') ?? 0.0),
+        'discount_amount': (s['discount_amount'] is num) ? (s['discount_amount'] as num).toDouble() : (double.tryParse(s['discount_amount']?.toString() ?? '0') ?? 0.0),
+        'tax_amount': (s['tax_amount'] is num) ? (s['tax_amount'] as num).toDouble() : (double.tryParse(s['tax_amount']?.toString() ?? '0') ?? 0.0),
+        'final_amount': (s['final_amount'] is num) ? (s['final_amount'] as num).toDouble() : (double.tryParse(s['final_amount']?.toString() ?? '0') ?? 0.0),
+        'paid_amount': (s['paid_amount'] is num) ? (s['paid_amount'] as num).toDouble() : (double.tryParse(s['paid_amount']?.toString() ?? '0') ?? 0.0),
+        'balance_due': (s['balance_due'] is num) ? (s['balance_due'] as num).toDouble() : (double.tryParse(s['balance_due']?.toString() ?? '0') ?? 0.0),
+        'payment_method': s['payment_method']?.toString() ?? 'cash',
+        'notes': s['notes']?.toString(),
+        'items_json': s['items_json']?.toString(),
+        'created_at': s['created_at']?.toString() ?? DateTime.now().toIso8601String(),
+        'updated_at': s['updated_at']?.toString() ?? DateTime.now().toIso8601String(),
+      };
+    }).toList();
+    await _client.from('business_sales').upsert(rows);
+  }
+
+  Future<void> deleteBusinessSale(String id) async {
+    await _client.from('business_sales').delete().eq('id', id);
+  }
+
+  // ══════════════════════════════════════════════════════
   // SYNC (Pull + Push with local SQLite)
   // ══════════════════════════════════════════════════════
 
@@ -1061,12 +1179,15 @@ class SupabaseService {
     List<Map<String, dynamic>> unsyncedKhataEntries = const [],
     List<Map<String, dynamic>> unsyncedSubscriptions = const [],
     List<Map<String, dynamic>> unsyncedSplitBills = const [],
+    List<Map<String, dynamic>> unsyncedBusinessSales = const [],
+    Map<String, dynamic>? unsyncedBusinessProfile,
     required List<String> deletedExpenseIds,
     required List<String> deletedBudgetIds,
     List<String> deletedPaymentDetailIds = const [],
     List<String> deletedKhataIds = const [],
     List<String> deletedSubscriptionIds = const [],
     List<String> deletedSplitBillIds = const [],
+    List<String> deletedBusinessSaleIds = const [],
     String? lastSyncTime,
   }) async {
     try {
@@ -1090,6 +1211,10 @@ class SupabaseService {
           upsertSubscriptions(unsyncedSubscriptions).catchError((e) => print('[Sync Error] Subscriptions push failed: $e')),
         if (unsyncedSplitBills.isNotEmpty)
           upsertSplitBills(unsyncedSplitBills).catchError((e) => print('[Sync Error] SplitBills push failed: $e')),
+        if (unsyncedBusinessSales.isNotEmpty)
+          upsertBusinessSales(unsyncedBusinessSales).catchError((e) => print('[Sync Error] BusinessSales push failed: $e')),
+        if (unsyncedBusinessProfile != null)
+          upsertBusinessProfile(unsyncedBusinessProfile).catchError((e) => print('[Sync Error] BusinessProfile push failed: $e')),
       ]).timeout(const Duration(seconds: 12));
 
       // 2. PUSH batch deletes in parallel with timeout
@@ -1106,6 +1231,8 @@ class SupabaseService {
           _client.from('subscriptions').delete().inFilter('id', deletedSubscriptionIds).eq('user_id', uid).catchError((e) => null),
         if (deletedSplitBillIds.isNotEmpty)
           _client.from('split_bills').delete().inFilter('id', deletedSplitBillIds).eq('user_id', uid).catchError((e) => null),
+        if (deletedBusinessSaleIds.isNotEmpty)
+          _client.from('business_sales').delete().inFilter('id', deletedBusinessSaleIds).eq('user_id', uid).catchError((e) => null),
       ]).timeout(const Duration(seconds: 8));
 
       // 3. PULL fresh server data concurrently with timeout
@@ -1116,14 +1243,18 @@ class SupabaseService {
         fetchKhataEntriesSince(lastSyncTime),
         fetchSubscriptionsSince(lastSyncTime),
         fetchSplitBillsSince(lastSyncTime),
+        fetchBusinessSalesSince(lastSyncTime),
+        fetchBusinessProfile(),
       ]).timeout(const Duration(seconds: 15));
 
-      final serverExpenses = pullResults[0];
-      final serverBudgets = pullResults[1];
-      final serverPayments = pullResults[2];
-      final serverKhata = pullResults[3];
-      final serverSubs = pullResults[4];
-      final serverSplits = pullResults[5];
+      final serverExpenses = pullResults[0] as List<Map<String, dynamic>>;
+      final serverBudgets = pullResults[1] as List<Map<String, dynamic>>;
+      final serverPayments = pullResults[2] as List<Map<String, dynamic>>;
+      final serverKhata = pullResults[3] as List<Map<String, dynamic>>;
+      final serverSubs = pullResults[4] as List<Map<String, dynamic>>;
+      final serverSplits = pullResults[5] as List<Map<String, dynamic>>;
+      final serverBusinessSales = pullResults[6] as List<Map<String, dynamic>>;
+      final serverBusinessProfile = pullResults[7] as Map<String, dynamic>?;
 
       // Store new server time
       final prefs = await SharedPreferences.getInstance();
@@ -1136,6 +1267,8 @@ class SupabaseService {
         'khataEntries': serverKhata,
         'subscriptions': serverSubs,
         'splitBills': serverSplits,
+        'businessSales': serverBusinessSales,
+        'businessProfile': serverBusinessProfile,
       };
     } catch (e) {
       print('[Sync] Error during Supabase sync: $e');
