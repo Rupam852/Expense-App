@@ -1586,6 +1586,190 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     }
   }
 
+  void _openLanguagePickerSheet(
+    BuildContext context,
+    AiConfigService aiService,
+    VoidCallback onUpdated,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        final isDark = Theme.of(sheetCtx).brightness == Brightness.dark;
+        final bg = isDark ? const Color(0xFF1E2430) : Colors.white;
+        final textColor = isDark ? Colors.white : const Color(0xFF212121);
+        final primaryColor = Theme.of(context).primaryColor;
+
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(sheetCtx).size.height * 0.8,
+          ),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.25),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  width: 44,
+                  height: 4.5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.35),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: primaryColor.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(Icons.translate_rounded, color: primaryColor, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Select AI Language',
+                            style: GoogleFonts.outfit(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
+                          ),
+                          Text(
+                            'AI responses will automatically be in this language',
+                            style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: Colors.grey),
+                      onPressed: () => Navigator.pop(sheetCtx),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, thickness: 0.8),
+              Flexible(
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  itemCount: _languageOptions.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+                  itemBuilder: (ctx, idx) {
+                    final opt = _languageOptions[idx];
+                    final code = opt['code']!;
+                    final label = opt['label']!;
+                    final native = opt['native']!;
+                    final isSelected = aiService.responseLanguage.toLowerCase() == code.toLowerCase();
+
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          aiService.setResponseLanguage(code);
+                          onUpdated();
+                          Navigator.pop(sheetCtx);
+                          CustomToast.show(context, 'Language set to $label ($native)');
+                        },
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? primaryColor.withOpacity(0.1)
+                                : (isDark ? const Color(0xFF272F3E) : const Color(0xFFF8FAFC)),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isSelected
+                                  ? primaryColor
+                                  : (isDark ? Colors.white10 : Colors.black.withOpacity(0.06)),
+                              width: isSelected ? 1.6 : 1.0,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? primaryColor.withOpacity(0.2)
+                                      : (isDark ? Colors.white10 : Colors.grey.withOpacity(0.1)),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  Icons.language_rounded,
+                                  size: 18,
+                                  color: isSelected ? primaryColor : Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      label,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                                        color: isSelected ? primaryColor : textColor,
+                                      ),
+                                    ),
+                                    Text(
+                                      native,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: isSelected ? primaryColor.withOpacity(0.8) : Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (isSelected)
+                                Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: primaryColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.check, size: 14, color: Colors.white),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _openChatSettingsModal() {
     showModalBottomSheet(
       context: context,
@@ -1681,51 +1865,67 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E2430) : const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: isDark ? const Color(0xFF2E384D) : const Color(0xFFE2E8F0),
-                        ),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: aiService.responseLanguage,
-                          isExpanded: true,
-                          dropdownColor: isDark ? const Color(0xFF1E2430) : Colors.white,
-                          icon: Icon(Icons.keyboard_arrow_down_rounded, color: primaryColor),
-                          items: _languageOptions.map((opt) {
-                            return DropdownMenuItem<String>(
-                              value: opt['code'],
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.translate_rounded, size: 16, color: Colors.grey),
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    opt['label']!,
-                                    style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13.5),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    '(${opt['native']})',
-                                    style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null) {
-                              aiService.setResponseLanguage(val);
+                    Builder(
+                      builder: (_) {
+                        final currentLangCode = aiService.responseLanguage;
+                        final currentLangOption = _languageOptions.firstWhere(
+                          (opt) => opt['code']?.toLowerCase() == currentLangCode.toLowerCase(),
+                          orElse: () => {'code': currentLangCode, 'label': currentLangCode, 'native': currentLangCode},
+                        );
+
+                        return InkWell(
+                          onTap: () {
+                            _openLanguagePickerSheet(context, aiService, () {
                               setModalState(() {});
                               setState(() {});
-                              CustomToast.show(context, 'Language set to $val');
-                            }
+                            });
                           },
-                        ),
-                      ),
+                          borderRadius: BorderRadius.circular(14),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E2430) : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: isDark ? const Color(0xFF2E384D) : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: primaryColor.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(Icons.translate_rounded, size: 18, color: primaryColor),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        currentLangOption['label'] ?? currentLangCode,
+                                        style: GoogleFonts.inter(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: isDark ? Colors.white : const Color(0xFF1E293B),
+                                        ),
+                                      ),
+                                      Text(
+                                        currentLangOption['native'] ?? '',
+                                        style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Icon(Icons.keyboard_arrow_right_rounded, color: primaryColor, size: 22),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
 
                     const SizedBox(height: 22),

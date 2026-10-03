@@ -147,15 +147,11 @@ class SupabaseService {
     final uid = currentUser?.id;
     if (uid == null) return;
     
-    // Delete Storage files
+    // Delete Storage files (e.g. business payment QR code)
     try {
       final qrFiles = await _client.storage.from('qr-codes').list(path: uid);
       if (qrFiles.isNotEmpty) {
         await _client.storage.from('qr-codes').remove(qrFiles.map((f) => '$uid/${f.name}').toList());
-      }
-      final invFiles = await _client.storage.from('invoices').list(path: uid);
-      if (invFiles.isNotEmpty) {
-        await _client.storage.from('invoices').remove(invFiles.map((f) => '$uid/${f.name}').toList());
       }
     } catch (_) {}
 
@@ -1262,33 +1258,6 @@ class SupabaseService {
     }
   }
 
-  // ══════════════════════════════════════════════════════
-  // RECEIPT SCAN (AI via old backend URL or Edge Function)
-  // ══════════════════════════════════════════════════════
-
-  Future<Map<String, dynamic>> scanReceipt(Uint8List imageBytes, {String? geminiApiKey}) async {
-    try {
-      // Upload to receipts bucket temporarily
-      final uid = currentUser?.id;
-      if (uid == null) return {'success': false, 'error': 'Not authenticated'};
-      final path = '$uid/scan_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      await _client.storage.from('receipts').uploadBinary(
-        path, imageBytes,
-        fileOptions: const FileOptions(upsert: true, contentType: 'image/jpeg'),
-      );
-      // Invoke scan Edge Function
-      final response = await _client.functions.invoke(
-        'scan-receipt',
-        body: {'storage_path': path, 'gemini_api_key': geminiApiKey},
-      );
-      // Cleanup temp file
-      try { await _client.storage.from('receipts').remove([path]); } catch (_) {}
-      if (response.data != null) return Map<String, dynamic>.from(response.data as Map);
-      return {'success': false, 'error': 'Scan failed'};
-    } catch (e) {
-      return {'success': false, 'error': e.toString()};
-    }
-  }
 
   // ══════════════════════════════════════════════════════
   // FILE DOWNLOAD HELPER (Android Scoped Storage)

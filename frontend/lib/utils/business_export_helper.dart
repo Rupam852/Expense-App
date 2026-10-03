@@ -40,15 +40,17 @@ class BusinessExportHelper {
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text(
-                        prof.businessName,
+                        prof.businessName.trim().isNotEmpty ? prof.businessName.trim() : 'My Business',
                         style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: primaryColor),
                       ),
-                      if (prof.address != null && prof.address!.isNotEmpty)
-                        pw.Text(prof.address!, style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                      if (prof.phone != null && prof.phone!.isNotEmpty)
-                        pw.Text('Phone: ${prof.phone}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                      if (prof.gstin != null && prof.gstin!.isNotEmpty)
-                        pw.Text('GSTIN: ${prof.gstin}', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                      if (prof.address != null && prof.address!.trim().isNotEmpty)
+                        pw.Text(prof.address!.trim(), style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                      if (prof.phone != null && prof.phone!.trim().isNotEmpty)
+                        pw.Text('Phone: ${prof.phone!.trim()}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                      if (prof.gstin != null && prof.gstin!.trim().isNotEmpty)
+                        pw.Text('GSTIN: ${prof.gstin!.trim()}', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                      if (prof.upiId != null && prof.upiId!.trim().isNotEmpty)
+                        pw.Text('UPI ID: ${prof.upiId!.trim()}', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: primaryColor)),
                     ],
                   ),
                 ),
@@ -192,14 +194,22 @@ class BusinessExportHelper {
               pw.Text('Notes: ${sale.notes}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
             ],
 
-            pw.SizedBox(height: 24),
+            pw.SizedBox(height: 20),
             pw.Divider(thickness: 0.8, color: PdfColors.grey300),
+            pw.SizedBox(height: 4),
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('Thank you for your business! 🙏', style: pw.TextStyle(fontSize: 9, fontStyle: pw.FontStyle.italic, color: PdfColors.grey700)),
+                pw.Text('Thank you for your business!', style: pw.TextStyle(fontSize: 9, fontStyle: pw.FontStyle.italic, color: PdfColors.grey700)),
                 pw.Text('Authorized Signatory', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
               ],
+            ),
+            pw.SizedBox(height: 6),
+            pw.Center(
+              child: pw.Text(
+                'Generated via Groww Expense App',
+                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey500),
+              ),
             ),
           ],
         ),
@@ -258,13 +268,15 @@ class BusinessExportHelper {
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text(
-                        prof.businessName,
+                        prof.businessName.trim().isNotEmpty ? prof.businessName.trim() : 'My Business',
                         style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: orangeAccent),
                       ),
-                      if (prof.address != null && prof.address!.isNotEmpty)
-                        pw.Text(prof.address!, style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                      if (prof.phone != null && prof.phone!.isNotEmpty)
-                        pw.Text('Phone: ${prof.phone}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                      if (prof.address != null && prof.address!.trim().isNotEmpty)
+                        pw.Text(prof.address!.trim(), style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                      if (prof.phone != null && prof.phone!.trim().isNotEmpty)
+                        pw.Text('Phone: ${prof.phone!.trim()}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                      if (prof.gstin != null && prof.gstin!.trim().isNotEmpty)
+                        pw.Text('GSTIN: ${prof.gstin!.trim()}', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
                     ],
                   ),
                   pw.Container(
@@ -403,7 +415,10 @@ class BusinessExportHelper {
        final totalSales = filteredSales.fold<double>(0.0, (sum, s) => sum + s.finalAmount);
       final totalGstOutput = filteredSales.fold<double>(0.0, (sum, s) => sum + s.taxAmount);
       final totalExpenses = filteredExpenses.fold<double>(0.0, (sum, e) => sum + e.amount);
-      final netProfit = totalSales - totalExpenses;
+      final totalGoodsCost = filteredSales.fold<double>(0.0, (sum, s) => sum + s.totalPurchaseCost);
+      final netProfit = totalGoodsCost > 0
+          ? (totalSales - totalGoodsCost - totalExpenses)
+          : (totalSales - totalExpenses);
       final totalBalanceDue = filteredSales.fold<double>(0.0, (sum, s) => sum + s.balanceDue);
 
       // Tax slabs breakup
@@ -429,13 +444,17 @@ class BusinessExportHelper {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     pw.Text(
-                      prof.businessName,
+                      prof.businessName.trim().isNotEmpty ? prof.businessName.trim() : 'My Business',
                       style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: primaryColor),
                     ),
-                    if (prof.gstin != null && prof.gstin!.isNotEmpty)
-                      pw.Text('GSTIN: ${prof.gstin}', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                    if (prof.phone != null && prof.phone!.isNotEmpty)
-                      pw.Text('Phone: ${prof.phone}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                    if (prof.address != null && prof.address!.trim().isNotEmpty)
+                      pw.Text(prof.address!.trim(), style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                    if (prof.phone != null && prof.phone!.trim().isNotEmpty)
+                      pw.Text('Phone: ${prof.phone!.trim()}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                    if (prof.gstin != null && prof.gstin!.trim().isNotEmpty)
+                      pw.Text('GSTIN: ${prof.gstin!.trim()}', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                    if (prof.upiId != null && prof.upiId!.trim().isNotEmpty)
+                      pw.Text('UPI: ${prof.upiId!.trim()}', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: primaryColor)),
                   ],
                 ),
                 pw.Column(
@@ -559,7 +578,7 @@ class BusinessExportHelper {
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('Grow Expense Business Management Suite', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
+                pw.Text('Generated via Groww Expense App', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
                 pw.Text('Authorized Auditor / Manager Signatory', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
               ],
             ),
@@ -615,15 +634,20 @@ class BusinessExportHelper {
       final totalTaxable = filteredSales.fold<double>(0.0, (sum, s) => sum + s.totalAmount);
       final totalGst = filteredSales.fold<double>(0.0, (sum, s) => sum + s.taxAmount);
       final totalExpenses = filteredExpenses.fold<double>(0.0, (sum, e) => sum + e.amount);
-      final netProfit = totalSales - totalExpenses;
+      final totalGoodsCost = filteredSales.fold<double>(0.0, (sum, s) => sum + s.totalPurchaseCost);
+      final netProfit = totalGoodsCost > 0
+          ? (totalSales - totalGoodsCost - totalExpenses)
+          : (totalSales - totalExpenses);
 
       // ── SHEET 1: Tax & P&L Summary ──────────────────────────────
       final summarySheet = excel['Tax_PnL_Summary'];
       excel.setDefaultSheet('Tax_PnL_Summary');
 
       summarySheet.appendRow([TextCellValue('BUSINESS TAX & P&L FINANCIAL REPORT')]);
-      summarySheet.appendRow([TextCellValue('Business Name:'), TextCellValue(prof.businessName)]);
-      if (prof.gstin != null) summarySheet.appendRow([TextCellValue('GSTIN:'), TextCellValue(prof.gstin!)]);
+      summarySheet.appendRow([TextCellValue('Business Name:'), TextCellValue(prof.businessName.trim().isNotEmpty ? prof.businessName.trim() : 'My Business')]);
+      if (prof.gstin != null && prof.gstin!.trim().isNotEmpty) summarySheet.appendRow([TextCellValue('GSTIN:'), TextCellValue(prof.gstin!.trim())]);
+      if (prof.phone != null && prof.phone!.trim().isNotEmpty) summarySheet.appendRow([TextCellValue('Phone:'), TextCellValue(prof.phone!.trim())]);
+      if (prof.address != null && prof.address!.trim().isNotEmpty) summarySheet.appendRow([TextCellValue('Address:'), TextCellValue(prof.address!.trim())]);
       summarySheet.appendRow([TextCellValue('Report Period:'), TextCellValue('${DateFormat('dd-MM-yyyy').format(startDate)} to ${DateFormat('dd-MM-yyyy').format(endDate)}')]);
       summarySheet.appendRow([TextCellValue('')]);
 
@@ -631,6 +655,9 @@ class BusinessExportHelper {
       summarySheet.appendRow([TextCellValue('Gross Sales Revenue'), DoubleCellValue(totalSales)]);
       summarySheet.appendRow([TextCellValue('Taxable Sales (Pre-Tax)'), DoubleCellValue(totalTaxable)]);
       summarySheet.appendRow([TextCellValue('Total GST Output Tax Collected'), DoubleCellValue(totalGst)]);
+      if (totalGoodsCost > 0) {
+        summarySheet.appendRow([TextCellValue('Cost of Goods Sold (Item Buy Cost)'), DoubleCellValue(totalGoodsCost)]);
+      }
       summarySheet.appendRow([TextCellValue('Total Business Expenses'), DoubleCellValue(totalExpenses)]);
       summarySheet.appendRow([TextCellValue('Net Operating Profit / Loss'), DoubleCellValue(netProfit)]);
       summarySheet.appendRow([TextCellValue('Total Invoices Count'), IntCellValue(filteredSales.length)]);
@@ -768,13 +795,15 @@ class BusinessExportHelper {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     pw.Text(
-                      prof.businessName,
+                      prof.businessName.trim().isNotEmpty ? prof.businessName.trim() : 'My Business',
                       style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: primaryColor),
                     ),
-                    if (prof.gstin != null && prof.gstin!.isNotEmpty)
-                      pw.Text('GSTIN: ${prof.gstin}', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
-                    if (prof.phone != null && prof.phone!.isNotEmpty)
-                      pw.Text('Phone: ${prof.phone}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                    if (prof.address != null && prof.address!.trim().isNotEmpty)
+                      pw.Text(prof.address!.trim(), style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                    if (prof.phone != null && prof.phone!.trim().isNotEmpty)
+                      pw.Text('Phone: ${prof.phone!.trim()}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                    if (prof.gstin != null && prof.gstin!.trim().isNotEmpty)
+                      pw.Text('GSTIN: ${prof.gstin!.trim()}', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
                   ],
                 ),
                 pw.Column(
@@ -815,7 +844,7 @@ class BusinessExportHelper {
                   _buildPdfSummaryCell('TOTAL SALES INVOICES', '${filteredSales.length}', primaryColor, isBold: true),
                   _buildPdfSummaryCell('GROSS SALES REVENUE', 'Rs. ${totalRevenue.toStringAsFixed(2)}', PdfColors.blue800, isBold: true),
                   if (totalCost > 0)
-                    _buildPdfSummaryCell('GOODS COST (🔒 COGS)', 'Rs. ${totalCost.toStringAsFixed(2)}', PdfColors.grey800),
+                    _buildPdfSummaryCell('GOODS COST (COGS)', 'Rs. ${totalCost.toStringAsFixed(2)}', PdfColors.grey800),
                   _buildPdfSummaryCell('EST. GROSS PROFIT', 'Rs. ${totalGrossProfit.toStringAsFixed(2)}', PdfColors.green800, isBold: true),
                   _buildPdfSummaryCell('TOTAL GST COLLECTED', 'Rs. ${totalTax.toStringAsFixed(2)}', PdfColors.orange800),
                   _buildPdfSummaryCell('TOTAL BALANCE DUE', 'Rs. ${totalDue.toStringAsFixed(2)}', totalDue > 0 ? PdfColors.red800 : PdfColors.green800, isBold: true),
@@ -832,7 +861,7 @@ class BusinessExportHelper {
                 1: const pw.FlexColumnWidth(1.1), // Date
                 2: const pw.FlexColumnWidth(1.8), // Customer
                 3: const pw.FlexColumnWidth(2.5), // Items
-                4: const pw.FlexColumnWidth(1.1), // Cost 🔒
+                4: const pw.FlexColumnWidth(1.1), // Cost
                 5: const pw.FlexColumnWidth(1.1), // Taxable
                 6: const pw.FlexColumnWidth(1.0), // GST
                 7: const pw.FlexColumnWidth(1.2), // Final
@@ -848,7 +877,7 @@ class BusinessExportHelper {
                     pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Date', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8))),
                     pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Customer', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8))),
                     pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Items (Qty)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8))),
-                    pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Cost (Rs) 🔒', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Cost (Rs)', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8))),
                     pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Taxable', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8))),
                     pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('GST', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8))),
                     pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Total (Rs)', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8))),
@@ -886,7 +915,7 @@ class BusinessExportHelper {
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('🔒 Internal Business Report - Strictly Confidential', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
+                pw.Text('Internal Business Report - Strictly Confidential', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
                 pw.Text('Grow Expense Business Suite', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
               ],
             ),
@@ -955,7 +984,7 @@ class BusinessExportHelper {
       summarySheet.appendRow([TextCellValue('METRIC'), TextCellValue('AMOUNT (INR)')]);
       summarySheet.appendRow([TextCellValue('Total Invoices Count'), IntCellValue(filteredSales.length)]);
       summarySheet.appendRow([TextCellValue('Gross Sales Revenue'), DoubleCellValue(totalRevenue)]);
-      summarySheet.appendRow([TextCellValue('Confidential Goods Cost (COGS 🔒)'), DoubleCellValue(totalCost)]);
+      summarySheet.appendRow([TextCellValue('Confidential Goods Cost (COGS)'), DoubleCellValue(totalCost)]);
       summarySheet.appendRow([TextCellValue('Est. Gross Profit'), DoubleCellValue(totalGrossProfit)]);
       summarySheet.appendRow([TextCellValue('Total GST Collected'), DoubleCellValue(totalTax)]);
       summarySheet.appendRow([TextCellValue('Total Balance Due (Udhar)'), DoubleCellValue(totalDue)]);
@@ -969,7 +998,7 @@ class BusinessExportHelper {
         TextCellValue('Customer Phone'),
         TextCellValue('Customer GSTIN'),
         TextCellValue('Items Summary'),
-        TextCellValue('Confidential Buy Cost (Rs) 🔒'),
+        TextCellValue('Confidential Buy Cost (Rs)'),
         TextCellValue('Taxable Amount (Rs)'),
         TextCellValue('GST Amount (Rs)'),
         TextCellValue('Discount Amount (Rs)'),
@@ -1071,11 +1100,15 @@ class BusinessExportHelper {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     pw.Text(
-                      prof.businessName,
+                      prof.businessName.trim().isNotEmpty ? prof.businessName.trim() : 'My Business',
                       style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: orangeAccent),
                     ),
-                    if (prof.phone != null && prof.phone!.isNotEmpty)
-                      pw.Text('Phone: ${prof.phone}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                    if (prof.address != null && prof.address!.trim().isNotEmpty)
+                      pw.Text(prof.address!.trim(), style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                    if (prof.phone != null && prof.phone!.trim().isNotEmpty)
+                      pw.Text('Phone: ${prof.phone!.trim()}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                    if (prof.gstin != null && prof.gstin!.trim().isNotEmpty)
+                      pw.Text('GSTIN: ${prof.gstin!.trim()}', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
                   ],
                 ),
                 pw.Column(

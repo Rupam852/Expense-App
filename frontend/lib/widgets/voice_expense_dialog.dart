@@ -813,7 +813,7 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Try speaking in ${_getLanguageName(_selectedLocale)}:',
+                  _getSpeakingPromptTitle(_selectedLocale),
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -821,12 +821,13 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
+              const SizedBox(height: 10),
+              Column(
                 children: _getExamplesForLocale(_selectedLocale, isBusiness).map((ex) {
-                  return _buildExampleChip(ex, isDark);
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: _buildExampleCard(ex, isDark, isBusiness),
+                  );
                 }).toList(),
               ),
             ] else ...[
@@ -1142,113 +1143,380 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
     );
   }
 
-  List<String> _getExamplesForLocale(String locale, bool isBusiness) {
+  String _getSpeakingPromptTitle(String code) {
+    switch (code) {
+      case 'bn_IN':
+        return 'বাংলায় বলুন (Try speaking in Bengali):';
+      case 'hi_IN':
+        return 'हिंदी में बोलिए (Try speaking in Hindi):';
+      case 'gu_IN':
+        return 'ગુજરાતીમાં બોલો (Try speaking in Gujarati):';
+      case 'mr_IN':
+        return 'मराठीत बोला (Try speaking in Marathi):';
+      case 'ta_IN':
+        return 'தமிழில் பேசுங்கள் (Try speaking in Tamil):';
+      case 'te_IN':
+        return 'తెలుగులో మాట్లాడండి (Try speaking in Telugu):';
+      case 'kn_IN':
+        return 'ಕನ್ನಡದಲ್ಲಿ ಮಾತನಾಡಿ (Try speaking in Kannada):';
+      case 'pa_IN':
+        return 'ਪੰਜਾਬੀ ਵਿੱਚ ਬੋਲੋ (Try speaking in Punjabi):';
+      case 'ur_IN':
+        return 'اردو میں بولیں (Try speaking in Urdu):';
+      case 'en_IN':
+      default:
+        return 'Try speaking in English / Hinglish:';
+    }
+  }
+
+  List<Map<String, dynamic>> _getExamplesForLocale(String locale, bool isBusiness) {
     if (isBusiness) {
       if (locale.startsWith('bn')) {
         return [
-          '“Ratan babu ke 500 takar chawal dilam 200 taka baki”',
-          '“Customer ke 2 to saree 1800 takay bikri korlam”',
-          '“Dokaner bhara 6000 taka dilam”',
-          '“Stock maal kinlam 12000 takar”',
+          {
+            'tag': '🛒 কাস্টমার সেল ও খাতা বাকি বিল',
+            'text': '“রতন বাবুকে ২৫ কেজি চাল ৫০০ টাকা আর ২ কেজি চিনি ৯০ টাকায় বিক্রি করলাম, ৫০০ টাকা ক্যাশ দিল আর ৯০ টাকা খাতা বাকি রইল”',
+            'icon': Icons.point_of_sale_rounded,
+          },
+          {
+            'tag': '📦 পাইকারি স্টক মাল ও ইউপিআই পেমেন্ট',
+            'text': '“শ্যাম ট্রেডার্স থেকে ১২০০০ টাকার নতুন স্টক মাল কিনলাম আর গুগলপে ইউপিআই দিয়ে পেমেন্ট করলাম”',
+            'icon': Icons.inventory_2_outlined,
+          },
         ];
       } else if (locale.startsWith('hi')) {
         return [
-          '“Raju ko 25kg chawal 500 rupay me becha 100 rupay baki”',
-          '“Customer ko 3 shirt bechi 1500 cash mila”',
-          '“Dukan ka kiraya 8000 diya”',
-          '“Stock kharida 5000 rupay me”',
+          {
+            'tag': '🛒 कस्टमर सेल व खाता बाकी बिल',
+            'text': '“राजू भाई को 25 किलो चावल 500 रुपये और 2 किलो चीनी 90 रुपये में बेची, 500 ऑनलाइन मिला और 90 रुपये खाता बाकी रहा”',
+            'icon': Icons.point_of_sale_rounded,
+          },
+          {
+            'tag': '📦 सप्लायर से नया स्टॉक व UPI भुगतान',
+            'text': '“श्याम ट्रेडर्स से 12000 रुपये का दुकान का नया स्टॉक माल खरीदा और बैंक UPI से पेमेंट किया”',
+            'icon': Icons.inventory_2_outlined,
+          },
         ];
       } else if (locale.startsWith('gu')) {
         return [
-          '“Ramesh bhai ne 1200 no maal apyo 400 baki”',
-          '“Dukan nu bhadu 7000 rupiya chukavyu”',
-          '“Stock 15000 ma kharidyu”',
+          {
+            'tag': '🛒 ગ્રાહક વેચાણ અને ખાતા બાકી બિલ',
+            'text': '“રમેશભાઈને ૨૫ કિલો ચોખા ૫૦૦ અને ૨ કિલો ખાંડ ૯૦ માં વેચી, ૫૦૦ રોકડા મળ્યા અને ૯૦ રૂપિયા ખાતા બાકી રાખ્યા”',
+            'icon': Icons.point_of_sale_rounded,
+          },
+          {
+            'tag': '📦 સપ્લાયર સ્ટોક ખરીદી અને UPI પેમેન્ટ',
+            'text': '“શ્યામ ટ્રેડર્સ પાસેથી ૧૨૦૦૦ રૂપિયાનો દુકાનનો સ્ટોક ખરીદ્યો અને યુપીઆઈ દ્વારા ચૂકવણી કરી”',
+            'icon': Icons.inventory_2_outlined,
+          },
         ];
       } else if (locale.startsWith('mr')) {
         return [
-          '“Suresh la 1500 cha maal dila 500 baki”',
-          '“Dukanache bhade 8000 dile”',
-          '“Stock kharedi kela 10000 rupaye”',
+          {
+            'tag': '🛒 ग्राहक विक्री आणि उधारी बिल',
+            'text': '“सुरेश भाऊंना २५ किलो तांदूळ ५०० आणि २ किलो साखर ९० रुपयांत विकली, ५०० रोख दिले आणि ९० रुपये उधारी बाकी ठेवली”',
+            'icon': Icons.point_of_sale_rounded,
+          },
+          {
+            'tag': '📦 सप्लायर स्टॉक खरेदी आणि ऑनलाइन पेमेंट',
+            'text': '“श्याम ट्रेडर्स कडून १२,००० रुपयांचा नवीन माल खरेदी केला आणि गुगलपे UPI ने पेमेंट केले”',
+            'icon': Icons.inventory_2_outlined,
+          },
+        ];
+      } else if (locale.startsWith('ta')) {
+        return [
+          {
+            'tag': '🛒 வாடிக்கையாளர் விற்பனை & கடன் பில்',
+            'text': '“ரமேஷுக்கு 25 கிலோ அரிசி 500 மற்றும் 2 கிலோ சர்க்கரை 90 ரூபாய்க்கு விற்றேன், 500 ரொக்கம் கொடுத்தார் 90 ரூபாய் கடன் பாக்கி”',
+            'icon': Icons.point_of_sale_rounded,
+          },
+          {
+            'tag': '📦 சப்ளையர் சரக்கு கொள்முதல் & UPI',
+            'text': '“சியாம் டிரேடர்ஸிடம் இருந்து 12000 ரூபாய்க்கு சரக்கு வாங்கி கூகுள்பே UPI மூலம் செலுத்தினேன்”',
+            'icon': Icons.inventory_2_outlined,
+          },
+        ];
+      } else if (locale.startsWith('te')) {
+        return [
+          {
+            'tag': '🛒 కస్టమర్ సేల్ & ఖాతా బాకీ బిల్లు',
+            'text': '“రాజుకి 25 కేజీల బియ్యం 500 మరియు 2 కేజీల చక్కెర 90 కి అమ్మాను, 500 ఆన్‌లైన్ ఇచ్చారు 90 రూపాయలు ఖాతా బాకీ పెట్టారు”',
+            'icon': Icons.point_of_sale_rounded,
+          },
+          {
+            'tag': '📦 సప్లయర్ స్టాక్ కొనుగోలు & UPI',
+            'text': '“శ్యామ్ ట్రేడర్స్ నుండి 12000 రూపాయల కొత్త స్టాక్ కొని బ్యాంక్ యూపీఐ ద్వారా చెల్లించాను”',
+            'icon': Icons.inventory_2_outlined,
+          },
+        ];
+      } else if (locale.startsWith('kn')) {
+        return [
+          {
+            'tag': '🛒 ಗ್ರಾಹಕರ ಮಾರಾಟ & ಖಾತಾ ಬಾಕಿ ಬಿಲ್',
+            'text': '“ರಮೇಶ್‌ಗೆ 25 ಕೆಜಿ ಅಕ್ಕಿ 500 ಮತ್ತು 2 ಕೆಜಿ ಸಕ್ಕರೆ 90 ಕ್ಕೆ ಮಾರಾಟ ಮಾಡಿದೆ, 500 ನಗದು ಕೊಟ್ಟರು 90 ರೂಪಾಯಿ ಖಾತಾ ಬಾಕಿ ಉಳಿದಿದೆ”',
+            'icon': Icons.point_of_sale_rounded,
+          },
+          {
+            'tag': '📦 ಪೂರೈಕೆದಾರರ ಸ್ಟಾಕ್ ಖರೀದಿ & UPI',
+            'text': '“ಶ್ಯಾಮ್ ಟ್ರೇಡರ್ಸ್‌ನಿಂದ 12000 ರೂಪಾಯಿ ಹೊಸ ಸ್ಟಾಕ್ ಖರೀದಿಸಿ ಗೂಗಲ್‌ಪೇ ಯುಪಿಐ ಮೂಲಕ ಪಾವತಿಸಿದೆ”',
+            'icon': Icons.inventory_2_outlined,
+          },
+        ];
+      } else if (locale.startsWith('pa')) {
+        return [
+          {
+            'tag': '🛒 ਗਾਹਕ ਵਿਕਰੀ ਤੇ ਖਾਤਾ ਬਾਕੀ ਬਿੱਲ',
+            'text': '“ਰਾਜੂ ਨੂੰ 25 ਕਿੱਲੋ ਚੌਲ 500 ਅਤੇ 2 ਕਿੱਲੋ ਖੰਡ 90 ਰੁਪਏ ਵਿੱਚ ਵੇਚੀ, 500 ਨਕਦ ਦਿੱਤਾ ਤੇ 90 ਰੁਪਏ ਖਾਤਾ ਬਾਕੀ ਰਿਹਾ”',
+            'icon': Icons.point_of_sale_rounded,
+          },
+          {
+            'tag': '📦 ਸਪਲਾਇਰ ਸਟਾਕ ਖਰੀਦ ਤੇ UPI ਭੁਗਤਾਨ',
+            'text': '“ਸ਼ਾਮ ਟਰੇਡਰਜ਼ ਤੋਂ 12000 ਦਾ ਨਵਾਂ ਸਟਾਕ ਖਰੀਦਿਆ ਅਤੇ ਬੈਂਕ ਯੂਪੀਆਈ ਰਾਹੀਂ ਪੇਮੈਂਟ ਕੀਤੀ”',
+            'icon': Icons.inventory_2_outlined,
+          },
+        ];
+      } else if (locale.startsWith('ur')) {
+        return [
+          {
+            'tag': '🛒 گاہک فروخت اور کھاتہ باقی بل',
+            'text': '“راجو بھائی کو 25 کلو چاول 500 اور 2 کلو چینی 90 روپے میں بیچی، 500 آن لائن ملا اور 90 روپے کھاتہ باقی رہا”',
+            'icon': Icons.point_of_sale_rounded,
+          },
+          {
+            'tag': '📦 سپلائر نیا مال اور یو پی آئی ادائیگی',
+            'text': '“شیام ٹریڈرز سے 12000 روپے کا نیا اسٹاک خریدا اور بینک یو پی آئی سے ادائیگی کی”',
+            'icon': Icons.inventory_2_outlined,
+          },
         ];
       } else {
         return [
-          '“Sold 5 bags of sugar for 2500 rupees to Rajesh 500 due”',
-          '“Sold 2 shirts 1200 cash”',
-          '“Shop rent paid 10000”',
-          '“Inventory purchase 15000”',
+          {
+            'tag': '🛒 Customer Multi-item Sale & Khata Due',
+            'text': '“Sold 25kg rice for 500 and 2kg sugar for 90 to Rajesh, received 500 by UPI and 90 remaining as khata balance”',
+            'icon': Icons.point_of_sale_rounded,
+          },
+          {
+            'tag': '📦 Supplier Inventory Purchase with Bank UPI',
+            'text': '“Purchased 12000 rupees stock inventory from Shyam Traders and paid via Bank UPI”',
+            'icon': Icons.inventory_2_outlined,
+          },
         ];
       }
     }
 
+    // Personal Mode
     if (locale.startsWith('bn')) {
       return [
-        '“Ami 150 takar mach kinechi”',
-        '“Duto dim ar dudh kinlam 80 taka”',
-        '“Rikshaw bhara dilam 40 taka”',
-        '“250 taka diye lunch korlam”',
+        {
+          'tag': '🍔 বাজার ও কেনাকাটা (Food & Groceries)',
+          'text': '“বাজার থেকে ২৫০ টাকার মাছ আর ৮০ টাকার দুধ ও ডিম কিনলাম এবং গুগলপে দিয়ে পেমেন্ট করলাম”',
+          'icon': Icons.shopping_bag_outlined,
+        },
+        {
+          'tag': '🚗 যাতায়াত ও দৈনন্দিন খরচ (Travel & Bills)',
+          'text': '“অফিস যাওয়ার জন্য অটো ভাড়া দিলাম ৫০ টাকা আর পেট্রোল পাম্পে ৫০০ টাকার তেল ভরলাম”',
+          'icon': Icons.local_gas_station_rounded,
+        },
       ];
     } else if (locale.startsWith('hi')) {
       return [
-        '“Dost ke sath khana khaya 450 rupay”',
-        '“Petrol ₹500 Indian Oil par bharwaya”',
-        '“Dudh aur bread liya 70 rupay”',
-        '“Auto wale ko 80 rupay diye”',
+        {
+          'tag': '🍔 राशन व घरेलू खरीदारी (Food & Groceries)',
+          'text': '“बाजार से 250 रुपये की सब्जी और 80 रुपये का दूध ब्रेड खरीदा और गूगलपे से पेमेंट किया”',
+          'icon': Icons.shopping_bag_outlined,
+        },
+        {
+          'tag': '🚗 पेट्रोल व यात्रा खर्च (Travel & Fuel)',
+          'text': '“इंडियन ऑयल पेट्रोल पंप पर ₹500 का पेट्रोल भरवाया और ऑटो वाले को ₹60 नकद दिया”',
+          'icon': Icons.local_gas_station_rounded,
+        },
       ];
     } else if (locale.startsWith('gu')) {
       return [
-        '“Dudh ane shakbhaji 150 rupiya ma lidhu”',
-        '“Petrol 300 rupiya puravyu”',
-        '“Rickshaw vadane 60 rupiya apya”',
+        {
+          'tag': '🍔 કરિયાણું અને શાકભાજી (Food & Groceries)',
+          'text': '“દૂધ, બ્રેડ અને શાકભાજી ૨૫૦ રૂપિયામાં ખરીદ્યા અને પેટીએમ દ્વારા ચૂકવ્યા”',
+          'icon': Icons.shopping_bag_outlined,
+        },
+        {
+          'tag': '🚗 પેટ્રોલ અને પરિવહન (Travel & Fuel)',
+          'text': '“ગાડીમાં ૫૦૦ રૂપિયાનું પેટ્રોલ પુરાવ્યું અને રિક્ષાવાળાને ૬૦ રૂપિયા રોકડા આપ્યા”',
+          'icon': Icons.local_gas_station_rounded,
+        },
       ];
     } else if (locale.startsWith('mr')) {
       return [
-        '“Doodh ani ande aani 90 rupaye”',
-        '“Rickshaw che 50 rupaye dile”',
-        '“Dmart madhun shopping keli 800 rupaye”',
+        {
+          'tag': '🍔 भाजीपाला व किराणा (Food & Groceries)',
+          'text': '“बाजारातून २५০ रुपयांची भाजी आणि ८० रुपयांचे दूध आणले व गुगलपेने दिले”',
+          'icon': Icons.shopping_bag_outlined,
+        },
+        {
+          'tag': '🚗 प्रवास आणि इंधन खर्च (Travel & Fuel)',
+          'text': '“गाडीत ५०० रुपयांचे पेट्रोल भरले आणि रिक्षाचे ६० रुपये रोख दिले”',
+          'icon': Icons.local_gas_station_rounded,
+        },
       ];
     } else if (locale.startsWith('ta')) {
       return [
-        '“Kaalai unavu 120 roobai”',
-        '“Pal matrum muttai 85 roobai”',
-        '“Auto vaadagai 70 roobai”',
+        {
+          'tag': '🍔 உணவு மற்றும் மளிகை (Food & Groceries)',
+          'text': '“காய்கறி மற்றும் பால் 250 ரூபாய்க்கு வாங்கி கூகுள்பே மூலம் செலுத்தினேன்”',
+          'icon': Icons.shopping_bag_outlined,
+        },
+        {
+          'tag': '🚗 பெட்ரோல் மற்றும் பயணம் (Travel & Fuel)',
+          'text': '“பைக் பெட்ரோல் 500 ரூபாய்க்கு போட்டேன் மற்றும் ஆட்டோவுக்கு 60 ரூபாய் கொடுத்தேன்”',
+          'icon': Icons.local_gas_station_rounded,
+        },
       ];
     } else if (locale.startsWith('te')) {
       return [
-        '“Tiffin ki 80 rupayalu ayyindi”',
-        '“Auto ki 50 rupayalu ichanu”',
-        '“Petrol 300 rupayalu kottinchanu”',
+        {
+          'tag': '🍔 కిరాణా మరియు కూరగాయలు (Food & Groceries)',
+          'text': '“కూరగాయలు మరియు పాలు 250 రూపాయలకు కొని గూగల్‌పే ద్వారా చెల్లించాను”',
+          'icon': Icons.shopping_bag_outlined,
+        },
+        {
+          'tag': '🚗 పెట్రోల్ మరియు ప్రయాణం (Travel & Fuel)',
+          'text': '“బండిలో 500 రూపాయల పెట్రోల్ కొట్టించాను మరియు ఆటోకి 60 రూపాయలు ఇచ్చాను”',
+          'icon': Icons.local_gas_station_rounded,
+        },
+      ];
+    } else if (locale.startsWith('kn')) {
+      return [
+        {
+          'tag': '🍔 ಆಹಾರ ಮತ್ತು ದಿನಸಿ (Food & Groceries)',
+          'text': '“ತರಕಾರಿ ಮತ್ತು ಹಾಲು 250 ರೂಪಾಯಿಗೆ ಖರೀದಿಸಿ ಗೂಗಲ್‌ಪೇ ಮೂಲಕ ಪಾವತಿಸಿದೆ”',
+          'icon': Icons.shopping_bag_outlined,
+        },
+        {
+          'tag': '🚗 ಪೆಟ್ರೋಲ್ ಮತ್ತು ಪ್ರಯಾಣ (Travel & Fuel)',
+          'text': '“500 ರೂಪಾಯಿ ಪೆಟ್ರೋಲ್ ಹಾಕಿಸಿದೆ ಮತ್ತು ಆಟೋಗೆ 60 ರೂಪಾಯಿ ನಗದು ಕೊಟ್ಟೆ”',
+          'icon': Icons.local_gas_station_rounded,
+        },
+      ];
+    } else if (locale.startsWith('pa')) {
+      return [
+        {
+          'tag': '🍔 ਰਾਸ਼ਨ ਤੇ ਘਰੇਲੂ ਖਰਚ (Food & Groceries)',
+          'text': '“ਬਾਜ਼ਾਰ ਤੋਂ 250 ਰੁਪਏ ਦੀ ਸਬਜ਼ੀ ਅਤੇ 80 ਰੁਪਏ ਦਾ ਦੁੱਧ ਖਰੀਦਿਆ ਅਤੇ ਯੂਪੀਆਈ ਨਾਲ ਦਿੱਤਾ”',
+          'icon': Icons.shopping_bag_outlined,
+        },
+        {
+          'tag': '🚗 ਪੈਟਰੋਲ ਤੇ ਸਫ਼ਰ (Travel & Fuel)',
+          'text': '“ਪੈਟਰੋਲ ਪੰਪ ਤੇ 500 ਰੁਪਏ ਦਾ ਪੈਟਰੋਲ ਪਵਾਇਆ ਅਤੇ ਆਟੋ ਵਾਲੇ ਨੂੰ 60 ਰੁਪਏ ਦਿੱਤੇ”',
+          'icon': Icons.local_gas_station_rounded,
+        },
+      ];
+    } else if (locale.startsWith('ur')) {
+      return [
+        {
+          'tag': '🍔 راشن اور گھریلو سامان (Food & Groceries)',
+          'text': '“بازار سے 250 روپے کی سبزی اور 80 روپے کا دودھ خریدا اور آن لائن ادائیگی کی”',
+          'icon': Icons.shopping_bag_outlined,
+        },
+        {
+          'tag': '🚗 پیٹرول اور کرایہ (Travel & Fuel)',
+          'text': '“گاڑی میں 500 روپے کا پیٹرول ڈلوایا اور آٹو والے کو 60 روپے نقد دیے”',
+          'icon': Icons.local_gas_station_rounded,
+        },
       ];
     } else {
       return [
-        '“Spent 250 on grocery shopping”',
-        '“Paid 500 for electricity bill”',
-        '“Uber ride 180 rs yesterday”',
-        '“Lunch with friends 450 rupees”',
+        {
+          'tag': '🍔 Food & Grocery Shopping with UPI',
+          'text': '“Spent 250 on grocery and 80 on dairy milk, paid via Google Pay UPI”',
+          'icon': Icons.shopping_bag_outlined,
+        },
+        {
+          'tag': '🚗 Fuel & Travel Daily Expense',
+          'text': '“Filled 500 rupees petrol at Indian Oil and paid 60 cash for auto ride”',
+          'icon': Icons.local_gas_station_rounded,
+        },
       ];
     }
   }
 
-  Widget _buildExampleChip(String text, bool isDark) {
-    return InkWell(
-      onTap: () {
-        final clean = text.replaceAll('“', '').replaceAll('”', '');
-        _processVoiceInput(clean);
-      },
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1B202B) : const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0),
+  Widget _buildExampleCard(Map<String, dynamic> item, bool isDark, bool isBusiness) {
+    final text = item['text'] as String;
+    final tag = item['tag'] as String;
+    final icon = item['icon'] as IconData? ?? Icons.record_voice_over_rounded;
+    final activeColor = isBusiness ? const Color(0xFF38BDF8) : const Color(0xFF6C63FF);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          final clean = text.replaceAll('“', '').replaceAll('”', '');
+          _processVoiceInput(clean);
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1B202B) : const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0),
+            ),
           ),
-        ),
-        child: Text(
-          text,
-          style: GoogleFonts.inter(
-            fontSize: 11,
-            color: isDark ? Colors.grey[300] : Colors.grey[700],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, size: 14, color: activeColor),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      tag,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: activeColor,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: activeColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.bolt_rounded, size: 11, color: activeColor),
+                        const SizedBox(width: 2),
+                        Text(
+                          'Try',
+                          style: GoogleFonts.inter(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.bold,
+                            color: activeColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                text,
+                softWrap: true,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  height: 1.4,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? Colors.grey[200] : Colors.grey[800],
+                ),
+              ),
+            ],
           ),
         ),
       ),

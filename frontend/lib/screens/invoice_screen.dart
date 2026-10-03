@@ -1480,7 +1480,11 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
     final totalSales = filteredSales.fold<double>(0.0, (sum, s) => sum + s.finalAmount);
     final totalGst = filteredSales.fold<double>(0.0, (sum, s) => sum + s.taxAmount);
     final totalExpenses = filteredExpenses.fold<double>(0.0, (sum, e) => sum + e.amount);
-    final netProfit = totalSales - totalExpenses;
+    final totalGoodsCost = filteredSales.fold<double>(0.0, (sum, s) => sum + s.totalPurchaseCost);
+    final netProfit = totalGoodsCost > 0
+        ? (totalSales - totalGoodsCost - totalExpenses)
+        : (totalSales - totalExpenses);
+    final marginPercent = totalSales > 0 ? (netProfit / totalSales) * 100 : 0.0;
 
     // GST Slabs Breakup
     final Map<double, double> gstBreakup = {0.0: 0.0, 5.0: 0.0, 12.0: 0.0, 18.0: 0.0, 28.0: 0.0};
@@ -1636,13 +1640,20 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
                     '₹${netProfit.toStringAsFixed(2)}',
                     style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
+                  if (totalGoodsCost > 0) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      'Includes ₹${totalGoodsCost.toStringAsFixed(0)} item buy cost',
+                      style: GoogleFonts.inter(fontSize: 10.5, color: Colors.white60),
+                    ),
+                  ],
                 ],
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(10)),
                 child: Text(
-                  totalSales > 0 ? '${((netProfit / totalSales) * 100).toStringAsFixed(1)}% Margin' : '0% Margin',
+                  '${marginPercent.toStringAsFixed(1)}% Margin',
                   style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
               ),
@@ -1666,22 +1677,66 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('GST Tax Collections Breakdown', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15)),
-                  Text('Total: ₹${totalGst.toStringAsFixed(2)}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: primaryColor)),
+                  Text(
+                    'Total: ₹${totalGst.toStringAsFixed(2)}',
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: totalGst > 0 ? primaryColor : Colors.grey,
+                    ),
+                  ),
                 ],
               ),
               const Divider(height: 16),
-              ...gstBreakup.entries.where((e) => e.value > 0 || e.key == 0.0 || e.key == 18.0).map((e) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
+              if (totalGst == 0) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('0% GST (Non-GST / Exempt)', style: GoogleFonts.inter(fontSize: 12.5, color: Colors.grey.shade600)),
+                    Text('₹0.00', style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('${e.key.toStringAsFixed(0)}% GST Slab', style: GoogleFonts.inter(fontSize: 12)),
-                      Text('₹${e.value.toStringAsFixed(2)}', style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w600)),
+                      const Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFF3B82F6)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'No GST collected (All items billed under 0% tax rate).',
+                          style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF3B82F6)),
+                        ),
+                      ),
                     ],
                   ),
-                );
-              }),
+                ),
+              ] else ...[
+                ...gstBreakup.entries.where((e) => e.value > 0).map((e) {
+                  final halfRate = (e.key / 2).toStringAsFixed(1).replaceAll('.0', '');
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 5),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('${e.key.toStringAsFixed(0)}% GST Slab', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                            Text('CGST $halfRate% + SGST $halfRate%', style: GoogleFonts.inter(fontSize: 10.5, color: Colors.grey)),
+                          ],
+                        ),
+                        Text('₹${e.value.toStringAsFixed(2)}', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: primaryColor)),
+                      ],
+                    ),
+                  );
+                }),
+              ],
             ],
           ),
         ),

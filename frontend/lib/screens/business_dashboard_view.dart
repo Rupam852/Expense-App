@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/expense.dart';
 import '../models/business_sale.dart';
 import '../models/business_profile.dart';
+import '../models/payment_detail.dart';
 import '../services/database_helper.dart';
 import '../services/user_provider.dart';
 import '../services/expense_provider.dart';
@@ -166,134 +167,239 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
     );
   }
 
-  void _showEditBusinessProfileDialog() {
+  void _showEditBusinessProfileDialog() async {
     final nameCtrl = TextEditingController(text: _businessProfile.businessName);
     final phoneCtrl = TextEditingController(text: _businessProfile.phone ?? '');
     final gstinCtrl = TextEditingController(text: _businessProfile.gstin ?? '');
     final addrCtrl = TextEditingController(text: _businessProfile.address ?? '');
     final upiCtrl = TextEditingController(text: _businessProfile.upiId ?? '');
 
+    List<PaymentDetail> savedPayments = Provider.of<ExpenseProvider>(context, listen: false).paymentDetails;
+    if (savedPayments.isEmpty) {
+      savedPayments = await DatabaseHelper.instance.getPaymentDetails();
+    }
+    final validPayments = savedPayments.where((p) => p.upiId.trim().isNotEmpty).toList();
+
+    if (!mounted) return;
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.storefront_rounded, color: Color(0xFF3B82F6), size: 22),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          return AlertDialog(
+            backgroundColor: isDark ? const Color(0xFF1E232D) : Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.storefront_rounded, color: Color(0xFF3B82F6), size: 22),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Edit Business Profile',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Edit Business Profile',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'My Business / Shop Name *',
+                      hintText: 'e.g. Ramesh General Store',
+                      prefixIcon: Icon(Icons.business_rounded),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      labelText: 'Business Phone Number',
+                      hintText: 'e.g. +91 9876543210',
+                      prefixIcon: Icon(Icons.phone_rounded),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: gstinCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'GSTIN (Optional)',
+                      hintText: 'e.g. 27AAAAA0000A1Z5',
+                      prefixIcon: Icon(Icons.receipt_rounded),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: addrCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Shop / Office Address',
+                      hintText: 'e.g. Shop 12, Main Market, Mumbai',
+                      prefixIcon: Icon(Icons.location_on_outlined),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: upiCtrl,
+                    onChanged: (_) => setDialogState(() {}),
+                    decoration: InputDecoration(
+                      labelText: 'Business UPI ID (for QR Code)',
+                      hintText: 'e.g. storename@okaxis',
+                      prefixIcon: const Icon(Icons.qr_code_rounded),
+                      suffixIcon: upiCtrl.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () {
+                                upiCtrl.clear();
+                                setDialogState(() {});
+                              },
+                            )
+                          : null,
+                      border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                    ),
+                  ),
+                  if (validPayments.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        const Icon(Icons.touch_app_rounded, size: 13, color: Color(0xFF3B82F6)),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Select from saved app UPI IDs:',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white70 : Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: validPayments.map((p) {
+                        final isSelected = upiCtrl.text.trim().toLowerCase() == p.upiId.trim().toLowerCase();
+                        return Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(10),
+                            onTap: () {
+                              upiCtrl.text = p.upiId.trim();
+                              setDialogState(() {});
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? const Color(0xFF3B82F6).withValues(alpha: 0.15)
+                                    : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.04)),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? const Color(0xFF3B82F6)
+                                      : (isDark ? Colors.white12 : Colors.black12),
+                                  width: isSelected ? 1.5 : 1.0,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isSelected ? Icons.check_circle_rounded : Icons.account_balance_wallet_outlined,
+                                    size: 13,
+                                    color: isSelected ? const Color(0xFF3B82F6) : (isDark ? Colors.white60 : Colors.black54),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    p.name.isNotEmpty ? p.name : 'UPI',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11.5,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                      color: isSelected ? const Color(0xFF3B82F6) : (isDark ? Colors.white : Colors.black87),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '(${p.upiId})',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10.5,
+                                      color: isSelected
+                                          ? const Color(0xFF3B82F6).withValues(alpha: 0.85)
+                                          : (isDark ? Colors.white38 : Colors.black45),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ],
               ),
             ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'My Business / Shop Name *',
-                  hintText: 'e.g. Ramesh General Store',
-                  prefixIcon: Icon(Icons.business_rounded),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-                ),
+            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text('Cancel', style: GoogleFonts.inter(color: Colors.grey, fontWeight: FontWeight.w600)),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: phoneCtrl,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Business Phone Number',
-                  hintText: 'e.g. +91 9876543210',
-                  prefixIcon: Icon(Icons.phone_rounded),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF3B82F6),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: gstinCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'GSTIN (Optional)',
-                  hintText: 'e.g. 27AAAAA0000A1Z5',
-                  prefixIcon: Icon(Icons.receipt_rounded),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: addrCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Shop / Office Address',
-                  hintText: 'e.g. Shop 12, Main Market, Mumbai',
-                  prefixIcon: Icon(Icons.location_on_outlined),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: upiCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Business UPI ID (for QR Code)',
-                  hintText: 'e.g. storename@okaxis',
-                  prefixIcon: Icon(Icons.qr_code_rounded),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-                ),
+                onPressed: () async {
+                  final newName = nameCtrl.text.trim().isEmpty ? 'My Business' : nameCtrl.text.trim();
+                  final updated = BusinessProfile(
+                    id: _businessProfile.id,
+                    businessName: newName,
+                    phone: phoneCtrl.text.trim().isNotEmpty ? phoneCtrl.text.trim() : null,
+                    gstin: gstinCtrl.text.trim().isNotEmpty ? gstinCtrl.text.trim() : null,
+                    address: addrCtrl.text.trim().isNotEmpty ? addrCtrl.text.trim() : null,
+                    upiId: upiCtrl.text.trim().isNotEmpty ? upiCtrl.text.trim() : null,
+                  );
+                  await DatabaseHelper.instance.saveBusinessProfile(updated);
+
+                  // Cloud Sync to Supabase business_profiles
+                  try {
+                    await SupabaseService.instance.upsertBusinessProfile(updated.toMap());
+                  } catch (e) {
+                    debugPrint('[BusinessDashboard] Cloud upsert profile note: $e');
+                  }
+
+                  if (mounted) {
+                    setState(() => _businessProfile = updated);
+                    Navigator.of(ctx).pop();
+                    CustomToast.show(context, '✅ Business profile saved & synced! ☁️');
+                  }
+                },
+                child: Text('Save Profile', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
               ),
             ],
-          ),
-        ),
-        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('Cancel', style: GoogleFonts.inter(color: Colors.grey, fontWeight: FontWeight.w600)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF3B82F6),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: () async {
-              final newName = nameCtrl.text.trim().isEmpty ? 'My Business' : nameCtrl.text.trim();
-              final updated = BusinessProfile(
-                id: _businessProfile.id,
-                businessName: newName,
-                phone: phoneCtrl.text.trim().isNotEmpty ? phoneCtrl.text.trim() : null,
-                gstin: gstinCtrl.text.trim().isNotEmpty ? gstinCtrl.text.trim() : null,
-                address: addrCtrl.text.trim().isNotEmpty ? addrCtrl.text.trim() : null,
-                upiId: upiCtrl.text.trim().isNotEmpty ? upiCtrl.text.trim() : null,
-              );
-              await DatabaseHelper.instance.saveBusinessProfile(updated);
-
-              // Cloud Sync to Supabase business_profiles
-              try {
-                await SupabaseService.instance.upsertBusinessProfile(updated.toMap());
-              } catch (e) {
-                debugPrint('[BusinessDashboard] Cloud upsert profile note: $e');
-              }
-
-              if (mounted) {
-                setState(() => _businessProfile = updated);
-                Navigator.of(ctx).pop();
-                CustomToast.show(context, '✅ Business profile saved & synced! ☁️');
-              }
-            },
-            child: Text('Save Profile', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -873,15 +979,16 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
             Row(
               children: [
                 _buildActionButton(
-                  label: '+ Add',
-                  subtitle: 'Sale / Expense',
+                  label: 'Add Entry',
+                  subtitle: 'Sale / Exp',
                   icon: Icons.add_circle_outline_rounded,
                   color: primaryColor,
                   onTap: _showAddEntryBottomSheet,
                 ),
                 const SizedBox(width: 8),
                 _buildActionButton(
-                  label: '🧾 Invoices',
+                  label: 'Invoices',
+                  subtitle: 'Bills & Tax',
                   icon: Icons.receipt_long_rounded,
                   color: const Color(0xFF8B5CF6),
                   onTap: () async {
@@ -893,7 +1000,8 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                 ),
                 const SizedBox(width: 8),
                 _buildActionButton(
-                  label: '📖 Khata Book',
+                  label: 'Khata Book',
+                  subtitle: 'Udhar & Dues',
                   icon: Icons.menu_book_rounded,
                   color: const Color(0xFFF59E0B),
                   onTap: () async {
@@ -905,7 +1013,8 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                 ),
                 const SizedBox(width: 8),
                 _buildActionButton(
-                  label: '🛒 Mandi Calc',
+                  label: 'Mandi Calc',
+                  subtitle: 'Rates & Crop',
                   icon: Icons.calculate_rounded,
                   color: const Color(0xFF10B981),
                   onTap: () async {
@@ -1293,35 +1402,44 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
           HapticFeedback.lightImpact();
           onTap();
         },
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          height: 72,
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withValues(alpha: 0.3)),
+            color: color.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: color.withValues(alpha: 0.28), width: 1.2),
           ),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: color, size: 20),
+              Icon(icon, color: color, size: 22),
               const SizedBox(height: 3),
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
                   label,
-                  style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.bold, color: color),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
                   textAlign: TextAlign.center,
                   maxLines: 1,
                 ),
               ),
-              if (subtitle != null) ...[
+              if (subtitle != null && subtitle.isNotEmpty) ...[
                 const SizedBox(height: 1),
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
                     subtitle,
-                    style: GoogleFonts.inter(fontSize: 8.5, fontWeight: FontWeight.w500, color: color.withValues(alpha: 0.85)),
+                    style: GoogleFonts.inter(
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w500,
+                      color: color.withValues(alpha: 0.82),
+                    ),
                     textAlign: TextAlign.center,
                     maxLines: 1,
                   ),

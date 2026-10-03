@@ -41,6 +41,338 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
 
   static const List<double> _taxSlabs = [0.0, 5.0, 12.0, 18.0, 28.0];
 
+  static const Map<String, List<Map<String, String>>> _unitCategories = {
+    'Count & Pieces': [
+      {'key': 'pcs', 'label': 'Pieces (pcs)', 'sub': 'Standard individual item count'},
+      {'key': 'box', 'label': 'Box (box)', 'sub': 'Carton, pack or grouped box'},
+      {'key': 'pkt', 'label': 'Packet (pkt)', 'sub': 'Pouches or sealed packets'},
+      {'key': 'nos', 'label': 'Numbers (nos)', 'sub': 'Discrete quantified count'},
+      {'key': 'doz', 'label': 'Dozen (doz)', 'sub': 'Set of 12 items'},
+      {'key': 'pair', 'label': 'Pair (pair)', 'sub': 'Set of 2 matched items'},
+      {'key': 'set', 'label': 'Set (set)', 'sub': 'Multi-piece bundled set'},
+    ],
+    'Weight & Mass': [
+      {'key': 'kg', 'label': 'Kilogram (kg)', 'sub': 'Standard bulk metric weight'},
+      {'key': 'g', 'label': 'Gram (g)', 'sub': 'Lightweight or spices / gold'},
+      {'key': 'quintal', 'label': 'Quintal', 'sub': '100 kg agricultural wholesale'},
+    ],
+    'Liquid & Volume': [
+      {'key': 'ltr', 'label': 'Litre (ltr)', 'sub': 'Standard liquids, oils, milk'},
+      {'key': 'ml', 'label': 'Millilitre (ml)', 'sub': 'Small volume beverages & bottles'},
+    ],
+    'Length & Area': [
+      {'key': 'm', 'label': 'Metre (m)', 'sub': 'Fabrics, cables, wires, pipes'},
+      {'key': 'sq.ft', 'label': 'Square Feet (sq.ft)', 'sub': 'Flooring, tiles, real estate'},
+    ],
+    'Time & Service': [
+      {'key': 'service', 'label': 'Service', 'sub': 'Labor, repair, consultancy job'},
+      {'key': 'hour', 'label': 'Hour (hr)', 'sub': 'Hourly billable work or rental'},
+    ],
+  };
+
+  void _openUnitPickerSheet(BuildContext context, String currentUnit, ValueChanged<String> onSelected) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        final isDark = Theme.of(sheetCtx).brightness == Brightness.dark;
+        final bg = isDark ? const Color(0xFF1E2430) : Colors.white;
+        final textColor = isDark ? Colors.white : const Color(0xFF212121);
+        const primaryColor = Color(0xFF1E88E5);
+
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(sheetCtx).size.height * 0.75,
+          ),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  width: 44,
+                  height: 4.5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.35),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: primaryColor.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.straighten_rounded, color: primaryColor, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Select Unit of Measurement',
+                            style: GoogleFonts.outfit(
+                              fontSize: 16.5,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
+                          ),
+                          Text(
+                            'Tap to apply unit for this catalog item',
+                            style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: Colors.grey),
+                      onPressed: () => Navigator.pop(sheetCtx),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, thickness: 0.8),
+              Flexible(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  children: _unitCategories.entries.map((entry) {
+                    final categoryName = entry.key;
+                    final units = entry.value;
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4, top: 10, bottom: 6),
+                          child: Text(
+                            categoryName.toUpperCase(),
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.6,
+                              color: primaryColor,
+                            ),
+                          ),
+                        ),
+                        ...units.map((u) {
+                          final isSelected = currentUnit.toLowerCase() == u['key']!.toLowerCase();
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 6),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? primaryColor.withOpacity(0.12)
+                                  : (isDark ? Colors.white.withOpacity(0.04) : Colors.grey.shade50),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isSelected ? primaryColor : (isDark ? Colors.white12 : Colors.black12),
+                                width: isSelected ? 1.5 : 1,
+                              ),
+                            ),
+                            child: ListTile(
+                              dense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                              leading: Container(
+                                width: 38,
+                                height: 38,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: isSelected ? primaryColor : (isDark ? Colors.white10 : Colors.grey.shade200),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  u['key']!.toUpperCase(),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: isSelected ? Colors.white : (isDark ? Colors.white : Colors.black87),
+                                  ),
+                                ),
+                              ),
+                              title: Text(
+                                u['label']!,
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                  color: isSelected ? primaryColor : textColor,
+                                ),
+                              ),
+                              subtitle: Text(
+                                u['sub']!,
+                                style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                              ),
+                              trailing: isSelected
+                                  ? const Icon(Icons.check_circle_rounded, color: primaryColor, size: 20)
+                                  : null,
+                              onTap: () {
+                                onSelected(u['key']!);
+                                Navigator.pop(sheetCtx);
+                              },
+                            ),
+                          );
+                        }),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _openTaxPickerSheet(BuildContext context, double currentTax, ValueChanged<double> onSelected) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        final isDark = Theme.of(sheetCtx).brightness == Brightness.dark;
+        final bg = isDark ? const Color(0xFF1E2430) : Colors.white;
+        final textColor = isDark ? Colors.white : const Color(0xFF212121);
+        const primaryColor = Color(0xFF1E88E5);
+
+        final slabDescriptions = {
+          0.0: '0% (Exempt / No Tax) - Fresh produce, books, unbranded food',
+          5.0: '5% GST - Essential groceries, apparel <= ₹1k, medicines',
+          12.0: '12% GST - Processed foods, business services, mobile phones',
+          18.0: '18% GST (Standard) - IT services, consumer goods, general services',
+          28.0: '28% GST - Luxury items, automobiles, high-end electronics',
+        };
+
+        return Container(
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.35),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.receipt_long_rounded, color: primaryColor, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Select GST Tax Slab',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16.5,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Colors.grey),
+                    onPressed: () => Navigator.pop(sheetCtx),
+                  ),
+                ],
+              ),
+              const Divider(height: 16),
+              ..._taxSlabs.map((tax) {
+                final isSelected = (currentTax - tax).abs() < 0.01;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? primaryColor.withOpacity(0.12)
+                        : (isDark ? Colors.white.withOpacity(0.04) : Colors.grey.shade50),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isSelected ? primaryColor : (isDark ? Colors.white12 : Colors.black12),
+                      width: isSelected ? 1.5 : 1,
+                    ),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                    onTap: () {
+                      onSelected(tax);
+                      Navigator.pop(sheetCtx);
+                    },
+                    leading: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isSelected ? primaryColor : (isDark ? Colors.white10 : Colors.grey.shade200),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        tax == 0.0 ? '0%' : '${tax.toStringAsFixed(0)}%',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? Colors.white : (isDark ? Colors.white : Colors.black87),
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      tax == 0.0 ? '0% Exempt (No Tax)' : '${tax.toStringAsFixed(0)}% GST Slab',
+                      style: GoogleFonts.inter(
+                        fontSize: 13.5,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                        color: isSelected ? primaryColor : textColor,
+                      ),
+                    ),
+                    subtitle: Text(
+                      slabDescriptions[tax] ?? '',
+                      style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                    ),
+                    trailing: isSelected
+                        ? const Icon(Icons.check_circle_rounded, color: primaryColor)
+                        : const Icon(Icons.radio_button_unchecked, color: Colors.grey, size: 20),
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -587,26 +919,34 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                                   style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey),
                                 ),
                                 const SizedBox(height: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.grey.withValues(alpha: 0.5)),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: DropdownButtonHideUnderline(
-                                    child: DropdownButton<String>(
-                                      value: selectedUnit,
-                                      isExpanded: true,
-                                      dropdownColor: isDark ? _darkCard : Colors.white,
-                                      items: _unitOptions.map((u) {
-                                        return DropdownMenuItem(
-                                          value: u,
-                                          child: Text(u.toUpperCase(), style: GoogleFonts.inter(fontSize: 13)),
-                                        );
-                                      }).toList(),
-                                      onChanged: (val) {
-                                        if (val != null) setModalState(() => selectedUnit = val);
-                                      },
+                                InkWell(
+                                  onTap: () {
+                                    _openUnitPickerSheet(context, selectedUnit, (val) {
+                                      setModalState(() => selectedUnit = val);
+                                    });
+                                  },
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Container(
+                                    height: 48,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.grey.shade50,
+                                      border: Border.all(color: Colors.grey.withValues(alpha: 0.4)),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          selectedUnit.toUpperCase(),
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.bold,
+                                            color: isDark ? Colors.white : Colors.black87,
+                                          ),
+                                        ),
+                                        const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                                      ],
                                     ),
                                   ),
                                 ),
@@ -625,27 +965,34 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                                   style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey),
                                 ),
                                 const SizedBox(height: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.grey.withValues(alpha: 0.5)),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: DropdownButtonHideUnderline(
-                                    child: DropdownButton<double>(
-                                      value: selectedTax,
-                                      isExpanded: true,
-                                      dropdownColor: isDark ? _darkCard : Colors.white,
-                                      items: _taxSlabs.map((t) {
-                                        return DropdownMenuItem(
-                                          value: t,
-                                          child: Text(t == 0.0 ? '0% (Exempt)' : '${t.toStringAsFixed(0)}% GST',
-                                              style: GoogleFonts.inter(fontSize: 13)),
-                                        );
-                                      }).toList(),
-                                      onChanged: (val) {
-                                        if (val != null) setModalState(() => selectedTax = val);
-                                      },
+                                InkWell(
+                                  onTap: () {
+                                    _openTaxPickerSheet(context, selectedTax, (val) {
+                                      setModalState(() => selectedTax = val);
+                                    });
+                                  },
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Container(
+                                    height: 48,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.grey.shade50,
+                                      border: Border.all(color: Colors.grey.withValues(alpha: 0.4)),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          selectedTax == 0.0 ? '0% (Exempt)' : '${selectedTax.toStringAsFixed(0)}% GST',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: isDark ? Colors.white : Colors.black87,
+                                          ),
+                                        ),
+                                        const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                                      ],
                                     ),
                                   ),
                                 ),
