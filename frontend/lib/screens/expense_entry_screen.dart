@@ -579,18 +579,18 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ─── Mode Indicator & Switcher Banner ───
+              // ─── Mode Indicator Banner ───
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
                   color: isBusiness
-                      ? const Color(0xFF2563EB).withOpacity(0.1)
-                      : const Color(0xFF00D09C).withOpacity(0.1),
+                      ? const Color(0xFF2563EB).withValues(alpha: 0.1)
+                      : const Color(0xFF00D09C).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: isBusiness
-                        ? const Color(0xFF2563EB).withOpacity(0.3)
-                        : const Color(0xFF00D09C).withOpacity(0.3),
+                        ? const Color(0xFF2563EB).withValues(alpha: 0.3)
+                        : const Color(0xFF00D09C).withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
@@ -625,32 +625,6 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                         ],
                       ),
                     ),
-                    if (!_isRealEdit)
-                      InkWell(
-                        onTap: () {
-                          setState(() {
-                            _ledgerType = isBusiness ? 'personal' : 'business';
-                            _selectedCategory = null; // reset category on mode switch
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF222836) : Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: accentColor.withOpacity(0.5)),
-                          ),
-                          child: Text(
-                            isBusiness ? 'Switch to 👤' : 'Switch to 💼',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: accentColor,
-                            ),
-                          ),
-                        ),
-                      ),
                   ],
                 ),
               ),
