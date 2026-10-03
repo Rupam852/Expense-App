@@ -7,8 +7,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:provider/provider.dart';
 import '../services/ai_config_service.dart';
 import '../services/database_helper.dart';
+import '../services/user_provider.dart';
 import '../widgets/ai_config_required_dialog.dart';
 import '../widgets/custom_toast.dart';
 
@@ -1042,6 +1044,8 @@ class _CalculatorHubScreenState extends State<CalculatorHubScreen>
       orElse: () => kSupportedCalcVoiceLanguages.first,
     );
     final str = CalcHubStrings.of(_selectedLangCode);
+    final userProvider = Provider.of<UserProvider>(context);
+    final activeMode = userProvider.isBusinessMode ? 'business' : 'personal';
 
     return Scaffold(
       appBar: AppBar(
@@ -1114,11 +1118,11 @@ class _CalculatorHubScreenState extends State<CalculatorHubScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _StandardCalculatorView(langCode: _selectedLangCode),
-          _MarketPriceCalculatorView(langCode: _selectedLangCode),
-          _EmiCalculatorView(langCode: _selectedLangCode),
-          _DailyFinancialToolsView(langCode: _selectedLangCode),
-          _CalculatorHistoryView(langCode: _selectedLangCode),
+          _StandardCalculatorView(langCode: _selectedLangCode, activeMode: activeMode),
+          _MarketPriceCalculatorView(langCode: _selectedLangCode, activeMode: activeMode),
+          _EmiCalculatorView(langCode: _selectedLangCode, activeMode: activeMode),
+          _DailyFinancialToolsView(langCode: _selectedLangCode, activeMode: activeMode),
+          _CalculatorHistoryView(langCode: _selectedLangCode, activeMode: activeMode),
         ],
       ),
     );
@@ -1129,13 +1133,10 @@ class _CalculatorHubScreenState extends State<CalculatorHubScreen>
 // TAB 1: STANDARD CALCULATOR
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ═══════════════════════════════════════════════════════════════════════════
-// TAB 1: STANDARD CALCULATOR
-// ═══════════════════════════════════════════════════════════════════════════
-
 class _StandardCalculatorView extends StatefulWidget {
   final String langCode;
-  const _StandardCalculatorView({this.langCode = 'en_IN'});
+  final String activeMode;
+  const _StandardCalculatorView({this.langCode = 'en_IN', this.activeMode = 'personal'});
 
   @override
   State<_StandardCalculatorView> createState() => _StandardCalculatorViewState();
@@ -1277,6 +1278,7 @@ class _StandardCalculatorViewState extends State<_StandardCalculatorView> {
       title: 'Standard Calculation',
       summary: '$exp = $res',
       detailsJson: jsonEncode({'expression': exp, 'result': res}),
+      mode: widget.activeMode,
     );
     if (mounted) {
       CustomToast.show(context, 'Calculation saved to history ✨');
@@ -1448,7 +1450,8 @@ class _StandardCalculatorViewState extends State<_StandardCalculatorView> {
 
 class _MarketPriceCalculatorView extends StatefulWidget {
   final String langCode;
-  const _MarketPriceCalculatorView({this.langCode = 'en_IN'});
+  final String activeMode;
+  const _MarketPriceCalculatorView({this.langCode = 'en_IN', this.activeMode = 'personal'});
 
   @override
   State<_MarketPriceCalculatorView> createState() => _MarketPriceCalculatorViewState();
@@ -1617,6 +1620,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
         'unit': _selectedUnit,
         'rate_per_std': stdRate,
       }),
+      mode: widget.activeMode,
     );
 
     if (mounted) {
@@ -1732,6 +1736,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
       title: 'Mandi Voice Shopping List (${items.length} Items)',
       summary: summary,
       detailsJson: jsonEncode(_aiParsedResult),
+      mode: widget.activeMode,
     );
 
     if (mounted) {
@@ -2464,7 +2469,8 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
 
 class _EmiCalculatorView extends StatefulWidget {
   final String langCode;
-  const _EmiCalculatorView({this.langCode = 'en_IN'});
+  final String activeMode;
+  const _EmiCalculatorView({this.langCode = 'en_IN', this.activeMode = 'personal'});
 
   @override
   State<_EmiCalculatorView> createState() => _EmiCalculatorViewState();
@@ -2534,6 +2540,7 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
         'total_interest': _totalInterest,
         'total_payment': _totalPayment,
       }),
+      mode: widget.activeMode,
     );
 
     if (mounted) {
@@ -3051,7 +3058,8 @@ class _EmiCalculatorViewState extends State<_EmiCalculatorView> {
 
 class _DailyFinancialToolsView extends StatefulWidget {
   final String langCode;
-  const _DailyFinancialToolsView({this.langCode = 'en_IN'});
+  final String activeMode;
+  const _DailyFinancialToolsView({this.langCode = 'en_IN', this.activeMode = 'personal'});
 
   @override
   State<_DailyFinancialToolsView> createState() => _DailyFinancialToolsViewState();
@@ -3090,6 +3098,7 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
       title: title,
       summary: summary,
       detailsJson: jsonEncode(data),
+      mode: widget.activeMode,
     );
     if (mounted) {
       CustomToast.show(context, 'Calculation saved to history! ✨');
@@ -3570,7 +3579,8 @@ class _DailyFinancialToolsViewState extends State<_DailyFinancialToolsView> {
 
 class _CalculatorHistoryView extends StatefulWidget {
   final String langCode;
-  const _CalculatorHistoryView({this.langCode = 'en_IN'});
+  final String activeMode;
+  const _CalculatorHistoryView({this.langCode = 'en_IN', this.activeMode = 'personal'});
 
   @override
   State<_CalculatorHistoryView> createState() => _CalculatorHistoryViewState();
@@ -3591,6 +3601,7 @@ class _CalculatorHistoryViewState extends State<_CalculatorHistoryView> {
     setState(() => _isLoading = true);
     final list = await DatabaseHelper.instance.getCalculatorHistory(
       type: _selectedFilter == 'all' ? null : _selectedFilter,
+      mode: widget.activeMode,
     );
     if (mounted) {
       setState(() {
@@ -3628,6 +3639,7 @@ class _CalculatorHistoryViewState extends State<_CalculatorHistoryView> {
     if (confirmed == true) {
       await DatabaseHelper.instance.clearCalculatorHistory(
         type: _selectedFilter == 'all' ? null : _selectedFilter,
+        mode: widget.activeMode,
       );
       _loadHistory();
       if (mounted) {

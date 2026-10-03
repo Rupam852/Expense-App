@@ -963,20 +963,25 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
         },
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: color.withValues(alpha: 0.3)),
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: color, size: 22),
+              Icon(icon, color: color, size: 20),
               const SizedBox(height: 4),
-              Text(
-                label,
-                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: color),
-                textAlign: TextAlign.center,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.bold, color: color),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                ),
               ),
             ],
           ),

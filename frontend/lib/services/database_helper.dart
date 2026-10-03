@@ -296,9 +296,13 @@ class DatabaseHelper {
           title TEXT NOT NULL,
           summary TEXT NOT NULL,
           details_json TEXT NOT NULL,
+          mode TEXT NOT NULL DEFAULT 'personal',
           created_at TEXT NOT NULL
         )
       ''');
+    } catch (_) {}
+    try {
+      await db.execute("ALTER TABLE calculator_history ADD COLUMN mode TEXT NOT NULL DEFAULT 'personal'");
     } catch (_) {}
     try {
       await db.execute('''
@@ -2091,6 +2095,7 @@ class DatabaseHelper {
     required String title,
     required String summary,
     required String detailsJson,
+    String mode = 'personal',
   }) async {
     final db = await instance.database;
     final res = await db.insert(
@@ -2101,6 +2106,7 @@ class DatabaseHelper {
         'title': title,
         'summary': summary,
         'details_json': detailsJson,
+        'mode': mode,
         'created_at': DateTime.now().toIso8601String(),
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
@@ -2127,15 +2133,27 @@ class DatabaseHelper {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getCalculatorHistory({String? type}) async {
+  Future<List<Map<String, dynamic>>> getCalculatorHistory({String? type, String? mode}) async {
     final db = await instance.database;
-    final where = type != null && type.isNotEmpty && type != 'all' ? 'calc_type = ?' : null;
-    final whereArgs = type != null && type.isNotEmpty && type != 'all' ? [type] : null;
+    final List<String> conditions = [];
+    final List<dynamic> whereArgs = [];
+
+    if (type != null && type.isNotEmpty && type != 'all') {
+      conditions.add('calc_type = ?');
+      whereArgs.add(type);
+    }
+    if (mode != null && mode.isNotEmpty) {
+      conditions.add('(mode = ? OR (mode IS NULL AND ? = \'personal\'))');
+      whereArgs.add(mode);
+      whereArgs.add(mode);
+    }
+
+    final where = conditions.isNotEmpty ? conditions.join(' AND ') : null;
 
     return await db.query(
       'calculator_history',
       where: where,
-      whereArgs: whereArgs,
+      whereArgs: whereArgs.isNotEmpty ? whereArgs : null,
       orderBy: 'created_at DESC',
       limit: maxCalculatorHistoryLimit,
     );
@@ -2150,16 +2168,28 @@ class DatabaseHelper {
     );
   }
 
-  Future<int> clearCalculatorHistory({String? type}) async {
+  Future<int> clearCalculatorHistory({String? type, String? mode}) async {
     final db = await instance.database;
+    final List<String> conditions = [];
+    final List<dynamic> whereArgs = [];
+
     if (type != null && type.isNotEmpty && type != 'all') {
-      return await db.delete(
-        'calculator_history',
-        where: 'calc_type = ?',
-        whereArgs: [type],
-      );
+      conditions.add('calc_type = ?');
+      whereArgs.add(type);
     }
-    return await db.delete('calculator_history');
+    if (mode != null && mode.isNotEmpty) {
+      conditions.add('(mode = ? OR (mode IS NULL AND ? = \'personal\'))');
+      whereArgs.add(mode);
+      whereArgs.add(mode);
+    }
+
+    final where = conditions.isNotEmpty ? conditions.join(' AND ') : null;
+
+    return await db.delete(
+      'calculator_history',
+      where: where,
+      whereArgs: whereArgs.isNotEmpty ? whereArgs : null,
+    );
   }
 
   // ── BUSINESS SALES & REVENUE CRUD ─────────────────────────
