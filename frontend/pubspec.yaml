@@ -2,7 +2,7 @@ name: expense_app
 description: "A secure, offline-first expense tracker app with Groww-inspired UI."
 publish_to: 'none'
 
-version: 1.1.0+2
+version: 1.2.0+3
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
