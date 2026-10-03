@@ -14,12 +14,14 @@ import '../services/user_provider.dart';
 import '../models/expense.dart';
 import '../models/split_bill.dart';
 import '../models/business_profile.dart';
+import '../models/business_sale.dart';
+import '../models/khata_entry.dart';
 import '../widgets/ai_config_required_dialog.dart';
 import '../widgets/custom_toast.dart';
 import 'ai_config_screen.dart';
 
 class AiActionProposal {
-  final String actionType; // 'ADD_EXPENSE', 'SET_BUDGET', 'ADD_KHATA', 'ADD_SPLIT'
+  final String actionType; // 'ADD_EXPENSE', 'SET_BUDGET', 'ADD_KHATA', 'ADD_SPLIT', 'ADD_BUSINESS_SALE', 'ADD_BUSINESS_EXPENSE'
   final Map<String, dynamic> data;
   bool isExecuted;
   bool isDismissed;
@@ -640,7 +642,8 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
 
   Future<void> _refreshSessionsList() async {
     try {
-      final rows = await DatabaseHelper.instance.getAiChatSessions();
+      final isBusiness = Provider.of<UserProvider>(context, listen: false).isBusinessMode;
+      final rows = await DatabaseHelper.instance.getAiChatSessions(mode: isBusiness ? 'business' : 'personal');
       if (mounted) {
         setState(() {
           _sessions = rows;
@@ -654,11 +657,13 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
   Future<void> _loadChatHistoryAndSessions() async {
     setState(() => _isLoadingSessions = true);
     try {
-      var sessionRows = await DatabaseHelper.instance.getAiChatSessions();
+      final isBusiness = Provider.of<UserProvider>(context, listen: false).isBusinessMode;
+      final activeMode = isBusiness ? 'business' : 'personal';
+      var sessionRows = await DatabaseHelper.instance.getAiChatSessions(mode: activeMode);
 
       // Legacy migration: If existing unassigned messages exist and sessions is empty, bundle them into a session
       final legacyRows = await DatabaseHelper.instance.getAiChatMessages();
-      if (sessionRows.isEmpty && legacyRows.isNotEmpty) {
+      if (sessionRows.isEmpty && legacyRows.isNotEmpty && !isBusiness) {
         final firstUserMsg = legacyRows.firstWhere((m) => m['is_user'] == 1, orElse: () => legacyRows.first);
         final rawTitle = firstUserMsg['text']?.toString() ?? 'Financial Advice';
         final cleanTitle = _generateTitleFromPrompt(rawTitle);
@@ -668,6 +673,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
           id: legacySessionId,
           title: cleanTitle,
           createdAt: DateTime.tryParse(legacyRows.first['timestamp']?.toString() ?? '') ?? DateTime.now(),
+          mode: 'personal',
         );
 
         // Assign legacy messages to this session
@@ -684,7 +690,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
             );
           }
         }
-        sessionRows = await DatabaseHelper.instance.getAiChatSessions();
+        sessionRows = await DatabaseHelper.instance.getAiChatSessions(mode: 'personal');
       }
 
       if (!mounted) return;
@@ -696,7 +702,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       if (_sessions.isNotEmpty) {
         final latest = _sessions.first;
         final sId = latest['id']?.toString() ?? '';
-        final sTitle = latest['title']?.toString() ?? 'Financial Advisor';
+        final sTitle = latest['title']?.toString() ?? (isBusiness ? 'Business Advisor' : 'Financial Advisor');
         _currentSessionId = sId;
         _currentSessionTitle = sTitle;
         await _loadSessionMessages(sId);
@@ -1286,6 +1292,10 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     final question = text.trim();
     _textController.clear();
 
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final isBusiness = userProvider.isBusinessMode;
+    final modeStr = isBusiness ? 'business' : 'personal';
+
     // Auto-create session if starting on a new draft chat
     if (_currentSessionId == null) {
       final newSessionId = 'session_${DateTime.now().millisecondsSinceEpoch}';
@@ -1293,6 +1303,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       await DatabaseHelper.instance.createAiChatSession(
         id: newSessionId,
         title: autoTitle,
+        mode: modeStr,
       );
       setState(() {
         _currentSessionId = newSessionId;
@@ -1322,8 +1333,6 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       timestamp: userMsg.timestamp,
     );
 
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final isBusiness = userProvider.isBusinessMode;
     String contextSummary;
     if (isBusiness) {
       contextSummary = await _buildBusinessFinancialContext();
@@ -1345,6 +1354,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       userQuestion: question,
       financialContextSummary: contextSummary,
       chatHistory: chatHistory,
+      isBusinessMode: isBusiness,
     );
 
     if (!mounted) return;
@@ -1457,7 +1467,9 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
   }
 
   Future<void> _confirmClearChat() async {
-    final stats = await DatabaseHelper.instance.getAiChatStats();
+    final isBusiness = Provider.of<UserProvider>(context, listen: false).isBusinessMode;
+    final modeStr = isBusiness ? 'business' : 'personal';
+    final stats = await DatabaseHelper.instance.getAiChatStats(mode: modeStr);
     final count = stats['count'] as int? ?? _messages.where((m) => m.isUser || m.text.isNotEmpty).length;
     final sessionCount = stats['sessionCount'] as int? ?? _sessions.length;
     final formattedSize = stats['formattedSize'] as String? ?? '0 KB';
@@ -1487,7 +1499,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Clear All Chat History?',
+                isBusiness ? 'Clear Business AI History?' : 'Clear Personal AI History?',
                 style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
               ),
             ),
@@ -1516,7 +1528,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Stored Chat Size: $formattedSize',
+                          '${isBusiness ? "Business" : "Personal"} Chat Size: $formattedSize',
                           style: GoogleFonts.inter(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
@@ -1536,7 +1548,9 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
             ),
             const SizedBox(height: 14),
             Text(
-              'All your past AI conversations, suggestions, and action intents will be permanently wiped from local phone storage. This action cannot be undone.',
+              isBusiness
+                  ? 'All your past Business AI CFO chat history will be permanently cleared from this device. Your business sales, inventory, and khata records remain 100% safe.'
+                  : 'All your past Personal AI Advisor chat history will be permanently cleared from this device. Your personal expenses and budgets remain 100% safe.',
               style: GoogleFonts.inter(fontSize: 12.5, height: 1.45, color: isDark ? Colors.grey[400] : Colors.grey[600]),
             ),
           ],
@@ -1563,11 +1577,11 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     );
 
     if (confirm == true) {
-      await DatabaseHelper.instance.clearAllAiChatData();
+      await DatabaseHelper.instance.clearAllAiChatData(mode: modeStr);
       _startNewChat();
       await _refreshSessionsList();
       if (mounted) {
-        CustomToast.show(context, 'All chat history cleared ($formattedSize freed)');
+        CustomToast.show(context, '${isBusiness ? "Business" : "Personal"} chat history cleared ($formattedSize freed)');
       }
     }
   }
@@ -1770,10 +1784,13 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
 
                     // Section 3: Delete / Clear Chat History Button
                     FutureBuilder<Map<String, dynamic>>(
-                      future: DatabaseHelper.instance.getAiChatStats(),
+                      future: DatabaseHelper.instance.getAiChatStats(
+                        mode: Provider.of<UserProvider>(context, listen: false).isBusinessMode ? 'business' : 'personal',
+                      ),
                       builder: (context, snapshot) {
                         final sizeStr = snapshot.data?['formattedSize'] ?? '0 KB';
                         final count = snapshot.data?['count'] ?? 0;
+                        final isBiz = Provider.of<UserProvider>(context, listen: false).isBusinessMode;
                         return InkWell(
                           onTap: () {
                             Navigator.of(ctx).pop();
@@ -1795,7 +1812,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                                     const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent, size: 20),
                                     const SizedBox(width: 8),
                                     Text(
-                                      'Clear All Chat History',
+                                      isBiz ? 'Clear Business Chat History' : 'Clear Personal Chat History',
                                       style: GoogleFonts.inter(
                                         color: Colors.redAccent,
                                         fontWeight: FontWeight.bold,
@@ -1836,6 +1853,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
   }
 
   Widget _buildHistoryDrawer(BuildContext context, bool isDark, Color primaryColor) {
+    final isBusiness = Provider.of<UserProvider>(context, listen: false).isBusinessMode;
     final grouped = _groupSessionsByTimeline(_sessions);
     return Drawer(
       backgroundColor: isDark ? const Color(0xFF14171F) : Colors.white,
@@ -1859,12 +1877,18 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF00D09C), Color(0xFF059669)],
+                          gradient: LinearGradient(
+                            colors: isBusiness
+                                ? [const Color(0xFF3B82F6), const Color(0xFF1D4ED8)]
+                                : [const Color(0xFF00D09C), const Color(0xFF059669)],
                           ),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.psychology_alt_rounded, color: Colors.white, size: 22),
+                        child: Icon(
+                          isBusiness ? Icons.insights_rounded : Icons.psychology_alt_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -1872,7 +1896,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Grow Expense AI History',
+                              isBusiness ? 'Business AI History' : 'Grow Expense AI History',
                               style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold),
                             ),
                             Text(
@@ -1902,25 +1926,25 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            const Color(0xFF00D09C).withValues(alpha: 0.15),
-                            const Color(0xFF00D09C).withValues(alpha: 0.05),
+                            primaryColor.withValues(alpha: 0.15),
+                            primaryColor.withValues(alpha: 0.05),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: const Color(0xFF00D09C).withValues(alpha: 0.4),
+                          color: primaryColor.withValues(alpha: 0.4),
                           width: 1.2,
                         ),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.add_rounded, color: Color(0xFF00D09C), size: 20),
+                          Icon(Icons.add_rounded, color: primaryColor, size: 20),
                           const SizedBox(width: 8),
                           Text(
-                            'New Chat',
+                            isBusiness ? 'New Business Chat' : 'New Chat',
                             style: GoogleFonts.outfit(
-                              color: const Color(0xFF00D09C),
+                              color: primaryColor,
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
                             ),
@@ -1943,18 +1967,20 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              Icons.chat_bubble_outline_rounded,
+                              isBusiness ? Icons.insights_rounded : Icons.chat_bubble_outline_rounded,
                               size: 48,
                               color: isDark ? const Color(0xFF2E384D) : const Color(0xFFCBD5E1),
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              'No Chat History Yet',
+                              isBusiness ? 'No Business Chat History Yet' : 'No Chat History Yet',
                               style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Ask Grow Expense AI any expense question to start your first conversation!',
+                              isBusiness
+                                  ? 'Ask Business AI CFO any question about sales, GST, khata or profits!'
+                                  : 'Ask Grow Expense AI any expense question to start your first conversation!',
                               textAlign: TextAlign.center,
                               style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
                             ),
@@ -1975,7 +2001,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.1,
-                                  color: const Color(0xFF00D09C).withValues(alpha: 0.8),
+                                  color: primaryColor.withValues(alpha: 0.8),
                                 ),
                               ),
                             ),
@@ -2006,7 +2032,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                       },
                       icon: const Icon(Icons.delete_sweep_outlined, size: 18, color: Colors.redAccent),
                       label: Text(
-                        'Clear All History',
+                        isBusiness ? 'Clear Business AI History' : 'Clear All History',
                         style: GoogleFonts.inter(color: Colors.redAccent, fontSize: 12.5, fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -2033,27 +2059,27 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       margin: const EdgeInsets.symmetric(vertical: 3),
       decoration: BoxDecoration(
         color: isActive
-            ? const Color(0xFF00D09C).withValues(alpha: 0.12)
+            ? primaryColor.withValues(alpha: 0.12)
             : (isDark ? const Color(0xFF1A1F2B) : const Color(0xFFF8FAFC)),
         borderRadius: BorderRadius.circular(12),
         border: Border(
           left: BorderSide(
-            color: isActive ? const Color(0xFF00D09C) : Colors.transparent,
+            color: isActive ? primaryColor : Colors.transparent,
             width: 3.5,
           ),
           top: BorderSide(
             color: isActive
-                ? const Color(0xFF00D09C).withValues(alpha: 0.3)
+                ? primaryColor.withValues(alpha: 0.3)
                 : (isDark ? const Color(0xFF262C3D) : const Color(0xFFE2E8F0)),
           ),
           right: BorderSide(
             color: isActive
-                ? const Color(0xFF00D09C).withValues(alpha: 0.3)
+                ? primaryColor.withValues(alpha: 0.3)
                 : (isDark ? const Color(0xFF262C3D) : const Color(0xFFE2E8F0)),
           ),
           bottom: BorderSide(
             color: isActive
-                ? const Color(0xFF00D09C).withValues(alpha: 0.3)
+                ? primaryColor.withValues(alpha: 0.3)
                 : (isDark ? const Color(0xFF262C3D) : const Color(0xFFE2E8F0)),
           ),
         ),
@@ -2063,7 +2089,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
         dense: true,
         leading: Icon(
           isActive ? Icons.chat_bubble_rounded : Icons.chat_bubble_outline_rounded,
-          color: isActive ? const Color(0xFF00D09C) : Colors.grey,
+          color: isActive ? primaryColor : Colors.grey,
           size: 18,
         ),
         title: Text(
@@ -2073,7 +2099,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
           style: GoogleFonts.outfit(
             fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
             fontSize: 13.5,
-            color: isActive ? (isDark ? Colors.white : const Color(0xFF007A5E)) : null,
+            color: isActive ? (isDark ? Colors.white : primaryColor) : null,
           ),
         ),
         subtitle: Row(
@@ -2588,6 +2614,82 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
             CustomToast.show(context, 'Split bill "$title" created for $count members! 👥');
           }
           break;
+
+        case 'ADD_BUSINESS_SALE':
+          final custName = proposal.data['customerName']?.toString() ?? 'Customer';
+          final totalAmt = double.tryParse(proposal.data['totalAmount']?.toString() ?? '0') ?? 0.0;
+          final payMode = proposal.data['paymentMode']?.toString() ?? 'Cash';
+          final payStatus = proposal.data['paymentStatus']?.toString() ?? 'paid';
+          final notes = proposal.data['notes']?.toString();
+          final paidAmt = payStatus == 'paid' ? totalAmt : (payStatus == 'unpaid' ? 0.0 : (totalAmt * 0.5));
+          final balDue = (totalAmt - paidAmt).clamp(0.0, double.infinity);
+          final saleId = 'sale_${DateTime.now().millisecondsSinceEpoch}';
+          final invNo = 'INV-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+
+          final sale = BusinessSale(
+            id: saleId,
+            customerName: custName,
+            totalAmount: totalAmt,
+            taxAmount: 0.0,
+            discountAmount: 0.0,
+            finalAmount: totalAmt,
+            paidAmount: paidAmt,
+            balanceDue: balDue,
+            paymentMode: payMode,
+            paymentStatus: payStatus,
+            saleDate: DateTime.now(),
+            invoiceNo: invNo,
+            notes: notes,
+            items: [
+              BusinessSaleItem(
+                id: 'item_${DateTime.now().millisecondsSinceEpoch}',
+                saleId: saleId,
+                itemName: notes != null && notes.isNotEmpty ? notes : 'General Sale Item',
+                quantity: 1.0,
+                unitPrice: totalAmt,
+                totalPrice: totalAmt,
+                taxRate: 0.0,
+              ),
+            ],
+          );
+          await DatabaseHelper.instance.insertBusinessSale(sale);
+          if (balDue > 0 && custName.isNotEmpty && custName != 'Walk-in Customer') {
+            try {
+              final khataEntry = KhataEntry(
+                id: 'khata_${DateTime.now().millisecondsSinceEpoch}',
+                personName: custName,
+                amount: balDue,
+                type: 'lent',
+                entryDate: DateTime.now(),
+                note: 'Sale Inv #$invNo: Due ₹${balDue.toStringAsFixed(0)}',
+                isSettled: false,
+                ledgerType: 'business',
+              );
+              await DatabaseHelper.instance.insertKhataEntry(khataEntry);
+            } catch (_) {}
+          }
+          if (mounted) {
+            CustomToast.show(context, 'Sale #$invNo (₹${totalAmt.toStringAsFixed(0)}) recorded in Business Store! 🏢');
+          }
+          break;
+
+        case 'ADD_BUSINESS_EXPENSE':
+          final amount = double.tryParse(proposal.data['amount']?.toString() ?? '0') ?? 0.0;
+          final category = proposal.data['category']?.toString() ?? 'Stock Purchase';
+          final description = proposal.data['description']?.toString() ?? category;
+
+          await expenseProvider.addExpense(
+            amount: amount,
+            category: category,
+            description: description,
+            date: DateTime.now(),
+            currency: 'INR',
+            ledgerType: 'business',
+          );
+          if (mounted) {
+            CustomToast.show(context, 'Business Expense ₹${amount.toStringAsFixed(0)} ($category) recorded! 🏢');
+          }
+          break;
       }
 
       setState(() {
@@ -2664,6 +2766,22 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
         badgeText = 'SPLIT ACTION';
         final amt = double.tryParse(proposal.data['totalAmount']?.toString() ?? '0') ?? 0.0;
         actionTitle = 'Split Bill • ₹${amt.toStringAsFixed(0)}';
+        break;
+      case 'ADD_BUSINESS_SALE':
+        actionIcon = Icons.point_of_sale_rounded;
+        actionColor = const Color(0xFF3B82F6);
+        badgeText = 'BUSINESS SALE';
+        final amt = double.tryParse(proposal.data['totalAmount']?.toString() ?? '0') ?? 0.0;
+        final cust = proposal.data['customerName']?.toString() ?? 'Customer';
+        actionTitle = 'Record Sale • ₹${amt.toStringAsFixed(0)} ($cust)';
+        break;
+      case 'ADD_BUSINESS_EXPENSE':
+        actionIcon = Icons.storefront_rounded;
+        actionColor = const Color(0xFFEC4899);
+        badgeText = 'BUSINESS EXPENSE';
+        final amt = double.tryParse(proposal.data['amount']?.toString() ?? '0') ?? 0.0;
+        final cat = proposal.data['category']?.toString() ?? 'Expense';
+        actionTitle = 'Record Expense • ₹${amt.toStringAsFixed(0)} ($cat)';
         break;
       default:
         actionIcon = Icons.bolt_rounded;
@@ -2920,6 +3038,33 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
           children: [
             Text('• Bill: $title', style: textStyle),
             if (parts.isNotEmpty) Text('• Split between: ${parts.join(', ')}', style: textStyle),
+          ],
+        );
+
+      case 'ADD_BUSINESS_SALE':
+        final cust = data['customerName']?.toString() ?? 'Customer';
+        final payMode = data['paymentMode']?.toString() ?? 'Cash';
+        final payStatus = data['paymentStatus']?.toString() ?? 'paid';
+        final notes = data['notes']?.toString();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('• Customer: $cust', style: textStyle),
+            Text('• Payment: $payMode ($payStatus)', style: textStyle),
+            if (notes != null && notes.isNotEmpty) Text('• Item / Notes: $notes', style: textStyle),
+          ],
+        );
+
+      case 'ADD_BUSINESS_EXPENSE':
+        final cat = data['category']?.toString() ?? 'Stock Purchase';
+        final desc = data['description']?.toString() ?? cat;
+        final payMethod = data['paymentMethod']?.toString() ?? 'Cash';
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('• Category: $cat', style: textStyle),
+            Text('• Payment Method: $payMethod', style: textStyle),
+            if (desc != cat && desc.isNotEmpty) Text('• Details: $desc', style: textStyle),
           ],
         );
 

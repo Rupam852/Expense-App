@@ -11,6 +11,7 @@ import '../models/split_bill.dart';
 import '../models/subscription_item.dart';
 import '../models/business_sale.dart';
 import '../models/business_profile.dart';
+import '../models/business_item.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -304,11 +305,15 @@ class DatabaseHelper {
         CREATE TABLE IF NOT EXISTS ai_chat_sessions (
           id TEXT PRIMARY KEY,
           title TEXT NOT NULL,
+          mode TEXT NOT NULL DEFAULT 'personal',
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           is_pinned INTEGER NOT NULL DEFAULT 0
         )
       ''');
+    } catch (_) {}
+    try {
+      await db.execute("ALTER TABLE ai_chat_sessions ADD COLUMN mode TEXT NOT NULL DEFAULT 'personal'");
     } catch (_) {}
     try {
       await db.execute('''
@@ -375,6 +380,23 @@ class DatabaseHelper {
     } catch (_) {}
     try {
       await db.execute("ALTER TABLE khata_entries ADD COLUMN ledger_type TEXT NOT NULL DEFAULT 'personal'");
+    } catch (_) {}
+    try {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS business_items (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          purchase_price REAL NOT NULL DEFAULT 0.0,
+          selling_price REAL NOT NULL DEFAULT 0.0,
+          tax_rate REAL NOT NULL DEFAULT 0.0,
+          unit TEXT NOT NULL DEFAULT 'pcs',
+          category TEXT,
+          notes TEXT,
+          sync_status INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
     } catch (_) {}
   }
 
@@ -682,6 +704,7 @@ class DatabaseHelper {
       CREATE TABLE IF NOT EXISTS ai_chat_sessions (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
+        mode TEXT NOT NULL DEFAULT 'personal',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         is_pinned INTEGER NOT NULL DEFAULT 0
@@ -752,6 +775,23 @@ class DatabaseHelper {
         upi_id TEXT,
         logo_path TEXT,
         terms_and_conditions TEXT,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    // 12. Business Items / Inventory Catalog SQLite Table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS business_items (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        purchase_price REAL NOT NULL DEFAULT 0.0,
+        selling_price REAL NOT NULL DEFAULT 0.0,
+        tax_rate REAL NOT NULL DEFAULT 0.0,
+        unit TEXT NOT NULL DEFAULT 'pcs',
+        category TEXT,
+        notes TEXT,
+        sync_status INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
     ''');
@@ -1748,6 +1788,7 @@ class DatabaseHelper {
   Future<int> createAiChatSession({
     required String id,
     required String title,
+    String mode = 'personal',
     DateTime? createdAt,
     DateTime? updatedAt,
     bool isPinned = false,
@@ -1760,6 +1801,7 @@ class DatabaseHelper {
       {
         'id': id,
         'title': title,
+        'mode': mode,
         'created_at': nowIso,
         'updated_at': updatedIso,
         'is_pinned': isPinned ? 1 : 0,
@@ -1768,17 +1810,29 @@ class DatabaseHelper {
     );
   }
 
-  Future<List<Map<String, dynamic>>> getAiChatSessions() async {
+  Future<List<Map<String, dynamic>>> getAiChatSessions({String? mode}) async {
     final db = await instance.database;
     try {
+      String whereClause = '';
+      List<dynamic> whereArgs = [];
+      if (mode != null && mode.isNotEmpty) {
+        if (mode == 'personal') {
+          whereClause = 'WHERE (s.mode = ? OR s.mode IS NULL)';
+          whereArgs = ['personal'];
+        } else {
+          whereClause = 'WHERE s.mode = ?';
+          whereArgs = [mode];
+        }
+      }
       final result = await db.rawQuery('''
-        SELECT s.id, s.title, s.created_at, s.updated_at, s.is_pinned,
+        SELECT s.id, s.title, s.mode, s.created_at, s.updated_at, s.is_pinned,
                COUNT(m.id) as message_count
         FROM ai_chat_sessions s
         LEFT JOIN ai_chat_messages m ON s.id = m.session_id
+        $whereClause
         GROUP BY s.id
         ORDER BY s.is_pinned DESC, s.updated_at DESC
-      ''');
+      ''', whereArgs);
       return List<Map<String, dynamic>>.from(result);
     } catch (e) {
       debugPrint('[DatabaseHelper] Error fetching AI chat sessions: $e');
@@ -1906,11 +1960,24 @@ class DatabaseHelper {
     }
   }
 
-  Future<Map<String, dynamic>> getAiChatStats() async {
+  Future<Map<String, dynamic>> getAiChatStats({String? mode}) async {
     try {
       final db = await instance.database;
-      final msgResult = await db.rawQuery('SELECT COUNT(*) as count, TOTAL(LENGTH(text)) as text_bytes FROM ai_chat_messages');
-      final sessionResult = await db.rawQuery('SELECT COUNT(*) as session_count FROM ai_chat_sessions');
+      String sessionWhere = '';
+      String msgWhere = '';
+      List<dynamic> args = [];
+      if (mode != null && mode.isNotEmpty) {
+        if (mode == 'personal') {
+          sessionWhere = 'WHERE (mode = "personal" OR mode IS NULL)';
+          msgWhere = 'WHERE (session_id IN (SELECT id FROM ai_chat_sessions WHERE (mode = "personal" OR mode IS NULL)) OR session_id IS NULL)';
+        } else {
+          sessionWhere = 'WHERE mode = ?';
+          msgWhere = 'WHERE session_id IN (SELECT id FROM ai_chat_sessions WHERE mode = ?)';
+          args = [mode];
+        }
+      }
+      final sessionResult = await db.rawQuery('SELECT COUNT(*) as session_count FROM ai_chat_sessions $sessionWhere', args);
+      final msgResult = await db.rawQuery('SELECT COUNT(*) as count, TOTAL(LENGTH(text)) as text_bytes FROM ai_chat_messages $msgWhere', args);
 
       final count = Sqflite.firstIntValue(msgResult) ?? 0;
       final sessionCount = Sqflite.firstIntValue(sessionResult) ?? 0;
@@ -1948,10 +2015,31 @@ class DatabaseHelper {
     return await db.delete('ai_chat_messages');
   }
 
-  Future<void> clearAllAiChatData() async {
+  Future<void> clearAllAiChatData({String? mode}) async {
     final db = await instance.database;
-    try { await db.delete('ai_chat_messages'); } catch (_) {}
-    try { await db.delete('ai_chat_sessions'); } catch (_) {}
+    if (mode != null && mode.isNotEmpty) {
+      if (mode == 'personal') {
+        try {
+          await db.execute('''
+            DELETE FROM ai_chat_messages 
+            WHERE session_id IN (SELECT id FROM ai_chat_sessions WHERE mode = 'personal' OR mode IS NULL)
+               OR session_id IS NULL
+          ''');
+          await db.execute("DELETE FROM ai_chat_sessions WHERE mode = 'personal' OR mode IS NULL");
+        } catch (_) {}
+      } else {
+        try {
+          await db.execute('''
+            DELETE FROM ai_chat_messages 
+            WHERE session_id IN (SELECT id FROM ai_chat_sessions WHERE mode = ?)
+          ''', [mode]);
+          await db.delete('ai_chat_sessions', where: 'mode = ?', whereArgs: [mode]);
+        } catch (_) {}
+      }
+    } else {
+      try { await db.delete('ai_chat_messages'); } catch (_) {}
+      try { await db.delete('ai_chat_sessions'); } catch (_) {}
+    }
   }
 
   // ================= CALCULATOR HISTORY CRUD =================
@@ -2158,6 +2246,98 @@ class DatabaseHelper {
       'totalTax': totalTax,
       'saleCount': salesRows.length.toDouble(),
     };
+  }
+
+  // ── BUSINESS CATALOG ITEMS CRUD ───────────────────────────
+  Future<int> insertBusinessItem(BusinessItem item) async {
+    final db = await instance.database;
+    return await db.insert(
+      'business_items',
+      item.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<int> updateBusinessItem(BusinessItem item) async {
+    final db = await instance.database;
+    return await db.update(
+      'business_items',
+      item.toMap(),
+      where: 'id = ?',
+      whereArgs: [item.id],
+    );
+  }
+
+  Future<int> deleteBusinessItem(String id) async {
+    final db = await instance.database;
+    await db.insert(
+      'deleted_records',
+      {
+        'id': id,
+        'table_name': 'business_items',
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    return await db.delete(
+      'business_items',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<List<BusinessItem>> getBusinessItems() async {
+    final db = await instance.database;
+    final rows = await db.query(
+      'business_items',
+      orderBy: 'name ASC',
+    );
+    return rows.map((r) => BusinessItem.fromMap(r)).toList();
+  }
+
+  Future<BusinessItem?> getBusinessItemById(String id) async {
+    final db = await instance.database;
+    final rows = await db.query(
+      'business_items',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (rows.isNotEmpty) {
+      return BusinessItem.fromMap(rows.first);
+    }
+    return null;
+  }
+
+  Future<List<Map<String, dynamic>>> getUnsyncedBusinessItems() async {
+    final db = await instance.database;
+    return await db.query('business_items', where: 'sync_status = 0');
+  }
+
+  Future<void> markBusinessItemsSynced(List<String> ids) async {
+    final db = await instance.database;
+    if (ids.isEmpty) return;
+    await db.update(
+      'business_items',
+      {'sync_status': 1},
+      where: 'id IN (${ids.map((_) => '?').join(', ')})',
+      whereArgs: ids,
+    );
+  }
+
+  Future<void> syncDownBusinessItems(List<BusinessItem> items) async {
+    final db = await instance.database;
+    await db.transaction((txn) async {
+      for (final it in items) {
+        final map = it.toMap();
+        map['sync_status'] = 1;
+        await txn.insert(
+          'business_items',
+          map,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
   }
 
   Future<void> close() async {

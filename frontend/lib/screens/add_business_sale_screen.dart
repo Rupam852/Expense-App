@@ -9,12 +9,16 @@ import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
 import '../models/business_sale.dart';
 import '../models/business_profile.dart';
+import '../models/business_item.dart';
 import '../models/khata_entry.dart';
 import '../services/database_helper.dart';
+import '../services/expense_provider.dart';
 import '../utils/pdf_unicode_helper.dart';
 import '../widgets/custom_toast.dart';
+import 'business_catalog_screen.dart';
 
 class AddBusinessSaleScreen extends StatefulWidget {
   final BusinessSale? existingSale;
@@ -34,6 +38,8 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
   final TextEditingController _customerGstinController = TextEditingController();
   final TextEditingController _customerAddressController = TextEditingController();
   final TextEditingController _discountController = TextEditingController(text: '0');
+  final TextEditingController _discountPercentController = TextEditingController(text: '0');
+  String _discountType = '₹'; // '₹' or '%'
   final TextEditingController _paidAmountController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
 
@@ -74,6 +80,7 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
           'qty': TextEditingController(text: item.quantity.toStringAsFixed(item.quantity % 1 == 0 ? 0 : 2)),
           'unit': item.unit,
           'price': TextEditingController(text: item.unitPrice.toStringAsFixed(2)),
+          'cost': TextEditingController(text: item.purchasePrice != null ? item.purchasePrice!.toStringAsFixed(item.purchasePrice! % 1 == 0 ? 0 : 2) : ''),
           'tax': item.taxRate,
         });
       }
@@ -98,6 +105,7 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
         'qty': TextEditingController(text: '1'),
         'unit': 'pcs',
         'price': TextEditingController(text: '0'),
+        'cost': TextEditingController(),
         'tax': 0.0,
       });
     });
@@ -112,8 +120,64 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
       _itemRows[index]['name'].dispose();
       _itemRows[index]['qty'].dispose();
       _itemRows[index]['price'].dispose();
+      _itemRows[index]['cost']?.dispose();
       _itemRows.removeAt(index);
     });
+  }
+
+  void _populateItemRowFromCatalog(int index, BusinessItem item) {
+    setState(() {
+      _itemRows[index]['name'].text = item.name;
+      _itemRows[index]['price'].text = item.sellingPrice > 0 ? item.sellingPrice.toStringAsFixed(2) : '0';
+      if (item.purchasePrice > 0) {
+        _itemRows[index]['cost']?.text = item.purchasePrice.toStringAsFixed(2);
+      } else {
+        _itemRows[index]['cost']?.text = '';
+      }
+      _itemRows[index]['unit'] = _units.contains(item.unit.toLowerCase()) ? item.unit.toLowerCase() : 'pcs';
+      _itemRows[index]['tax'] = _taxSlabs.contains(item.taxRate) ? item.taxRate : 0.0;
+      _updateDiscountFromPercent();
+    });
+  }
+
+  void _addItemFromCatalog(BusinessItem item) {
+    if (_itemRows.length == 1 &&
+        _itemRows[0]['name'].text.trim().isEmpty &&
+        (_itemRows[0]['price'].text == '0' || _itemRows[0]['price'].text.isEmpty)) {
+      _populateItemRowFromCatalog(0, item);
+    } else {
+      setState(() {
+        _itemRows.add({
+          'name': TextEditingController(text: item.name),
+          'qty': TextEditingController(text: '1'),
+          'unit': _units.contains(item.unit.toLowerCase()) ? item.unit.toLowerCase() : 'pcs',
+          'price': TextEditingController(text: item.sellingPrice > 0 ? item.sellingPrice.toStringAsFixed(2) : '0'),
+          'cost': TextEditingController(text: item.purchasePrice > 0 ? item.purchasePrice.toStringAsFixed(2) : ''),
+          'tax': _taxSlabs.contains(item.taxRate) ? item.taxRate : 0.0,
+        });
+        _updateDiscountFromPercent();
+      });
+    }
+  }
+
+  void _showCatalogPickerModal({int? targetRowIndex}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return _CatalogPickerBottomSheet(
+          onItemSelected: (item) {
+            Navigator.of(ctx).pop();
+            if (targetRowIndex != null && targetRowIndex < _itemRows.length) {
+              _populateItemRowFromCatalog(targetRowIndex, item);
+            } else {
+              _addItemFromCatalog(item);
+            }
+          },
+        );
+      },
+    );
   }
 
   double get _subtotal {
@@ -122,6 +186,16 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
       final q = double.tryParse(row['qty'].text.trim()) ?? 0.0;
       final p = double.tryParse(row['price'].text.trim()) ?? 0.0;
       total += (q * p);
+    }
+    return total;
+  }
+
+  double get _totalCost {
+    double total = 0.0;
+    for (var row in _itemRows) {
+      final q = double.tryParse(row['qty'].text.trim()) ?? 0.0;
+      final c = double.tryParse(row['cost']?.text.trim() ?? '') ?? 0.0;
+      total += (q * c);
     }
     return total;
   }
@@ -156,6 +230,14 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
     return bal < 0 ? 0.0 : bal;
   }
 
+  void _updateDiscountFromPercent() {
+    if (_discountType == '%') {
+      final p = double.tryParse(_discountPercentController.text.trim()) ?? 0.0;
+      final calc = _subtotal * (p / 100.0);
+      _discountController.text = calc.toStringAsFixed(calc % 1 == 0 ? 0 : 2);
+    }
+  }
+
   @override
   void dispose() {
     _customerNameController.dispose();
@@ -163,12 +245,14 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
     _customerGstinController.dispose();
     _customerAddressController.dispose();
     _discountController.dispose();
+    _discountPercentController.dispose();
     _paidAmountController.dispose();
     _notesController.dispose();
     for (var row in _itemRows) {
       row['name'].dispose();
       row['qty'].dispose();
       row['price'].dispose();
+      row['cost']?.dispose();
     }
     super.dispose();
   }
@@ -194,6 +278,8 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
         final qty = double.tryParse(row['qty'].text.trim()) ?? 1.0;
         final unit = row['unit'].toString();
         final price = double.tryParse(row['price'].text.trim()) ?? 0.0;
+        final costText = row['cost']?.text.trim() ?? '';
+        final costPrice = costText.isNotEmpty ? double.tryParse(costText) : null;
         final tax = (row['tax'] as double?) ?? 0.0;
         final itemTotal = (qty * price) + ((qty * price) * (tax / 100.0));
 
@@ -204,6 +290,7 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
           quantity: qty,
           unit: unit,
           unitPrice: price,
+          purchasePrice: costPrice,
           taxRate: tax,
           totalPrice: itemTotal,
         ));
@@ -662,12 +749,67 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Billing Items (${_itemRows.length})', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
-                      TextButton.icon(
-                        onPressed: _addNewItemRow,
-                        icon: const Icon(Icons.add, size: 18),
-                        label: const Text('Add Item'),
+                      Row(
+                        children: [
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF1E88E5),
+                              side: const BorderSide(color: Color(0xFF1E88E5), width: 1.2),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed: () => _showCatalogPickerModal(),
+                            icon: const Icon(Icons.inventory_2_outlined, size: 16),
+                            label: Text('Catalog', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                          const SizedBox(width: 8),
+                          TextButton.icon(
+                            onPressed: _addNewItemRow,
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text('Add Manual'),
+                          ),
+                        ],
                       ),
                     ],
+                  ),
+                  Consumer<ExpenseProvider>(
+                    builder: (context, expProv, _) {
+                      final catalog = expProv.businessItems;
+                      if (catalog.isEmpty) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8, bottom: 4),
+                        child: SizedBox(
+                          height: 32,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: catalog.length,
+                            separatorBuilder: (_, __) => const SizedBox(width: 6),
+                            itemBuilder: (ctx, i) {
+                              final it = catalog[i];
+                              return ActionChip(
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                                labelPadding: const EdgeInsets.symmetric(horizontal: 8),
+                                backgroundColor: const Color(0xFF1E88E5).withOpacity(0.1),
+                                side: BorderSide(color: const Color(0xFF1E88E5).withOpacity(0.3)),
+                                label: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      it.name,
+                                      style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: const Color(0xFF1E88E5)),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text('₹${it.sellingPrice.toStringAsFixed(0)}', style: GoogleFonts.inter(fontSize: 10, color: Colors.grey)),
+                                  ],
+                                ),
+                                onPressed: () => _addItemFromCatalog(it),
+                              );
+                            },
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   const Divider(height: 16),
                   ..._itemRows.asMap().entries.map((entry) {
@@ -695,10 +837,15 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                                 flex: 3,
                                 child: TextFormField(
                                   controller: row['name'],
-                                  decoration: const InputDecoration(
+                                  decoration: InputDecoration(
                                     hintText: 'Item Name (e.g. Rice, Shirt)',
                                     isDense: true,
-                                    border: UnderlineInputBorder(),
+                                    border: const UnderlineInputBorder(),
+                                    suffixIcon: IconButton(
+                                      tooltip: 'Pick from Catalog',
+                                      icon: const Icon(Icons.inventory_2_outlined, size: 18, color: Color(0xFF1E88E5)),
+                                      onPressed: () => _showCatalogPickerModal(targetRowIndex: idx),
+                                    ),
                                   ),
                                   onChanged: (_) => setState(() {}),
                                 ),
@@ -722,7 +869,11 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                                     isDense: true,
                                     border: OutlineInputBorder(),
                                   ),
-                                  onChanged: (_) => setState(() {}),
+                                  onChanged: (_) {
+                                    setState(() {
+                                      _updateDiscountFromPercent();
+                                    });
+                                  },
                                 ),
                               ),
                               const SizedBox(width: 6),
@@ -742,7 +893,11 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                                     isDense: true,
                                     border: OutlineInputBorder(),
                                   ),
-                                  onChanged: (_) => setState(() {}),
+                                  onChanged: (_) {
+                                    setState(() {
+                                      _updateDiscountFromPercent();
+                                    });
+                                  },
                                 ),
                               ),
                               const SizedBox(width: 6),
@@ -751,6 +906,60 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                                 items: _taxSlabs.map((t) => DropdownMenuItem(value: t, child: Text('${t.toStringAsFixed(0)}% GST', style: const TextStyle(fontSize: 11)))).toList(),
                                 onChanged: (t) => setState(() => row['tax'] = t ?? 0.0),
                               ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: TextFormField(
+                                  controller: row['cost'],
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  decoration: InputDecoration(
+                                    labelText: 'Buy / Cost Price (₹) 🔒',
+                                    hintText: 'Purchase cost (Optional)',
+                                    isDense: true,
+                                    prefixIcon: const Icon(Icons.lock_outline_rounded, size: 14, color: Colors.blueGrey),
+                                    border: const OutlineInputBorder(),
+                                    helperText: 'Private (Hidden on bill)',
+                                    helperStyle: GoogleFonts.inter(fontSize: 9.5, color: Colors.grey),
+                                  ),
+                                  onChanged: (_) => setState(() {}),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Builder(builder: (ctx) {
+                                final q = double.tryParse(row['qty'].text.trim()) ?? 1.0;
+                                final p = double.tryParse(row['price'].text.trim()) ?? 0.0;
+                                final c = double.tryParse(row['cost']?.text.trim() ?? '') ?? 0.0;
+                                final itemProfit = (p - c) * q;
+                                if (c <= 0) return const SizedBox.shrink();
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: (itemProfit >= 0 ? const Color(0xFF10B981) : Colors.redAccent).withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: (itemProfit >= 0 ? const Color(0xFF10B981) : Colors.redAccent).withOpacity(0.3),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text('Est. Profit', style: GoogleFonts.inter(fontSize: 9.5, color: Colors.grey)),
+                                      Text(
+                                        '${itemProfit >= 0 ? "+" : ""}₹${itemProfit.toStringAsFixed(0)}',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: itemProfit >= 0 ? const Color(0xFF10B981) : Colors.redAccent,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }),
                             ],
                           ),
                         ],
@@ -772,21 +981,127 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                   const SizedBox(height: 10),
                   _buildSummaryRow('Subtotal', '₹${_subtotal.toStringAsFixed(2)}'),
                   _buildSummaryRow('GST / Tax Total', '₹${_taxTotal.toStringAsFixed(2)}', color: Colors.blueAccent),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Discount (₹):'),
-                      SizedBox(
-                        width: 100,
-                        child: TextFormField(
-                          controller: _discountController,
-                          keyboardType: TextInputType.number,
-                          textAlign: TextAlign.end,
-                          decoration: const InputDecoration(isDense: true, border: UnderlineInputBorder()),
-                          onChanged: (_) => setState(() {}),
+                  if (_totalCost > 0) ...[
+                    _buildSummaryRow(
+                      'Est. Gross Profit (🔒 Internal)',
+                      '₹${((_subtotal - _discount) - _totalCost).toStringAsFixed(2)}',
+                      color: const Color(0xFF10B981),
+                      isBold: true,
+                    ),
+                  ],
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Text('Discount:', style: TextStyle(fontWeight: FontWeight.w600)),
+                            const SizedBox(width: 8),
+                            Container(
+                              height: 28,
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: isDark ? Colors.grey[800] : Colors.grey[200],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _discountType = '₹';
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: _discountType == '₹' ? primaryColor : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        '₹ Amount',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: _discountType == '₹' ? Colors.white : (isDark ? Colors.grey[400] : Colors.grey[700]),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _discountType = '%';
+                                        _updateDiscountFromPercent();
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: _discountType == '%' ? primaryColor : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        '% Percent',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: _discountType == '%' ? Colors.white : (isDark ? Colors.grey[400] : Colors.grey[700]),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                        SizedBox(
+                          width: 130,
+                          child: _discountType == '%'
+                              ? Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    SizedBox(
+                                      width: 50,
+                                      child: TextFormField(
+                                        controller: _discountPercentController,
+                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                        textAlign: TextAlign.end,
+                                        decoration: const InputDecoration(
+                                          isDense: true,
+                                          suffixText: '%',
+                                          border: UnderlineInputBorder(),
+                                        ),
+                                        onChanged: (_) {
+                                          setState(() {
+                                            _updateDiscountFromPercent();
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '(-₹${_discount.toStringAsFixed(0)})',
+                                      style: TextStyle(fontSize: 11, color: Colors.orange.shade700, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                )
+                              : TextFormField(
+                                  controller: _discountController,
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  textAlign: TextAlign.end,
+                                  decoration: const InputDecoration(
+                                    isDense: true,
+                                    prefixText: '₹ ',
+                                    border: UnderlineInputBorder(),
+                                  ),
+                                  onChanged: (_) => setState(() {}),
+                                ),
+                        ),
+                      ],
+                    ),
                   ),
                   const Divider(height: 16),
                   _buildSummaryRow('Grand Total', '₹${_grandTotal.toStringAsFixed(2)}', isBold: true, fontSize: 16, color: primaryColor),
@@ -904,6 +1219,244 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
         children: [
           Text(label, style: GoogleFonts.inter(fontSize: fontSize, fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
           Text(value, style: GoogleFonts.outfit(fontSize: fontSize, fontWeight: isBold ? FontWeight.bold : FontWeight.w600, color: color)),
+        ],
+      ),
+    );
+  }
+}
+
+class _CatalogPickerBottomSheet extends StatefulWidget {
+  final ValueChanged<BusinessItem> onItemSelected;
+
+  const _CatalogPickerBottomSheet({required this.onItemSelected});
+
+  @override
+  State<_CatalogPickerBottomSheet> createState() => _CatalogPickerBottomSheetState();
+}
+
+class _CatalogPickerBottomSheetState extends State<_CatalogPickerBottomSheet> {
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _search = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final expProv = Provider.of<ExpenseProvider>(context);
+    final items = expProv.businessItems.where((it) {
+      if (_search.isEmpty) return true;
+      return it.name.toLowerCase().contains(_search.toLowerCase()) ||
+          (it.category?.toLowerCase().contains(_search.toLowerCase()) ?? false);
+    }).toList();
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.7,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      child: Column(
+        children: [
+          // Drag handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E88E5).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.inventory_2, color: Color(0xFF1E88E5), size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Select from Catalog',
+                    style: GoogleFonts.outfit(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const BusinessCatalogScreen()),
+                  );
+                },
+                icon: const Icon(Icons.settings_outlined, size: 16, color: Color(0xFF1E88E5)),
+                label: Text(
+                  'Manage',
+                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF1E88E5)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Search Box
+          TextField(
+            controller: _searchCtrl,
+            style: GoogleFonts.inter(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
+            decoration: InputDecoration(
+              hintText: 'Search products or services...',
+              hintStyle: GoogleFonts.inter(fontSize: 13, color: isDark ? Colors.white38 : Colors.black38),
+              prefixIcon: Icon(Icons.search, color: isDark ? Colors.white60 : Colors.black45, size: 20),
+              isDense: true,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            ),
+            onChanged: (val) => setState(() => _search = val.trim()),
+          ),
+          const SizedBox(height: 12),
+
+          // Item List
+          Expanded(
+            child: items.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.inventory_2_outlined, size: 40, color: Colors.grey.withOpacity(0.5)),
+                        const SizedBox(height: 10),
+                        Text(
+                          expProv.businessItems.isEmpty
+                              ? 'No items in catalog yet.'
+                              : 'No matching items found.',
+                          style: GoogleFonts.inter(fontSize: 13, color: Colors.grey),
+                        ),
+                        if (expProv.businessItems.isEmpty) ...[
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1E88E5),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            icon: const Icon(Icons.add, size: 16),
+                            label: const Text('Add New Item to Catalog'),
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const BusinessCatalogScreen()),
+                              );
+                            },
+                          ),
+                        ],
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    itemCount: items.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (ctx, i) {
+                      final it = items[i];
+                      final hasCost = it.purchasePrice > 0;
+                      return InkWell(
+                        onTap: () => widget.onItemSelected(it),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.black26 : Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1E88E5).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.check_circle_outline, color: Color(0xFF1E88E5), size: 18),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      it.name,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.white : Colors.black87,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Wrap(
+                                      spacing: 6,
+                                      children: [
+                                        Text(
+                                          'Unit: ${it.unit.toUpperCase()}',
+                                          style: GoogleFonts.inter(fontSize: 10.5, color: Colors.grey),
+                                        ),
+                                        Text(
+                                          '•',
+                                          style: GoogleFonts.inter(fontSize: 10.5, color: Colors.grey),
+                                        ),
+                                        Text(
+                                          it.taxRate > 0 ? 'GST ${it.taxRate.toStringAsFixed(0)}%' : '0% GST',
+                                          style: GoogleFonts.inter(fontSize: 10.5, color: Colors.purpleAccent),
+                                        ),
+                                        if (hasCost) ...[
+                                          Text('•', style: GoogleFonts.inter(fontSize: 10.5, color: Colors.grey)),
+                                          Text('Cost: ₹${it.purchasePrice.toStringAsFixed(0)} 🔒',
+                                              style: GoogleFonts.inter(fontSize: 10.5, color: Colors.amber)),
+                                        ],
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '₹${it.sellingPrice.toStringAsFixed(2)}',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Tap to select',
+                                    style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF1E88E5)),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
         ],
       ),
     );

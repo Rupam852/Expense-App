@@ -11,6 +11,9 @@ import '../models/business_sale.dart';
 import '../models/business_profile.dart';
 import '../services/database_helper.dart';
 import '../services/user_provider.dart';
+import '../services/expense_provider.dart';
+import '../services/app_update_service.dart';
+import '../services/supabase_service.dart';
 import '../utils/business_export_helper.dart';
 import '../widgets/custom_toast.dart';
 import 'add_business_sale_screen.dart';
@@ -18,6 +21,7 @@ import 'expense_entry_screen.dart';
 import 'khata_screen.dart';
 import 'invoice_screen.dart';
 import 'calculator_hub_screen.dart';
+import 'settings_screen.dart';
 
 class BusinessDashboardView extends StatefulWidget {
   const BusinessDashboardView({super.key});
@@ -45,8 +49,10 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
     _loadDashboardData();
   }
 
-  Future<void> _loadDashboardData() async {
-    setState(() => _isLoading = true);
+  Future<void> _loadDashboardData({bool isQuiet = false}) async {
+    if (!isQuiet) {
+      setState(() => _isLoading = true);
+    }
     try {
       final prof = await DatabaseHelper.instance.getBusinessProfile();
       final sales = await DatabaseHelper.instance.getBusinessSales(limit: 50);
@@ -116,6 +122,23 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
     }
   }
 
+  Widget _buildAvatarFallback(UserProvider userProvider) {
+    final name = userProvider.userProfile?['name']?.toString() ?? 'U';
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+    return Container(
+      color: const Color(0xFF1E293B),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: GoogleFonts.outfit(
+          color: const Color(0xFFFFD700),
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+        ),
+      ),
+    );
+  }
+
   void _showEditBusinessProfileDialog() {
     final nameCtrl = TextEditingController(text: _businessProfile.businessName);
     final phoneCtrl = TextEditingController(text: _businessProfile.phone ?? '');
@@ -126,42 +149,96 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('🏢 Edit Business Profile', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.storefront_rounded, color: Color(0xFF3B82F6), size: 22),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Edit Business Profile',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nameCtrl,
-                decoration: const InputDecoration(labelText: 'Business / Shop Name *', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: 'My Business / Shop Name *',
+                  hintText: 'e.g. Ramesh General Store',
+                  prefixIcon: Icon(Icons.business_rounded),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               TextField(
                 controller: phoneCtrl,
                 keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Business Phone Number', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: 'Business Phone Number',
+                  hintText: 'e.g. +91 9876543210',
+                  prefixIcon: Icon(Icons.phone_rounded),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               TextField(
                 controller: gstinCtrl,
-                decoration: const InputDecoration(labelText: 'GSTIN (Optional)', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: 'GSTIN (Optional)',
+                  hintText: 'e.g. 27AAAAA0000A1Z5',
+                  prefixIcon: Icon(Icons.receipt_rounded),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               TextField(
                 controller: addrCtrl,
-                decoration: const InputDecoration(labelText: 'Shop / Office Address', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: 'Shop / Office Address',
+                  hintText: 'e.g. Shop 12, Main Market, Mumbai',
+                  prefixIcon: Icon(Icons.location_on_outlined),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               TextField(
                 controller: upiCtrl,
-                decoration: const InputDecoration(labelText: 'Business UPI ID (for QR Code)', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: 'Business UPI ID (for QR Code)',
+                  hintText: 'e.g. storename@okaxis',
+                  prefixIcon: Icon(Icons.qr_code_rounded),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                ),
               ),
             ],
           ),
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancel', style: GoogleFonts.inter(color: Colors.grey, fontWeight: FontWeight.w600)),
+          ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF3B82F6),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
             onPressed: () async {
               final newName = nameCtrl.text.trim().isEmpty ? 'My Business' : nameCtrl.text.trim();
               final updated = BusinessProfile(
@@ -173,13 +250,21 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                 upiId: upiCtrl.text.trim().isNotEmpty ? upiCtrl.text.trim() : null,
               );
               await DatabaseHelper.instance.saveBusinessProfile(updated);
+
+              // Cloud Sync to Supabase business_profiles
+              try {
+                await SupabaseService.instance.upsertBusinessProfile(updated.toMap());
+              } catch (e) {
+                debugPrint('[BusinessDashboard] Cloud upsert profile note: $e');
+              }
+
               if (mounted) {
                 setState(() => _businessProfile = updated);
                 Navigator.of(ctx).pop();
-                CustomToast.show(context, '✅ Business details saved!');
+                CustomToast.show(context, '✅ Business profile saved & synced! ☁️');
               }
             },
-            child: const Text('Save Details'),
+            child: Text('Save Profile', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -189,112 +274,203 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
+    final expenseProvider = Provider.of<ExpenseProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = const Color(0xFF3B82F6); // Sapphire Blue for Business
 
     final totalSales = _metrics['totalSales'] ?? 0.0;
-    final netProfit = totalSales - _todayExpenses;
+    double totalGoodsCost = 0.0;
+    for (var s in _sales) {
+      totalGoodsCost += s.totalPurchaseCost;
+    }
+    final netProfit = totalGoodsCost > 0
+        ? (totalSales - totalGoodsCost - _todayExpenses)
+        : (totalSales - _todayExpenses);
     final marginPercent = totalSales > 0 ? ((netProfit / totalSales) * 100) : 0.0;
 
     return SafeArea(
       child: RefreshIndicator(
-        onRefresh: _loadDashboardData,
+        onRefresh: () async {
+          await _loadDashboardData(isQuiet: true);
+          await expenseProvider.triggerManualSync();
+        },
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           children: [
-            if (_isLoading)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 8),
-                child: LinearProgressIndicator(minHeight: 2),
-              ),
-
-            // ── TOP BUSINESS HEADER & MODE SWITCHER ───────────
+            // ── TOP BUSINESS HEADER ───────────────────────────
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                // User Avatar with Golden Ring
+                GestureDetector(
+                  onTap: _showEditBusinessProfileDialog,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFFFFD700), // Vibrant Golden Ring
+                            width: 2.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFFD700).withValues(alpha: 0.35),
+                              blurRadius: 7,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: userProvider.userProfile?['photo_url'] != null &&
+                                  userProvider.userProfile!['photo_url'].toString().isNotEmpty
+                              ? Image.network(
+                                  userProvider.userProfile!['photo_url'],
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => _buildAvatarFallback(userProvider),
+                                )
+                              : _buildAvatarFallback(userProvider),
+                        ),
+                      ),
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(2.5),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF3B82F6),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 10),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+
+                // User Name & Shop / Business Name with Pencil Edit
                 Expanded(
                   child: InkWell(
                     onTap: _showEditBusinessProfileDialog,
                     borderRadius: BorderRadius.circular(10),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: primaryColor.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            userProvider.userProfile?['name']?.toString() ?? 'Business Owner',
+                            style: GoogleFonts.outfit(
+                              fontSize: 15.5,
+                              fontWeight: FontWeight.bold,
+                              height: 1.2,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          child: Icon(Icons.storefront_rounded, color: primaryColor, size: 22),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          const SizedBox(height: 2),
+                          Row(
                             children: [
-                              Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      _businessProfile.businessName,
-                                      style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                              const Icon(Icons.storefront_outlined, size: 13, color: Color(0xFF3B82F6)),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  _businessProfile.businessName.isNotEmpty ? _businessProfile.businessName : 'My Business',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.grey[300] : const Color(0xFF334155),
                                   ),
-                                  const SizedBox(width: 4),
-                                  const Icon(Icons.edit, size: 14, color: Colors.grey),
-                                ],
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                              Text(
-                                '🏢 Business Mode Active',
-                                style: GoogleFonts.inter(fontSize: 11.5, color: primaryColor, fontWeight: FontWeight.w600),
-                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.edit, size: 12, color: Color(0xFF3B82F6)),
                             ],
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
 
-                // Mode Toggle Pill
-                GestureDetector(
-                  onTap: () async {
-                    HapticFeedback.mediumImpact();
-                    await userProvider.toggleAppMode(false); // Switch to Personal Mode
-                    if (context.mounted) {
-                      CustomToast.show(context, 'Switched to 🟢 Personal Mode');
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00D09C).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFF00D09C).withValues(alpha: 0.4)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF00D09C),
-                            shape: BoxShape.circle,
-                          ),
+                // Top Actions: Cloud Sync, Khata, Settings
+                IconButton(
+                  tooltip: 'Sync with Cloud',
+                  onPressed: expenseProvider.isSyncing
+                      ? null
+                      : () async {
+                          if (userProvider.userProfile?['id'] == 'guest-user-uuid') {
+                            CustomToast.show(
+                              context,
+                              'Cloud Sync is only available for registered accounts. Please log in.',
+                              isError: true,
+                            );
+                          } else {
+                            CustomToast.show(context, 'Syncing business ledger with cloud...');
+                            final success = await expenseProvider.triggerManualSync();
+                            if (context.mounted) {
+                              if (success) {
+                                CustomToast.show(context, '☁️ Business sync completed!');
+                                _loadDashboardData(isQuiet: true);
+                              } else {
+                                CustomToast.show(
+                                  context,
+                                  expenseProvider.syncErrorMessage ?? 'Sync failed. Operating offline.',
+                                  isError: true,
+                                );
+                              }
+                            }
+                          }
+                        },
+                  icon: expenseProvider.isSyncing
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF3B82F6)),
+                        )
+                      : Icon(
+                          expenseProvider.syncErrorMessage != null
+                              ? Icons.cloud_off_outlined
+                              : Icons.cloud_queue_outlined,
+                          color: expenseProvider.syncErrorMessage != null
+                              ? Colors.amber[800]
+                              : const Color(0xFF3B82F6),
+                          size: 22,
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Switch to Personal',
-                          style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: const Color(0xFF00D09C)),
-                        ),
-                      ],
-                    ),
+                ),
+                IconButton(
+                  tooltip: 'Business Khata Ledger',
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const KhataScreen()),
                   ),
+                  icon: const Icon(Icons.menu_book_rounded, color: Color(0xFF3B82F6), size: 22),
+                ),
+                ListenableBuilder(
+                  listenable: AppUpdateService.instance,
+                  builder: (context, _) {
+                    final hasUpdate = AppUpdateService.instance.latestUpdateInfo?.hasUpdate ?? false;
+                    return IconButton(
+                      tooltip: 'Settings',
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                      ),
+                      icon: Badge(
+                        isLabelVisible: hasUpdate,
+                        backgroundColor: const Color(0xFFEF4444),
+                        smallSize: 8,
+                        child: const Icon(Icons.settings_outlined, size: 22),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
             // ── PERIOD SELECTOR CHIPS ─────────────────────────
             SingleChildScrollView(
@@ -311,7 +487,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                       onSelected: (val) {
                         if (val) {
                           setState(() => _filterPeriod = p);
-                          _loadDashboardData();
+                          _loadDashboardData(isQuiet: true);
                         }
                       },
                     ),
@@ -399,6 +575,13 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                           color: netProfit >= 0 ? const Color(0xFF4ADE80) : const Color(0xFFF87171),
                         ),
                       ),
+                      if (totalGoodsCost > 0) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'Includes ₹${totalGoodsCost.toStringAsFixed(0)} item cost',
+                          style: GoogleFonts.inter(fontSize: 10.5, color: Colors.white54),
+                        ),
+                      ],
                     ],
                   ),
                   Container(

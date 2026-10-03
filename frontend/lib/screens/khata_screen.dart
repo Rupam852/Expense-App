@@ -103,6 +103,49 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
         ),
         elevation: 0,
         actions: [
+          Consumer<ExpenseProvider>(
+            builder: (context, expProvider, _) {
+              return IconButton(
+                tooltip: 'Sync with Cloud',
+                onPressed: expProvider.isSyncing
+                    ? null
+                    : () async {
+                        if (userProvider.userProfile?['id'] == 'guest-user-uuid') {
+                          CustomToast.show(
+                            context,
+                            'Cloud Sync is only available for registered accounts. Please log in.',
+                            isError: true,
+                          );
+                        } else {
+                          CustomToast.show(context, 'Syncing Khata entries with cloud...');
+                          final success = await expProvider.triggerManualSync();
+                          if (context.mounted) {
+                            if (success) {
+                              CustomToast.show(context, '☁️ Cloud sync completed!');
+                            } else {
+                              CustomToast.show(
+                                context,
+                                expProvider.syncErrorMessage ?? 'Sync failed. Operating offline.',
+                                isError: true,
+                              );
+                            }
+                          }
+                        }
+                      },
+                icon: expProvider.isSyncing
+                    ? SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: primaryColor),
+                      )
+                    : Icon(
+                        Icons.cloud_done_rounded,
+                        color: expProvider.syncErrorMessage != null ? Colors.orange : primaryColor,
+                        size: 22,
+                      ),
+              );
+            },
+          ),
           IconButton(
             tooltip: isBusiness ? 'Add Customer/Vendor Udhar' : 'Add Khata Entry',
             icon: Icon(Icons.person_add_alt_1_rounded, color: primaryColor),

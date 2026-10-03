@@ -667,56 +667,60 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
                     ),
                     const SizedBox(height: 8),
 
-                    // Quick Trip / Event Hashtag chips
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        '#GoaTrip2026',
-                        '#Diwali',
-                        '#Party',
-                        '#Office',
-                        '#Wedding',
-                        '#Medical',
-                        '#Shopping',
-                        '#Vacation',
-                      ].map((tag) {
-                        final hasThisTag = _descriptionController.text.contains(tag);
-                        return InkWell(
-                          onTap: () {
-                            setState(() {
-                              if (hasThisTag) {
-                                _descriptionController.text = _descriptionController.text.replaceAll(tag, '').replaceAll(RegExp(r'\s+'), ' ').trim();
-                              } else {
-                                _descriptionController.text = '${_descriptionController.text} $tag'.replaceAll(RegExp(r'\s+'), ' ').trim();
-                              }
-                            });
-                          },
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: hasThisTag
-                                  ? const Color(0xFF00D09C).withOpacity(0.2)
-                                  : (isDark ? const Color(0xFF222836) : const Color(0xFFF0F4F8)),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: hasThisTag ? const Color(0xFF00D09C) : Colors.transparent,
+                    // Quick Trip / Event Hashtag chips (Personal Mode only)
+                    if (_ledgerType != 'business') ...[
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          '#GoaTrip2026',
+                          '#Diwali',
+                          '#Party',
+                          '#Office',
+                          '#Wedding',
+                          '#Medical',
+                          '#Shopping',
+                          '#Vacation',
+                        ].map((tag) {
+                          final hasThisTag = _descriptionController.text.contains(tag);
+                          return InkWell(
+                            onTap: () {
+                              setState(() {
+                                if (hasThisTag) {
+                                  _descriptionController.text = _descriptionController.text.replaceAll(tag, '').replaceAll(RegExp(r'\s+'), ' ').trim();
+                                } else {
+                                  _descriptionController.text = '${_descriptionController.text} $tag'.replaceAll(RegExp(r'\s+'), ' ').trim();
+                                }
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: hasThisTag
+                                    ? const Color(0xFF00D09C).withOpacity(0.2)
+                                    : (isDark ? const Color(0xFF222836) : const Color(0xFFF0F4F8)),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: hasThisTag ? const Color(0xFF00D09C) : Colors.transparent,
+                                ),
+                              ),
+                              child: Text(
+                                tag,
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  color: hasThisTag ? const Color(0xFF00D09C) : (isDark ? Colors.white70 : Colors.black87),
+                                  fontWeight: hasThisTag ? FontWeight.bold : FontWeight.w500,
+                                ),
                               ),
                             ),
-                            child: Text(
-                              tag,
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                color: hasThisTag ? const Color(0xFF00D09C) : (isDark ? Colors.white70 : Colors.black87),
-                                fontWeight: hasThisTag ? FontWeight.bold : FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 16),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 16),
+                    ] else ...[
+                      const SizedBox(height: 8),
+                    ],
 
                     // Date Selection Picker Box
                     InkWell(

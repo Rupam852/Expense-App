@@ -1168,6 +1168,82 @@ class SupabaseService {
   }
 
   // ══════════════════════════════════════════════════════
+  // BUSINESS ITEMS / INVENTORY CATALOG (Cloud Backup)
+  // ══════════════════════════════════════════════════════
+
+  Future<List<Map<String, dynamic>>> fetchBusinessItems() async {
+    final uid = currentUser?.id;
+    if (uid == null) return [];
+    try {
+      final data = await _client
+          .from('business_items')
+          .select()
+          .eq('user_id', uid)
+          .order('name', ascending: true);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('[Supabase] fetchBusinessItems error: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchBusinessItemsSince(String? lastSyncTime) async {
+    final uid = currentUser?.id;
+    if (uid == null) return [];
+    try {
+      if (lastSyncTime != null && lastSyncTime.isNotEmpty) {
+        final data = await _client
+            .from('business_items')
+            .select()
+            .eq('user_id', uid)
+            .gte('updated_at', lastSyncTime)
+            .order('updated_at');
+        return List<Map<String, dynamic>>.from(data);
+      } else {
+        final data = await _client
+            .from('business_items')
+            .select()
+            .eq('user_id', uid)
+            .order('updated_at');
+        return List<Map<String, dynamic>>.from(data);
+      }
+    } catch (e) {
+      print('[Supabase] fetchBusinessItemsSince error: $e');
+      return [];
+    }
+  }
+
+  Future<void> upsertBusinessItems(List<Map<String, dynamic>> items) async {
+    final uid = currentUser?.id;
+    if (uid == null || items.isEmpty) return;
+    final rows = items.map((it) {
+      return {
+        'id': it['id']?.toString() ?? '',
+        'user_id': uid,
+        'name': it['name']?.toString() ?? '',
+        'purchase_price': (it['purchase_price'] is num)
+            ? (it['purchase_price'] as num).toDouble()
+            : (double.tryParse(it['purchase_price']?.toString() ?? '0') ?? 0.0),
+        'selling_price': (it['selling_price'] is num)
+            ? (it['selling_price'] as num).toDouble()
+            : (double.tryParse(it['selling_price']?.toString() ?? '0') ?? 0.0),
+        'tax_rate': (it['tax_rate'] is num)
+            ? (it['tax_rate'] as num).toDouble()
+            : (double.tryParse(it['tax_rate']?.toString() ?? '0') ?? 0.0),
+        'unit': it['unit']?.toString() ?? 'pcs',
+        'category': it['category']?.toString(),
+        'notes': it['notes']?.toString(),
+        'updated_at': it['updated_at']?.toString() ?? DateTime.now().toIso8601String(),
+      };
+    }).toList();
+    await _client.from('business_items').upsert(rows);
+  }
+
+  Future<void> deleteBusinessItem(String id) async {
+    await _client.from('business_items').delete().eq('id', id);
+  }
+
+  // ══════════════════════════════════════════════════════
   // SYNC (Pull + Push with local SQLite)
   // ══════════════════════════════════════════════════════
 
@@ -1180,6 +1256,7 @@ class SupabaseService {
     List<Map<String, dynamic>> unsyncedSubscriptions = const [],
     List<Map<String, dynamic>> unsyncedSplitBills = const [],
     List<Map<String, dynamic>> unsyncedBusinessSales = const [],
+    List<Map<String, dynamic>> unsyncedBusinessItems = const [],
     Map<String, dynamic>? unsyncedBusinessProfile,
     required List<String> deletedExpenseIds,
     required List<String> deletedBudgetIds,
@@ -1188,6 +1265,7 @@ class SupabaseService {
     List<String> deletedSubscriptionIds = const [],
     List<String> deletedSplitBillIds = const [],
     List<String> deletedBusinessSaleIds = const [],
+    List<String> deletedBusinessItemIds = const [],
     String? lastSyncTime,
   }) async {
     try {
@@ -1213,6 +1291,8 @@ class SupabaseService {
           upsertSplitBills(unsyncedSplitBills).catchError((e) => print('[Sync Error] SplitBills push failed: $e')),
         if (unsyncedBusinessSales.isNotEmpty)
           upsertBusinessSales(unsyncedBusinessSales).catchError((e) => print('[Sync Error] BusinessSales push failed: $e')),
+        if (unsyncedBusinessItems.isNotEmpty)
+          upsertBusinessItems(unsyncedBusinessItems).catchError((e) => print('[Sync Error] BusinessItems push failed: $e')),
         if (unsyncedBusinessProfile != null)
           upsertBusinessProfile(unsyncedBusinessProfile).catchError((e) => print('[Sync Error] BusinessProfile push failed: $e')),
       ]).timeout(const Duration(seconds: 12));
@@ -1233,6 +1313,8 @@ class SupabaseService {
           _client.from('split_bills').delete().inFilter('id', deletedSplitBillIds).eq('user_id', uid).catchError((e) => null),
         if (deletedBusinessSaleIds.isNotEmpty)
           _client.from('business_sales').delete().inFilter('id', deletedBusinessSaleIds).eq('user_id', uid).catchError((e) => null),
+        if (deletedBusinessItemIds.isNotEmpty)
+          _client.from('business_items').delete().inFilter('id', deletedBusinessItemIds).eq('user_id', uid).catchError((e) => null),
       ]).timeout(const Duration(seconds: 8));
 
       // 3. PULL fresh server data concurrently with timeout
@@ -1244,6 +1326,7 @@ class SupabaseService {
         fetchSubscriptionsSince(lastSyncTime),
         fetchSplitBillsSince(lastSyncTime),
         fetchBusinessSalesSince(lastSyncTime),
+        fetchBusinessItemsSince(lastSyncTime),
         fetchBusinessProfile(),
       ]).timeout(const Duration(seconds: 15));
 
@@ -1254,7 +1337,8 @@ class SupabaseService {
       final serverSubs = pullResults[4] as List<Map<String, dynamic>>;
       final serverSplits = pullResults[5] as List<Map<String, dynamic>>;
       final serverBusinessSales = pullResults[6] as List<Map<String, dynamic>>;
-      final serverBusinessProfile = pullResults[7] as Map<String, dynamic>?;
+      final serverBusinessItems = pullResults[7] as List<Map<String, dynamic>>;
+      final serverBusinessProfile = pullResults[8] as Map<String, dynamic>?;
 
       // Store new server time
       final prefs = await SharedPreferences.getInstance();
@@ -1268,6 +1352,7 @@ class SupabaseService {
         'subscriptions': serverSubs,
         'splitBills': serverSplits,
         'businessSales': serverBusinessSales,
+        'businessItems': serverBusinessItems,
         'businessProfile': serverBusinessProfile,
       };
     } catch (e) {

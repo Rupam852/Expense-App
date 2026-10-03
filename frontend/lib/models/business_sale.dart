@@ -6,7 +6,8 @@ class BusinessSaleItem {
   final String itemName;
   final double quantity;
   final String unit;
-  final double unitPrice;
+  final double unitPrice; // Selling Rate (Printed on Invoice)
+  final double? purchasePrice; // Purchase / Cost Price (Confidential, never on Invoice)
   final double taxRate; // e.g. 0, 5, 12, 18, 28
   final double totalPrice;
 
@@ -17,9 +18,15 @@ class BusinessSaleItem {
     required this.quantity,
     this.unit = 'pcs',
     required this.unitPrice,
+    this.purchasePrice,
     this.taxRate = 0.0,
     required this.totalPrice,
   });
+
+  double get itemCost => quantity * (purchasePrice ?? 0.0);
+  double get itemGrossProfit => purchasePrice != null && purchasePrice! > 0
+      ? (quantity * unitPrice) - itemCost
+      : 0.0;
 
   Map<String, dynamic> toMap() {
     return {
@@ -29,6 +36,7 @@ class BusinessSaleItem {
       'quantity': quantity,
       'unit': unit,
       'unit_price': unitPrice,
+      'purchase_price': purchasePrice,
       'tax_rate': taxRate,
       'total_price': totalPrice,
     };
@@ -42,6 +50,7 @@ class BusinessSaleItem {
       quantity: (map['quantity'] as num?)?.toDouble() ?? 1.0,
       unit: map['unit']?.toString() ?? 'pcs',
       unitPrice: (map['unit_price'] as num?)?.toDouble() ?? 0.0,
+      purchasePrice: (map['purchase_price'] as num?)?.toDouble(),
       taxRate: (map['tax_rate'] as num?)?.toDouble() ?? 0.0,
       totalPrice: (map['total_price'] as num?)?.toDouble() ?? 0.0,
     );
@@ -95,6 +104,10 @@ class BusinessSale {
     DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
+
+  double get totalPurchaseCost => items.fold(0.0, (acc, item) => acc + item.itemCost);
+  double get grossProfit => totalPurchaseCost > 0 ? (finalAmount - totalPurchaseCost) : finalAmount;
+  double get grandTotal => finalAmount;
 
   Map<String, dynamic> toMap() {
     return {

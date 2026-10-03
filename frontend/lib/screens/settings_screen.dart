@@ -15,6 +15,10 @@ import 'about_screen.dart';
 import 'backup_scope_screen.dart';
 import 'notification_settings_screen.dart';
 import '../widgets/report_issue_modal.dart';
+import '../models/business_profile.dart';
+import '../services/database_helper.dart';
+import '../services/supabase_service.dart';
+import 'business_catalog_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -832,6 +836,123 @@ class SettingsScreen extends StatelessWidget {
                   ],
                 ),
 
+                // 2.1. DEDICATED BUSINESS SETTINGS SECTION (Visible only in Business Mode)
+                if (userProvider.isBusinessMode) ...[
+                  const SizedBox(height: 24),
+                  _buildSectionHeader('BUSINESS SETTINGS', isDark),
+                  const SizedBox(height: 8),
+                  _buildSettingsCard(
+                    isDark: isDark,
+                    cardBg: cardBg,
+                    borderColor: const Color(0xFF1E88E5).withOpacity(0.35),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            BusinessProfileSettingsCard(isDark: isDark),
+                            const SizedBox(height: 14),
+                            const Divider(height: 1),
+                            const SizedBox(height: 14),
+                            // Business Sales Items & Catalog Tile
+                            Consumer<ExpenseProvider>(
+                              builder: (context, expProv, _) {
+                                final itemCount = expProv.businessItems.length;
+                                return InkWell(
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => const BusinessCatalogScreen(),
+                                      ),
+                                    );
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? const Color(0xFF131720) : const Color(0xFFF8FAFC),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: const Color(0xFF1E88E5).withOpacity(0.35),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF1E88E5).withOpacity(0.12),
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          child: const Icon(
+                                            Icons.inventory_2_outlined,
+                                            color: Color(0xFF1E88E5),
+                                            size: 20,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Text(
+                                                    'Sales Items & Catalog',
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 13.5,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(0xFF1E88E5).withOpacity(0.15),
+                                                      borderRadius: BorderRadius.circular(6),
+                                                    ),
+                                                    child: Text(
+                                                      '$itemCount items',
+                                                      style: GoogleFonts.inter(
+                                                        fontSize: 10.5,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: const Color(0xFF1E88E5),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                'Add / Edit products, buy price & GST for fast billing',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 11.5,
+                                                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const Icon(
+                                          Icons.chevron_right,
+                                          color: Color(0xFF1E88E5),
+                                          size: 20,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
                 const SizedBox(height: 24),
 
                 // 3. AI CONFIGURATION SECTION (Featured)
@@ -1537,3 +1658,291 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 }
+
+class BusinessProfileSettingsCard extends StatefulWidget {
+  final bool isDark;
+  const BusinessProfileSettingsCard({super.key, required this.isDark});
+
+  @override
+  State<BusinessProfileSettingsCard> createState() => _BusinessProfileSettingsCardState();
+}
+
+class _BusinessProfileSettingsCardState extends State<BusinessProfileSettingsCard> {
+  BusinessProfile _profile = BusinessProfile(
+    id: 'default_business',
+    businessName: 'My Business',
+  );
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final prof = await DatabaseHelper.instance.getBusinessProfile();
+      if (mounted) {
+        setState(() {
+          if (prof != null) _profile = prof;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showEditDialog() {
+    final nameCtrl = TextEditingController(text: _profile.businessName);
+    final phoneCtrl = TextEditingController(text: _profile.phone ?? '');
+    final gstinCtrl = TextEditingController(text: _profile.gstin ?? '');
+    final addrCtrl = TextEditingController(text: _profile.address ?? '');
+    final upiCtrl = TextEditingController(text: _profile.upiId ?? '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.storefront_rounded, color: Color(0xFF3B82F6), size: 22),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Edit Business Profile',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'My Business / Shop Name *',
+                  hintText: 'e.g. Ramesh General Store',
+                  prefixIcon: Icon(Icons.business_rounded),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneCtrl,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Business Phone Number',
+                  hintText: 'e.g. +91 9876543210',
+                  prefixIcon: Icon(Icons.phone_rounded),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: gstinCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'GSTIN (Optional)',
+                  hintText: 'e.g. 27AAAAA0000A1Z5',
+                  prefixIcon: Icon(Icons.receipt_rounded),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: addrCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Shop / Office Address',
+                  hintText: 'e.g. Shop 12, Main Market, Mumbai',
+                  prefixIcon: Icon(Icons.location_on_outlined),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: upiCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Business UPI ID (for QR Code)',
+                  hintText: 'e.g. storename@okaxis',
+                  prefixIcon: Icon(Icons.qr_code_rounded),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancel', style: GoogleFonts.inter(color: Colors.grey, fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF3B82F6),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () async {
+              final newName = nameCtrl.text.trim().isEmpty ? 'My Business' : nameCtrl.text.trim();
+              final updated = BusinessProfile(
+                id: _profile.id,
+                businessName: newName,
+                phone: phoneCtrl.text.trim().isNotEmpty ? phoneCtrl.text.trim() : null,
+                gstin: gstinCtrl.text.trim().isNotEmpty ? gstinCtrl.text.trim() : null,
+                address: addrCtrl.text.trim().isNotEmpty ? addrCtrl.text.trim() : null,
+                upiId: upiCtrl.text.trim().isNotEmpty ? upiCtrl.text.trim() : null,
+                updatedAt: DateTime.now(),
+              );
+
+              await DatabaseHelper.instance.saveBusinessProfile(updated);
+
+              try {
+                await SupabaseService.instance.upsertBusinessProfile(updated.toMap());
+              } catch (e) {
+                debugPrint('[BusinessProfile] Cloud sync failed: $e');
+              }
+
+              if (mounted) {
+                setState(() => _profile = updated);
+                Navigator.of(ctx).pop();
+                CustomToast.show(context, '✅ Business Profile saved: $newName');
+              }
+            },
+            child: Text('Save Profile', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: Padding(padding: EdgeInsets.all(8.0), child: CircularProgressIndicator(strokeWidth: 2)));
+    }
+
+    final isDark = widget.isDark;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF131720) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFF3B82F6).withOpacity(0.25),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.storefront_rounded, size: 18, color: Color(0xFF3B82F6)),
+                  const SizedBox(width: 6),
+                  Text(
+                    'BUSINESS / SHOP PROFILE',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.8,
+                      color: const Color(0xFF3B82F6),
+                    ),
+                  ),
+                ],
+              ),
+              InkWell(
+                onTap: _showEditDialog,
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.edit, size: 13, color: Color(0xFF3B82F6)),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Edit',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF3B82F6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _profile.businessName.isNotEmpty ? _profile.businessName : 'My Business',
+            style: GoogleFonts.outfit(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
+            ),
+          ),
+          if (_profile.phone != null && _profile.phone!.isNotEmpty) ...[
+            const SizedBox(height: 3),
+            Row(
+              children: [
+                Icon(Icons.phone_rounded, size: 12, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                const SizedBox(width: 5),
+                Text(
+                  _profile.phone!,
+                  style: GoogleFonts.inter(fontSize: 12, color: isDark ? Colors.grey[300] : Colors.grey[700]),
+                ),
+              ],
+            ),
+          ],
+          if (_profile.gstin != null && _profile.gstin!.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Row(
+              children: [
+                Icon(Icons.receipt_rounded, size: 12, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                const SizedBox(width: 5),
+                Text(
+                  'GSTIN: ${_profile.gstin!}',
+                  style: GoogleFonts.inter(fontSize: 11.5, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                ),
+              ],
+            ),
+          ],
+          if (_profile.address != null && _profile.address!.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Row(
+              children: [
+                Icon(Icons.location_on_outlined, size: 12, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    _profile.address!,
+                    style: GoogleFonts.inter(fontSize: 11.5, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
