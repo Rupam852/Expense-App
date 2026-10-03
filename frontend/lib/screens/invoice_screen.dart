@@ -31,7 +31,9 @@ String getCurrencySymbol(String currencyCode) {
 }
 
 class InvoiceScreen extends StatefulWidget {
-  const InvoiceScreen({super.key});
+  final int initialTabIndex;
+
+  const InvoiceScreen({super.key, this.initialTabIndex = 0});
 
   @override
   State<InvoiceScreen> createState() => _InvoiceScreenState();
@@ -58,7 +60,11 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialTabIndex.clamp(0, 2),
+    );
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         setState(() {});

@@ -38,6 +38,7 @@ import 'subscription_screen.dart';
 import 'trip_tag_screen.dart';
 import '../widgets/sms_expense_parser_dialog.dart';
 import '../widgets/export_statement_dialog.dart';
+import '../widgets/monthly_rollover_dialog.dart';
 import 'calculator_hub_screen.dart';
 
 String getCurrencySymbol(String currencyCode) {
@@ -84,56 +85,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<bool> _checkMonthRolloverAndPrompt() async {
-    final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
-    
-    // Give a short delay to allow offline data to be loaded/ready
     await Future.delayed(const Duration(milliseconds: 500));
-    
     if (!mounted) return false;
-    
-    final prefs = await SharedPreferences.getInstance();
-    final lastKnown = prefs.getString('last_known_month_year');
-    final now = DateTime.now();
-    final currentMonthStr = '${now.year}-${now.month.toString().padLeft(2, '0')}';
-    
-    if (lastKnown == null) {
-      // First boot: set it to current month and do nothing
-      await prefs.setString('last_known_month_year', currentMonthStr);
-      return false;
-    }
-    
-    if (lastKnown != currentMonthStr) {
-      final parts = lastKnown.split('-');
-      String oldMonthLabel = lastKnown;
-      if (parts.length == 2) {
-        try {
-          final oldDate = DateTime(int.parse(parts[0]), int.parse(parts[1]));
-          oldMonthLabel = DateFormat('MMMM yyyy').format(oldDate);
-        } catch (_) {}
-      }
-
-      // Month rolled over! Let's check if we have old expenses
-      final oldTotal = expenseProvider.getOldExpensesTotal();
-      if (oldTotal > 0) {
-        if (!mounted) return false;
-
-        final currentMonthStart = DateTime(now.year, now.month);
-        final oldExpenseIds = expenseProvider.expenses
-            .where((e) => e.transactionDate.isBefore(currentMonthStart))
-            .map((e) => e.id)
-            .toList();
-        
-        _showMonthRolloverDialog(context, oldTotal, oldMonthLabel, oldExpenseIds, currentMonthStr);
-        return true;
-      } else {
-        // If there were no expenses in previous month, show clean Welcome New Month popup
-        if (!mounted) return false;
-        final newMonthLabel = DateFormat('MMMM yyyy').format(now);
-        _showZeroExpenseNewMonthDialog(context, oldMonthLabel, newMonthLabel, currentMonthStr);
-        return true;
-      }
-    }
-    return false;
+    return await MonthlyRolloverDialog.checkAndShowRollover(context);
   }
 
   // Helper: builds a single point row for the onboarding notice dialog

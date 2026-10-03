@@ -450,6 +450,13 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                   ),
                   icon: const Icon(Icons.menu_book_rounded, color: Color(0xFF3B82F6), size: 22),
                 ),
+                IconButton(
+                  tooltip: 'Export Tax & Sales Statements',
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const InvoiceScreen(initialTabIndex: 2)),
+                  ),
+                  icon: const Icon(Icons.file_download_outlined, color: Color(0xFF3B82F6), size: 22),
+                ),
                 ListenableBuilder(
                   listenable: AppUpdateService.instance,
                   builder: (context, _) {
