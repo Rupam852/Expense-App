@@ -690,122 +690,7 @@ class SupabaseService {
     return lines.join('\n');
   }
 
-  // ══════════════════════════════════════════════════════
-  // INVOICE HISTORY (Supabase Storage + DB)
-  // ══════════════════════════════════════════════════════
 
-  Future<List<Map<String, dynamic>>> fetchInvoiceHistory() async {
-    final uid = currentUser?.id;
-    if (uid == null) return [];
-    try {
-      final data = await _client
-          .from('invoice_history')
-          .select('id, file_name, month_year, storage_path, file_size_bytes, created_at, updated_at')
-          .eq('user_id', uid)
-          .order('created_at', ascending: false);
-      return List<Map<String, dynamic>>.from(data);
-    } catch (e) {
-      print('[Supabase] fetchInvoiceHistory error: $e');
-      return [];
-    }
-  }
-
-  Future<Map<String, dynamic>?> saveInvoiceToHistory({
-    required String fileName,
-    required String monthYear,
-    required Uint8List pdfBytes,
-  }) async {
-    final uid = currentUser?.id;
-    if (uid == null) return null;
-
-    try {
-      final existing = await _client
-          .from('invoice_history')
-          .select('id, storage_path, file_name')
-          .eq('user_id', uid)
-          .order('created_at', ascending: true);
-
-      if (existing.length >= 15) {
-        final deleteCount = existing.length - 14;
-        for (int i = 0; i < deleteCount; i++) {
-          final oldInvoice = existing[i];
-          final oldId = oldInvoice['id'];
-          final oldPath = oldInvoice['storage_path'] as String;
-          final oldName = oldInvoice['file_name'] as String;
-
-          try {
-            await _client.storage.from('invoices').remove([oldPath]);
-          } catch (e) {
-            print('[History Cleanup] Storage delete failed for $oldPath: $e');
-          }
-
-          try {
-            final dir = await getApplicationDocumentsDirectory();
-            final localFile = File('${dir.path}/$oldName');
-            if (await localFile.exists()) {
-              await localFile.delete();
-            }
-          } catch (e) {
-            print('[History Cleanup] Local file delete failed for $oldName: $e');
-          }
-
-          try {
-            await _client.from('invoice_history').delete().eq('id', oldId);
-          } catch (e) {
-            print('[History Cleanup] Database record delete failed for $oldId: $e');
-          }
-        }
-      }
-    } catch (e) {
-      print('[History Cleanup] Limit check error: $e');
-    }
-
-    final ts = DateTime.now().millisecondsSinceEpoch;
-    final safeFileName = fileName.endsWith('.pdf') ? fileName : '$fileName.pdf';
-    final storagePath = '$uid/${ts}_$safeFileName';
-
-    await _client.storage.from('invoices').uploadBinary(
-      storagePath,
-      pdfBytes,
-      fileOptions: const FileOptions(upsert: true, contentType: 'application/pdf'),
-    );
-
-    final record = await _client.from('invoice_history').insert({
-      'user_id': uid,
-      'file_name': safeFileName,
-      'month_year': monthYear,
-      'storage_path': storagePath,
-      'file_size_bytes': pdfBytes.length,
-    }).select().single();
-    return record;
-  }
-
-  Future<Uint8List?> downloadInvoiceBytes(String storagePath) async {
-    try {
-      final data = await _client.storage.from('invoices').download(storagePath);
-      return data;
-    } catch (e) {
-      print('[History] Download error: $e');
-      return null;
-    }
-  }
-
-  Future<bool> renameInvoice(String id, String newName) async {
-    final safeFileName = newName.endsWith('.pdf') ? newName : '$newName.pdf';
-    await _client.from('invoice_history').update({
-      'file_name': safeFileName,
-      'updated_at': DateTime.now().toIso8601String(),
-    }).eq('id', id);
-    return true;
-  }
-
-  Future<bool> deleteInvoice(String id, String storagePath) async {
-    try {
-      await _client.storage.from('invoices').remove([storagePath]);
-    } catch (_) {}
-    await _client.from('invoice_history').delete().eq('id', id);
-    return true;
-  }
 
   // ══════════════════════════════════════════════════════
   // AI / GEMINI (Edge Function passthrough)
@@ -1078,10 +963,14 @@ class SupabaseService {
         'id': profile['id']?.toString() ?? 'default_business',
         'user_id': uid,
         'business_name': profile['business_name']?.toString() ?? 'My Business',
+        'business_type': profile['business_type']?.toString(),
         'address': profile['address']?.toString(),
         'phone': profile['phone']?.toString(),
+        'email': profile['email']?.toString(),
         'gstin': profile['gstin']?.toString(),
         'upi_id': profile['upi_id']?.toString(),
+        'logo_path': profile['logo_path']?.toString(),
+        'terms_and_conditions': profile['terms_and_conditions']?.toString(),
         'updated_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
@@ -1140,20 +1029,32 @@ class SupabaseService {
     final uid = currentUser?.id;
     if (uid == null) return;
     final rows = sales.map((s) {
+      final subtotalVal = (s['subtotal'] is num)
+          ? (s['subtotal'] as num).toDouble()
+          : (s['total_amount'] is num)
+              ? (s['total_amount'] as num).toDouble()
+              : (double.tryParse(s['subtotal']?.toString() ?? s['total_amount']?.toString() ?? '0') ?? 0.0);
+      final payMethod = s['payment_method']?.toString() ?? s['payment_mode']?.toString() ?? 'cash';
       return <String, dynamic>{
         'id': s['id']?.toString(),
         'user_id': uid,
+        'customer_id': s['customer_id']?.toString(),
         'customer_name': s['customer_name']?.toString() ?? '',
         'customer_phone': s['customer_phone']?.toString(),
+        'customer_address': s['customer_address']?.toString(),
+        'customer_gstin': s['customer_gstin']?.toString(),
         'invoice_no': s['invoice_no']?.toString(),
         'sale_date': s['sale_date']?.toString() ?? DateTime.now().toIso8601String(),
-        'subtotal': (s['subtotal'] is num) ? (s['subtotal'] as num).toDouble() : (double.tryParse(s['subtotal']?.toString() ?? '0') ?? 0.0),
+        'subtotal': subtotalVal,
+        'total_amount': subtotalVal,
         'discount_amount': (s['discount_amount'] is num) ? (s['discount_amount'] as num).toDouble() : (double.tryParse(s['discount_amount']?.toString() ?? '0') ?? 0.0),
         'tax_amount': (s['tax_amount'] is num) ? (s['tax_amount'] as num).toDouble() : (double.tryParse(s['tax_amount']?.toString() ?? '0') ?? 0.0),
         'final_amount': (s['final_amount'] is num) ? (s['final_amount'] as num).toDouble() : (double.tryParse(s['final_amount']?.toString() ?? '0') ?? 0.0),
         'paid_amount': (s['paid_amount'] is num) ? (s['paid_amount'] as num).toDouble() : (double.tryParse(s['paid_amount']?.toString() ?? '0') ?? 0.0),
         'balance_due': (s['balance_due'] is num) ? (s['balance_due'] as num).toDouble() : (double.tryParse(s['balance_due']?.toString() ?? '0') ?? 0.0),
-        'payment_method': s['payment_method']?.toString() ?? 'cash',
+        'payment_method': payMethod,
+        'payment_mode': payMethod,
+        'payment_status': s['payment_status']?.toString() ?? 'paid',
         'notes': s['notes']?.toString(),
         'items_json': s['items_json']?.toString(),
         'created_at': s['created_at']?.toString() ?? DateTime.now().toIso8601String(),

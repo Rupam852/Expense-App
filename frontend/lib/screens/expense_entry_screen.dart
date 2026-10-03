@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -50,6 +49,11 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
   
+  // Dedicated Business Fields
+  final _vendorController = TextEditingController();
+  final _invoiceNoController = TextEditingController();
+  String _paymentMode = 'Cash'; // Cash, UPI, Bank Transfer, Cheque, Card, Udhar
+  
   String? _selectedCategory;
   String _selectedCurrency = 'INR';
   DateTime _selectedDate = DateTime.now();
@@ -58,7 +62,6 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   String _recurrencePeriod = 'monthly';
   String? _receiptLocalPath;
 
-  bool _isLocalLoading = false;
   bool _isSaving = false;
 
   bool get _isRealEdit =>
@@ -67,7 +70,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
       widget.editExpense!.id != 'temp-voice-draft' &&
       widget.editExpense!.id != 'draft';
 
-  final List<String> _categories = [
+  static const List<String> _personalCategories = [
     'Shopping',
     'Groceries',
     'Food & dining',
@@ -92,8 +95,76 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
     'Miscellaneous',
   ];
 
+  static const List<String> _businessCategories = [
+    'Shop Rent',
+    'Staff Salary & Wages',
+    'Inventory & Stock Purchase',
+    'Electricity & Utilities',
+    'Transport & Logistics',
+    'Repairs & Maintenance',
+    'Packaging & Supplies',
+    'Marketing & Advertising',
+    'Taxes & CA / Legal Fees',
+    'Tea & Refreshments',
+    'Machinery & Equipment',
+    'Internet & Telecom',
+    'Loan EMI & Interest',
+    'Business Insurance',
+    'Miscellaneous Business Expense',
+  ];
+
   final List<String> _currencies = ['INR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD'];
   final List<String> _periods = ['daily', 'weekly', 'monthly', 'yearly'];
+  final List<String> _paymentModes = [
+    'Cash',
+    'UPI',
+    'Bank Transfer',
+    'Cheque',
+    'Credit Card',
+    'Due / Udhar',
+  ];
+
+  List<String> get _activeCategories {
+    final base = _ledgerType == 'business' ? _businessCategories : _personalCategories;
+    final list = List<String>.from(base);
+    if (_selectedCategory != null &&
+        _selectedCategory!.isNotEmpty &&
+        !list.contains(_selectedCategory)) {
+      list.add(_selectedCategory!);
+    }
+    return list;
+  }
+
+  void _parseExistingDescription(String desc) {
+    if (desc.startsWith('[') && desc.contains(']')) {
+      final closeIdx = desc.indexOf(']');
+      final meta = desc.substring(1, closeIdx);
+      final remaining = desc.substring(closeIdx + 1).trim();
+
+      final parts = meta.split('|');
+      for (var part in parts) {
+        final pair = part.split(':');
+        if (pair.length >= 2) {
+          final key = pair[0].trim().toLowerCase();
+          final val = pair.sublist(1).join(':').trim();
+          if (key == 'vendor') {
+            _vendorController.text = val;
+          } else if (key == 'mode') {
+            if (_paymentModes.contains(val)) {
+              _paymentMode = val;
+            } else {
+              _paymentMode = 'Cash';
+            }
+          } else if (key == 'bill' || key == 'inv' || key == 'invoice') {
+            _invoiceNoController.text = val;
+          }
+        }
+      }
+      _descriptionController.text = remaining;
+    } else {
+      _descriptionController.text = desc;
+    }
+  }
 
   @override
   void initState() {
@@ -114,7 +185,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
       _amountController.text = exp.amount > 0
           ? (exp.amount == exp.amount.roundToDouble() ? exp.amount.toInt().toString() : exp.amount.toString())
           : '';
-      _descriptionController.text = exp.description;
+      _parseExistingDescription(exp.description);
       _selectedCategory = exp.category;
       _selectedCurrency = exp.currency;
       _selectedDate = exp.transactionDate;
@@ -132,9 +203,9 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
       }
 
       if (widget.initialDescription != null) {
-        _descriptionController.text = widget.initialDescription!;
+        _parseExistingDescription(widget.initialDescription!);
       } else if (widget.editExpense != null && widget.editExpense!.description.isNotEmpty) {
-        _descriptionController.text = widget.editExpense!.description;
+        _parseExistingDescription(widget.editExpense!.description);
       }
 
       if (widget.initialCategory != null && widget.initialCategory!.isNotEmpty) {
@@ -172,13 +243,9 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   void dispose() {
     _amountController.dispose();
     _descriptionController.dispose();
+    _vendorController.dispose();
+    _invoiceNoController.dispose();
     super.dispose();
-  }
-
-  void _showGeminiKeyDialog(BuildContext context, UserProvider userProvider) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const AiConfigScreen()),
-    );
   }
 
   void _showApiErrorDialog(BuildContext context, String actualError, UserProvider userProvider) {
@@ -316,10 +383,9 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
         }
         if (extracted['category'] != null) {
           final cat = extracted['category'].toString();
-          // Match category case-insensitively or set default
-          final matched = _categories.firstWhere(
-            (c) => c.toLowerCase() == cat.toLowerCase(),
-            orElse: () => 'Miscellaneous',
+          final matched = _activeCategories.firstWhere(
+            (c) => c.toLowerCase() == cat.toLowerCase() || c.toLowerCase().contains(cat.toLowerCase()),
+            orElse: () => _ledgerType == 'business' ? 'Miscellaneous Business Expense' : 'Miscellaneous',
           );
           _selectedCategory = matched;
         }
@@ -329,12 +395,11 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
             _selectedCurrency = curr;
           }
         }
-        if (extracted['description'] != null || extracted['vendor'] != null) {
-          final vendor = extracted['vendor'] ?? '';
-          final desc = extracted['description'] ?? '';
-          _descriptionController.text = vendor.isNotEmpty 
-              ? '$vendor: $desc' 
-              : desc;
+        if (extracted['vendor'] != null && extracted['vendor'].toString().isNotEmpty) {
+          _vendorController.text = extracted['vendor'].toString();
+        }
+        if (extracted['description'] != null) {
+          _descriptionController.text = extracted['description'].toString();
         }
         if (extracted['transaction_date'] != null) {
           try {
@@ -361,7 +426,6 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   }
 
   void _presentDatePicker() async {
-    final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
@@ -371,8 +435,8 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: ColorScheme.fromSeed(
-              seedColor: Theme.of(context).primaryColor,
-              primary: Theme.of(context).primaryColor,
+              seedColor: _ledgerType == 'business' ? const Color(0xFF2563EB) : const Color(0xFF00D09C),
+              primary: _ledgerType == 'business' ? const Color(0xFF2563EB) : const Color(0xFF00D09C),
             ),
           ),
           child: child!,
@@ -413,12 +477,32 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
 
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
 
+    // Build structured description
+    final String finalDescription;
+    if (_ledgerType == 'business') {
+      final parts = <String>[];
+      if (_vendorController.text.trim().isNotEmpty) {
+        parts.add('Vendor: ${_vendorController.text.trim()}');
+      }
+      if (_paymentMode.isNotEmpty && _paymentMode != 'Cash') {
+        parts.add('Mode: $_paymentMode');
+      }
+      if (_invoiceNoController.text.trim().isNotEmpty) {
+        parts.add('Bill: ${_invoiceNoController.text.trim()}');
+      }
+      final metaPrefix = parts.isNotEmpty ? '[${parts.join(' | ')}] ' : '';
+      final note = _descriptionController.text.trim();
+      finalDescription = '$metaPrefix$note'.trim();
+    } else {
+      finalDescription = _descriptionController.text.trim();
+    }
+
     try {
       if (_isRealEdit) {
         final updated = widget.editExpense!.copyWith(
           amount: amount,
           category: _selectedCategory!,
-          description: _descriptionController.text.trim(),
+          description: finalDescription,
           transactionDate: _selectedDate,
           currency: _selectedCurrency,
           isRecurring: _isRecurring,
@@ -435,7 +519,7 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
         await expenseProvider.addExpense(
           amount: amount,
           category: _selectedCategory!,
-          description: _descriptionController.text.trim(),
+          description: finalDescription,
           date: _selectedDate,
           currency: _selectedCurrency,
           isRecurring: _isRecurring,
@@ -464,368 +548,541 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isBusinessExpense = _ledgerType == 'business';
+    final isBusiness = _ledgerType == 'business';
+    final accentColor = isBusiness ? const Color(0xFF2563EB) : const Color(0xFF00D09C);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isRealEdit 
-            ? (isBusinessExpense ? 'Edit Business Expense' : 'Edit Transaction') 
-            : (isBusinessExpense ? '➕ Add Business Expense' : 'Add Transaction')),
+        title: Text(
+          _isRealEdit 
+            ? (isBusiness ? 'Edit Business Expense 💼' : 'Edit Transaction ✍️') 
+            : (isBusiness ? '➕ Add Business Expense' : 'Add Transaction'),
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
             onPressed: () => SmsExpenseParserDialog.show(context),
-            icon: const Icon(Icons.sms_outlined, color: Color(0xFF00D09C)),
+            icon: Icon(Icons.sms_outlined, color: accentColor),
             tooltip: 'Bank SMS Parser',
           ),
           IconButton(
             onPressed: () => VoiceExpenseDialog.show(context),
-            icon: const Icon(Icons.mic_none_rounded, color: Color(0xFF00D09C)),
+            icon: Icon(Icons.mic_none_rounded, color: accentColor),
             tooltip: 'AI Voice Expense Logger',
           ),
         ],
       ),
       body: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+        padding: const EdgeInsets.all(20.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ─── Mode Indicator & Switcher Banner ───
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isBusiness
+                      ? const Color(0xFF2563EB).withOpacity(0.1)
+                      : const Color(0xFF00D09C).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isBusiness
+                        ? const Color(0xFF2563EB).withOpacity(0.3)
+                        : const Color(0xFF00D09C).withOpacity(0.3),
+                  ),
+                ),
+                child: Row(
                   children: [
-                    // Receipt Scan Rounded Widget
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF181B22) : Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
-                        ),
-                      ),
+                    Icon(
+                      isBusiness ? Icons.storefront_rounded : Icons.person_rounded,
+                      color: accentColor,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Icon(Icons.camera_alt_outlined, color: Theme.of(context).primaryColor, size: 28),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Smart Scan Receipt',
-                                      style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
-                                    ),
-                                    Text(
-                                      'Take receipt snap or UPI transaction screenshot to autofill',
-                                      style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () => _triggerScanner(ImageSource.camera),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                                    foregroundColor: Theme.of(context).primaryColor,
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  ),
-                                  icon: const Icon(Icons.camera_alt),
-                                  label: const Text('Camera'),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () => _triggerScanner(ImageSource.gallery),
-                                  style: OutlinedButton.styleFrom(
-                                    side: BorderSide(color: Theme.of(context).primaryColor.withOpacity(0.5)),
-                                    foregroundColor: Theme.of(context).primaryColor,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  ),
-                                  icon: const Icon(Icons.photo_library),
-                                  label: const Text('Gallery'),
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (_receiptLocalPath != null) ...[
-                            const SizedBox(height: 12),
-                            Chip(
-                              label: const Text('Receipt Attached'),
-                              avatar: const Icon(Icons.check, size: 14, color: Colors.white),
-                              backgroundColor: const Color(0xFF00D09C),
-                              labelStyle: const TextStyle(color: Colors.white, fontSize: 11),
-                              deleteIcon: const Icon(Icons.close, size: 14, color: Colors.white),
-                              onDeleted: () {
-                                setState(() {
-                                  _receiptLocalPath = null;
-                                });
-                              },
+                          Text(
+                            isBusiness ? 'Business Operating Expense' : 'Personal Daily Expense',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: isBusiness ? const Color(0xFF3B82F6) : const Color(0xFF00D09C),
                             ),
-                          ],
+                          ),
+                          Text(
+                            isBusiness
+                                ? 'Recorded in Shop P&L, Net Profit & Tax calculation'
+                                : 'Recorded in personal budget & daily spending',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
-
-                    // Amount Row + Currency Dropdown
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: TextFormField(
-                            controller: _amountController,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold),
-                            decoration: const InputDecoration(
-                              hintText: '0.00',
-                              labelText: 'Transaction Amount',
+                    if (!_isRealEdit)
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            _ledgerType = isBusiness ? 'personal' : 'business';
+                            _selectedCategory = null; // reset category on mode switch
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF222836) : Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: accentColor.withOpacity(0.5)),
+                          ),
+                          child: Text(
+                            isBusiness ? 'Switch to 👤' : 'Switch to 💼',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: accentColor,
                             ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Enter amount';
-                              }
-                              if (double.tryParse(value) == null) {
-                                return 'Invalid number';
-                              }
-                              return null;
-                            },
                           ),
                         ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // ─── Receipt Scan Rounded Widget ───
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF181B22) : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.camera_alt_outlined, color: accentColor, size: 28),
                         const SizedBox(width: 12),
                         Expanded(
-                          flex: 1,
-                          child: DropdownButtonFormField<String>(
-                            value: _selectedCurrency,
-                            decoration: const InputDecoration(labelText: 'Currency'),
-                            items: _currencies.map((c) => DropdownMenuItem(
-                              value: c,
-                              child: Text(c, style: const TextStyle(fontSize: 12)),
-                            )).toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() {
-                                  _selectedCurrency = val;
-                                });
-                              }
-                            },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isBusiness ? 'Scan Bill / Invoice / Slip' : 'Smart Scan Receipt',
+                                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
+                              Text(
+                                isBusiness 
+                                    ? 'Upload vendor receipt or expense bill to autofill'
+                                    : 'Take receipt snap or UPI screenshot to autofill',
+                                style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
-
-                    // Category Selector
-                    DropdownButtonFormField<String>(
-                      value: _selectedCategory,
-                      decoration: const InputDecoration(labelText: 'Category'),
-                      hint: const Text('Select Category'),
-                      items: _categories.map((c) => DropdownMenuItem(
-                        value: c,
-                        child: Text(c),
-                      )).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => _triggerScanner(ImageSource.camera),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: accentColor.withOpacity(0.1),
+                              foregroundColor: accentColor,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            icon: const Icon(Icons.camera_alt),
+                            label: const Text('Camera'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _triggerScanner(ImageSource.gallery),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: accentColor.withOpacity(0.5)),
+                              foregroundColor: accentColor,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            icon: const Icon(Icons.photo_library),
+                            label: const Text('Gallery'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_receiptLocalPath != null) ...[
+                      const SizedBox(height: 12),
+                      Chip(
+                        label: const Text('Receipt Attached'),
+                        avatar: const Icon(Icons.check, size: 14, color: Colors.white),
+                        backgroundColor: accentColor,
+                        labelStyle: const TextStyle(color: Colors.white, fontSize: 11),
+                        deleteIcon: const Icon(Icons.close, size: 14, color: Colors.white),
+                        onDeleted: () {
                           setState(() {
-                            _selectedCategory = val;
+                            _receiptLocalPath = null;
                           });
-                        }
-                      },
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // ─── Amount Row + Currency Dropdown ───
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: TextFormField(
+                      controller: _amountController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold),
+                      decoration: InputDecoration(
+                        hintText: '0.00',
+                        labelText: isBusiness ? 'Expense Amount (₹)' : 'Transaction Amount',
+                        prefixIcon: const Icon(Icons.currency_rupee),
+                      ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Please select a category';
+                          return 'Enter amount';
+                        }
+                        if (double.tryParse(value) == null) {
+                          return 'Invalid number';
                         }
                         return null;
                       },
                     ),
-                    const SizedBox(height: 16),
-
-                    // Description text input (Optional)
-                    TextFormField(
-                      controller: _descriptionController,
-                      decoration: const InputDecoration(
-                        hintText: 'Spent on lunch with friends, rent, utilities (optional)...',
-                        labelText: 'Description / Vendor Details (Optional)',
-                        prefixIcon: Icon(Icons.description_outlined),
-                      ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 1,
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedCurrency,
+                      decoration: const InputDecoration(labelText: 'Currency'),
+                      items: _currencies.map((c) => DropdownMenuItem(
+                        value: c,
+                        child: Text(c, style: const TextStyle(fontSize: 12)),
+                      )).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            _selectedCurrency = val;
+                          });
+                        }
+                      },
                     ),
-                    const SizedBox(height: 8),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
 
-                    // Quick Trip / Event Hashtag chips (Personal Mode only)
-                    if (_ledgerType != 'business') ...[
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          '#GoaTrip2026',
-                          '#Diwali',
-                          '#Party',
-                          '#Office',
-                          '#Wedding',
-                          '#Medical',
-                          '#Shopping',
-                          '#Vacation',
-                        ].map((tag) {
-                          final hasThisTag = _descriptionController.text.contains(tag);
-                          return InkWell(
-                            onTap: () {
-                              setState(() {
-                                if (hasThisTag) {
-                                  _descriptionController.text = _descriptionController.text.replaceAll(tag, '').replaceAll(RegExp(r'\s+'), ' ').trim();
-                                } else {
-                                  _descriptionController.text = '${_descriptionController.text} $tag'.replaceAll(RegExp(r'\s+'), ' ').trim();
-                                }
-                              });
-                            },
-                            borderRadius: BorderRadius.circular(16),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: hasThisTag
-                                    ? const Color(0xFF00D09C).withOpacity(0.2)
-                                    : (isDark ? const Color(0xFF222836) : const Color(0xFFF0F4F8)),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: hasThisTag ? const Color(0xFF00D09C) : Colors.transparent,
-                                ),
-                              ),
-                              child: Text(
-                                tag,
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  color: hasThisTag ? const Color(0xFF00D09C) : (isDark ? Colors.white70 : Colors.black87),
-                                  fontWeight: hasThisTag ? FontWeight.bold : FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 16),
-                    ] else ...[
-                      const SizedBox(height: 8),
-                    ],
+              // ─── Category Selector ───
+              DropdownButtonFormField<String>(
+                value: _selectedCategory,
+                decoration: InputDecoration(
+                  labelText: isBusiness ? 'Business Expense Category' : 'Category',
+                  prefixIcon: Icon(
+                    isBusiness ? Icons.category_rounded : Icons.label_outline,
+                    color: accentColor,
+                  ),
+                ),
+                hint: Text(isBusiness ? 'Select Business Category' : 'Select Category'),
+                items: _activeCategories.map((c) => DropdownMenuItem(
+                  value: c,
+                  child: Text(c, style: GoogleFonts.inter(fontSize: 13)),
+                )).toList(),
+                onChanged: (val) {
+                  if (val != null) {
+                    setState(() {
+                      _selectedCategory = val;
+                    });
+                  }
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please select a category';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
 
-                    // Date Selection Picker Box
-                    InkWell(
-                      onTap: _presentDatePicker,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF181B22) : Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.calendar_today_outlined, size: 20, color: Colors.grey),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                DateFormat('dd MMMM yyyy').format(_selectedDate),
-                                style: GoogleFonts.inter(fontSize: 14),
-                              ),
-                            ),
-                            Text(
-                              'Change',
-                              style: GoogleFonts.inter(
-                                color: Theme.of(context).primaryColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
+              // ─── Business-Specific Fields (Vendor & Payment Mode) ───
+              if (isBusiness) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _vendorController,
+                        decoration: const InputDecoration(
+                          labelText: 'Paid To / Vendor (Optional)',
+                          hintText: 'e.g. Ramesh (Staff), Sharma Store',
+                          prefixIcon: Icon(Icons.storefront_outlined),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Recurring Toggle & Section
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF181B22) : Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          SwitchListTile(
-                            activeColor: Theme.of(context).primaryColor,
-                            title: const Text('Recurring Transaction'),
-                            subtitle: const Text('Automatically log this bill regularly'),
-                            value: _isRecurring,
-                            onChanged: (val) {
-                              setState(() {
-                                _isRecurring = val;
-                              });
-                            },
-                          ),
-                          if (_isRecurring) ...[
-                            const SizedBox(height: 12),
-                            DropdownButtonFormField<String>(
-                              value: _recurrencePeriod,
-                              decoration: const InputDecoration(labelText: 'Interval Frequency'),
-                              items: _periods.map((p) => DropdownMenuItem(
-                                value: p,
-                                child: Text(p[0].toUpperCase() + p.substring(1)),
-                              )).toList(),
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setState(() {
-                                    _recurrencePeriod = val;
-                                  });
-                                }
-                              },
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Save Action Button
-                    ElevatedButton(
-                      onPressed: _isSaving ? null : _save,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
-                      ),
-                      child: _isSaving
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              _isRealEdit ? 'Update Expense' : 'Save Expense',
-                              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: DropdownButtonFormField<String>(
+                        value: _paymentMode,
+                        decoration: const InputDecoration(
+                          labelText: 'Payment Mode',
+                          prefixIcon: Icon(Icons.payment_rounded),
+                        ),
+                        items: _paymentModes.map((m) => DropdownMenuItem(
+                          value: m,
+                          child: Text(m, style: GoogleFonts.inter(fontSize: 13)),
+                        )).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _paymentMode = val);
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 3,
+                      child: TextFormField(
+                        controller: _invoiceNoController,
+                        decoration: const InputDecoration(
+                          labelText: 'Bill # (Optional)',
+                          hintText: 'e.g. INV-102',
+                          prefixIcon: Icon(Icons.receipt_outlined),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // ─── Description / Notes text input ───
+              TextFormField(
+                controller: _descriptionController,
+                decoration: InputDecoration(
+                  hintText: isBusiness 
+                      ? 'Notes on expense (e.g. 50 boxes packaging, generator diesel)...' 
+                      : 'Spent on lunch with friends, rent, utilities (optional)...',
+                  labelText: isBusiness ? 'Expense Description / Notes (Optional)' : 'Description / Vendor Details (Optional)',
+                  prefixIcon: const Icon(Icons.description_outlined),
+                ),
               ),
-            ),
+              const SizedBox(height: 10),
+
+              // ─── Quick Hashtag Chips ───
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: (isBusiness
+                    ? [
+                        '#ShopRent',
+                        '#StaffSalary',
+                        '#StockPurchase',
+                        '#UtilityBill',
+                        '#Delivery',
+                        '#Packaging',
+                        '#TeaSnacks',
+                        '#Maintenance',
+                        '#VendorPayment',
+                        '#TaxFee',
+                      ]
+                    : [
+                        '#GoaTrip2026',
+                        '#Diwali',
+                        '#Party',
+                        '#Office',
+                        '#Wedding',
+                        '#Medical',
+                        '#Shopping',
+                        '#Vacation',
+                      ]).map((tag) {
+                  final hasThisTag = _descriptionController.text.contains(tag);
+                  return InkWell(
+                    onTap: () {
+                      setState(() {
+                        if (hasThisTag) {
+                          _descriptionController.text = _descriptionController.text
+                              .replaceAll(tag, '')
+                              .replaceAll(RegExp(r'\s+'), ' ')
+                              .trim();
+                        } else {
+                          _descriptionController.text =
+                              '${_descriptionController.text} $tag'
+                                  .replaceAll(RegExp(r'\s+'), ' ')
+                                  .trim();
+                        }
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: hasThisTag
+                            ? accentColor.withOpacity(0.2)
+                            : (isDark ? const Color(0xFF222836) : const Color(0xFFF0F4F8)),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: hasThisTag ? accentColor : Colors.transparent,
+                        ),
+                      ),
+                      child: Text(
+                        tag,
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: hasThisTag ? accentColor : (isDark ? Colors.white70 : Colors.black87),
+                          fontWeight: hasThisTag ? FontWeight.bold : FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 20),
+
+              // ─── Date Selection Picker Box ───
+              InkWell(
+                onTap: _presentDatePicker,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF181B22) : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today_outlined, size: 20, color: Colors.grey),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          DateFormat('dd MMMM yyyy').format(_selectedDate),
+                          style: GoogleFonts.inter(fontSize: 14),
+                        ),
+                      ),
+                      Text(
+                        'Change',
+                        style: GoogleFonts.inter(
+                          color: accentColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // ─── Recurring Toggle & Section ───
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF181B22) : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      activeColor: accentColor,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        isBusiness ? 'Monthly Recurring Business Expense' : 'Recurring Transaction',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        isBusiness ? 'e.g. Monthly Shop Rent, Staff Salary' : 'Automatically log this bill regularly',
+                        style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+                      ),
+                      value: _isRecurring,
+                      onChanged: (val) {
+                        setState(() {
+                          _isRecurring = val;
+                        });
+                      },
+                    ),
+                    if (_isRecurring) ...[
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: _recurrencePeriod,
+                        decoration: const InputDecoration(labelText: 'Interval Frequency'),
+                        items: _periods.map((p) => DropdownMenuItem(
+                          value: p,
+                          child: Text(p[0].toUpperCase() + p.substring(1)),
+                        )).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() {
+                              _recurrencePeriod = val;
+                            });
+                          }
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 30),
+
+              // ─── Save Action Button ───
+              ElevatedButton(
+                onPressed: _isSaving ? null : _save,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accentColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: _isSaving
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        _isRealEdit 
+                            ? (isBusiness ? 'Update Business Expense 💼' : 'Update Expense ✨') 
+                            : (isBusiness ? 'Save Business Expense 💼' : 'Save Expense 🎉'),
+                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -929,7 +1186,7 @@ class _OcrProgressDialogState extends State<OcrProgressDialog> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = const Color(0xFF00D09C);
+    final primaryColor = Theme.of(context).primaryColor;
     
     return PopScope(
       canPop: false,

@@ -20,7 +20,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:open_file/open_file.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/custom_toast.dart';
-import 'invoice_history_screen.dart';
 import 'settings_screen.dart';
 import 'ai_config_screen.dart';
 import '../services/ai_config_service.dart';
@@ -2365,20 +2364,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       _proceedWithFilePicker(context);
                     },
                   ),
-                  const SizedBox(height: 8),
-                  _buildToolTile(
-                    ctx: ctx,
-                    isDark: isDark,
-                    icon: Icons.history_edu_outlined,
-                    iconColor: const Color(0xFF10B981),
-                    title: 'Invoice History',
-                    subtitle: 'View, share and download generated month-end invoices',
-                    onTap: () {
-                      Navigator.of(ctx).pop();
-                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const InvoiceHistoryScreen()));
-                    },
-                  ),
-
                   const SizedBox(height: 22),
 
                   // ─── 2. SMART UTILITIES & AI ───
@@ -2839,34 +2824,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       
                       const Divider(),
                       const SizedBox(height: 8),
-
-                      // Invoice History
-                      ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(Icons.history_edu_outlined, color: Theme.of(context).primaryColor, size: 22),
-                        ),
-                        title: Text(
-                          'Invoice History',
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-                        ),
-                        subtitle: Text(
-                          'View & manage saved month-end invoices',
-                          style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
-                        ),
-                        trailing: const Icon(Icons.chevron_right, size: 20),
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const InvoiceHistoryScreen()),
-                          );
-                        },
-                      ),
 
                       // Khata Book
                       ListTile(

@@ -23,15 +23,20 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
   static const List<String> _unitOptions = [
     'pcs',
     'kg',
-    'grams',
+    'g',
     'ltr',
     'ml',
     'box',
-    'packet',
-    'meter',
+    'pkt',
+    'm',
+    'nos',
+    'doz',
+    'pair',
+    'set',
+    'quintal',
+    'sq.ft',
     'service',
     'hour',
-    'dozen',
   ];
 
   static const List<double> _taxSlabs = [0.0, 5.0, 12.0, 18.0, 28.0];
@@ -653,6 +658,7 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
 
                       // 3. Selling Price & Buy Price
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Selling Price
                           Expanded(
@@ -660,7 +666,7 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Selling Price (₹) *',
+                                  'Selling Price (₹/$selectedUnit) *',
                                   style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.green),
                                 ),
                                 const SizedBox(height: 6),
@@ -674,6 +680,7 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                                   ),
+                                  onChanged: (_) => setModalState(() {}),
                                 ),
                               ],
                             ),
@@ -688,7 +695,7 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                                 Row(
                                   children: [
                                     Text(
-                                      'Buy / Cost (₹)',
+                                      'Buy Cost (₹/$selectedUnit)',
                                       style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.amber),
                                     ),
                                     const SizedBox(width: 3),
@@ -706,12 +713,60 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                                   ),
+                                  onChanged: (_) => setModalState(() {}),
                                 ),
                               ],
                             ),
                           ),
                         ],
                       ),
+
+                      // Live Profit Calculation Preview inside Catalog Editor
+                      Builder(builder: (ctx) {
+                        final sp = double.tryParse(sellPriceCtrl.text.trim()) ?? 0.0;
+                        final bp = double.tryParse(buyPriceCtrl.text.trim()) ?? 0.0;
+                        if (sp <= 0 && bp <= 0) return const SizedBox.shrink();
+                        if (bp <= 0) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              '💡 Standard Selling Rate: ₹${sp.toStringAsFixed(2)} per $selectedUnit',
+                              style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                            ),
+                          );
+                        }
+                        final diff = sp - bp;
+                        final isProfit = diff >= 0;
+                        final marginPercent = bp > 0 ? (diff / bp) * 100 : 0.0;
+                        return Container(
+                          margin: const EdgeInsets.only(top: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: (isProfit ? Colors.green : Colors.redAccent).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: (isProfit ? Colors.green : Colors.redAccent).withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(isProfit ? Icons.check_circle_outline : Icons.warning_amber_rounded,
+                                  size: 14, color: isProfit ? Colors.green : Colors.redAccent),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  isProfit
+                                      ? 'Profit Margin: +₹${diff.toStringAsFixed(2)} / $selectedUnit (${marginPercent.toStringAsFixed(0)}% margin)'
+                                      : '⚠️ Buy Cost > Selling Price! Loss: -₹${(-diff).toStringAsFixed(2)} / $selectedUnit',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: isProfit ? Colors.green : Colors.redAccent,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
                       const SizedBox(height: 14),
 
                       // 4. Category / Group

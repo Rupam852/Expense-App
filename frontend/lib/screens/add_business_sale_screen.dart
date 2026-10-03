@@ -22,8 +22,25 @@ import 'business_catalog_screen.dart';
 
 class AddBusinessSaleScreen extends StatefulWidget {
   final BusinessSale? existingSale;
+  final String? initialCustomerName;
+  final String? initialCustomerPhone;
+  final double? initialPaidAmount;
+  final String? initialPaymentMode;
+  final String? initialPaymentStatus;
+  final String? initialNotes;
+  final List<Map<String, dynamic>>? initialItemData;
 
-  const AddBusinessSaleScreen({super.key, this.existingSale});
+  const AddBusinessSaleScreen({
+    super.key,
+    this.existingSale,
+    this.initialCustomerName,
+    this.initialCustomerPhone,
+    this.initialPaidAmount,
+    this.initialPaymentMode,
+    this.initialPaymentStatus,
+    this.initialNotes,
+    this.initialItemData,
+  });
 
   @override
   State<AddBusinessSaleScreen> createState() => _AddBusinessSaleScreenState();
@@ -53,7 +70,110 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
   BusinessProfile? _businessProfile;
 
   static const List<double> _taxSlabs = [0.0, 5.0, 12.0, 18.0, 28.0];
-  static const List<String> _units = ['pcs', 'kg', 'g', 'ltr', 'ml', 'box', 'pkt', 'm', 'nos'];
+  static const List<String> _units = [
+    'pcs',
+    'kg',
+    'g',
+    'ltr',
+    'ml',
+    'box',
+    'pkt',
+    'm',
+    'nos',
+    'doz',
+    'pair',
+    'set',
+    'quintal',
+    'sq.ft',
+    'service',
+  ];
+
+  String _getQtyLabel(String unit) {
+    switch (unit.toLowerCase()) {
+      case 'kg':
+        return 'Weight (kg)';
+      case 'g':
+      case 'grams':
+        return 'Weight (g)';
+      case 'ltr':
+        return 'Volume (ltr)';
+      case 'ml':
+        return 'Volume (ml)';
+      case 'm':
+      case 'meter':
+        return 'Length (m)';
+      case 'box':
+        return 'Qty (box)';
+      case 'pkt':
+      case 'packet':
+        return 'Qty (pkt)';
+      case 'doz':
+      case 'dozen':
+        return 'Qty (doz)';
+      case 'nos':
+        return 'Qty (nos)';
+      case 'quintal':
+        return 'Weight (qtl)';
+      case 'sq.ft':
+        return 'Area (sq.ft)';
+      case 'service':
+        return 'Service Units';
+      default:
+        return 'Qty ($unit)';
+    }
+  }
+
+  String _getRateLabel(String unit) {
+    return 'Rate (₹/$unit)';
+  }
+
+  String _getCostLabel(String unit) {
+    return 'Buy Rate (₹/$unit) 🔒';
+  }
+
+  List<String> _getQuickPresetsForUnit(String unit) {
+    switch (unit.toLowerCase()) {
+      case 'kg':
+        return ['250g (0.25)', '500g (0.5)', '1 kg', '2 kg', '5 kg', '10 kg', '25 kg', '50 kg'];
+      case 'ltr':
+        return ['200ml (0.2)', '500ml (0.5)', '1 Ltr', '2 Ltr', '5 Ltr', '15 Ltr'];
+      case 'g':
+      case 'grams':
+        return ['50g', '100g', '250g', '500g', '1000g'];
+      case 'doz':
+      case 'dozen':
+        return ['0.5 doz', '1 doz', '2 doz', '5 doz'];
+      case 'm':
+      case 'meter':
+        return ['0.5m', '1m', '2m', '5m', '10m'];
+      case 'pcs':
+      case 'nos':
+      case 'pkt':
+      case 'box':
+        return ['1', '2', '5', '10', '20', '50', '100'];
+      default:
+        return [];
+    }
+  }
+
+  void _applyQuickPreset(TextEditingController controller, String preset, String unit) {
+    double val = 1.0;
+    if (preset.startsWith('250g')) {
+      val = unit == 'kg' ? 0.25 : 250;
+    } else if (preset.startsWith('500g')) {
+      val = unit == 'kg' ? 0.5 : 500;
+    } else if (preset.startsWith('200ml')) {
+      val = unit == 'ltr' ? 0.2 : 200;
+    } else if (preset.startsWith('500ml')) {
+      val = unit == 'ltr' ? 0.5 : 500;
+    } else if (preset.startsWith('0.5')) {
+      val = 0.5;
+    } else {
+      final clean = preset.replaceAll(RegExp(r'[^0-9.]'), '');
+      val = double.tryParse(clean) ?? 1.0;
+    }
+    controller.text = val % 1 == 0 ? val.toStringAsFixed(0) : val.toStringAsFixed(2);
+  }
 
   @override
   void initState() {
@@ -84,6 +204,39 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
           'tax': item.taxRate,
         });
       }
+    } else if (widget.initialCustomerName != null || widget.initialItemData != null) {
+      final cust = widget.initialCustomerName?.trim() ?? 'Walk-in Customer';
+      _isWalkIn = cust == 'Walk-in Customer' && (widget.initialCustomerPhone == null || widget.initialCustomerPhone!.isEmpty);
+      _customerNameController.text = cust;
+      if (widget.initialCustomerPhone != null) _customerPhoneController.text = widget.initialCustomerPhone!;
+      if (widget.initialPaidAmount != null) _paidAmountController.text = widget.initialPaidAmount!.toStringAsFixed(0);
+      if (widget.initialPaymentMode != null) _paymentMode = widget.initialPaymentMode!;
+      if (widget.initialPaymentStatus != null) _paymentStatus = widget.initialPaymentStatus!;
+      if (widget.initialNotes != null) _notesController.text = widget.initialNotes!;
+
+      if (widget.initialItemData != null && widget.initialItemData!.isNotEmpty) {
+        for (var item in widget.initialItemData!) {
+          final q = (item['quantity'] is num) ? (item['quantity'] as num).toDouble() : 1.0;
+          final p = (item['unit_price'] is num)
+              ? (item['unit_price'] as num).toDouble()
+              : ((item['price'] is num) ? (item['price'] as num).toDouble() : 0.0);
+          final c = (item['purchase_price'] is num) ? (item['purchase_price'] as num).toDouble() : null;
+          final t = (item['tax_rate'] is num) ? (item['tax_rate'] as num).toDouble() : 0.0;
+          final u = item['unit']?.toString() ?? 'pcs';
+          final n = item['item_name']?.toString() ?? item['name']?.toString() ?? 'Item';
+
+          _itemRows.add({
+            'name': TextEditingController(text: n),
+            'qty': TextEditingController(text: q % 1 == 0 ? q.toStringAsFixed(0) : q.toStringAsFixed(2)),
+            'unit': _units.contains(u.toLowerCase()) ? u.toLowerCase() : 'pcs',
+            'price': TextEditingController(text: p > 0 ? p.toStringAsFixed(2) : ''),
+            'cost': TextEditingController(text: c != null ? (c % 1 == 0 ? c.toStringAsFixed(0) : c.toStringAsFixed(2)) : ''),
+            'tax': _taxSlabs.contains(t) ? t : 0.0,
+          });
+        }
+      } else {
+        _addNewItemRow();
+      }
     } else {
       _addNewItemRow();
     }
@@ -95,7 +248,7 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
     try {
       final prof = await DatabaseHelper.instance.getBusinessProfile();
       final sales = await DatabaseHelper.instance.getBusinessSales();
-      final khata = await DatabaseHelper.instance.getKhataEntries();
+      final khata = await DatabaseHelper.instance.getKhataEntries(ledgerType: 'business');
 
       final Map<String, Map<String, String>> uniqueCust = {};
       for (var s in sales) {
@@ -649,13 +802,6 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
           widget.existingSale != null ? 'Edit Sale Bill' : '➕ New Sale / Tax Invoice',
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.picture_as_pdf_rounded),
-            tooltip: 'Save & Generate PDF',
-            onPressed: _isSaving ? null : () => _saveSale(generatePdf: true),
-          ),
-        ],
       ),
       bottomNavigationBar: SafeArea(
         child: Container(
@@ -1053,17 +1199,19 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                             ],
                           ),
                           const SizedBox(height: 8),
+                          // ── ROW 1: QTY, UNIT, SELLING RATE, GST ──
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
                                 flex: 2,
                                 child: TextFormField(
                                   controller: row['qty'],
                                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  decoration: const InputDecoration(
-                                    labelText: 'Qty',
+                                  decoration: InputDecoration(
+                                    labelText: _getQtyLabel(row['unit'] ?? 'pcs'),
                                     isDense: true,
-                                    border: OutlineInputBorder(),
+                                    border: const OutlineInputBorder(),
                                   ),
                                   onChanged: (_) {
                                     setState(() {
@@ -1073,10 +1221,28 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                                 ),
                               ),
                               const SizedBox(width: 6),
-                              DropdownButton<String>(
-                                value: row['unit'],
-                                items: _units.map((u) => DropdownMenuItem(value: u, child: Text(u, style: const TextStyle(fontSize: 12)))).toList(),
-                                onChanged: (u) => setState(() => row['unit'] = u ?? 'pcs'),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey.withValues(alpha: 0.4)),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: _units.contains(row['unit']) ? row['unit'] : 'pcs',
+                                    isDense: true,
+                                    items: _units.map((u) {
+                                      return DropdownMenuItem(
+                                        value: u,
+                                        child: Text(
+                                          u,
+                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (u) => setState(() => row['unit'] = u ?? 'pcs'),
+                                  ),
+                                ),
                               ),
                               const SizedBox(width: 6),
                               Expanded(
@@ -1084,10 +1250,10 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                                 child: TextFormField(
                                   controller: row['price'],
                                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  decoration: const InputDecoration(
-                                    labelText: 'Rate (₹)',
+                                  decoration: InputDecoration(
+                                    labelText: _getRateLabel(row['unit'] ?? 'pcs'),
                                     isDense: true,
-                                    border: OutlineInputBorder(),
+                                    border: const OutlineInputBorder(),
                                   ),
                                   onChanged: (_) {
                                     setState(() {
@@ -1097,67 +1263,165 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                                 ),
                               ),
                               const SizedBox(width: 6),
-                              DropdownButton<double>(
-                                value: row['tax'],
-                                items: _taxSlabs.map((t) => DropdownMenuItem(value: t, child: Text('${t.toStringAsFixed(0)}% GST', style: const TextStyle(fontSize: 11)))).toList(),
-                                onChanged: (t) => setState(() => row['tax'] = t ?? 0.0),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey.withValues(alpha: 0.4)),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<double>(
+                                    value: _taxSlabs.contains(row['tax']) ? row['tax'] : 0.0,
+                                    isDense: true,
+                                    items: _taxSlabs.map((t) {
+                                      return DropdownMenuItem(
+                                        value: t,
+                                        child: Text(
+                                          '${t.toStringAsFixed(0)}% GST',
+                                          style: const TextStyle(fontSize: 11),
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (t) => setState(() => row['tax'] = t ?? 0.0),
+                                  ),
+                                ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                flex: 3,
-                                child: TextFormField(
-                                  controller: row['cost'],
-                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  decoration: InputDecoration(
-                                    labelText: 'Buy / Cost Price (₹) 🔒',
-                                    hintText: 'Purchase cost (Optional)',
-                                    isDense: true,
-                                    prefixIcon: const Icon(Icons.lock_outline_rounded, size: 14, color: Colors.blueGrey),
-                                    border: const OutlineInputBorder(),
-                                    helperText: 'Private (Hidden on bill)',
-                                    helperStyle: GoogleFonts.inter(fontSize: 9.5, color: Colors.grey),
-                                  ),
-                                  onChanged: (_) => setState(() {}),
+
+                          // ── QUICK PRESETS FOR UNIT (e.g. 250g, 500g, 1kg, 25kg) ──
+                          Builder(builder: (ctx) {
+                            final unit = (row['unit'] ?? 'pcs').toString();
+                            final presets = _getQuickPresetsForUnit(unit);
+                            if (presets.isEmpty) return const SizedBox.shrink();
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 6, bottom: 2),
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: presets.map((p) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(right: 4),
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(6),
+                                        onTap: () {
+                                          setState(() {
+                                            _applyQuickPreset(row['qty'], p, unit);
+                                            _updateDiscountFromPercent();
+                                          });
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                                          decoration: BoxDecoration(
+                                            color: primaryColor.withValues(alpha: 0.08),
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(color: primaryColor.withValues(alpha: 0.25)),
+                                          ),
+                                          child: Text(
+                                            p,
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              color: primaryColor,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              Builder(builder: (ctx) {
-                                final q = double.tryParse(row['qty'].text.trim()) ?? 1.0;
-                                final p = double.tryParse(row['price'].text.trim()) ?? 0.0;
-                                final c = double.tryParse(row['cost']?.text.trim() ?? '') ?? 0.0;
-                                final itemProfit = (p - c) * q;
-                                if (c <= 0) return const SizedBox.shrink();
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: (itemProfit >= 0 ? const Color(0xFF10B981) : Colors.redAccent).withOpacity(0.12),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: (itemProfit >= 0 ? const Color(0xFF10B981) : Colors.redAccent).withOpacity(0.3),
+                            );
+                          }),
+
+                          const SizedBox(height: 6),
+
+                          // ── ROW 2: CONFIDENTIAL BUY/COST PRICE & PROFIT PREVIEW ──
+                          Builder(builder: (ctx) {
+                            final unit = (row['unit'] ?? 'pcs').toString();
+                            final q = double.tryParse(row['qty'].text.trim()) ?? 1.0;
+                            final p = double.tryParse(row['price'].text.trim()) ?? 0.0;
+                            final c = double.tryParse(row['cost']?.text.trim() ?? '') ?? 0.0;
+                            final totalItemCost = q * c;
+                            final isCostHigher = c > 0 && c > p;
+                            final itemProfit = (p - c) * q;
+
+                            String helper;
+                            Color helperColor;
+                            if (c <= 0) {
+                              helper = '🔒 Buy rate per $unit (Hidden from customer invoice)';
+                              helperColor = Colors.grey;
+                            } else if (isCostHigher) {
+                              helper = '⚠️ Buy rate (₹${c.toStringAsFixed(1)}/$unit) is HIGHER than Sell rate (₹${p.toStringAsFixed(1)}/$unit)! Loss: -₹${((c - p) * q).toStringAsFixed(0)}';
+                              helperColor = Colors.redAccent;
+                            } else {
+                              helper = '✅ Total Cost: ₹${totalItemCost.toStringAsFixed(1)} (Margin: +₹${(p - c).toStringAsFixed(1)}/$unit)';
+                              helperColor = const Color(0xFF059669);
+                            }
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      flex: 3,
+                                      child: TextFormField(
+                                        controller: row['cost'],
+                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                        decoration: InputDecoration(
+                                          labelText: _getCostLabel(unit),
+                                          hintText: 'e.g. 16 per $unit (Optional)',
+                                          isDense: true,
+                                          prefixIcon: const Icon(Icons.lock_outline_rounded, size: 14, color: Colors.blueGrey),
+                                          border: const OutlineInputBorder(),
+                                          helperText: helper,
+                                          helperMaxLines: 2,
+                                          helperStyle: GoogleFonts.inter(fontSize: 10, color: helperColor, fontWeight: FontWeight.w500),
+                                        ),
+                                        onChanged: (_) => setState(() {}),
+                                      ),
                                     ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Text('Est. Profit', style: GoogleFonts.inter(fontSize: 9.5, color: Colors.grey)),
-                                      Text(
-                                        '${itemProfit >= 0 ? "+" : ""}₹${itemProfit.toStringAsFixed(0)}',
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
-                                          color: itemProfit >= 0 ? const Color(0xFF10B981) : Colors.redAccent,
+                                    if (c > 0) ...[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: (itemProfit >= 0 ? const Color(0xFF10B981) : Colors.redAccent).withValues(alpha: 0.12),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(
+                                            color: (itemProfit >= 0 ? const Color(0xFF10B981) : Colors.redAccent).withValues(alpha: 0.3),
+                                          ),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          children: [
+                                            Text(
+                                              itemProfit >= 0 ? 'Est. Profit' : 'Est. Loss',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 9.5,
+                                                fontWeight: FontWeight.bold,
+                                                color: itemProfit >= 0 ? const Color(0xFF047857) : Colors.redAccent,
+                                              ),
+                                            ),
+                                            Text(
+                                              '${itemProfit >= 0 ? "+" : ""}₹${itemProfit.toStringAsFixed(0)}',
+                                              style: GoogleFonts.outfit(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.bold,
+                                                color: itemProfit >= 0 ? const Color(0xFF10B981) : Colors.redAccent,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
-                                  ),
-                                );
-                              }),
-                            ],
-                          ),
+                                  ],
+                                ),
+                              ],
+                            );
+                          }),
                         ],
                       ),
                     );

@@ -1169,12 +1169,12 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       }
     }
 
-    // Customer Dues & Vendor Dues from Khata
-    final khataEntries = await DatabaseHelper.instance.getKhataEntries();
+    // Customer Dues & Vendor Dues from Khata (Strictly Business Ledger)
+    final khataEntries = await DatabaseHelper.instance.getKhataEntries(ledgerType: 'business');
     double customerLenaHai = 0.0;
     double vendorDenaHai = 0.0;
     for (var k in khataEntries) {
-      if (!k.isSettled) {
+      if (!k.isSettled && k.ledgerType == 'business') {
         if (k.type == 'lent') {
           customerLenaHai += k.amount;
         } else {

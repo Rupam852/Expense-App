@@ -43,6 +43,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
   // ── PERSONAL MODE STATE ──────────────────────────────────────────
   final List<String> _selectedExpenseIds = [];
   DateTime _personalSelectedMonthYear = DateTime.now();
+  bool _initializedPersonalMonth = false;
 
   // ── BUSINESS MODE STATE ──────────────────────────────────────────
   late TabController _tabController;
@@ -56,7 +57,8 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
   String _expenseSearchQuery = '';
 
   // Tax & P&L Statement period
-  String _reportPeriod = 'This Month'; // This Month, Last Month, This Quarter, This FY, All Time
+  String _reportPeriod = 'This Month'; // This Month, Last Month, This Quarter, This FY, All Time, Custom Range, or MMM yyyy
+  DateTimeRange? _customReportRange;
 
   @override
   void initState() {
@@ -72,6 +74,22 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
       }
     });
     _loadBusinessData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initializedPersonalMonth) {
+      final expProv = Provider.of<ExpenseProvider>(context, listen: false);
+      _personalSelectedMonthYear = expProv.selectedMonthYear;
+      final pickedStr = DateFormat('yyyy-MM').format(_personalSelectedMonthYear);
+      final monthExpenses = expProv.expenses.where((e) =>
+        !e.isDeleted && e.ledgerType == 'personal' && DateFormat('yyyy-MM').format(e.transactionDate) == pickedStr
+      ).toList();
+      _selectedExpenseIds.clear();
+      _selectedExpenseIds.addAll(monthExpenses.map((e) => e.id));
+      _initializedPersonalMonth = true;
+    }
   }
 
   @override
@@ -131,6 +149,9 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
       !e.isDeleted && e.ledgerType == 'personal' && DateFormat('yyyy-MM').format(e.transactionDate) == pickedStr
     ).toList();
 
+    final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+    expenseProvider.setSelectedMonthYear(picked);
+
     setState(() {
       _personalSelectedMonthYear = picked;
       _selectedExpenseIds.clear();
@@ -141,6 +162,264 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
         CustomToast.show(context, '✅ Auto-selected ${monthExpenses.length} transactions for ${DateFormat('MMMM yyyy').format(picked)}');
       }
     });
+  }
+
+  void _showPersonalMonthPickerModal(BuildContext context, ExpenseProvider expenseProvider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    int displayYear = _personalSelectedMonthYear.year;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final now = DateTime.now();
+            final months = [
+              {'name': 'Jan', 'month': 1, 'full': 'January'},
+              {'name': 'Feb', 'month': 2, 'full': 'February'},
+              {'name': 'Mar', 'month': 3, 'full': 'March'},
+              {'name': 'Apr', 'month': 4, 'full': 'April'},
+              {'name': 'May', 'month': 5, 'full': 'May'},
+              {'name': 'Jun', 'month': 6, 'full': 'June'},
+              {'name': 'Jul', 'month': 7, 'full': 'July'},
+              {'name': 'Aug', 'month': 8, 'full': 'August'},
+              {'name': 'Sep', 'month': 9, 'full': 'September'},
+              {'name': 'Oct', 'month': 10, 'full': 'October'},
+              {'name': 'Nov', 'month': 11, 'full': 'November'},
+              {'name': 'Dec', 'month': 12, 'full': 'December'},
+            ];
+
+            return Container(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF181B22) : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.18),
+                    blurRadius: 20,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Drag Handle
+                  Container(
+                    width: 42,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+
+                  // Header with Year Navigator
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Select Statement Month',
+                            style: GoogleFonts.outfit(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                          Text(
+                            'Compile invoices for any month',
+                            style: GoogleFonts.inter(
+                              fontSize: 11.5,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF242936) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF333D4F) : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.chevron_left, size: 20),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                              onPressed: () {
+                                setModalState(() => displayYear--);
+                              },
+                            ),
+                            Text(
+                              '$displayYear',
+                              style: GoogleFonts.outfit(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF00D09C),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.chevron_right, size: 20),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                              onPressed: () {
+                                setModalState(() => displayYear++);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // 12-Month Grid
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      childAspectRatio: 2.1,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                    ),
+                    itemCount: 12,
+                    itemBuilder: (context, index) {
+                      final m = months[index];
+                      final mNum = m['month'] as int;
+                      final isSelected = _personalSelectedMonthYear.year == displayYear && _personalSelectedMonthYear.month == mNum;
+                      final isCurrentMonth = now.year == displayYear && now.month == mNum;
+
+                      // Count personal transactions for this month
+                      final count = expenseProvider.expenses.where((e) {
+                        return !e.isDeleted &&
+                            e.ledgerType == 'personal' &&
+                            e.transactionDate.year == displayYear &&
+                            e.transactionDate.month == mNum;
+                      }).length;
+
+                      return InkWell(
+                        onTap: () {
+                          Navigator.of(ctx).pop();
+                          _onSelectMonthYear(DateTime(displayYear, mNum), expenseProvider.expenses);
+                        },
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: isSelected
+                                ? const LinearGradient(
+                                    colors: [Color(0xFF00D09C), Color(0xFF05B488)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  )
+                                : null,
+                            color: isSelected
+                                ? null
+                                : (isDark ? const Color(0xFF202632) : const Color(0xFFF8FAFC)),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(0xFF00D09C)
+                                  : (isCurrentMonth
+                                      ? const Color(0xFF00D09C).withOpacity(0.5)
+                                      : (isDark ? const Color(0xFF2C3545) : const Color(0xFFE2E8F0))),
+                              width: isCurrentMonth ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    m['name'] as String,
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 13.5,
+                                      fontWeight: isSelected || isCurrentMonth ? FontWeight.bold : FontWeight.w600,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : (isDark ? Colors.white : Colors.black87),
+                                    ),
+                                  ),
+                                  if (count > 0)
+                                    Text(
+                                      '$count txns',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w500,
+                                        color: isSelected
+                                            ? Colors.white.withOpacity(0.85)
+                                            : const Color(0xFF00D09C),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              if (isCurrentMonth && !isSelected)
+                                Positioned(
+                                  top: 4,
+                                  right: 6,
+                                  child: Container(
+                                    width: 5,
+                                    height: 5,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF00D09C),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Quick Action: Return to Current Month
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        _onSelectMonthYear(DateTime.now(), expenseProvider.expenses);
+                      },
+                      icon: const Icon(Icons.today_rounded, size: 16),
+                      label: Text(
+                        'Jump to Current Month (${DateFormat('MMM yyyy').format(DateTime.now())})',
+                        style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDark ? const Color(0xFF242936) : const Color(0xFFF1F5F9),
+                        foregroundColor: const Color(0xFF00D09C),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(
+                            color: isDark ? const Color(0xFF333D4F) : const Color(0xFFCBD5E1),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void _generatePersonalInvoice() async {
@@ -482,6 +761,10 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
   }
 
   DateTimeRange _getReportDateRange() {
+    if (_customReportRange != null) {
+      return _customReportRange!;
+    }
+
     final now = DateTime.now();
     DateTime start;
     DateTime end = DateTime(now.year, now.month, now.day, 23, 59, 59);
@@ -506,6 +789,106 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
     return DateTimeRange(start: start, end: end);
   }
 
+  Future<void> _showMonthYearReportPicker() async {
+    final now = DateTime.now();
+    int selectedYear = _customReportRange != null ? _customReportRange!.start.year : now.year;
+    int selectedMonth = _customReportRange != null ? _customReportRange!.start.month : now.month;
+
+    final months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.calendar_month_rounded, color: Color(0xFF3B82F6), size: 22),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Select Month & Year',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_rounded, size: 18),
+                    onPressed: () => setDlgState(() => selectedYear--),
+                  ),
+                  Text(
+                    '$selectedYear',
+                    style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
+                    onPressed: () => setDlgState(() => selectedYear++),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: List.generate(12, (index) {
+                  final mIndex = index + 1;
+                  final isSel = selectedMonth == mIndex;
+                  return ChoiceChip(
+                    label: Text(months[index].substring(0, 3)),
+                    selected: isSel,
+                    selectedColor: const Color(0xFF3B82F6).withValues(alpha: 0.2),
+                    onSelected: (val) {
+                      if (val) setDlgState(() => selectedMonth = mIndex);
+                    },
+                  );
+                }),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF3B82F6),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                final start = DateTime(selectedYear, selectedMonth, 1);
+                final end = DateTime(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
+                setState(() {
+                  _customReportRange = DateTimeRange(start: start, end: end);
+                  _reportPeriod = '${months[selectedMonth - 1]} $selectedYear';
+                });
+              },
+              child: const Text('Apply Month'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── TAX & P&L STATEMENT EXPORTS ────────────────────────────────────
   Future<void> _exportTaxReportPdf() async {
     final range = _getReportDateRange();
     CustomToast.show(context, 'Generating Tax Report PDF...');
@@ -544,6 +927,86 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
       }
     } else {
       CustomToast.show(context, 'Failed to generate Excel sheet', isError: true);
+    }
+  }
+
+  // ── DETAILED SALES & MARGIN REPORT EXPORTS ─────────────────────────
+  Future<void> _exportSalesReportPdf() async {
+    final range = _getReportDateRange();
+    CustomToast.show(context, 'Generating Sales Register PDF...');
+    final file = await BusinessExportHelper.generateSalesReportPdf(
+      sales: _businessSales,
+      profile: _businessProfile,
+      startDate: range.start,
+      endDate: range.end,
+    );
+    if (!mounted) return;
+    if (file != null) {
+      CustomToast.show(context, '📁 Saved to Downloads & Opening...');
+      await OpenFile.open(file.path);
+    } else {
+      CustomToast.show(context, 'Failed to export Sales PDF', isError: true);
+    }
+  }
+
+  Future<void> _exportSalesReportExcel() async {
+    final range = _getReportDateRange();
+    CustomToast.show(context, 'Generating Sales Excel Sheet (.xlsx)...');
+    final file = await BusinessExportHelper.generateSalesReportExcel(
+      sales: _businessSales,
+      profile: _businessProfile,
+      startDate: range.start,
+      endDate: range.end,
+    );
+    if (!mounted) return;
+    if (file != null) {
+      CustomToast.show(context, '📁 Saved to Downloads & Opening...');
+      final result = await OpenFile.open(file.path);
+      if (result.type != ResultType.done && mounted) {
+        await Share.shareXFiles([XFile(file.path)], text: 'Business Sales Register (${_reportPeriod})');
+      }
+    } else {
+      CustomToast.show(context, 'Failed to generate Sales Excel sheet', isError: true);
+    }
+  }
+
+  // ── BUSINESS OPERATING EXPENSES REPORT EXPORTS ─────────────────────
+  Future<void> _exportExpenseReportPdf() async {
+    final range = _getReportDateRange();
+    CustomToast.show(context, 'Generating Business Expenses PDF...');
+    final file = await BusinessExportHelper.generateExpenseReportPdf(
+      expenses: _businessExpenses,
+      profile: _businessProfile,
+      startDate: range.start,
+      endDate: range.end,
+    );
+    if (!mounted) return;
+    if (file != null) {
+      CustomToast.show(context, '📁 Saved to Downloads & Opening...');
+      await OpenFile.open(file.path);
+    } else {
+      CustomToast.show(context, 'Failed to export Expenses PDF', isError: true);
+    }
+  }
+
+  Future<void> _exportExpenseReportExcel() async {
+    final range = _getReportDateRange();
+    CustomToast.show(context, 'Generating Expenses Excel Sheet (.xlsx)...');
+    final file = await BusinessExportHelper.generateExpenseReportExcel(
+      expenses: _businessExpenses,
+      profile: _businessProfile,
+      startDate: range.start,
+      endDate: range.end,
+    );
+    if (!mounted) return;
+    if (file != null) {
+      CustomToast.show(context, '📁 Saved to Downloads & Opening...');
+      final result = await OpenFile.open(file.path);
+      if (result.type != ResultType.done && mounted) {
+        await Share.shareXFiles([XFile(file.path)], text: 'Business Expenses Register (${_reportPeriod})');
+      }
+    } else {
+      CustomToast.show(context, 'Failed to generate Expenses Excel sheet', isError: true);
     }
   }
 
@@ -1036,20 +1499,88 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
-            children: ['This Month', 'Last Month', 'This Quarter', 'This FY', 'All Time'].map((p) {
-              final isSelected = _reportPeriod == p;
-              return Padding(
+            children: [
+              ...['This Month', 'Last Month', 'This Quarter', 'This FY', 'All Time'].map((p) {
+                final isSelected = _reportPeriod == p && _customReportRange == null;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(p, style: TextStyle(fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                    selected: isSelected,
+                    selectedColor: primaryColor.withValues(alpha: 0.2),
+                    onSelected: (val) {
+                      if (val) {
+                        setState(() {
+                          _reportPeriod = p;
+                          _customReportRange = null;
+                        });
+                      }
+                    },
+                  ),
+                );
+              }),
+
+              // Month & Year Picker Chip
+              Padding(
                 padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  label: Text(p, style: TextStyle(fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-                  selected: isSelected,
-                  selectedColor: primaryColor.withOpacity(0.2),
-                  onSelected: (val) {
-                    if (val) setState(() => _reportPeriod = p);
+                child: ActionChip(
+                  avatar: const Icon(Icons.calendar_month_rounded, size: 16, color: Color(0xFF3B82F6)),
+                  label: Text(
+                    _reportPeriod.contains('202')
+                        ? '🗓️ $_reportPeriod'
+                        : 'Month & Year 🗓️',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: _reportPeriod.contains('202') ? FontWeight.bold : FontWeight.normal,
+                      color: _reportPeriod.contains('202') ? const Color(0xFF3B82F6) : null,
+                    ),
+                  ),
+                  backgroundColor: _reportPeriod.contains('202')
+                      ? const Color(0xFF3B82F6).withValues(alpha: 0.15)
+                      : null,
+                  onPressed: _showMonthYearReportPicker,
+                ),
+              ),
+
+              // Custom Date Range Picker Chip
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ActionChip(
+                  avatar: const Icon(Icons.date_range_rounded, size: 16, color: Color(0xFF3B82F6)),
+                  label: Text(
+                    _customReportRange != null && !_reportPeriod.contains('202')
+                        ? '${DateFormat('dd MMM').format(_customReportRange!.start)} - ${DateFormat('dd MMM').format(_customReportRange!.end)}'
+                        : 'Custom Range 📅',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: _customReportRange != null && !_reportPeriod.contains('202') ? FontWeight.bold : FontWeight.normal,
+                      color: _customReportRange != null && !_reportPeriod.contains('202') ? const Color(0xFF3B82F6) : null,
+                    ),
+                  ),
+                  backgroundColor: _customReportRange != null && !_reportPeriod.contains('202')
+                      ? const Color(0xFF3B82F6).withValues(alpha: 0.15)
+                      : null,
+                  onPressed: () async {
+                    final picked = await showDateRangePicker(
+                      context: context,
+                      firstDate: DateTime(2020, 1, 1),
+                      lastDate: DateTime(2100, 12, 31),
+                      initialDateRange: _customReportRange ??
+                          DateTimeRange(
+                            start: DateTime(DateTime.now().year, DateTime.now().month, 1),
+                            end: DateTime.now(),
+                          ),
+                    );
+                    if (picked != null) {
+                      setState(() {
+                        _customReportRange = picked;
+                        _reportPeriod = 'Custom Range';
+                      });
+                    }
                   },
                 ),
-              );
-            }).toList(),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 14),
@@ -1154,44 +1685,158 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
             ],
           ),
         ),
-        const SizedBox(height: 18),
-
-        // 1-Click Export Buttons
-        Text('Download Accounts & Tax Reports', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _exportTaxReportPdf,
-                icon: const Icon(Icons.picture_as_pdf_rounded, size: 20),
-                label: const Text('PDF Tax Report'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF047857), // Emerald Green
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _exportTaxReportExcel,
-                icon: const Icon(Icons.table_chart_rounded, size: 20),
-                label: const Text('Excel Sheet (.xlsx)'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1D6F42), // Excel Green
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
-          ],
-        ),
         const SizedBox(height: 20),
+
+        // ══════════════════════════════════════════════════════════════
+        // SECTION 1: DOWNLOAD ACCOUNTS & TAX REPORTS
+        // ══════════════════════════════════════════════════════════════
+        _buildExportSectionCard(
+          title: '1. Download Accounts & Tax Reports',
+          subtitle: 'Complete P&L statement with GST tax liability summary',
+          icon: Icons.account_balance_wallet_rounded,
+          iconColor: const Color(0xFF047857),
+          pdfButtonText: 'Tax Statement (PDF)',
+          excelButtonText: 'Tax Statement (Excel)',
+          pdfColor: const Color(0xFF047857),
+          excelColor: const Color(0xFF1D6F42),
+          onPdfPressed: _exportTaxReportPdf,
+          onExcelPressed: _exportTaxReportExcel,
+          isDark: isDark,
+        ),
+        const SizedBox(height: 16),
+
+        // ══════════════════════════════════════════════════════════════
+        // SECTION 2: DOWNLOAD SALES & PROFIT REPORT
+        // ══════════════════════════════════════════════════════════════
+        _buildExportSectionCard(
+          title: '2. Download Sales & Profit Register',
+          subtitle: 'Item-wise bills, confidential Buy Cost 🔒, selling price & profit margin',
+          icon: Icons.receipt_long_rounded,
+          iconColor: const Color(0xFF2563EB),
+          pdfButtonText: 'Sales Register (PDF)',
+          excelButtonText: 'Sales Register (Excel)',
+          pdfColor: const Color(0xFF2563EB),
+          excelColor: const Color(0xFF1E40AF),
+          onPdfPressed: _exportSalesReportPdf,
+          onExcelPressed: _exportSalesReportExcel,
+          isDark: isDark,
+        ),
+        const SizedBox(height: 16),
+
+        // ══════════════════════════════════════════════════════════════
+        // SECTION 3: DOWNLOAD BUSINESS EXPENSES REPORT
+        // ══════════════════════════════════════════════════════════════
+        _buildExportSectionCard(
+          title: '3. Download Business Expenses Data',
+          subtitle: 'Category-wise operating expense entries and vouchers record',
+          icon: Icons.payments_rounded,
+          iconColor: const Color(0xFFEA580C),
+          pdfButtonText: 'Expense Register (PDF)',
+          excelButtonText: 'Expense Register (Excel)',
+          pdfColor: const Color(0xFFEA580C),
+          excelColor: const Color(0xFFC2410C),
+          onPdfPressed: _exportExpenseReportPdf,
+          onExcelPressed: _exportExpenseReportExcel,
+          isDark: isDark,
+        ),
+        const SizedBox(height: 24),
       ],
+    );
+  }
+
+  Widget _buildExportSectionCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color iconColor,
+    required String pdfButtonText,
+    required String excelButtonText,
+    required Color pdfColor,
+    required Color excelColor,
+    required VoidCallback onPdfPressed,
+    required VoidCallback onExcelPressed,
+    required bool isDark,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: iconColor, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: onPdfPressed,
+                  icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+                  label: Text(pdfButtonText, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: pdfColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: onExcelPressed,
+                  icon: const Icon(Icons.table_chart_rounded, size: 18),
+                  label: Text(excelButtonText, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: excelColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -1299,18 +1944,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
                   ],
                 ),
                 InkWell(
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: _personalSelectedMonthYear,
-                      firstDate: DateTime(2020, 1, 1),
-                      lastDate: DateTime(2100, 12, 31),
-                      helpText: 'Select Month & Year for Statement',
-                    );
-                    if (picked != null) {
-                      _onSelectMonthYear(picked, expenseProvider.expenses);
-                    }
-                  },
+                  onTap: () => _showPersonalMonthPickerModal(context, expenseProvider),
                   borderRadius: BorderRadius.circular(10),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

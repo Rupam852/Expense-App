@@ -17,7 +17,6 @@ import '../screens/expense_entry_screen.dart';
 import '../screens/budget_screen.dart';
 import '../screens/analytics_screen.dart';
 import '../screens/invoice_screen.dart';
-import '../screens/invoice_history_screen.dart';
 import 'app_update_service.dart';
 import 'supabase_service.dart';
 
@@ -469,13 +468,9 @@ class NotificationService with ChangeNotifier {
         Navigator.of(context).push(
           MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
         );
-      } else if (payload == 'month_end_reminder') {
+      } else if (payload == 'month_end_reminder' || payload == 'new_month_start') {
         Navigator.of(context).push(
           MaterialPageRoute(builder: (context) => const InvoiceScreen()),
-        );
-      } else if (payload == 'new_month_start') {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => const InvoiceHistoryScreen()),
         );
       }
     } catch (e) {

@@ -117,12 +117,12 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
       }
       periodExpenses.sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
 
-      // Fetch Khata Dues
-      final khataEntries = await DatabaseHelper.instance.getKhataEntries();
+      // Fetch Khata Dues (Strictly Business Ledger)
+      final khataEntries = await DatabaseHelper.instance.getKhataEntries(ledgerType: 'business');
       double lenaHai = 0.0;
       double denaHai = 0.0;
       for (var k in khataEntries) {
-        if (!k.isSettled) {
+        if (!k.isSettled && k.ledgerType == 'business') {
           if (k.type == 'lent') {
             lenaHai += k.amount;
           } else {
@@ -294,6 +294,106 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
             child: Text('Save Profile', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _showMonthYearPicker() async {
+    final now = DateTime.now();
+    int selectedYear = _customSelectedRange != null ? _customSelectedRange!.start.year : now.year;
+    int selectedMonth = _customSelectedRange != null ? _customSelectedRange!.start.month : now.month;
+
+    final months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.calendar_month_rounded, color: Color(0xFF3B82F6), size: 22),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Select Month & Year',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_rounded, size: 18),
+                    onPressed: () => setDlgState(() => selectedYear--),
+                  ),
+                  Text(
+                    '$selectedYear',
+                    style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
+                    onPressed: () => setDlgState(() => selectedYear++),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: List.generate(12, (index) {
+                  final mIndex = index + 1;
+                  final isSel = selectedMonth == mIndex;
+                  return ChoiceChip(
+                    label: Text(months[index].substring(0, 3)),
+                    selected: isSel,
+                    selectedColor: const Color(0xFF3B82F6).withValues(alpha: 0.2),
+                    onSelected: (val) {
+                      if (val) setDlgState(() => selectedMonth = mIndex);
+                    },
+                  );
+                }),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF3B82F6),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                final start = DateTime(selectedYear, selectedMonth, 1);
+                final end = DateTime(selectedYear, selectedMonth + 1, 0, 23, 59, 59);
+                setState(() {
+                  _customSelectedRange = DateTimeRange(start: start, end: end);
+                  _filterPeriod = '${months[selectedMonth - 1]} $selectedYear';
+                });
+                _loadDashboardData(isQuiet: true);
+              },
+              child: const Text('Apply Month'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -532,21 +632,44 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                       ),
                     );
                   }),
+                  // Month & Year Picker Chip
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ActionChip(
+                      avatar: const Icon(Icons.calendar_month_rounded, size: 16, color: Color(0xFF3B82F6)),
+                      label: Text(
+                        _filterPeriod.contains('202') // If month year formatted like "October 2026"
+                            ? '🗓️ $_filterPeriod'
+                            : 'Month & Year 🗓️',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: _filterPeriod.contains('202') ? FontWeight.bold : FontWeight.normal,
+                          color: _filterPeriod.contains('202') ? const Color(0xFF3B82F6) : null,
+                        ),
+                      ),
+                      backgroundColor: _filterPeriod.contains('202')
+                          ? const Color(0xFF3B82F6).withValues(alpha: 0.15)
+                          : null,
+                      onPressed: _showMonthYearPicker,
+                    ),
+                  ),
+
+                  // Custom Range Picker Chip
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ActionChip(
                       avatar: const Icon(Icons.date_range_rounded, size: 16, color: Color(0xFF3B82F6)),
                       label: Text(
-                        _customSelectedRange != null
+                        _customSelectedRange != null && !_filterPeriod.contains('202')
                             ? '${DateFormat('dd MMM').format(_customSelectedRange!.start)} - ${DateFormat('dd MMM').format(_customSelectedRange!.end)}'
-                            : 'Choose Range / Month 🗓️',
+                            : 'Custom Range 📅',
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: _customSelectedRange != null ? FontWeight.bold : FontWeight.normal,
-                          color: _customSelectedRange != null ? const Color(0xFF3B82F6) : null,
+                          fontWeight: _customSelectedRange != null && !_filterPeriod.contains('202') ? FontWeight.bold : FontWeight.normal,
+                          color: _customSelectedRange != null && !_filterPeriod.contains('202') ? const Color(0xFF3B82F6) : null,
                         ),
                       ),
-                      backgroundColor: _customSelectedRange != null
+                      backgroundColor: _customSelectedRange != null && !_filterPeriod.contains('202')
                           ? const Color(0xFF3B82F6).withValues(alpha: 0.15)
                           : null,
                       onPressed: () async {
@@ -750,15 +873,11 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
             Row(
               children: [
                 _buildActionButton(
-                  label: '➕ New Sale',
-                  icon: Icons.point_of_sale_rounded,
+                  label: '+ Add',
+                  subtitle: 'Sale / Expense',
+                  icon: Icons.add_circle_outline_rounded,
                   color: primaryColor,
-                  onTap: () async {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const AddBusinessSaleScreen()),
-                    );
-                    _loadDashboardData(isQuiet: true);
-                  },
+                  onTap: _showAddEntryBottomSheet,
                 ),
                 const SizedBox(width: 8),
                 _buildActionButton(
@@ -970,8 +1089,200 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
     );
   }
 
+  void _showAddEntryBottomSheet() {
+    HapticFeedback.lightImpact();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      isDismissible: true,
+      enableDrag: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Drag Handle & Close Button
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const SizedBox(width: 32),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 20, color: Colors.grey),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // Header Title
+            Text(
+              'Add New Entry',
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            Text(
+              'Select what you would like to record for your business',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Option 1: New Sale / Tax Invoice
+            InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () async {
+                Navigator.of(ctx).pop();
+                await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AddBusinessSaleScreen()),
+                );
+                _loadDashboardData(isQuiet: true);
+              },
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3B82F6).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.point_of_sale_rounded, color: Colors.white, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'New Sale / Tax Invoice',
+                            style: GoogleFonts.outfit(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Record customer sale, create GST tax invoice & bill',
+                            style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF3B82F6)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Option 2: Business Expense
+            InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () async {
+                Navigator.of(ctx).pop();
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ExpenseEntryScreen(initialLedgerType: 'business'),
+                  ),
+                );
+                _loadDashboardData(isQuiet: true);
+              },
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.receipt_long_rounded, color: Colors.white, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Business Expense',
+                            style: GoogleFonts.outfit(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Log shop expenses, stock purchase, rent, utility bills',
+                            style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFFF59E0B)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildActionButton({
     required String label,
+    String? subtitle,
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
@@ -984,7 +1295,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
         },
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(12),
@@ -994,7 +1305,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon, color: color, size: 20),
-              const SizedBox(height: 4),
+              const SizedBox(height: 3),
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
@@ -1004,6 +1315,18 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                   maxLines: 1,
                 ),
               ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 1),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    subtitle,
+                    style: GoogleFonts.inter(fontSize: 8.5, fontWeight: FontWeight.w500, color: color.withValues(alpha: 0.85)),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                  ),
+                ),
+              ],
             ],
           ),
         ),

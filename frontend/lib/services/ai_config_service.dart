@@ -1025,7 +1025,10 @@ JSON structure:
   // VOICE & NATURAL LANGUAGE EXPENSE PARSER (Cascaded Failover)
   // ══════════════════════════════════════════════════════════════════════
 
-  Future<Map<String, dynamic>> parseExpenseFromNaturalText(String naturalSpeechText) async {
+  Future<Map<String, dynamic>> parseExpenseFromNaturalText(
+    String naturalSpeechText, {
+    bool isBusinessMode = false,
+  }) async {
     if (naturalSpeechText.trim().isEmpty) {
       return {'success': false, 'error': 'No speech or text detected.'};
     }
@@ -1046,10 +1049,11 @@ JSON structure:
 
     Map<String, dynamic>? primaryResult;
     if (primaryKey.trim().isNotEmpty) {
-      debugPrint('[AiConfigService] Attempting Voice Natural Text Parse with Primary Engine: $primary');
+      debugPrint('[AiConfigService] Attempting Voice Natural Text Parse with Primary Engine: $primary (BusinessMode: $isBusinessMode)');
       primaryResult = await _invokeProviderForNaturalText(
         provider: primary,
         naturalSpeechText: naturalSpeechText,
+        isBusinessMode: isBusinessMode,
       );
 
       if (primaryResult['success'] == true) {
@@ -1060,10 +1064,11 @@ JSON structure:
 
     // Attempt Secondary Engine Failover
     if (secondaryKey.trim().isNotEmpty) {
-      debugPrint('[AiConfigService] Failing over to Secondary Engine for Voice: $secondary...');
+      debugPrint('[AiConfigService] Failing over to Secondary Engine for Voice: $secondary (BusinessMode: $isBusinessMode)...');
       var secondaryResult = await _invokeProviderForNaturalText(
         provider: secondary,
         naturalSpeechText: naturalSpeechText,
+        isBusinessMode: isBusinessMode,
       );
 
       if (secondaryResult['success'] == true) {
@@ -1085,10 +1090,12 @@ JSON structure:
   Future<Map<String, dynamic>> _invokeProviderForNaturalText({
     required String provider,
     required String naturalSpeechText,
+    bool isBusinessMode = false,
   }) async {
     final now = DateTime.now();
     final currentDateIso = now.toIso8601String();
-    final promptText = '''You are an expert Universal Multilingual Financial Expense Voice Parser and Translator.
+
+    final personalPrompt = '''You are an expert Universal Multilingual Financial Expense Voice Parser and Translator.
 The user speaks their expense in ANY language or mixture of languages (such as Bengali, Hindi, Hinglish, Marathi, Tamil, Telugu, Gujarati, Kannada, Malayalam, Punjabi, Urdu, English, etc.).
 Your job is to deeply understand their intent, extract all expense parameters, and ALWAYS TRANSLATE & STANDARDIZE the description and merchant to clean, concise, natural ENGLISH.
 
@@ -1110,31 +1117,17 @@ USER SPOKEN TEXT:
 
 2. AMOUNT & NUMBER RECOGNITION (Float Number):
    - Identify the exact expense amount mentioned.
-   - Accurately convert spoken numbers from any language into numeric float:
-     (e.g., "eksho ponchash" -> 150, "dedh sau" -> 150, "dhai hazaar" -> 2500, "paanch sau" -> 500, "duto" -> 2, "saath" -> 60, "panjaas" -> 50, "tin hajar" -> 3000, "two thousand five hundred" -> 2500.0).
+   - Accurately convert spoken numbers from any language into numeric float (e.g., "eksho ponchash" -> 150, "dedh sau" -> 150, "dhai hazaar" -> 2500, "paanch sau" -> 500, "duto" -> 2, "saath" -> 60, "panjaas" -> 50).
    - Return ONLY a numeric float (e.g. 150.0).
 
-3. CURRENCY (ISO 3-Letter Code):
-   - Default to "INR" (Indian Rupee) unless another currency (USD, EUR, GBP, AED, etc.) is explicitly stated. If spoken "taka" or "rupaye" or "rupees" or "bucks", use "INR".
+3. CURRENCY: Default to "INR".
+4. CATEGORY: Match one of: Shopping, Groceries, Food & dining, Transport, Bills & recharges, Transfers, Medical, Travel, Repayments, Personal, Services, Insurance, Entertainment, Gaming, Small shops, Rent, Logistics, Subscription, Investment, Fitness, Pet, Miscellaneous.
+5. PAYMENT METHOD: "UPI", "Cash", "Credit Card", "Debit Card", "Net Banking", "Wallet". Default "UPI".
+6. TRANSACTION DATE: ISO 8601 string.
 
-4. CATEGORY (Strict Classification):
-   - MUST match EXACTLY ONE of the following 22 valid categories:
-     Shopping, Groceries, Food & dining, Transport, Bills & recharges, Transfers, Medical, Travel, Repayments, Personal, Services, Insurance, Entertainment, Gaming, Small shops, Rent, Logistics, Subscription, Investment, Fitness, Pet, Miscellaneous
-
-5. PAYMENT METHOD:
-   - Identify payment method: "UPI", "Cash", "Credit Card", "Debit Card", "Net Banking", "Wallet".
-   - If user mentioned "GPay", "Google Pay", "PhonePe", "Paytm", "UPI", "scanner", "online transfer", classify as "UPI".
-   - If user mentioned "cash", "nagad", "rokh", classify as "Cash". Default is "UPI".
-
-6. TRANSACTION DATE (ISO 8601):
-   - If user mentions "yesterday" / "kal" / "gatokal" / "last night" / "2 days ago" / specific day, calculate the relative date from $currentDateIso.
-   - Otherwise, use $currentDateIso.
-
-### OUTPUT FORMAT:
-Return ONLY a valid, single JSON object without markdown fences, backticks, or conversational text.
-
-JSON format:
+OUTPUT FORMAT: Return ONLY valid JSON:
 {
+  "entry_type": "expense",
   "amount": 150.0,
   "currency": "INR",
   "category": "Food & dining",
@@ -1143,6 +1136,64 @@ JSON format:
   "payment_method": "UPI",
   "transaction_date": "$currentDateIso"
 }''';
+
+    final businessPrompt = '''You are an expert AI Business & Commercial Billing & Expense Voice Parser.
+The user is a shopkeeper / business owner who speaks in ANY language (Hindi, Hinglish, Bengali, Gujarati, Marathi, Tamil, Telugu, English, etc.) about a CUSTOMER SALE or a BUSINESS EXPENSE.
+
+Current Timestamp: $currentDateIso
+
+USER SPOKEN TEXT:
+"$naturalSpeechText"
+
+### YOUR TASK:
+1. Determine if this is a "sale" (customer bill / selling items / udhar to customer) OR an "expense" (shop rent, stock purchase, utility bill, worker salary, vendor payment).
+2. If "sale":
+   - Extract customer name (default "Walk-in Customer" if not mentioned).
+   - Extract item list with item_name, quantity, unit (kg, g, ltr, ml, pcs, pkt, box), unit_price, total_price.
+   - Extract total amount, paid amount, balance due (udhar).
+   - Extract payment mode (Cash, UPI, Credit, Card, Bank Transfer).
+   - Status: "paid", "partial", or "unpaid".
+3. If "expense":
+   - Extract amount, business category ("Stock Purchase", "Shop Rent", "Electricity & Utilities", "Employee Salaries", "Packaging & Shipping", "Marketing", "Maintenance", "General"), description, vendor/payee, payment method.
+
+OUTPUT FORMAT: Return ONLY valid JSON:
+If SALE:
+{
+  "entry_type": "sale",
+  "customer_name": "Raju",
+  "customer_phone": "",
+  "items": [
+    {
+      "item_name": "Rice (Chawal)",
+      "quantity": 25.0,
+      "unit": "kg",
+      "unit_price": 20.0,
+      "total_price": 500.0,
+      "tax_rate": 0.0
+    }
+  ],
+  "total_amount": 500.0,
+  "paid_amount": 400.0,
+  "balance_due": 100.0,
+  "payment_mode": "Cash",
+  "payment_status": "partial",
+  "notes": "25kg Rice sold to Raju",
+  "transaction_date": "$currentDateIso"
+}
+
+If EXPENSE:
+{
+  "entry_type": "expense",
+  "amount": 5000.0,
+  "currency": "INR",
+  "category": "Shop Rent",
+  "description": "Monthly shop rent payment",
+  "vendor": "Landlord",
+  "payment_method": "Net Banking",
+  "transaction_date": "$currentDateIso"
+}''';
+
+    final promptText = isBusinessMode ? businessPrompt : personalPrompt;
 
     if (provider == 'gemini') {
       final geminiKey = effectiveGeminiApiKey;
@@ -1193,7 +1244,7 @@ JSON format:
               if (parts != null && parts.isNotEmpty) {
                 final rawText = parts[0]['text']?.toString() ?? '';
                 final parsed = _extractJsonFromText(rawText);
-                if (parsed != null && parsed.containsKey('amount')) {
+                if (parsed != null && (parsed.containsKey('amount') || parsed.containsKey('total_amount') || parsed.containsKey('entry_type'))) {
                   debugPrint('[AiConfigService] Gemini Voice model $model succeeded!');
                   return {'success': true, 'data': parsed, 'modelUsed': model};
                 }
@@ -1228,19 +1279,16 @@ JSON format:
 
       String? lastNvidiaError;
       for (final model in candidateModels) {
-        debugPrint('[AiConfigService] Attempting NVIDIA NIM Voice parsing with model: $model');
         try {
           final url = Uri.parse('https://integrate.api.nvidia.com/v1/chat/completions');
           final payload = {
             'model': model,
             'messages': [
-              {
-                'role': 'user',
-                'content': promptText,
-              }
+              {'role': 'system', 'content': 'You are a multilingual voice transaction parser. Output pure JSON only.'},
+              {'role': 'user', 'content': promptText},
             ],
-            'max_tokens': 512,
             'temperature': 0.1,
+            'max_tokens': 1024,
           };
 
           final response = await http.post(
@@ -1250,24 +1298,21 @@ JSON format:
               'Authorization': 'Bearer $nvidiaKey',
             },
             body: json.encode(payload),
-          ).timeout(const Duration(seconds: 25));
+          ).timeout(const Duration(seconds: 30));
 
           if (response.statusCode == 200) {
             final resJson = json.decode(response.body);
             final rawText = resJson['choices']?[0]?['message']?['content']?.toString() ?? '';
             final parsed = _extractJsonFromText(rawText);
-            if (parsed != null && parsed.containsKey('amount')) {
-              debugPrint('[AiConfigService] NVIDIA Voice model $model succeeded!');
+            if (parsed != null && (parsed.containsKey('amount') || parsed.containsKey('total_amount') || parsed.containsKey('entry_type'))) {
               return {'success': true, 'data': parsed, 'modelUsed': model};
             }
-            lastNvidiaError = 'Model $model: JSON parsing failed';
+            lastNvidiaError = 'Model $model returned unparseable content';
           } else {
             lastNvidiaError = 'Model $model: HTTP ${response.statusCode}';
-            debugPrint('[AiConfigService] NVIDIA Voice model $model failed (${response.statusCode}). Failing over to next model...');
           }
         } catch (e) {
           lastNvidiaError = 'Model $model: $e';
-          debugPrint('[AiConfigService] NVIDIA Voice model $model error: $e. Failing over to next model...');
         }
       }
 

@@ -367,16 +367,29 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
                                     ),
                                     const SizedBox(height: 12),
 
-                                    // 3. AI Voice / OCR Scan
+                                    // 3. AI Voice Entry
                                     _buildSpeedDialItem(
                                       context: context,
                                       isDark: isDark,
-                                      label: 'AI Voice & Scan',
-                                      subtitle: 'Speak or scan expense',
+                                      label: 'AI Voice Entry',
+                                      subtitle: 'Speak sale or expense',
                                       icon: Icons.mic_rounded,
                                       iconColor: Colors.white,
                                       gradientColors: const [Color(0xFF7C3AED), Color(0xFF6366F1)],
                                       onTap: _openVoiceExpenseDialog,
+                                    ),
+                                    const SizedBox(height: 12),
+
+                                    // 4. Smart OCR Receipt Scanner
+                                    _buildSpeedDialItem(
+                                      context: context,
+                                      isDark: isDark,
+                                      label: 'Smart OCR Scan',
+                                      subtitle: 'Scan vendor bills & receipts',
+                                      icon: Icons.document_scanner_rounded,
+                                      iconColor: Colors.white,
+                                      gradientColors: const [Color(0xFF2563EB), Color(0xFF38BDF8)],
+                                      onTap: _openOcrScanner,
                                     ),
                                   ],
                                 )

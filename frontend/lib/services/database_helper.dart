@@ -397,10 +397,27 @@ class DatabaseHelper {
           category TEXT,
           notes TEXT,
           sync_status INTEGER NOT NULL DEFAULT 0,
+          is_synced INTEGER NOT NULL DEFAULT 0,
+          is_deleted INTEGER NOT NULL DEFAULT 0,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL
         )
       ''');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE business_sales ADD COLUMN is_synced INTEGER NOT NULL DEFAULT 0');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE business_sales ADD COLUMN sync_status INTEGER NOT NULL DEFAULT 0');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE business_items ADD COLUMN is_synced INTEGER NOT NULL DEFAULT 0');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE business_items ADD COLUMN sync_status INTEGER NOT NULL DEFAULT 0');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE business_items ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0');
     } catch (_) {}
   }
 
@@ -656,6 +673,7 @@ class DatabaseHelper {
         note TEXT,
         is_settled INTEGER NOT NULL DEFAULT 0,
         settled_at TEXT,
+        ledger_type TEXT NOT NULL DEFAULT 'personal',
         is_deleted INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
@@ -761,6 +779,7 @@ class DatabaseHelper {
         notes TEXT,
         items_json TEXT,
         sync_status INTEGER NOT NULL DEFAULT 0,
+        is_synced INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
@@ -795,6 +814,8 @@ class DatabaseHelper {
         category TEXT,
         notes TEXT,
         sync_status INTEGER NOT NULL DEFAULT 0,
+        is_synced INTEGER NOT NULL DEFAULT 0,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
@@ -2272,7 +2293,10 @@ class DatabaseHelper {
 
   Future<List<Map<String, dynamic>>> getUnsyncedBusinessSales() async {
     final db = await instance.database;
-    return await db.query('business_sales', where: 'is_synced = 0');
+    return await db.query(
+      'business_sales',
+      where: 'is_synced = 0 OR sync_status = 0',
+    );
   }
 
   Future<void> markBusinessSalesSynced(List<String> ids) async {
@@ -2280,7 +2304,7 @@ class DatabaseHelper {
     if (ids.isEmpty) return;
     await db.update(
       'business_sales',
-      {'is_synced': 1},
+      {'is_synced': 1, 'sync_status': 1},
       where: 'id IN (${ids.map((_) => '?').join(', ')})',
       whereArgs: ids,
     );
@@ -2292,6 +2316,7 @@ class DatabaseHelper {
       for (final s in sales) {
         final map = s.toMap();
         map['is_synced'] = 1;
+        map['sync_status'] = 1;
         await txn.insert(
           'business_sales',
           map,
@@ -2410,7 +2435,10 @@ class DatabaseHelper {
 
   Future<List<Map<String, dynamic>>> getUnsyncedBusinessItems() async {
     final db = await instance.database;
-    return await db.query('business_items', where: 'sync_status = 0');
+    return await db.query(
+      'business_items',
+      where: 'sync_status = 0 OR is_synced = 0',
+    );
   }
 
   Future<void> markBusinessItemsSynced(List<String> ids) async {
@@ -2418,7 +2446,7 @@ class DatabaseHelper {
     if (ids.isEmpty) return;
     await db.update(
       'business_items',
-      {'sync_status': 1},
+      {'sync_status': 1, 'is_synced': 1},
       where: 'id IN (${ids.map((_) => '?').join(', ')})',
       whereArgs: ids,
     );
@@ -2430,6 +2458,7 @@ class DatabaseHelper {
       for (final it in items) {
         final map = it.toMap();
         map['sync_status'] = 1;
+        map['is_synced'] = 1;
         await txn.insert(
           'business_items',
           map,
