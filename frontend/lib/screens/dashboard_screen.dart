@@ -3064,6 +3064,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         },
                       ),
 
+                      // Business Mode Switcher
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF00D09C), Color(0xFF059669)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 22),
+                        ),
+                        title: Row(
+                          children: [
+                            Text(
+                              'Switch to Business Mode',
+                              style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF00D09C).withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                'PRO',
+                                style: GoogleFonts.inter(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF00D09C),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        subtitle: Text(
+                          'Sales, GST Billing, Customer Udhar Khata & P&L',
+                          style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                        ),
+                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          userProvider.toggleAppMode(true);
+                          CustomToast.show(context, 'Switched to Business Mode 🏢');
+                        },
+                      ),
+
                       // Bank SMS Auto-Expense Parser
                       ListTile(
                         contentPadding: const EdgeInsets.symmetric(horizontal: 4),
@@ -3501,6 +3552,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ? Colors.amber[800] 
                         : const Color(0xFF00D09C),
                   ),
+          ),
+          // Business Mode Switcher Pill
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+            child: InkWell(
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                userProvider.toggleAppMode(true);
+                CustomToast.show(context, 'Switched to Business Mode 🏢');
+              },
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF00D09C), Color(0xFF059669)],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF00D09C).withOpacity(0.35),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.storefront_rounded, color: Colors.black, size: 15),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Business',
+                      style: GoogleFonts.outfit(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
           IconButton(
             onPressed: () => Navigator.of(context).push(

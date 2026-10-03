@@ -24,6 +24,7 @@ class UserProvider with ChangeNotifier {
   bool _biometricsEnabled = false;
   bool _highRefreshRateEnabled = true; // Default ON for smooth 90Hz/120Hz/144Hz
   bool _showSpendingPredictionInBudget = false; // Default OFF: only shown in Budgets if enabled
+  bool _isBusinessMode = false;
   String? _errorMessage;
   String? _userGeminiApiKey;
   bool _showApiKeyPrompt = false;
@@ -37,6 +38,7 @@ class UserProvider with ChangeNotifier {
   bool get biometricsEnabled => _biometricsEnabled;
   bool get highRefreshRateEnabled => _highRefreshRateEnabled;
   bool get showSpendingPredictionInBudget => _showSpendingPredictionInBudget;
+  bool get isBusinessMode => _isBusinessMode;
   String? get errorMessage => _errorMessage;
   String? get userGeminiApiKey => _userGeminiApiKey;
   String? get userNvidiaApiKey => _userProfile?['nvidia_api_key'];
@@ -88,6 +90,17 @@ class UserProvider with ChangeNotifier {
     }
   }
 
+  Future<void> toggleAppMode(bool isBusiness) async {
+    _isBusinessMode = isBusiness;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('app_working_mode', isBusiness ? 'business' : 'personal');
+    } catch (e) {
+      debugPrint('[UserProvider] Error saving app mode: $e');
+    }
+  }
+
   Future<void> _applyRefreshRate(bool highRate) async {
     if (!Platform.isAndroid) return;
     try {
@@ -129,6 +142,9 @@ class UserProvider with ChangeNotifier {
       } else {
         _themeMode = ThemeMode.system;
       }
+
+      final savedMode = prefs.getString('app_working_mode');
+      _isBusinessMode = savedMode == 'business';
 
       _highRefreshRateEnabled = prefs.getBool('high_refresh_rate') ?? true;
       _applyRefreshRate(_highRefreshRateEnabled);

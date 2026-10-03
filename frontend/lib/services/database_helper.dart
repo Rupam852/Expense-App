@@ -9,6 +9,8 @@ import '../models/payment_detail.dart';
 import '../models/khata_entry.dart';
 import '../models/split_bill.dart';
 import '../models/subscription_item.dart';
+import '../models/business_sale.dart';
+import '../models/business_profile.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -324,6 +326,53 @@ class DatabaseHelper {
     try {
       await db.execute('ALTER TABLE ai_chat_messages ADD COLUMN session_id TEXT');
     } catch (_) {}
+    try {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS business_sales (
+          id TEXT PRIMARY KEY,
+          customer_id TEXT,
+          customer_name TEXT NOT NULL,
+          customer_phone TEXT,
+          customer_address TEXT,
+          customer_gstin TEXT,
+          total_amount REAL NOT NULL,
+          tax_amount REAL NOT NULL DEFAULT 0.0,
+          discount_amount REAL NOT NULL DEFAULT 0.0,
+          final_amount REAL NOT NULL,
+          paid_amount REAL NOT NULL DEFAULT 0.0,
+          balance_due REAL NOT NULL DEFAULT 0.0,
+          payment_mode TEXT NOT NULL DEFAULT 'cash',
+          payment_status TEXT NOT NULL DEFAULT 'paid',
+          sale_date TEXT NOT NULL,
+          invoice_no TEXT,
+          notes TEXT,
+          items_json TEXT,
+          sync_status INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+    } catch (_) {}
+    try {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS business_profile (
+          id TEXT PRIMARY KEY,
+          business_name TEXT NOT NULL,
+          business_type TEXT,
+          phone TEXT,
+          email TEXT,
+          address TEXT,
+          gstin TEXT,
+          upi_id TEXT,
+          logo_path TEXT,
+          terms_and_conditions TEXT,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+    } catch (_) {}
+    try {
+      await db.execute("ALTER TABLE expenses ADD COLUMN ledger_type TEXT NOT NULL DEFAULT 'personal'");
+    } catch (_) {}
   }
 
   Future<Database> _initDB(String filePath) async {
@@ -332,7 +381,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 11,
+      version: 12,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -656,6 +705,50 @@ class DatabaseHelper {
         summary TEXT NOT NULL,
         details_json TEXT NOT NULL,
         created_at TEXT NOT NULL
+      )
+    ''');
+
+    // 10. Business Sales & GST Invoices SQLite Table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS business_sales (
+        id TEXT PRIMARY KEY,
+        customer_id TEXT,
+        customer_name TEXT NOT NULL,
+        customer_phone TEXT,
+        customer_address TEXT,
+        customer_gstin TEXT,
+        total_amount REAL NOT NULL,
+        tax_amount REAL NOT NULL DEFAULT 0.0,
+        discount_amount REAL NOT NULL DEFAULT 0.0,
+        final_amount REAL NOT NULL,
+        paid_amount REAL NOT NULL DEFAULT 0.0,
+        balance_due REAL NOT NULL DEFAULT 0.0,
+        payment_mode TEXT NOT NULL DEFAULT 'cash',
+        payment_status TEXT NOT NULL DEFAULT 'paid',
+        sale_date TEXT NOT NULL,
+        invoice_no TEXT,
+        notes TEXT,
+        items_json TEXT,
+        sync_status INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    // 11. Business Profile & Settings SQLite Table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS business_profile (
+        id TEXT PRIMARY KEY,
+        business_name TEXT NOT NULL,
+        business_type TEXT,
+        phone TEXT,
+        email TEXT,
+        address TEXT,
+        gstin TEXT,
+        upi_id TEXT,
+        logo_path TEXT,
+        terms_and_conditions TEXT,
+        updated_at TEXT NOT NULL
       )
     ''');
   }
@@ -1907,6 +2000,91 @@ class DatabaseHelper {
       );
     }
     return await db.delete('calculator_history');
+  }
+
+  // ── BUSINESS SALES & REVENUE CRUD ─────────────────────────
+  Future<int> insertBusinessSale(BusinessSale sale) async {
+    final db = await instance.database;
+    return await db.insert(
+      'business_sales',
+      sale.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<BusinessSale>> getBusinessSales({int? limit}) async {
+    final db = await instance.database;
+    final rows = await db.query(
+      'business_sales',
+      orderBy: 'sale_date DESC',
+      limit: limit,
+    );
+    return rows.map((r) => BusinessSale.fromMap(r)).toList();
+  }
+
+  Future<int> deleteBusinessSale(String id) async {
+    final db = await instance.database;
+    return await db.delete(
+      'business_sales',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // ── BUSINESS PROFILE CRUD ─────────────────────────────────
+  Future<BusinessProfile> getBusinessProfile() async {
+    final db = await instance.database;
+    final rows = await db.query('business_profile', limit: 1);
+    if (rows.isNotEmpty) {
+      return BusinessProfile.fromMap(rows.first);
+    }
+    return BusinessProfile(id: 'default_business', businessName: 'My Business');
+  }
+
+  Future<int> saveBusinessProfile(BusinessProfile profile) async {
+    final db = await instance.database;
+    return await db.insert(
+      'business_profile',
+      profile.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  // ── BUSINESS AGGREGATED METRICS ───────────────────────────
+  Future<Map<String, double>> getBusinessMetrics({DateTime? start, DateTime? end}) async {
+    final db = await instance.database;
+    String where = '';
+    List<dynamic> whereArgs = [];
+    if (start != null && end != null) {
+      where = 'sale_date >= ? AND sale_date <= ?';
+      whereArgs = [start.toIso8601String(), end.toIso8601String()];
+    }
+
+    final salesRows = await db.query(
+      'business_sales',
+      where: where.isNotEmpty ? where : null,
+      whereArgs: whereArgs.isNotEmpty ? whereArgs : null,
+    );
+
+    double totalSales = 0.0;
+    double totalCollected = 0.0;
+    double totalBalanceDue = 0.0;
+    double totalTax = 0.0;
+
+    for (final row in salesRows) {
+      totalSales += (row['final_amount'] as num?)?.toDouble() ?? 0.0;
+      totalCollected += (row['paid_amount'] as num?)?.toDouble() ?? 0.0;
+      totalBalanceDue += (row['balance_due'] as num?)?.toDouble() ?? 0.0;
+      totalTax += (row['tax_amount'] as num?)?.toDouble() ?? 0.0;
+    }
+
+    return {
+      'totalSales': totalSales,
+      'totalCollected': totalCollected,
+      'totalBalanceDue': totalBalanceDue,
+      'totalTax': totalTax,
+      'saleCount': salesRows.length.toDouble(),
+    };
   }
 
   Future<void> close() async {

@@ -4,12 +4,16 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../services/expense_provider.dart';
+import '../services/user_provider.dart';
 import 'dashboard_screen.dart';
+import 'business_dashboard_view.dart';
 import 'budget_screen.dart';
 import 'analytics_screen.dart';
 import 'invoice_screen.dart';
+import 'khata_screen.dart';
 import 'payment_details_screen.dart';
 import 'expense_entry_screen.dart';
+import 'add_business_sale_screen.dart';
 import 'ai_advisor_screen.dart';
 import '../widgets/voice_expense_dialog.dart';
 
@@ -89,19 +93,39 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
     }
   }
 
-  final List<Widget> _screens = [
-    const DashboardScreen(),
-    const BudgetScreen(),
-    const AnalyticsScreen(),
-    const InvoiceScreen(),
-    const PaymentDetailsScreen(),
-  ];
+  List<Widget> _getScreens(bool isBusiness) {
+    if (isBusiness) {
+      return const [
+        BusinessDashboardView(),
+        InvoiceScreen(),
+        KhataScreen(),
+        AnalyticsScreen(),
+        PaymentDetailsScreen(),
+      ];
+    }
+    return const [
+      DashboardScreen(),
+      BudgetScreen(),
+      AnalyticsScreen(),
+      InvoiceScreen(),
+      PaymentDetailsScreen(),
+    ];
+  }
 
   void _openQuickAddExpense() {
     _closeFabMenu();
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const ExpenseEntryScreen(),
+      ),
+    );
+  }
+
+  void _openNewBusinessSale() {
+    _closeFabMenu();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const AddBusinessSaleScreen(),
       ),
     );
   }
@@ -138,8 +162,11 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
+    final userProvider = Provider.of<UserProvider>(context);
+    final isBusiness = userProvider.isBusinessMode;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = const Color(0xFF00D09C);
+    final currentScreens = _getScreens(isBusiness);
 
     return PopScope(
       canPop: _currentIndex == 0 && !_isFabOpen,
@@ -183,7 +210,7 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
             children: [
               IndexedStack(
                 index: _currentIndex,
-                children: _screens,
+                children: currentScreens,
               ),
 
             // ══════════════════════════════════════════════════════
@@ -271,7 +298,7 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
               ),
 
               // ══════════════════════════════════════════════════════
-              // SPEED DIAL POPUP ITEMS (Voice + Manual Entry on + click)
+              // SPEED DIAL POPUP ITEMS (Mode-aware actions)
               // ══════════════════════════════════════════════════════
               if (_currentIndex == 0 && (_isFabOpen || _fabAnimationController.isAnimating))
                 Positioned(
@@ -285,49 +312,93 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
                         child: Transform.scale(
                           scale: _expandAnimation.value.clamp(0.0, 1.0),
                           alignment: Alignment.bottomRight,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // 1. AI Voice Entry Action
-                              _buildSpeedDialItem(
-                                context: context,
-                                isDark: isDark,
-                                label: 'AI Voice Entry',
-                                subtitle: 'Speak in any language',
-                                icon: Icons.mic_rounded,
-                                iconColor: Colors.white,
-                                gradientColors: const [Color(0xFF7C3AED), Color(0xFF6366F1)],
-                                onTap: _openVoiceExpenseDialog,
-                              ),
-                              const SizedBox(height: 12),
+                          child: isBusiness
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // 1. New Sale & GST Bill
+                                    _buildSpeedDialItem(
+                                      context: context,
+                                      isDark: isDark,
+                                      label: 'New Sale / GST Bill',
+                                      subtitle: 'Cash / Udhar + Bill PDF',
+                                      icon: Icons.add_shopping_cart_rounded,
+                                      iconColor: Colors.black,
+                                      gradientColors: const [Color(0xFF00D09C), Color(0xFF05B488)],
+                                      onTap: _openNewBusinessSale,
+                                    ),
+                                    const SizedBox(height: 12),
 
-                              // 2. Smart OCR Receipt Scanner
-                              _buildSpeedDialItem(
-                                context: context,
-                                isDark: isDark,
-                                label: 'Smart OCR Scan',
-                                subtitle: 'Scan bills & receipts',
-                                icon: Icons.document_scanner_rounded,
-                                iconColor: Colors.white,
-                                gradientColors: const [Color(0xFF2563EB), Color(0xFF38BDF8)],
-                                onTap: _openOcrScanner,
-                              ),
-                              const SizedBox(height: 12),
+                                    // 2. Business Expense
+                                    _buildSpeedDialItem(
+                                      context: context,
+                                      isDark: isDark,
+                                      label: 'Business Expense',
+                                      subtitle: 'Stock, Rent, Bills, Salary',
+                                      icon: Icons.receipt_rounded,
+                                      iconColor: Colors.white,
+                                      gradientColors: const [Color(0xFFF59E0B), Color(0xFFD97706)],
+                                      onTap: _openQuickAddExpense,
+                                    ),
+                                    const SizedBox(height: 12),
 
-                              // 3. Manual Typing Action
-                              _buildSpeedDialItem(
-                                context: context,
-                                isDark: isDark,
-                                label: 'Manual Entry',
-                                subtitle: 'Type amount & category',
-                                icon: Icons.edit_note_rounded,
-                                iconColor: Colors.black,
-                                gradientColors: const [Color(0xFF00D09C), Color(0xFF05B488)],
-                                onTap: _openQuickAddExpense,
-                              ),
-                            ],
-                          ),
+                                    // 3. AI Voice / OCR Scan
+                                    _buildSpeedDialItem(
+                                      context: context,
+                                      isDark: isDark,
+                                      label: 'AI Voice & Scan',
+                                      subtitle: 'Speak or scan expense',
+                                      icon: Icons.mic_rounded,
+                                      iconColor: Colors.white,
+                                      gradientColors: const [Color(0xFF7C3AED), Color(0xFF6366F1)],
+                                      onTap: _openVoiceExpenseDialog,
+                                    ),
+                                  ],
+                                )
+                              : Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // 1. AI Voice Entry Action
+                                    _buildSpeedDialItem(
+                                      context: context,
+                                      isDark: isDark,
+                                      label: 'AI Voice Entry',
+                                      subtitle: 'Speak in any language',
+                                      icon: Icons.mic_rounded,
+                                      iconColor: Colors.white,
+                                      gradientColors: const [Color(0xFF7C3AED), Color(0xFF6366F1)],
+                                      onTap: _openVoiceExpenseDialog,
+                                    ),
+                                    const SizedBox(height: 12),
+
+                                    // 2. Smart OCR Receipt Scanner
+                                    _buildSpeedDialItem(
+                                      context: context,
+                                      isDark: isDark,
+                                      label: 'Smart OCR Scan',
+                                      subtitle: 'Scan bills & receipts',
+                                      icon: Icons.document_scanner_rounded,
+                                      iconColor: Colors.white,
+                                      gradientColors: const [Color(0xFF2563EB), Color(0xFF38BDF8)],
+                                      onTap: _openOcrScanner,
+                                    ),
+                                    const SizedBox(height: 12),
+
+                                    // 3. Manual Typing Action
+                                    _buildSpeedDialItem(
+                                      context: context,
+                                      isDark: isDark,
+                                      label: 'Manual Entry',
+                                      subtitle: 'Type amount & category',
+                                      icon: Icons.edit_note_rounded,
+                                      iconColor: Colors.black,
+                                      gradientColors: const [Color(0xFF00D09C), Color(0xFF05B488)],
+                                      onTap: _openQuickAddExpense,
+                                    ),
+                                  ],
+                                ),
                         ),
                       );
                     },
@@ -346,33 +417,61 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
               _isFabVisible = true;
             });
           },
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_outlined),
-              activeIcon: Icon(Icons.dashboard),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.pie_chart_outline_outlined),
-              activeIcon: Icon(Icons.pie_chart),
-              label: 'Budgets',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.bar_chart_outlined),
-              activeIcon: Icon(Icons.bar_chart),
-              label: 'Analytics',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.receipt_long_outlined),
-              activeIcon: Icon(Icons.receipt_long),
-              label: 'Invoices',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.account_balance_outlined),
-              activeIcon: Icon(Icons.account_balance),
-              label: 'Payments',
-            ),
-          ],
+          items: isBusiness
+              ? const [
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.storefront_outlined),
+                    activeIcon: Icon(Icons.storefront_rounded),
+                    label: 'Business',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.receipt_long_outlined),
+                    activeIcon: Icon(Icons.receipt_long),
+                    label: 'Invoices',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.menu_book_outlined),
+                    activeIcon: Icon(Icons.menu_book_rounded),
+                    label: 'Khata',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.bar_chart_outlined),
+                    activeIcon: Icon(Icons.bar_chart),
+                    label: 'Analytics',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.account_balance_outlined),
+                    activeIcon: Icon(Icons.account_balance),
+                    label: 'Payments',
+                  ),
+                ]
+              : const [
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.dashboard_outlined),
+                    activeIcon: Icon(Icons.dashboard),
+                    label: 'Home',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.pie_chart_outline_outlined),
+                    activeIcon: Icon(Icons.pie_chart),
+                    label: 'Budgets',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.bar_chart_outlined),
+                    activeIcon: Icon(Icons.bar_chart),
+                    label: 'Analytics',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.receipt_long_outlined),
+                    activeIcon: Icon(Icons.receipt_long),
+                    label: 'Invoices',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.account_balance_outlined),
+                    activeIcon: Icon(Icons.account_balance),
+                    label: 'Payments',
+                  ),
+                ],
         ),
         floatingActionButton: _currentIndex == 0
             ? AnimatedScale(
