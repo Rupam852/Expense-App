@@ -206,7 +206,7 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
               ),
 
             // ══════════════════════════════════════════════════════
-            // FLOATING GROWWAI CHAT BUTTON (Auto-hides on scroll down, shows on scroll up)
+            // FLOATING GROW EXPENSE AI CHAT BUTTON (Auto-hides on scroll down, shows on scroll up)
             // ══════════════════════════════════════════════════════
             if (_currentIndex == 0)
               Positioned(

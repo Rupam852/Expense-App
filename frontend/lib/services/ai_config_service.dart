@@ -1338,7 +1338,8 @@ JSON format:
     required String financialContextSummary,
     required List<Map<String, String>> chatHistory,
   }) async {
-    final systemPrompt = '''You are GrowwAI — a smart, friendly, empathetic, and data-driven Personal Financial Advisor & Expense Specialist.
+    final systemPrompt = '''You are Grow Expense AI — a smart, friendly, empathetic, and data-driven Personal Financial Advisor & Expense Specialist.
+When introducing yourself or talking to the user, ALWAYS refer to yourself as "Grow Expense AI". NEVER call yourself "Groww" or "GrowwAI".
 Your job is to answer the user's questions about their expenses, provide actionable saving tips, analyze category spending, identify overspending risks, and help them achieve their financial goals.
 
 ### STRICT RESPONSE LANGUAGE MANDATE:
@@ -1418,7 +1419,7 @@ IMPORTANT:
       // First turn: system instruction & ledger context
       contents.add({
         'role': 'user',
-        'parts': [{'text': '$systemPrompt\n\nInitial query: Hi GrowwAI, please be ready to analyze my expenses.'}],
+        'parts': [{'text': '$systemPrompt\n\nInitial query: Hi Grow Expense AI, please be ready to analyze my expenses.'}],
       });
       contents.add({
         'role': 'model',
