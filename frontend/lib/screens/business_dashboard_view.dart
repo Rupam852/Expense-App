@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:open_file/open_file.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/business_sale.dart';
 import '../models/business_profile.dart';
 import '../services/database_helper.dart';
 import '../services/user_provider.dart';
+import '../utils/business_export_helper.dart';
 import '../widgets/custom_toast.dart';
 import 'add_business_sale_screen.dart';
 import 'expense_entry_screen.dart';
@@ -189,6 +193,12 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           children: [
+            if (_isLoading)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: LinearProgressIndicator(minHeight: 2),
+              ),
+
             // ── TOP BUSINESS HEADER & MODE SWITCHER ───────────
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -202,7 +212,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: primaryColor.withOpacity(0.15),
+                            color: primaryColor.withValues(alpha: 0.15),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(Icons.storefront_rounded, color: primaryColor, size: 22),
@@ -242,14 +252,16 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                   onTap: () async {
                     HapticFeedback.mediumImpact();
                     await userProvider.toggleAppMode(false); // Switch to Personal Mode
-                    CustomToast.show(context, 'Switched to 🟢 Personal Mode');
+                    if (context.mounted) {
+                      CustomToast.show(context, 'Switched to 🟢 Personal Mode');
+                    }
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF00D09C).withOpacity(0.15),
+                      color: const Color(0xFF00D09C).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFF00D09C).withOpacity(0.4)),
+                      border: Border.all(color: const Color(0xFF00D09C).withValues(alpha: 0.4)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -286,7 +298,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                     child: ChoiceChip(
                       label: Text(p, style: TextStyle(fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
                       selected: isSelected,
-                      selectedColor: primaryColor.withOpacity(0.2),
+                      selectedColor: primaryColor.withValues(alpha: 0.2),
                       onSelected: (val) {
                         if (val) {
                           setState(() => _filterPeriod = p);
@@ -356,7 +368,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                 ),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: netProfit >= 0 ? Colors.blue.withOpacity(0.3) : Colors.red.withOpacity(0.3),
+                  color: netProfit >= 0 ? Colors.blue.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3),
                 ),
               ),
               child: Row(
@@ -409,7 +421,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                     decoration: BoxDecoration(
                       color: isDark ? const Color(0xFF1E293B) : Colors.white,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.green.withOpacity(0.3)),
+                      border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,7 +449,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                     decoration: BoxDecoration(
                       color: isDark ? const Color(0xFF1E293B) : Colors.white,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                      border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -515,7 +527,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
               children: [
                 Text('Recent Sales & Invoices', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
                 if (_sales.isNotEmpty)
-                  Text('${_sales.length} records', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey)),
+                  Text('${_sales.length} records • Tap for options', style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey)),
               ],
             ),
             const SizedBox(height: 10),
@@ -526,7 +538,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                 alignment: Alignment.center,
                 child: Column(
                   children: [
-                    Icon(Icons.receipt_outlined, size: 48, color: Colors.grey.withOpacity(0.5)),
+                    Icon(Icons.receipt_outlined, size: 48, color: Colors.grey.withValues(alpha: 0.5)),
                     const SizedBox(height: 8),
                     Text('No Sales Recorded Yet', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
                     const SizedBox(height: 4),
@@ -593,9 +605,9 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.12),
+            color: color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withOpacity(0.3)),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
           ),
           child: Column(
             children: [
@@ -613,6 +625,164 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
     );
   }
 
+  Future<void> _viewCustomerInvoicePdf(BusinessSale sale) async {
+    CustomToast.show(context, 'Generating Tax Invoice PDF...');
+    final file = await BusinessExportHelper.generateCustomerInvoicePdf(sale, _businessProfile);
+    if (!mounted) return;
+    if (file != null) {
+      await OpenFile.open(file.path);
+    } else {
+      CustomToast.show(context, 'Failed to generate PDF', isError: true);
+    }
+  }
+
+  Future<void> _shareCustomerInvoiceWhatsApp(BusinessSale sale) async {
+    final cleanPhone = sale.customerPhone?.replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+    final formattedPhone = cleanPhone.length == 10 ? '91$cleanPhone' : cleanPhone;
+
+    final file = await BusinessExportHelper.generateCustomerInvoicePdf(sale, _businessProfile);
+
+    final msg = Uri.encodeComponent(
+      '🧾 *Invoice #${sale.invoiceNo}*\n'
+      'From: *${_businessProfile.businessName}*\n\n'
+      'Dear ${sale.customerName},\n'
+      'Total Amount: *₹${sale.finalAmount.toStringAsFixed(2)}*\n'
+      'Paid: ₹${sale.paidAmount.toStringAsFixed(2)}\n'
+      '${sale.balanceDue > 0 ? "⚠️ Balance Due: *₹${sale.balanceDue.toStringAsFixed(2)}*\n" : "✅ Status: *Fully Paid*\n"}'
+      '\nThank you for doing business with us! 🙏',
+    );
+
+    if (file != null) {
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Invoice #${sale.invoiceNo} from ${_businessProfile.businessName} - Total: ₹${sale.finalAmount.toStringAsFixed(2)}',
+      );
+    } else if (formattedPhone.isNotEmpty) {
+      final url = 'https://wa.me/$formattedPhone?text=$msg';
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    }
+  }
+
+  Future<void> _editSale(BusinessSale sale) async {
+    final res = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AddBusinessSaleScreen(existingSale: sale),
+      ),
+    );
+    if (res == true) {
+      _loadDashboardData();
+    }
+  }
+
+  Future<void> _deleteSale(BusinessSale sale) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete Invoice #${sale.invoiceNo}?', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        content: Text('Are you sure you want to delete this customer sale invoice for ₹${sale.finalAmount.toStringAsFixed(2)}? This action cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await DatabaseHelper.instance.deleteBusinessSale(sale.id);
+      if (mounted) {
+        CustomToast.show(context, 'Sale deleted');
+        _loadDashboardData();
+      }
+    }
+  }
+
+  void _showSaleOptionsBottomSheet(BusinessSale sale) {
+    HapticFeedback.lightImpact();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${sale.customerName} • #${sale.invoiceNo}',
+                      style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      '₹${sale.finalAmount.toStringAsFixed(2)}',
+                      style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF3B82F6)),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 20),
+              ListTile(
+                leading: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFF3B82F6)),
+                title: const Text('View & Download Tax Invoice PDF'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _viewCustomerInvoicePdf(sale);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.share_rounded, color: Colors.green),
+                title: const Text('Share Invoice on WhatsApp'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _shareCustomerInvoiceWhatsApp(sale);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.edit_rounded, color: Colors.amber),
+                title: const Text('Edit Sale / Bill Details'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _editSale(sale);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                title: const Text('Delete Invoice', style: TextStyle(color: Colors.redAccent)),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _deleteSale(sale);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSaleTile({
     required BusinessSale sale,
     required bool isDark,
@@ -621,65 +791,125 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
     final dateStr = DateFormat('dd MMM, hh:mm a').format(sale.saleDate);
     final isPaid = sale.balanceDue <= 0;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
+    return Dismissible(
+      key: ValueKey(sale.id),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (direction) async {
+        return await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text('Delete Invoice #${sale.invoiceNo}?', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+            content: Text('Are you sure you want to delete this sale of ₹${sale.finalAmount.toStringAsFixed(2)} for ${sale.customerName}?'),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+        );
+      },
+      onDismissed: (direction) async {
+        await DatabaseHelper.instance.deleteBusinessSale(sale.id);
+        if (mounted) {
+          CustomToast.show(context, '🗑️ Invoice #${sale.invoiceNo} deleted');
+          _loadDashboardData();
+        }
+      },
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: Colors.redAccent,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: const [
+            Text('Swipe to Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+            SizedBox(width: 8),
+            Icon(Icons.delete_forever_rounded, color: Colors.white, size: 24),
+          ],
+        ),
       ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: (isPaid ? Colors.green : Colors.redAccent).withOpacity(0.15),
-            child: Icon(
-              isPaid ? Icons.check_circle_outline_rounded : Icons.pending_outlined,
-              color: isPaid ? Colors.green : Colors.redAccent,
-              size: 20,
-            ),
+      child: InkWell(
+        onTap: () => _showSaleOptionsBottomSheet(sale),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: (isPaid ? Colors.green : Colors.redAccent).withValues(alpha: 0.15),
+                child: Icon(
+                  isPaid ? Icons.check_circle_outline_rounded : Icons.pending_outlined,
+                  color: isPaid ? Colors.green : Colors.redAccent,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      sale.customerName,
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          sale.customerName,
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                        Text(
+                          '₹${sale.finalAmount.toStringAsFixed(2)}',
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15, color: primaryColor),
+                        ),
+                      ],
                     ),
-                    Text(
-                      '₹${sale.finalAmount.toStringAsFixed(2)}',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15, color: primaryColor),
+                    const SizedBox(height: 2),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '#${sale.invoiceNo} • $dateStr',
+                          style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                        ),
+                        Row(
+                          children: [
+                            Text(
+                              isPaid ? 'PAID' : 'Due: ₹${sale.balanceDue.toStringAsFixed(0)}',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: isPaid ? Colors.green : Colors.redAccent,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            IconButton(
+                              icon: const Icon(Icons.edit_outlined, size: 16, color: Colors.grey),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () => _editSale(sale),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 2),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '#${sale.invoiceNo} • $dateStr',
-                      style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
-                    ),
-                    Text(
-                      isPaid ? 'PAID' : 'Due: ₹${sale.balanceDue.toStringAsFixed(0)}',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: isPaid ? Colors.green : Colors.redAccent,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
