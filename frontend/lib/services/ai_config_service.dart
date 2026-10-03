@@ -243,9 +243,20 @@ class AiConfigService with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_keyResponseLanguage, language);
+
+      // Also update local cached user profile if present
+      final cachedProfileStr = prefs.getString('cached_user_profile');
+      if (cachedProfileStr != null) {
+        try {
+          final map = Map<String, dynamic>.from(json.decode(cachedProfileStr));
+          map['response_language'] = language;
+          await prefs.setString('cached_user_profile', json.encode(map));
+        } catch (_) {}
+      }
     } catch (e) {
       debugPrint('[AiConfigService] Error saving response language: $e');
     }
+    _backupToCloudQuietly();
     notifyListeners();
   }
 
@@ -394,6 +405,9 @@ class AiConfigService with ChangeNotifier {
         _responseLanguage = cloudLang;
         await prefs.setString(_keyResponseLanguage, cloudLang);
         changed = true;
+      } else if (_responseLanguage.isNotEmpty && _responseLanguage != 'English') {
+        // If cloud profile has no language set yet, back up current user choice to cloud
+        _backupToCloudQuietly();
       }
 
       if (changed) {
