@@ -530,7 +530,16 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
             ),
             const SizedBox(height: 20),
 
-            // ── RECENT ACTIVITIES (SALES & EXPENSES TOGGLE) ───────────
+            // ── RECENT TRANSACTIONS (SALES & EXPENSES TOGGLE) ───────────
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Recent Transactions', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
+                Text('Cash Flow Activity', style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey)),
+              ],
+            ),
+            const SizedBox(height: 10),
+
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
