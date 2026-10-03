@@ -3363,6 +3363,265 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  void _showMonthPickerModal(BuildContext context, ExpenseProvider expenseProvider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final currentSelected = expenseProvider.selectedMonthYear;
+    int displayYear = currentSelected.year;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final now = DateTime.now();
+            final months = [
+              {'name': 'Jan', 'month': 1, 'full': 'January'},
+              {'name': 'Feb', 'month': 2, 'full': 'February'},
+              {'name': 'Mar', 'month': 3, 'full': 'March'},
+              {'name': 'Apr', 'month': 4, 'full': 'April'},
+              {'name': 'May', 'month': 5, 'full': 'May'},
+              {'name': 'Jun', 'month': 6, 'full': 'June'},
+              {'name': 'Jul', 'month': 7, 'full': 'July'},
+              {'name': 'Aug', 'month': 8, 'full': 'August'},
+              {'name': 'Sep', 'month': 9, 'full': 'September'},
+              {'name': 'Oct', 'month': 10, 'full': 'October'},
+              {'name': 'Nov', 'month': 11, 'full': 'November'},
+              {'name': 'Dec', 'month': 12, 'full': 'December'},
+            ];
+
+            return Container(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF181B22) : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.18),
+                    blurRadius: 20,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Drag Handle
+                  Container(
+                    width: 42,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+
+                  // Header with Year Navigator
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Select Month',
+                            style: GoogleFonts.outfit(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                          Text(
+                            'View previous statements & expenses',
+                            style: GoogleFonts.inter(
+                              fontSize: 11.5,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Year Selector Bar
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF242936) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF333D4F) : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.chevron_left, size: 20),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                              onPressed: () {
+                                setModalState(() => displayYear--);
+                              },
+                            ),
+                            Text(
+                              '$displayYear',
+                              style: GoogleFonts.outfit(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF00D09C),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.chevron_right, size: 20),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                              onPressed: () {
+                                setModalState(() => displayYear++);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // 12-Month Grid
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      childAspectRatio: 2.1,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                    ),
+                    itemCount: 12,
+                    itemBuilder: (context, index) {
+                      final m = months[index];
+                      final mNum = m['month'] as int;
+                      final isSelected = currentSelected.year == displayYear && currentSelected.month == mNum;
+                      final isCurrentMonth = now.year == displayYear && now.month == mNum;
+
+                      // Count transactions for this month
+                      final count = expenseProvider.expenses.where((e) {
+                        return e.transactionDate.year == displayYear && e.transactionDate.month == mNum;
+                      }).length;
+
+                      return InkWell(
+                        onTap: () {
+                          Navigator.of(ctx).pop();
+                          expenseProvider.setSelectedMonthYear(DateTime(displayYear, mNum));
+                          CustomToast.show(context, 'Showing ${m['full']} $displayYear 📅');
+                        },
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: isSelected
+                                ? const LinearGradient(
+                                    colors: [Color(0xFF00D09C), Color(0xFF05B488)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  )
+                                : null,
+                            color: isSelected
+                                ? null
+                                : (isDark ? const Color(0xFF202632) : const Color(0xFFF8FAFC)),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(0xFF00D09C)
+                                  : (isCurrentMonth
+                                      ? const Color(0xFF00D09C).withOpacity(0.5)
+                                      : (isDark ? const Color(0xFF2C3545) : const Color(0xFFE2E8F0))),
+                              width: isCurrentMonth ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    m['name'] as String,
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 13.5,
+                                      fontWeight: isSelected || isCurrentMonth ? FontWeight.bold : FontWeight.w600,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : (isDark ? Colors.white : Colors.black87),
+                                    ),
+                                  ),
+                                  if (count > 0)
+                                    Text(
+                                      '$count txns',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w500,
+                                        color: isSelected
+                                            ? Colors.white.withOpacity(0.85)
+                                            : const Color(0xFF00D09C),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              if (isCurrentMonth && !isSelected)
+                                Positioned(
+                                  top: 4,
+                                  right: 6,
+                                  child: Container(
+                                    width: 5,
+                                    height: 5,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF00D09C),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Quick Action: Return to Current Month
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        expenseProvider.setSelectedMonthYear(DateTime.now());
+                        CustomToast.show(context, 'Reset to Current Month ✨');
+                      },
+                      icon: const Icon(Icons.today_rounded, size: 16),
+                      label: Text(
+                        'Jump to Current Month (${DateFormat('MMM yyyy').format(DateTime.now())})',
+                        style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDark ? const Color(0xFF242936) : const Color(0xFFF1F5F9),
+                        foregroundColor: const Color(0xFF00D09C),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(
+                            color: isDark ? const Color(0xFF333D4F) : const Color(0xFFCBD5E1),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
@@ -3517,16 +3776,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      isSelectedMonthCurrent
-                          ? 'TOTAL SPENT THIS MONTH'
-                          : 'TOTAL SPENT IN ${DateFormat('MMMM yyyy').format(_selectedMonthYear!).toUpperCase()}',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white.withOpacity(0.8),
-                        letterSpacing: 1.0,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          isSelectedMonthCurrent
+                              ? 'TOTAL SPENT THIS MONTH'
+                              : 'TOTAL SPENT IN ${DateFormat('MMMM yyyy').format(_selectedMonthYear).toUpperCase()}',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white.withOpacity(0.8),
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                        if (!isSelectedMonthCurrent)
+                          InkWell(
+                            onTap: () {
+                              expenseProvider.setSelectedMonthYear(DateTime.now());
+                              CustomToast.show(context, 'Reset to Current Month ✨');
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.25),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.refresh, size: 12, color: Colors.white),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'This Month',
+                                    style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -3577,30 +3867,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                         const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.calendar_today_outlined,
-                                size: 12,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                '${isSelectedMonthCurrent ? DateTime.now().day : 1} ${DateFormat('MMMM yyyy').format(_selectedMonthYear).toUpperCase()}',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
+                        InkWell(
+                          onTap: () => _showMonthPickerModal(context, expenseProvider),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.calendar_today_outlined,
+                                  size: 12,
                                   color: Colors.white,
-                                  fontWeight: FontWeight.bold,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${isSelectedMonthCurrent ? DateTime.now().day : 1} ${DateFormat('MMMM yyyy').format(_selectedMonthYear).toUpperCase()}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.arrow_drop_down, size: 14, color: Colors.white),
+                              ],
+                            ),
                           ),
                         ),
                       ],
