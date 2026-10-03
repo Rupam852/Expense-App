@@ -89,11 +89,44 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
     }
   }
 
+  List<Map<String, String>> _existingCustomers = [];
+
   Future<void> _loadBusinessProfile() async {
     try {
       final prof = await DatabaseHelper.instance.getBusinessProfile();
+      final sales = await DatabaseHelper.instance.getBusinessSales();
+      final khata = await DatabaseHelper.instance.getKhataEntries();
+
+      final Map<String, Map<String, String>> uniqueCust = {};
+      for (var s in sales) {
+        if (s.customerName.isNotEmpty && s.customerName != 'Walk-in Customer') {
+          uniqueCust[s.customerName.toLowerCase()] = {
+            'name': s.customerName,
+            'phone': s.customerPhone ?? '',
+            'address': s.customerAddress ?? '',
+            'gstin': s.customerGstin ?? '',
+          };
+        }
+      }
+      for (var k in khata) {
+        if (k.personName.isNotEmpty && k.personName != 'Walk-in Customer') {
+          final key = k.personName.toLowerCase();
+          if (!uniqueCust.containsKey(key)) {
+            uniqueCust[key] = {
+              'name': k.personName,
+              'phone': k.phoneNumber ?? '',
+              'address': '',
+              'gstin': '',
+            };
+          }
+        }
+      }
+
       if (mounted) {
-        setState(() => _businessProfile = prof);
+        setState(() {
+          _businessProfile = prof;
+          _existingCustomers = uniqueCust.values.toList();
+        });
       }
     } catch (_) {}
   }
@@ -141,23 +174,41 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
   }
 
   void _addItemFromCatalog(BusinessItem item) {
+    // 1. If first row is completely empty, populate it
     if (_itemRows.length == 1 &&
         _itemRows[0]['name'].text.trim().isEmpty &&
         (_itemRows[0]['price'].text == '0' || _itemRows[0]['price'].text.isEmpty)) {
       _populateItemRowFromCatalog(0, item);
-    } else {
+      return;
+    }
+
+    // 2. Duplicate detection: increment quantity if item name matches
+    final existingIndex = _itemRows.indexWhere((r) =>
+        r['name'].text.trim().toLowerCase() == item.name.trim().toLowerCase());
+    if (existingIndex != -1) {
+      final currentQty = double.tryParse(_itemRows[existingIndex]['qty'].text.trim()) ?? 1.0;
+      final newQty = currentQty + 1.0;
       setState(() {
-        _itemRows.add({
-          'name': TextEditingController(text: item.name),
-          'qty': TextEditingController(text: '1'),
-          'unit': _units.contains(item.unit.toLowerCase()) ? item.unit.toLowerCase() : 'pcs',
-          'price': TextEditingController(text: item.sellingPrice > 0 ? item.sellingPrice.toStringAsFixed(2) : '0'),
-          'cost': TextEditingController(text: item.purchasePrice > 0 ? item.purchasePrice.toStringAsFixed(2) : ''),
-          'tax': _taxSlabs.contains(item.taxRate) ? item.taxRate : 0.0,
-        });
+        _itemRows[existingIndex]['qty'].text =
+            newQty % 1 == 0 ? newQty.toStringAsFixed(0) : newQty.toStringAsFixed(2);
         _updateDiscountFromPercent();
       });
+      CustomToast.show(context, '📦 ${item.name}: Quantity increased to ${_itemRows[existingIndex]['qty'].text}');
+      return;
     }
+
+    // 3. Add fresh row
+    setState(() {
+      _itemRows.add({
+        'name': TextEditingController(text: item.name),
+        'qty': TextEditingController(text: '1'),
+        'unit': _units.contains(item.unit.toLowerCase()) ? item.unit.toLowerCase() : 'pcs',
+        'price': TextEditingController(text: item.sellingPrice > 0 ? item.sellingPrice.toStringAsFixed(2) : '0'),
+        'cost': TextEditingController(text: item.purchasePrice > 0 ? item.purchasePrice.toStringAsFixed(2) : ''),
+        'tax': _taxSlabs.contains(item.taxRate) ? item.taxRate : 0.0,
+      });
+      _updateDiscountFromPercent();
+    });
   }
 
   void _showCatalogPickerModal({int? targetRowIndex}) {
@@ -756,14 +807,82 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                   ),
                   const SizedBox(height: 12),
                   if (!_isWalkIn) ...[
-                    TextFormField(
-                      controller: _customerNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Customer Name *',
-                        prefixIcon: Icon(Icons.person_outline),
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (v) => v == null || v.trim().isEmpty ? 'Customer name is required' : null,
+                    Autocomplete<Map<String, String>>(
+                      optionsBuilder: (TextEditingValue textEditingValue) {
+                        if (textEditingValue.text.trim().isEmpty) {
+                          return const Iterable<Map<String, String>>.empty();
+                        }
+                        final q = textEditingValue.text.toLowerCase();
+                        return _existingCustomers.where((c) =>
+                            (c['name'] ?? '').toLowerCase().contains(q) ||
+                            (c['phone'] ?? '').contains(q));
+                      },
+                      displayStringForOption: (option) => option['name'] ?? '',
+                      onSelected: (Map<String, String> selection) {
+                        setState(() {
+                          _customerNameController.text = selection['name'] ?? '';
+                          if (selection['phone']?.isNotEmpty == true) {
+                            _customerPhoneController.text = selection['phone']!;
+                          }
+                          if (selection['address']?.isNotEmpty == true) {
+                            _customerAddressController.text = selection['address']!;
+                          }
+                          if (selection['gstin']?.isNotEmpty == true) {
+                            _customerGstinController.text = selection['gstin']!;
+                          }
+                        });
+                      },
+                      fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                        if (_customerNameController.text.isNotEmpty && textEditingController.text.isEmpty) {
+                          textEditingController.text = _customerNameController.text;
+                        }
+                        return TextFormField(
+                          controller: textEditingController,
+                          focusNode: focusNode,
+                          onChanged: (val) => _customerNameController.text = val,
+                          decoration: const InputDecoration(
+                            labelText: 'Customer Name *',
+                            hintText: 'Type name or pick existing',
+                            prefixIcon: Icon(Icons.person_outline),
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (v) => _customerNameController.text.trim().isEmpty ? 'Customer name is required' : null,
+                        );
+                      },
+                      optionsViewBuilder: (context, onSelected, options) {
+                        return Align(
+                          alignment: Alignment.topLeft,
+                          child: Material(
+                            elevation: 8,
+                            borderRadius: BorderRadius.circular(12),
+                            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxHeight: 200, maxWidth: 300),
+                              child: ListView.builder(
+                                padding: EdgeInsets.zero,
+                                shrinkWrap: true,
+                                itemCount: options.length,
+                                itemBuilder: (BuildContext context, int index) {
+                                  final option = options.elementAt(index);
+                                  return ListTile(
+                                    dense: true,
+                                    leading: const CircleAvatar(
+                                      radius: 14,
+                                      backgroundColor: Color(0xFF1E88E5),
+                                      child: Icon(Icons.person, size: 14, color: Colors.white),
+                                    ),
+                                    title: Text(option['name'] ?? '', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
+                                    subtitle: option['phone']?.isNotEmpty == true
+                                        ? Text(option['phone']!, style: GoogleFonts.inter(fontSize: 11, color: Colors.grey))
+                                        : null,
+                                    onTap: () => onSelected(option),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 10),
                     TextFormField(

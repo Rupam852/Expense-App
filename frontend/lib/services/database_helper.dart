@@ -1172,7 +1172,7 @@ class DatabaseHelper {
 
   Future<int> toggleSettleKhataEntry(String id, bool isSettled) async {
     final db = await instance.database;
-    return await db.update(
+    final res = await db.update(
       'khata_entries',
       {
         'is_settled': isSettled ? 1 : 0,
@@ -1183,6 +1183,45 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [id],
     );
+
+    try {
+      final rows = await db.query('khata_entries', where: 'id = ?', whereArgs: [id], limit: 1);
+      if (rows.isNotEmpty) {
+        final note = rows.first['note']?.toString() ?? '';
+        if (note.contains('Sale Bill #')) {
+          final regex = RegExp(r'Sale Bill #(\d+)');
+          final match = regex.firstMatch(note);
+          if (match != null) {
+            final invNo = int.tryParse(match.group(1) ?? '');
+            if (invNo != null) {
+              if (isSettled) {
+                await db.rawUpdate('''
+                  UPDATE business_sales
+                  SET payment_status = 'Paid',
+                      paid_amount = final_amount,
+                      balance_due = 0.0,
+                      is_synced = 0,
+                      updated_at = ?
+                  WHERE invoice_no = ?
+                ''', [DateTime.now().toIso8601String(), invNo]);
+              } else {
+                final amt = (rows.first['amount'] as num?)?.toDouble() ?? 0.0;
+                await db.rawUpdate('''
+                  UPDATE business_sales
+                  SET payment_status = CASE WHEN paid_amount > 0 THEN 'Partial' ELSE 'Unpaid' END,
+                      balance_due = ?,
+                      is_synced = 0,
+                      updated_at = ?
+                  WHERE invoice_no = ?
+                ''', [amt, DateTime.now().toIso8601String(), invNo]);
+              }
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    return res;
   }
 
   Future<int> deleteKhataEntry(String id) async {
@@ -2145,6 +2184,36 @@ class DatabaseHelper {
 
   Future<int> deleteBusinessSale(String id) async {
     final db = await instance.database;
+    try {
+      final rows = await db.query('business_sales', where: 'id = ?', whereArgs: [id], limit: 1);
+      if (rows.isNotEmpty) {
+        final invNo = rows.first['invoice_no'];
+        if (invNo != null) {
+          final khataRows = await db.query(
+            'khata_entries',
+            where: 'note LIKE ?',
+            whereArgs: ['%Sale Bill #$invNo%'],
+          );
+          for (var k in khataRows) {
+            final kId = k['id']?.toString();
+            if (kId != null) {
+              await deleteKhataEntry(kId);
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    await db.insert(
+      'deleted_records',
+      {
+        'id': id,
+        'table_name': 'business_sales',
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+
     return await db.delete(
       'business_sales',
       where: 'id = ?',
