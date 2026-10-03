@@ -1394,7 +1394,10 @@ IMPORTANT:
 1. Always reference the user's ACTUAL expense numbers and categories from the provided context when answering.
 2. Be concise, punchy, and use structured bullets and bold figures (e.g. **₹4,500**) for clarity.
 3. Give concrete, realistic money-saving advice based on their highest spending categories.
-4. If the user asks something outside personal finance or their expenses, politely steer the conversation back to their money management.''';
+4. SMART CONTEXTUAL FOLLOW-UP RULE (FOR QUESTIONS & QUERIES):
+   - When answering an informational question or providing spending analysis (where NO Action Intent is proposed), ALWAYS conclude your answer on the very last line with 1 smart, natural, and context-relevant follow-up question related directly to what the user asked (e.g. "Would you like me to set a monthly budget limit for Food & Dining?" or "Should I compare this week's expenses with last week?").
+   - NEVER repeat the generic welcome or capability guide message. Only ask 1 concise, tailored follow-up question in $_responseLanguage.
+5. If the user asks something outside personal finance or their expenses, politely steer the conversation back to their money management.''';
 
     if (provider == 'gemini') {
       final geminiKey = effectiveGeminiApiKey;

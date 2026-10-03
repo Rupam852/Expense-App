@@ -388,6 +388,59 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     ],
   };
 
+  static const Map<String, String> _localizedWelcomeMessages = {
+    'English':
+        'Hello! 👋 I am your **GrowwAI Autonomous Financial Agent**.\n\nBesides analyzing your financial ledger, I can directly:\n• 💳 **Add Expenses** (e.g. "Add ₹350 for lunch")\n• 🎯 **Set Budgets** (e.g. "Set Groceries budget to ₹6,000")\n• 📖 **Record Khata / Dues** (e.g. "Lent ₹1,500 to Raju")\n• 👥 **Split Group Bills** (e.g. "Split ₹1,200 with Amit and Rahul")\n\nYou can type or speak your command!',
+    'Hindi':
+        'नमस्ते! 👋 मैं आपका **GrowwAI ऑटोनॉमस फाइनेंशियल एजेंट** हूँ।\n\nमैं आपके खर्चों का विश्लेषण करने के साथ-साथ सीधे:\n• 💳 **खर्च जोड़ सकता हूँ** (उदा. "लंच के लिए ₹350 जोड़ें")\n• 🎯 **बजट सेट कर सकता हूँ** (उदा. "राशन का बजट ₹6,000 सेट करें")\n• 📖 **खाता / उधार दर्ज कर सकता हूँ** (उदा. "राजू को ₹1,500 उधार दिया")\n• 👥 **ग्रुप बिल बाँट सकता हूँ** (उदा. "अमित और राहुल के साथ ₹1,200 बाँटें")\n\nआप बोलकर या लिखकर निर्देश दे सकते हैं!',
+    'Hinglish':
+        'Namaste! 👋 Main aapka **GrowwAI Autonomous Financial Agent** hoon.\n\nMai aapke ledger ko analyze karne ke sath-sath:\n• 💳 **Expenses add kar sakta hoon** (e.g. "Add ₹350 for lunch")\n• 🎯 **Budgets set kar sakta hoon** (e.g. "Set Groceries budget to ₹6000")\n• 📖 **Khata / Udhar record kar sakta hoon** (e.g. "Raju ko ₹1500 udhar diya")\n• 👥 **Group Bills split kar sakta hoon** (e.g. "Split ₹1200 with Amit and Rahul")\n\nAap bol kar ya likh kar command de sakte hain!',
+    'Bengali':
+        'নমস্কার! 👋 আমি আপনার **GrowwAI স্বায়ত্তশাসিত আর্থিক সহকারী**।\n\nআপনার ব্যয়ের হিসাব বিশ্লেষণের পাশাপাশি আমি সরাসরি:\n• 💳 **খরচ যোগ করতে পারি** (যেমন "দুপুরের খাবারের জন্য ₹350 যোগ করুন")\n• 🎯 **বাজেট নির্ধারণ করতে পারি** (যেমন "মুদিখানার বাজেট ₹6,000 সেট করুন")\n• 📖 **খাতা / বাকি হিসাব রাখতে পারি** (যেমন "রাজুকে ₹1,500 ধার দিয়েছি")\n• 👥 **গ্রুপ বিল ভাগ করতে পারি** (যেমন "অমিত এবং রাহুলের সাথে ₹1,200 ভাগ করুন")\n\nআপনি মুখে বলে বা লিখে নির্দেশ দিতে পারেন!',
+    'Marathi':
+        'नमस्कार! 👋 मी तुमचा **GrowwAI ऑटोनॉमस फायनान्शियल एजंट** आहे.\n\nतुमच्या खर्चाचे विश्लेषण करण्यासोबतच मी थेट:\n• 💳 **खर्च नोंदवू शकतो** (उदा. "दुपारच्या जेवणासाठी ₹350 जोडा")\n• 🎯 **बजेट ठरवू शकतो** (उदा. "किराणा मालाचे बजेट ₹6,000 सेट करा")\n• 📖 **खाते / उधारी नोंदवू शकतो** (उदा. "राजूला ₹1,500 उसने दिले")\n• 👥 **ग्रुप बिल विभागू शकतो** (उदा. "अमित आणि राहुलसोबत ₹1,200 स्प्लिट करा")\n\nतुम्ही बोलून किंवा टाईप करून सांगू शकता!',
+    'Gujarati':
+        'નમસ્તે! 👋 હું તમારો **GrowwAI ઓટોનોમસ ફાયનાન્સિયલ એજન્ટ** છું.\n\nતમારા ખર્ચનું વિશ્લેષણ કરવા ઉપરાંત હું સીધા:\n• 💳 **ખર્ચ ઉમેરી શકું છું** (દા.ત. "લંચ માટે ₹350 ઉમેરો")\n• 🎯 **બજેટ સેટ કરી શકું છું** (દા.ત. "કરિયાણાનું બજેટ ₹6,000 સેટ કરો")\n• 📖 **ખાતાવહી / ઉધાર નોંધી શકું છું** (દા.ત. "રાજુને ₹1,500 ઉધાર આપ્યા")\n• 👥 **ગ્રુપ બિલ વહેંચી શકું છું** (દા.ત. "અમિત અને રાહુલ સાથે ₹1,200 સ્પ્લિટ કરો")\n\nતમે બોલીને અથવા ટાઇપ કરીને જણાવી શકો છો!',
+    'Tamil':
+        'வணக்கம்! 👋 நான் உங்கள் **GrowwAI நிதி உதவியாளர்**.\n\nஉங்கள் செலவுகளைப் பகுப்பாய்வு செய்வதோடு, என்னால் நேரடியாக:\n• 💳 **செலவுகளைச் சேர்க்க முடியும்** (எ.கா. "மதிய உணவிற்கு ₹350 சேர்க்கவும்")\n• 🎯 **பட்ஜெட் அமைக்க முடியும்** (எ.கா. "மளிகைப் பட்ஜெட்டை ₹6,000 ஆக அமைக்கவும்")\n• 📖 **கடன் / பாக்கி கணக்கு பதிய முடியும்** (எ.கா. "ராஜுவுக்கு ₹1,500 கடன் கொடுத்தேன்")\n• 👥 **குழு பில்களைப் பிரிக்க முடியும்** (எ.கா. "அமித் மற்றும் ராகுலுடன் ₹1,200 பிரிக்கவும்")\n\nநீங்கள் பேசியோ அல்லது தட்டச்சு செய்தோ கட்டளையிடலாம்!',
+    'Telugu':
+        'నమస్కారం! 👋 నేను మీ **GrowwAI ఆర్థిక సహాయకుడిని**.\n\nమీ ఖర్చులను విశ్లేషించడంతో పాటు, నేను నేరుగా:\n• 💳 **ఖర్చులను జోడించగలను** (ఉదా. "లంచ్ కోసం ₹350 జోడించండి")\n• 🎯 **బడ్జెట్‌ను సెట్ చేయగలను** (ఉదా. "కిరాణా బడ్జెట్ ₹6,000 సెట్ చేయండి")\n• 📖 **ఖాతా / అప్పు వివరాలు నమోదు చేయగలను** (ఉదా. "రాజుకు ₹1,500 అప్పు ఇచ్చాను")\n• 👥 **గ్రూప్ బిల్లులను విభజించగలను** (ఉదా. "అమిత్ మరియు రాహుల్‌తో ₹1,200 పంచుకోండి")\n\nమీరు మాట్లాడి లేదా టైప్ చేసి ఆదేశించవచ్చు!',
+    'Kannada':
+        'ನಮಸ್ಕಾರ! 👋 ನಾನು ನಿಮ್ಮ **GrowwAI ಹಣಕಾಸು ಸಹಾಯಕ**.\n\nನಿಮ್ಮ ವೆಚ್ಚಗಳನ್ನು ವಿಶ್ಲೇಷಿಸುವುದರ ಜೊತೆಗೆ, ನಾನು ನೇರವಾಗಿ:\n• 💳 **ವೆಚ್ಚವನ್ನು ಸೇರಿಸಬಲ್ಲೆ** (ಉದಾ. "ಊಟಕ್ಕಾಗಿ ₹350 ಸೇರಿಸಿ")\n• 🎯 **ಬಜೆಟ್ ನಿಗದಿಪಡಿಸಬಲ್ಲೆ** (ಉದಾ. "ಕಿರಾಣಿ ಬಜೆಟ್ ₹6,000 ನಿಗದಿಪಡಿಸಿ")\n• 📖 **ಖಾತೆ / ಸಾಲದ ಲೆಕ್ಕ ದಾಖಲಿಸಬಲ್ಲೆ** (ಉದಾ. "ರಾಜುಗೆ ₹1,500 ಸಾಲ ನೀಡಿದೆ")\n• 👥 **ಗುಂಪು ಬಿಲ್‌ಗಳನ್ನು ಹಂಚಬಲ್ಲೆ** (ಉದಾ. "ಅಮಿತ್ ಮತ್ತು ರಾಹುಲ್ ಜೊತೆ ₹1,200 ಹಂಚಿಕೊಳ್ಳಿ")\n\nನೀವು ಮಾತನಾಡಿ ಅಥವಾ ಟೈಪ್ ಮಾಡಿ ತಿಳಿಸಬಹುದು!',
+    'Malayalam':
+        'നമസ്കാരം! 👋 ഞാൻ നിങ്ങളുടെ **GrowwAI ധനകാര്യ സഹായി** ആണ്.\n\nനിങ്ങളുടെ ചെലവുകൾ വിശകലനം ചെയ്യുന്നതിനൊപ്പം, എനിക്ക് നേരിട്ട്:\n• 💳 **ചെലവുകൾ ചേർക്കാം** (ഉദാ. "ഉച്ചഭക്ഷണത്തിന് ₹350 ചേർക്കുക")\n• 🎯 **ബജറ്റ് നിശ്ചയിക്കാം** (ഉദാ. "പലചരക്ക് ബജറ്റ് ₹6,000 ആയി നിശ്ചയിക്കുക")\n• 📖 **കടം / ബാക്കി കണക്ക് രേഖപ്പെടുത്താം** (ഉദാ. "രാജുവിന് ₹1,500 കടം കൊടുത്തു")\n• 👥 **ഗ്രൂപ്പ് ബില്ലുകൾ പങ്കിടാം** (ഉദാ. "അമിതും രാഹുലുമായി ₹1,200 പങ്കിടുക")\n\nനിങ്ങൾക്ക് സംസാരിച്ചോ ടൈപ്പ് ചെയ്തോ നിർദ്ദേശിക്കാം!',
+    'Punjabi':
+        'ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ! 👋 ਮੈਂ ਤੁਹਾਡਾ **GrowwAI ਵਿੱਤੀ ਸਹਾਇਕ** ਹਾਂ।\n\nਤੁਹਾਡੇ ਖਰਚਿਆਂ ਦਾ ਵਿਸ਼ਲੇਸ਼ਣ ਕਰਨ ਤੋਂ ਇਲਾਵਾ, ਮੈਂ ਸਿੱਧਾ:\n• 💳 **ਖਰਚਾ ਜੋੜ ਸਕਦਾ ਹਾਂ** (ਜਿਵੇਂ "ਦੁਪਹਿਰ ਦੇ ਖਾਣੇ ਲਈ ₹350 ਜੋੜੋ")\n• 🎯 **ਬਜਟ ਸੈੱਟ ਕਰ ਸਕਦਾ ਹਾਂ** (ਜਿਵੇਂ "ਰਾਸ਼ਨ ਦਾ ਬਜਟ ₹6,000 ਸੈੱਟ ਕਰੋ")\n• 📖 **ਖਾਤਾ / ਉਧਾਰ ਦਰਜ ਕਰ ਸਕਦਾ ਹਾਂ** (ਜਿਵੇਂ "ਰਾਜੂ ਨੂੰ ₹1,500 ਉਧਾਰ ਦਿੱਤਾ")\n• 👥 **ਗਰੁੱਪ ਬਿੱਲ ਵੰਡ ਸਕਦਾ ਹਾਂ** (ਜਿਵੇਂ "ਅਮਿਤ ਅਤੇ ਰਾਹੁਲ ਨਾਲ ₹1,200 ਵੰਡੋ")\n\nਤੁਸੀਂ ਬੋਲ ਕੇ ਜਾਂ ਲਿਖ ਕੇ ਦੱਸ ਸਕਦੇ ਹੋ!',
+  };
+
+  static const Map<String, String> _localizedActionExecutionFollowUps = {
+    'English': '✅ Action successfully recorded and synced! What would you like to do next? You can track another expense, check your remaining budget, or ask for category insights.',
+    'Hindi': '✅ कार्य सफलतापूर्वक पूरा और दर्ज हो गया! अब आप क्या करना चाहेंगे? आप कोई अन्य खर्च जोड़ सकते हैं, अपना बचा हुआ बजट देख सकते हैं या वित्तीय विश्लेषण मांग सकते हैं।',
+    'Hinglish': '✅ Action successfully record ho gaya! Ab aap kya karna chahenge? Aap dusra expense add kar sakte hain, remaining budget check kar sakte hain ya savings insights pooch sakte hain.',
+    'Bengali': '✅ কাজ সফলভাবে সম্পন্ন এবং সংরক্ষিত হয়েছে! এরপরে আপনি কী করতে চান? আপনি অন্য খরচ যোগ করতে পারেন, অবশিষ্ট বাজেট দেখতে পারেন বা পরামর্শ চাইতে পারেন।',
+    'Marathi': '✅ कृती यशस्वीरित्या पूर्ण आणि नोंदवली गेली! पुढे काय करू इच्छिता? तुम्ही दुसरा खर्च जोडू शकता, शिल्लक बजेट तपासू शकता किंवा विश्लेषण मागू शकता.',
+    'Gujarati': '✅ કાર્ય સફળતાપૂર્વક પૂર્ણ અને રેકોર્ડ થઈ ગયું! આગળ તમે શું કરવા માંગો છો? તમે બીજો ખર્ચ ઉમેરી શકો છો, બાકીનું બજેટ ચકાસી શકો છો અથવા સલાહ લઈ શકો છો.',
+    'Tamil': '✅ செயல் வெற்றிகரமாக முடிந்து பதிவு செய்யப்பட்டது! அடுத்து என்ன செய்ய விரும்புகிறீர்கள்? நீங்கள் மற்றொரு செலவைச் சேர்க்கலாம் அல்லது மீதமுள்ள பட்ஜெட்டைச் சரிபார்க்கலாம்.',
+    'Telugu': '✅ చర్య విజయవంతంగా పూర్తయింది మరియు నమోదు చేయబడింది! తర్వాత మీరు ఏమి చేయాలనుకుంటున్నారు? మీరు మరొక ఖర్చును జోడించవచ్చు లేదా మిగిలిన బడ్జెట్‌ను తనిఖీ చేయవచ్చు.',
+    'Kannada': '✅ ಕ್ರಿಯೆಯು ಯಶಸ್ವಿಯಾಗಿ ಪೂರ್ಣಗೊಂಡಿದೆ ಮತ್ತು ದಾಖಲಾಗಿದೆ! ಮುಂದೆ ನೀವು ಏನು ಮಾಡಲು ಬಯಸುತ್ತೀರಿ? ನೀವು ಇನ್ನೊಂದು ವೆಚ್ಚವನ್ನು ಸೇರಿಸಬಹುದು ಅಥವಾ ಉಳಿದ ಬಜೆಟ್ ಪರಿಶೀಲಿಸಬಹುದು.',
+    'Malayalam': '✅ നടപടി വിജയകരമായി പൂർത്തിയാക്കി രേഖപ്പെടുത്തി! അടുത്തതായി നിങ്ങൾ എന്താണ് ചെയ്യാൻ ആഗ്രഹിക്കുന്നത്? നിങ്ങൾക്ക് മറ്റൊരു ചെലവ് ചേർക്കാം അല്ലെങ്കിൽ ബാക്കി ബജറ്റ് പരിശോധിക്കാം.',
+    'Punjabi': '✅ ਕੰਮ ਸਫਲਤਾਪੂਰਵਕ ਪੂਰਾ ਹੋ ਗਿਆ ਅਤੇ ਦਰਜ ਕੀਤਾ ਗਿਆ! ਅੱਗੇ ਤੁਸੀਂ ਕੀ ਕਰਨਾ ਚਾਹੁੰਦੇ ਹੋ? ਤੁਸੀਂ ਕੋਈ ਹੋਰ ਖਰਚਾ ਜੋੜ ਸਕਦੇ ਹੋ ਜਾਂ ਬਾਕੀ ਬਚਿਆ ਬਜਟ ਚੈੱਕ ਕਰ ਸਕਦੇ ਹੋ।',
+  };
+
+  static const Map<String, String> _localizedActionDismissFollowUps = {
+    'English': 'No problem, I have dismissed this action. Let me know if you want to modify the details or need help with anything else!',
+    'Hindi': 'कोई बात नहीं, मैंने इस प्रस्ताव को रद्द कर दिया है। यदि आप विवरण बदलना चाहते हैं या कुछ और पूछना चाहते हैं तो मुझे बताएं!',
+    'Hinglish': 'Koi baat nahi, maine is proposal ko dismiss kar diya hai. Agar details change karni ho ya kuch aur help chahiye to batayein!',
+    'Bengali': 'কোনো সমস্যা নেই, আমি এটি বাতিল করেছি। বিবরণ পরিবর্তন করতে চাইলে বা অন্য কোনো সহায়তা লাগলে জানান!',
+    'Marathi': 'काही हरकत नाही, मी हा प्रस्ताव रद्द केला आहे. तुम्हाला तपशील बदलायचे असतील किंवा इतर मदत हवी असल्यास सांगा!',
+    'Gujarati': 'કોઈ વાંધો નહીં, મેં આ દરખાસ્ત રદ કરી દીધી છે. જો તમારે વિગતો બદલવી હોય અથવા બીજી મદદ જોઈતી હોય તો જણાવો!',
+    'Tamil': 'பிரச்சினை இல்லை, நான் இதை நிராகரித்துள்ளேன். விவரங்களை மாற்ற விரும்பினால் அல்லது வேறு ஏதேனும் உதவி தேவைப்பட்டால் தெரியப்படுத்துங்கள்!',
+    'Telugu': 'పర్వాలేదు, నేను ఈ ప్రతిపాదనను రద్దు చేసాను. మీరు వివరాలను మార్చాలనుకుంటే లేదా మరేదైనా సహాయం కావాలంటే తెలియజేయండి!',
+    'Kannada': 'ಪರವಾಗಿಲ್ಲ, ನಾನು ಈ ಪ್ರಸ್ತಾಪವನ್ನು ರದ್ದುಗೊಳಿಸಿದ್ದೇನೆ. ವಿವರಗಳನ್ನು ಬದಲಾಯಿಸಲು ಅಥವಾ ಬೇರೆ ಯಾವುದೇ ಸಹಾಯ ಬೇಕಾದರೆ ತಿಳಿಸಿ!',
+    'Malayalam': 'കുഴപ്പമില്ല, ഞാൻ ഇത് റദ്ദാക്കിയിട്ടുണ്ട്. വിശദാംശങ്ങൾ മാറ്റണമെങ്കിലോ മറ്റ് എന്തെങ്കിലും സഹായം വേണമെങ്കിലോ അറിയിക്കുക!',
+    'Punjabi': 'ਕੋਈ ਗੱਲ ਨਹੀਂ, ਮੈਂ ਇਸਨੂੰ ਰੱਦ ਕਰ ਦਿੱਤਾ ਹੈ। ਜੇਕਰ ਵੇਰਵੇ ਬਦਲਣੇ ਹਨ ਜਾਂ ਕੋਈ ਹੋਰ ਮਦਦ ਚਾਹੀਦੀ ਹੈ ਤਾਂ ਦੱਸੋ!',
+  };
+
   List<String> get _currentSuggestedPrompts {
     final lang = AiConfigService.instance.responseLanguage;
     return _localizedSuggestions[lang] ?? _localizedSuggestions['English']!;
@@ -401,9 +454,19 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
   }
 
   void _onAiConfigUpdated() {
-    if (mounted) {
-      setState(() {});
-    }
+    if (!mounted) return;
+    setState(() {
+      // If the chat only has the initial welcome greeting, update it to the new language immediately
+      if (_messages.length == 1 && !_messages[0].isUser && _messages[0].id == 'initial_welcome') {
+        final lang = AiConfigService.instance.responseLanguage;
+        _messages[0] = ChatMessage(
+          id: 'initial_welcome',
+          text: _localizedWelcomeMessages[lang] ?? _localizedWelcomeMessages['English']!,
+          isUser: false,
+          timestamp: _messages[0].timestamp,
+        );
+      }
+    });
   }
 
   Future<void> _loadChatHistory() async {
@@ -580,10 +643,12 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
   }
 
   void _addInitialWelcomeMessage() {
+    final lang = AiConfigService.instance.responseLanguage;
     setState(() {
       _messages.add(
         ChatMessage(
-          text: 'Namaste! 👋 Main aapka **GrowwAI Autonomous Financial Agent** hoon.\n\nMai aapke ledger ko analyze karne ke sath-sath:\n• 💳 **Expenses add kar sakta hoon** (e.g. "Add ₹350 for lunch")\n• 🎯 **Budgets set kar sakta hoon** (e.g. "Set Groceries budget to ₹6000")\n• 📖 **Khata / Udhar record kar sakta hoon** (e.g. "Raju ko ₹1500 udhar diya")\n• 👥 **Group Bills split kar sakta hoon** (e.g. "Split ₹1200 with Amit and Rahul")\n\nAap bol kar ya likh kar command de sakte hain!',
+          id: 'initial_welcome',
+          text: _localizedWelcomeMessages[lang] ?? _localizedWelcomeMessages['English']!,
           isUser: false,
           timestamp: DateTime.now(),
         ),
@@ -1642,6 +1707,26 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
         id: msg.id,
         text: msg.toRawText(),
       );
+
+      // Localized follow-up guidance message after execution
+      final lang = AiConfigService.instance.responseLanguage;
+      final followUpText = _localizedActionExecutionFollowUps[lang] ?? _localizedActionExecutionFollowUps['English']!;
+      final followUpMsg = ChatMessage(
+        id: '${DateTime.now().millisecondsSinceEpoch}_followup',
+        text: followUpText,
+        isUser: false,
+        timestamp: DateTime.now(),
+      );
+      setState(() {
+        _messages.add(followUpMsg);
+      });
+      await DatabaseHelper.instance.insertAiChatMessage(
+        id: followUpMsg.id,
+        text: followUpMsg.toRawText(),
+        isUser: false,
+        timestamp: followUpMsg.timestamp,
+      );
+      _scrollToBottom();
     } catch (e) {
       debugPrint('[AiAdvisorScreen] Error executing AI action: $e');
       if (mounted) {
@@ -1862,6 +1947,24 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                       id: msg.id,
                       text: msg.toRawText(),
                     );
+                    final lang = AiConfigService.instance.responseLanguage;
+                    final dismissText = _localizedActionDismissFollowUps[lang] ?? _localizedActionDismissFollowUps['English']!;
+                    final dismissMsg = ChatMessage(
+                      id: '${DateTime.now().millisecondsSinceEpoch}_dismiss',
+                      text: dismissText,
+                      isUser: false,
+                      timestamp: DateTime.now(),
+                    );
+                    setState(() {
+                      _messages.add(dismissMsg);
+                    });
+                    await DatabaseHelper.instance.insertAiChatMessage(
+                      id: dismissMsg.id,
+                      text: dismissMsg.toRawText(),
+                      isUser: false,
+                      timestamp: dismissMsg.timestamp,
+                    );
+                    _scrollToBottom();
                   },
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.grey,
