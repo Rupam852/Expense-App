@@ -299,8 +299,20 @@ class DatabaseHelper {
     } catch (_) {}
     try {
       await db.execute('''
+        CREATE TABLE IF NOT EXISTS ai_chat_sessions (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          is_pinned INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+    } catch (_) {}
+    try {
+      await db.execute('''
         CREATE TABLE IF NOT EXISTS ai_chat_messages (
           id TEXT PRIMARY KEY,
+          session_id TEXT,
           text TEXT NOT NULL,
           is_user INTEGER NOT NULL,
           timestamp TEXT NOT NULL,
@@ -308,6 +320,9 @@ class DatabaseHelper {
           created_at TEXT NOT NULL
         )
       ''');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE ai_chat_messages ADD COLUMN session_id TEXT');
     } catch (_) {}
   }
 
@@ -317,7 +332,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 10,
+      version: 11,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -469,6 +484,26 @@ class DatabaseHelper {
         await db.execute('ALTER TABLE payment_details ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0');
       } catch (_) {}
     }
+    if (oldVersion < 11) {
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS ai_chat_sessions (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            is_pinned INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+      } catch (e) {
+        debugPrint('[Migration] Error creating ai_chat_sessions: $e');
+      }
+      try {
+        await db.execute('ALTER TABLE ai_chat_messages ADD COLUMN session_id TEXT');
+      } catch (e) {
+        debugPrint('[Migration] session_id column already exists: $e');
+      }
+    }
   }
 
   Future<void> _createDB(Database db, int version) async {
@@ -589,10 +624,21 @@ class DatabaseHelper {
       )
     ''');
 
-    // 8. AI Chat Messages SQLite Table
+    // 8. AI Chat Sessions & Messages SQLite Tables
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ai_chat_sessions (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        is_pinned INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
     await db.execute('''
       CREATE TABLE ai_chat_messages (
         id TEXT PRIMARY KEY,
+        session_id TEXT,
         text TEXT NOT NULL,
         is_user INTEGER NOT NULL,
         timestamp TEXT NOT NULL,
@@ -1565,12 +1611,103 @@ class DatabaseHelper {
     try { await db.delete('split_bills'); } catch (_) {}
     try { await db.delete('subscriptions'); } catch (_) {}
     if (!preserveLocalChatAndCalc) {
+      try { await db.delete('ai_chat_sessions'); } catch (_) {}
       try { await db.delete('ai_chat_messages'); } catch (_) {}
       try { await db.delete('calculator_history'); } catch (_) {}
     }
   }
 
-  // ================= AI CHAT MESSAGES CRUD =================
+  // ================= AI CHAT SESSIONS & MESSAGES CRUD =================
+
+  Future<int> createAiChatSession({
+    required String id,
+    required String title,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    bool isPinned = false,
+  }) async {
+    final db = await instance.database;
+    final nowIso = (createdAt ?? DateTime.now()).toIso8601String();
+    final updatedIso = (updatedAt ?? DateTime.now()).toIso8601String();
+    return await db.insert(
+      'ai_chat_sessions',
+      {
+        'id': id,
+        'title': title,
+        'created_at': nowIso,
+        'updated_at': updatedIso,
+        'is_pinned': isPinned ? 1 : 0,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getAiChatSessions() async {
+    final db = await instance.database;
+    try {
+      final result = await db.rawQuery('''
+        SELECT s.id, s.title, s.created_at, s.updated_at, s.is_pinned,
+               COUNT(m.id) as message_count
+        FROM ai_chat_sessions s
+        LEFT JOIN ai_chat_messages m ON s.id = m.session_id
+        GROUP BY s.id
+        ORDER BY s.is_pinned DESC, s.updated_at DESC
+      ''');
+      return List<Map<String, dynamic>>.from(result);
+    } catch (e) {
+      debugPrint('[DatabaseHelper] Error fetching AI chat sessions: $e');
+      return [];
+    }
+  }
+
+  Future<int> updateAiChatSessionTitle({
+    required String id,
+    required String title,
+  }) async {
+    try {
+      final db = await instance.database;
+      return await db.update(
+        'ai_chat_sessions',
+        {
+          'title': title,
+          'updated_at': DateTime.now().toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    } catch (e) {
+      debugPrint('[DatabaseHelper] Error updating session title: $e');
+      return 0;
+    }
+  }
+
+  Future<int> updateAiChatSessionTimestamp(String id, {DateTime? updatedAt}) async {
+    try {
+      final db = await instance.database;
+      return await db.update(
+        'ai_chat_sessions',
+        {
+          'updated_at': (updatedAt ?? DateTime.now()).toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    } catch (e) {
+      debugPrint('[DatabaseHelper] Error updating session timestamp: $e');
+      return 0;
+    }
+  }
+
+  Future<int> deleteAiChatSession(String id) async {
+    try {
+      final db = await instance.database;
+      await db.delete('ai_chat_messages', where: 'session_id = ?', whereArgs: [id]);
+      return await db.delete('ai_chat_sessions', where: 'id = ?', whereArgs: [id]);
+    } catch (e) {
+      debugPrint('[DatabaseHelper] Error deleting AI chat session: $e');
+      return 0;
+    }
+  }
 
   Future<int> insertAiChatMessage({
     required String id,
@@ -1578,13 +1715,15 @@ class DatabaseHelper {
     required bool isUser,
     required DateTime timestamp,
     String? modelUsed,
+    String? sessionId,
   }) async {
     final db = await instance.database;
     final encText = encryptVal(text);
-    return await db.insert(
+    final res = await db.insert(
       'ai_chat_messages',
       {
         'id': id,
+        'session_id': sessionId,
         'text': encText,
         'is_user': isUser ? 1 : 0,
         'timestamp': timestamp.toIso8601String(),
@@ -1593,14 +1732,28 @@ class DatabaseHelper {
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    if (sessionId != null) {
+      await updateAiChatSessionTimestamp(sessionId);
+    }
+    return res;
   }
 
-  Future<List<Map<String, dynamic>>> getAiChatMessages() async {
+  Future<List<Map<String, dynamic>>> getAiChatMessages({String? sessionId}) async {
     final db = await instance.database;
-    final result = await db.query(
-      'ai_chat_messages',
-      orderBy: 'timestamp ASC',
-    );
+    final List<Map<String, dynamic>> result;
+    if (sessionId != null) {
+      result = await db.query(
+        'ai_chat_messages',
+        where: 'session_id = ?',
+        whereArgs: [sessionId],
+        orderBy: 'timestamp ASC',
+      );
+    } else {
+      result = await db.query(
+        'ai_chat_messages',
+        orderBy: 'timestamp ASC',
+      );
+    }
     return result.map((row) {
       final decryptedRow = Map<String, dynamic>.from(row);
       decryptedRow['text'] = decryptVal(row['text']?.toString() ?? '');
@@ -1630,12 +1783,16 @@ class DatabaseHelper {
   Future<Map<String, dynamic>> getAiChatStats() async {
     try {
       final db = await instance.database;
-      final result = await db.rawQuery('SELECT COUNT(*) as count, TOTAL(LENGTH(text)) as text_bytes FROM ai_chat_messages');
-      final count = Sqflite.firstIntValue(result) ?? 0;
-      final textBytes = ((result.first['text_bytes'] as num?)?.toInt() ?? 0);
+      final msgResult = await db.rawQuery('SELECT COUNT(*) as count, TOTAL(LENGTH(text)) as text_bytes FROM ai_chat_messages');
+      final sessionResult = await db.rawQuery('SELECT COUNT(*) as session_count FROM ai_chat_sessions');
+
+      final count = Sqflite.firstIntValue(msgResult) ?? 0;
+      final sessionCount = Sqflite.firstIntValue(sessionResult) ?? 0;
+      final textBytes = ((msgResult.first['text_bytes'] as num?)?.toInt() ?? 0);
       final totalBytes = count > 0 ? (textBytes + (count * 128)) : 0;
       return {
         'count': count,
+        'sessionCount': sessionCount,
         'bytes': totalBytes,
         'formattedSize': formatBytes(totalBytes),
       };
@@ -1643,6 +1800,7 @@ class DatabaseHelper {
       debugPrint('[DatabaseHelper] Error calculating AI chat stats: $e');
       return {
         'count': 0,
+        'sessionCount': 0,
         'bytes': 0,
         'formattedSize': '0 KB',
       };
@@ -1656,9 +1814,18 @@ class DatabaseHelper {
     return '${(bytes / (1024 * 1024)).toStringAsFixed(2)} MB';
   }
 
-  Future<int> clearAiChatMessages() async {
+  Future<int> clearAiChatMessages({String? sessionId}) async {
     final db = await instance.database;
+    if (sessionId != null) {
+      return await db.delete('ai_chat_messages', where: 'session_id = ?', whereArgs: [sessionId]);
+    }
     return await db.delete('ai_chat_messages');
+  }
+
+  Future<void> clearAllAiChatData() async {
+    final db = await instance.database;
+    try { await db.delete('ai_chat_messages'); } catch (_) {}
+    try { await db.delete('ai_chat_sessions'); } catch (_) {}
   }
 
   // ================= CALCULATOR HISTORY CRUD =================

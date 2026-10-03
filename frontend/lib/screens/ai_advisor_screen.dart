@@ -119,11 +119,18 @@ class AiAdvisorScreen extends StatefulWidget {
 }
 
 class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
   final List<ChatMessage> _messages = [];
   bool _isLoading = false;
+
+  // Multi-Session Chat State (ChatGPT / Gemini Style)
+  String? _currentSessionId;
+  String _currentSessionTitle = 'New Chat';
+  List<Map<String, dynamic>> _sessions = [];
+  bool _isLoadingSessions = false;
 
   // Voice speech integration for chat
   final stt.SpeechToText _speech = stt.SpeechToText();
@@ -450,7 +457,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
   void initState() {
     super.initState();
     AiConfigService.instance.addListener(_onAiConfigUpdated);
-    _loadChatHistory();
+    _loadChatHistoryAndSessions();
   }
 
   void _onAiConfigUpdated() {
@@ -469,13 +476,103 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     });
   }
 
-  Future<void> _loadChatHistory() async {
+  String _generateTitleFromPrompt(String prompt) {
+    // Strip leading decorative emojis / action command characters
+    String clean = prompt.replaceAll(
+      RegExp(r'^[^\w₹0-9\u0900-\u097F\u0980-\u09FF\u0A00-\u0A7F\u0A80-\u0AFF\u0B00-\u0B7F\u0B80-\u0BFF\u0C00-\u0C7F\u0C80-\u0CFF\u0D00-\u0D7F]+\s*'),
+      '',
+    ).trim();
+    if (clean.isEmpty) clean = prompt.trim();
+    clean = clean.replaceAll(RegExp(r'<!--ACTION_INTENT:(.*?)-->', dotAll: true), '').trim();
+    if (clean.length > 36) {
+      return '${clean.substring(0, 36).trim()}...';
+    }
+    return clean.isEmpty ? 'New Conversation' : clean;
+  }
+
+  Future<void> _refreshSessionsList() async {
     try {
-      final rows = await DatabaseHelper.instance.getAiChatMessages();
-      if (!mounted) return;
-      if (rows.isNotEmpty) {
+      final rows = await DatabaseHelper.instance.getAiChatSessions();
+      if (mounted) {
         setState(() {
-          _messages.clear();
+          _sessions = rows;
+        });
+      }
+    } catch (e) {
+      debugPrint('[AiAdvisorScreen] Error refreshing sessions: $e');
+    }
+  }
+
+  Future<void> _loadChatHistoryAndSessions() async {
+    setState(() => _isLoadingSessions = true);
+    try {
+      var sessionRows = await DatabaseHelper.instance.getAiChatSessions();
+
+      // Legacy migration: If existing unassigned messages exist and sessions is empty, bundle them into a session
+      final legacyRows = await DatabaseHelper.instance.getAiChatMessages();
+      if (sessionRows.isEmpty && legacyRows.isNotEmpty) {
+        final firstUserMsg = legacyRows.firstWhere((m) => m['is_user'] == 1, orElse: () => legacyRows.first);
+        final rawTitle = firstUserMsg['text']?.toString() ?? 'Financial Advice';
+        final cleanTitle = _generateTitleFromPrompt(rawTitle);
+        final legacySessionId = 'session_${DateTime.now().millisecondsSinceEpoch}';
+
+        await DatabaseHelper.instance.createAiChatSession(
+          id: legacySessionId,
+          title: cleanTitle,
+          createdAt: DateTime.tryParse(legacyRows.first['timestamp']?.toString() ?? '') ?? DateTime.now(),
+        );
+
+        // Assign legacy messages to this session
+        for (var m in legacyRows) {
+          final mId = m['id']?.toString();
+          if (mId != null) {
+            await DatabaseHelper.instance.insertAiChatMessage(
+              id: mId,
+              sessionId: legacySessionId,
+              text: m['text']?.toString() ?? '',
+              isUser: m['is_user'] == 1,
+              timestamp: DateTime.tryParse(m['timestamp']?.toString() ?? '') ?? DateTime.now(),
+              modelUsed: m['model_used']?.toString(),
+            );
+          }
+        }
+        sessionRows = await DatabaseHelper.instance.getAiChatSessions();
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _sessions = sessionRows;
+        _isLoadingSessions = false;
+      });
+
+      if (_sessions.isNotEmpty) {
+        final latest = _sessions.first;
+        final sId = latest['id']?.toString() ?? '';
+        final sTitle = latest['title']?.toString() ?? 'Financial Advisor';
+        _currentSessionId = sId;
+        _currentSessionTitle = sTitle;
+        await _loadSessionMessages(sId);
+      } else {
+        _startNewChat();
+      }
+
+      await _checkMonthRolloverPrompt();
+    } catch (e) {
+      debugPrint('[AiAdvisorScreen] Error loading sessions/chat: $e');
+      if (mounted) {
+        setState(() => _isLoadingSessions = false);
+        _startNewChat();
+      }
+    }
+  }
+
+  Future<void> _loadSessionMessages(String sessionId) async {
+    try {
+      final rows = await DatabaseHelper.instance.getAiChatMessages(sessionId: sessionId);
+      if (!mounted) return;
+      setState(() {
+        _messages.clear();
+        if (rows.isNotEmpty) {
           for (var row in rows) {
             _messages.add(
               ChatMessage.fromRawText(
@@ -487,17 +584,230 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
               ),
             );
           }
-        });
-        _scrollToBottom();
-      } else {
-        _addInitialWelcomeMessage();
-      }
-
-      // Check for month rollover prompt
-      await _checkMonthRolloverPrompt();
+        } else {
+          _addInitialWelcomeMessage();
+        }
+      });
+      _scrollToBottom();
     } catch (e) {
-      debugPrint('[AiAdvisorScreen] Error loading chat history: $e');
+      debugPrint('[AiAdvisorScreen] Error loading messages for session $sessionId: $e');
       _addInitialWelcomeMessage();
+    }
+  }
+
+  void _startNewChat() {
+    setState(() {
+      _currentSessionId = null;
+      _currentSessionTitle = 'New Chat';
+      _messages.clear();
+      _addInitialWelcomeMessage();
+    });
+  }
+
+  Future<void> _switchSession(String? sessionId, String title) async {
+    if (sessionId == null) {
+      _startNewChat();
+      return;
+    }
+    setState(() {
+      _currentSessionId = sessionId;
+      _currentSessionTitle = title;
+    });
+    await _loadSessionMessages(sessionId);
+  }
+
+  Future<void> _showRenameSessionDialog(String sessionId, String currentTitle) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).primaryColor;
+    final ctrl = TextEditingController(text: currentTitle);
+
+    final newTitle = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1E2430) : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: isDark ? const Color(0xFF2E384D) : const Color(0xFFE2E8F0)),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: primaryColor.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.edit_note_rounded, color: primaryColor, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Rename Chat',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: 'Enter chat title',
+            filled: true,
+            fillColor: isDark ? const Color(0xFF14171F) : const Color(0xFFF1F5F9),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00D09C),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () {
+              final val = ctrl.text.trim();
+              if (val.isNotEmpty) {
+                Navigator.of(ctx).pop(val);
+              }
+            },
+            child: const Text('Save Title', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (newTitle != null && newTitle.trim().isNotEmpty && mounted) {
+      await DatabaseHelper.instance.updateAiChatSessionTitle(id: sessionId, title: newTitle.trim());
+      setState(() {
+        if (_currentSessionId == sessionId) {
+          _currentSessionTitle = newTitle.trim();
+        }
+      });
+      await _refreshSessionsList();
+      if (mounted) {
+        CustomToast.show(context, 'Chat renamed to "$newTitle" ✨');
+      }
+    }
+  }
+
+  Future<void> _confirmDeleteSession(String sessionId, String title) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1E2430) : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: isDark ? const Color(0xFF2E384D) : const Color(0xFFE2E8F0)),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.redAccent.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Delete Chat?',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to delete "$title"? All messages in this chat session will be permanently removed.',
+          style: GoogleFonts.inter(fontSize: 13.5, height: 1.45, color: isDark ? Colors.grey[300] : Colors.grey[700]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Cancel', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      await DatabaseHelper.instance.deleteAiChatSession(sessionId);
+      await _refreshSessionsList();
+      if (_currentSessionId == sessionId) {
+        if (_sessions.isNotEmpty) {
+          final next = _sessions.first;
+          await _switchSession(next['id']?.toString(), next['title']?.toString() ?? 'Financial Advisor');
+        } else {
+          _startNewChat();
+        }
+      }
+      if (mounted) {
+        CustomToast.show(context, 'Chat deleted successfully 🗑️');
+      }
+    }
+  }
+
+  Map<String, List<Map<String, dynamic>>> _groupSessionsByTimeline(List<Map<String, dynamic>> sessions) {
+    final Map<String, List<Map<String, dynamic>>> groups = {
+      'Today': [],
+      'Yesterday': [],
+      'Previous 7 Days': [],
+      'Older': [],
+    };
+
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final yesterdayStart = todayStart.subtract(const Duration(days: 1));
+    final sevenDaysAgo = todayStart.subtract(const Duration(days: 7));
+
+    for (var s in sessions) {
+      final dateStr = s['updated_at']?.toString() ?? s['created_at']?.toString() ?? '';
+      final dt = DateTime.tryParse(dateStr) ?? now;
+      if (dt.isAfter(todayStart)) {
+        groups['Today']!.add(s);
+      } else if (dt.isAfter(yesterdayStart)) {
+        groups['Yesterday']!.add(s);
+      } else if (dt.isAfter(sevenDaysAgo)) {
+        groups['Previous 7 Days']!.add(s);
+      } else {
+        groups['Older']!.add(s);
+      }
+    }
+
+    return groups;
+  }
+
+  String _formatSessionTime(DateTime dt) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dtDay = DateTime(dt.year, dt.month, dt.day);
+    if (dtDay == today) {
+      return DateFormat('hh:mm a').format(dt);
+    } else if (dtDay == today.subtract(const Duration(days: 1))) {
+      return 'Yesterday';
+    } else if (now.difference(dt).inDays < 7) {
+      return DateFormat('EEE, dd MMM').format(dt);
+    } else {
+      return DateFormat('dd MMM yyyy').format(dt);
     }
   }
 
@@ -514,7 +824,6 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     }
 
     if (lastSeenMonth != currentMonthKey && _messages.isNotEmpty) {
-      // Check if there are past messages from a different month
       final hasPastMessages = _messages.any((m) {
         final monthKey = DateFormat('yyyy-MM').format(m.timestamp);
         return monthKey != currentMonthKey;
@@ -571,7 +880,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'A new month ($monthName) has started! Would you like to clear previous months\' conversation and start fresh for $monthName?',
+              'A new month ($monthName) has started! Would you like to start a fresh chat session for $monthName? Your past conversations will stay securely saved in History.',
               style: GoogleFonts.inter(
                 fontSize: 13.5,
                 height: 1.45,
@@ -591,7 +900,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Your saved expenses and budgets are always 100% safe in History.',
+                      'Your saved expenses and budgets are always 100% safe.',
                       style: GoogleFonts.inter(fontSize: 11.5, color: primaryColor),
                     ),
                   ),
@@ -611,7 +920,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     foregroundColor: Colors.grey,
                   ),
-                  child: const Text('Keep Old Chat', style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: const Text('Keep Current Chat', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 10),
@@ -625,7 +934,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                     elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('Start Fresh 🚀', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text('New Chat 🚀', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -637,11 +946,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     await prefs.setString('last_seen_chat_month', currentMonthKey);
 
     if (startFresh == true && mounted) {
-      await DatabaseHelper.instance.clearAiChatMessages();
-      setState(() {
-        _messages.clear();
-      });
-      _addInitialWelcomeMessage();
+      _startNewChat();
       CustomToast.show(context, 'Started fresh chat for $monthName! ✨');
     }
   }
@@ -756,6 +1061,21 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     final question = text.trim();
     _textController.clear();
 
+    // Auto-create session if starting on a new draft chat
+    if (_currentSessionId == null) {
+      final newSessionId = 'session_${DateTime.now().millisecondsSinceEpoch}';
+      final autoTitle = _generateTitleFromPrompt(question);
+      await DatabaseHelper.instance.createAiChatSession(
+        id: newSessionId,
+        title: autoTitle,
+      );
+      setState(() {
+        _currentSessionId = newSessionId;
+        _currentSessionTitle = autoTitle;
+      });
+      _refreshSessionsList();
+    }
+
     final userMsg = ChatMessage(
       text: question,
       isUser: true,
@@ -771,6 +1091,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     // Persist user question in SQLite
     await DatabaseHelper.instance.insertAiChatMessage(
       id: '${DateTime.now().millisecondsSinceEpoch}_user',
+      sessionId: _currentSessionId,
       text: userMsg.text,
       isUser: true,
       timestamp: userMsg.timestamp,
@@ -830,12 +1151,14 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     // Persist AI response in SQLite (preserving action metadata for persistence)
     await DatabaseHelper.instance.insertAiChatMessage(
       id: aiMsg.id,
+      sessionId: _currentSessionId,
       text: aiMsg.toRawText(),
       isUser: false,
       timestamp: aiMsg.timestamp,
       modelUsed: aiMsg.modelUsed,
     );
 
+    _refreshSessionsList();
     _scrollToBottom();
   }
 
@@ -904,6 +1227,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
   Future<void> _confirmClearChat() async {
     final stats = await DatabaseHelper.instance.getAiChatStats();
     final count = stats['count'] as int? ?? _messages.where((m) => m.isUser || m.text.isNotEmpty).length;
+    final sessionCount = stats['sessionCount'] as int? ?? _sessions.length;
     final formattedSize = stats['formattedSize'] as String? ?? '0 KB';
     if (!mounted) return;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -926,12 +1250,12 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                 color: Colors.redAccent.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 22),
+              child: const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Clear Chat History?',
+                'Clear All Chat History?',
                 style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
               ),
             ),
@@ -969,7 +1293,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '$count saved messages on this device',
+                          '$count messages in $sessionCount conversations',
                           style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey[500]),
                         ),
                       ],
@@ -980,7 +1304,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
             ),
             const SizedBox(height: 14),
             Text(
-              'All your AI conversations, suggestions, and action intents will be permanently wiped from local phone storage. This action cannot be undone.',
+              'All your past AI conversations, suggestions, and action intents will be permanently wiped from local phone storage. This action cannot be undone.',
               style: GoogleFonts.inter(fontSize: 12.5, height: 1.45, color: isDark ? Colors.grey[400] : Colors.grey[600]),
             ),
           ],
@@ -998,7 +1322,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(
-              'Clear History ($formattedSize)',
+              'Clear All ($formattedSize)',
               style: GoogleFonts.inter(fontWeight: FontWeight.bold),
             ),
           ),
@@ -1007,13 +1331,11 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     );
 
     if (confirm == true) {
-      await DatabaseHelper.instance.clearAiChatMessages();
-      setState(() {
-        _messages.clear();
-        _addInitialWelcomeMessage();
-      });
+      await DatabaseHelper.instance.clearAllAiChatData();
+      _startNewChat();
+      await _refreshSessionsList();
       if (mounted) {
-        CustomToast.show(context, 'Chat history cleared successfully ($formattedSize freed)');
+        CustomToast.show(context, 'All chat history cleared ($formattedSize freed)');
       }
     }
   }
@@ -1281,52 +1603,380 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     );
   }
 
+  Widget _buildHistoryDrawer(BuildContext context, bool isDark, Color primaryColor) {
+    final grouped = _groupSessionsByTimeline(_sessions);
+    return Drawer(
+      backgroundColor: isDark ? const Color(0xFF14171F) : Colors.white,
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Drawer Top Header
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: isDark ? const Color(0xFF1F2633) : const Color(0xFFE2E8F0),
+                  ),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF00D09C), Color(0xFF059669)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.psychology_alt_rounded, color: Colors.white, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'GrowwAI History',
+                              style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              '${_sessions.length} saved conversations',
+                              style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        tooltip: 'Close History',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  // "➕ New Chat" Button
+                  InkWell(
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _startNewChat();
+                    },
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFF00D09C).withValues(alpha: 0.15),
+                            const Color(0xFF00D09C).withValues(alpha: 0.05),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: const Color(0xFF00D09C).withValues(alpha: 0.4),
+                          width: 1.2,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.add_rounded, color: Color(0xFF00D09C), size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'New Chat',
+                            style: GoogleFonts.outfit(
+                              color: const Color(0xFF00D09C),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Sessions List
+            Expanded(
+              child: _sessions.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.chat_bubble_outline_rounded,
+                              size: 48,
+                              color: isDark ? const Color(0xFF2E384D) : const Color(0xFFCBD5E1),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'No Chat History Yet',
+                              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Ask GrowwAI any expense question to start your first conversation!',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                      children: [
+                        for (final entry in grouped.entries)
+                          if (entry.value.isNotEmpty) ...[
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(12, 14, 12, 6),
+                              child: Text(
+                                entry.key.toUpperCase(),
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.1,
+                                  color: const Color(0xFF00D09C).withValues(alpha: 0.8),
+                                ),
+                              ),
+                            ),
+                            for (final session in entry.value)
+                              _buildSessionTile(session, isDark, primaryColor),
+                          ],
+                      ],
+                    ),
+            ),
+
+            // Drawer Bottom Actions
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: isDark ? const Color(0xFF1F2633) : const Color(0xFFE2E8F0),
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _confirmClearChat();
+                      },
+                      icon: const Icon(Icons.delete_sweep_outlined, size: 18, color: Colors.redAccent),
+                      label: Text(
+                        'Clear All History',
+                        style: GoogleFonts.inter(color: Colors.redAccent, fontSize: 12.5, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSessionTile(Map<String, dynamic> session, bool isDark, Color primaryColor) {
+    final id = session['id']?.toString() ?? '';
+    final title = session['title']?.toString() ?? 'Conversation';
+    final msgCount = session['message_count'] as int? ?? 0;
+    final isActive = (id == _currentSessionId);
+    final dateStr = session['updated_at']?.toString() ?? session['created_at']?.toString() ?? '';
+    final dt = DateTime.tryParse(dateStr) ?? DateTime.now();
+    final timeFormatted = _formatSessionTime(dt);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 3),
+      decoration: BoxDecoration(
+        color: isActive
+            ? const Color(0xFF00D09C).withValues(alpha: 0.12)
+            : (isDark ? const Color(0xFF1A1F2B) : const Color(0xFFF8FAFC)),
+        borderRadius: BorderRadius.circular(12),
+        border: Border(
+          left: BorderSide(
+            color: isActive ? const Color(0xFF00D09C) : Colors.transparent,
+            width: 3.5,
+          ),
+          top: BorderSide(
+            color: isActive
+                ? const Color(0xFF00D09C).withValues(alpha: 0.3)
+                : (isDark ? const Color(0xFF262C3D) : const Color(0xFFE2E8F0)),
+          ),
+          right: BorderSide(
+            color: isActive
+                ? const Color(0xFF00D09C).withValues(alpha: 0.3)
+                : (isDark ? const Color(0xFF262C3D) : const Color(0xFFE2E8F0)),
+          ),
+          bottom: BorderSide(
+            color: isActive
+                ? const Color(0xFF00D09C).withValues(alpha: 0.3)
+                : (isDark ? const Color(0xFF262C3D) : const Color(0xFFE2E8F0)),
+          ),
+        ),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+        dense: true,
+        leading: Icon(
+          isActive ? Icons.chat_bubble_rounded : Icons.chat_bubble_outline_rounded,
+          color: isActive ? const Color(0xFF00D09C) : Colors.grey,
+          size: 18,
+        ),
+        title: Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.outfit(
+            fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+            fontSize: 13.5,
+            color: isActive ? (isDark ? Colors.white : const Color(0xFF007A5E)) : null,
+          ),
+        ),
+        subtitle: Row(
+          children: [
+            Text(
+              timeFormatted,
+              style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+            ),
+            if (msgCount > 0) ...[
+              const SizedBox(width: 6),
+              Text(
+                '• $msgCount msgs',
+                style: GoogleFonts.inter(fontSize: 10.5, color: Colors.grey),
+              ),
+            ],
+          ],
+        ),
+        onTap: () {
+          Navigator.of(context).pop(); // Close drawer
+          if (!isActive) {
+            _switchSession(id, title);
+          }
+        },
+        trailing: PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert_rounded, size: 18, color: Colors.grey),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          onSelected: (val) {
+            if (val == 'rename') {
+              _showRenameSessionDialog(id, title);
+            } else if (val == 'delete') {
+              _confirmDeleteSession(id, title);
+            }
+          },
+          itemBuilder: (ctx) => [
+            PopupMenuItem(
+              value: 'rename',
+              child: Row(
+                children: [
+                  const Icon(Icons.edit_outlined, size: 16),
+                  const SizedBox(width: 8),
+                  Text('Rename', style: GoogleFonts.inter(fontSize: 13)),
+                ],
+              ),
+            ),
+            PopupMenuItem(
+              value: 'delete',
+              child: Row(
+                children: [
+                  const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.redAccent),
+                  const SizedBox(width: 8),
+                  Text('Delete', style: GoogleFonts.inter(fontSize: 13, color: Colors.redAccent)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).primaryColor;
 
     return Scaffold(
+      key: _scaffoldKey,
+      drawer: _buildHistoryDrawer(context, isDark, primaryColor),
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
         elevation: 0,
         titleSpacing: 0,
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
+        leading: IconButton(
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          icon: const Icon(Icons.history_rounded),
+          tooltip: 'Conversations History',
+        ),
+        title: GestureDetector(
+          onTap: _currentSessionId != null
+              ? () => _showRenameSessionDialog(_currentSessionId!, _currentSessionTitle)
+              : null,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00D09C).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.psychology_alt_rounded, color: Color(0xFF00D09C), size: 22),
               ),
-              child: Icon(Icons.psychology_alt_rounded, color: primaryColor, size: 22),
-            ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Financial Advisor',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16.5),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            _currentSessionTitle,
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (_currentSessionId != null) ...[
+                          const SizedBox(width: 4),
+                          const Icon(Icons.edit_outlined, size: 14, color: Colors.grey),
+                        ],
+                      ],
+                    ),
+                    Text(
+                      'Live Expense Intelligence',
+                      style: GoogleFonts.inter(fontSize: 10.5, color: Colors.grey),
+                    ),
+                  ],
                 ),
-                Text(
-                  'Live Expense Intelligence',
-                  style: GoogleFonts.inter(fontSize: 10.5, color: Colors.grey),
-                ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
         actions: [
+          IconButton(
+            onPressed: _startNewChat,
+            icon: const Icon(Icons.add_comment_outlined),
+            tooltip: 'New Chat',
+          ),
           IconButton(
             onPressed: _openChatSettingsModal,
             icon: const Icon(Icons.tune_rounded),
             tooltip: 'AI Chat Settings & Language',
-          ),
-          IconButton(
-            onPressed: _confirmClearChat,
-            icon: const Icon(Icons.delete_outline_rounded),
-            tooltip: 'Clear Chat History',
           ),
         ],
       ),
@@ -1726,6 +2376,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       });
       await DatabaseHelper.instance.insertAiChatMessage(
         id: followUpMsg.id,
+        sessionId: _currentSessionId,
         text: followUpMsg.toRawText(),
         isUser: false,
         timestamp: followUpMsg.timestamp,
@@ -1964,6 +2615,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                     });
                     await DatabaseHelper.instance.insertAiChatMessage(
                       id: dismissMsg.id,
+                      sessionId: _currentSessionId,
                       text: dismissMsg.toRawText(),
                       isUser: false,
                       timestamp: dismissMsg.timestamp,
