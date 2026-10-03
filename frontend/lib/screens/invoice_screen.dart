@@ -1095,7 +1095,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
                     if (res == true) _loadBusinessData();
                   },
                   icon: const Icon(Icons.add_shopping_cart_rounded, size: 18),
-                  label: const Text('➕ New Customer Bill / Invoice'),
+                  label: const Text('New Customer Bill / Invoice'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     foregroundColor: Colors.white,
@@ -1313,7 +1313,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
                     _loadBusinessData();
                   },
                   icon: const Icon(Icons.receipt_rounded, size: 18),
-                  label: const Text('➕ Log Business Expense / Purchase'),
+                  label: const Text('New Business Expense / Purchase'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFF59E0B), // Amber Accent
                     foregroundColor: Colors.white,
