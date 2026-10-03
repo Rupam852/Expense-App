@@ -60,6 +60,7 @@ dependencies:
   flutter_displaymode: ^0.7.0
   firebase_core: ^4.15.0
   firebase_messaging: ^16.7.0
+  printing: ^5.14.3
 
 dev_dependencies:
   flutter_test:

@@ -8,6 +8,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/expense.dart';
+import '../utils/pdf_unicode_helper.dart';
 import 'database_helper.dart';
 
 /// Central Supabase service — replaces the old ApiService + SyncService
@@ -433,7 +434,8 @@ class SupabaseService {
         }
       } catch (_) {}
 
-      final pdf = pw.Document();
+      final pdfTheme = await PdfUnicodeHelper.getUnicodePdfTheme();
+      final pdf = pw.Document(theme: pdfTheme);
       final double total = sortedExpenses.fold(0.0, (sum, e) => sum + e.amount);
       final issueDateStr = DateFormat('dd/MM/yyyy').format(DateTime.now());
       final mintColor = PdfColor.fromHex('#00D09C');

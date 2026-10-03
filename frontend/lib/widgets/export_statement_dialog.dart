@@ -17,6 +17,7 @@ import '../models/expense.dart';
 import '../services/database_helper.dart';
 import '../services/expense_provider.dart';
 import '../services/supabase_service.dart';
+import '../utils/pdf_unicode_helper.dart';
 import '../widgets/custom_toast.dart';
 
 enum ExportFormat { pdf, excel, csv }
@@ -218,7 +219,8 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
   // PDF GENERATOR (.pdf)
   // ────────────────────────────────────────────────────────────
   Future<Uint8List> _generatePdfBytes(List<Expense> expenses, String periodLabel) async {
-    final pdf = pw.Document();
+    final pdfTheme = await PdfUnicodeHelper.getUnicodePdfTheme();
+    final pdf = pw.Document(theme: pdfTheme);
     final double total = expenses.fold(0.0, (sum, e) => sum + e.amount);
     final issueDateStr = DateFormat('dd/MM/yyyy').format(DateTime.now());
     final mintColor = PdfColor.fromHex('#00D09C');
