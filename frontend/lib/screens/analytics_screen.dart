@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -23,7 +24,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   List<BusinessSale> _allBusinessSales = [];
   List<BusinessSale> _businessSales = [];
   List<Expense> _businessExpenses = [];
-  String _businessTimeFilter = 'This Month'; // 'Today', 'This Week', 'This Month', 'All Time'
+  String _businessTimeFilter = 'This Month'; // 'Today', 'This Week', 'This Month', 'All Time', 'Custom Month'
+  DateTime _selectedMonthYear = DateTime(DateTime.now().year, DateTime.now().month);
 
   @override
   void initState() {
@@ -60,6 +62,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       } else if (_businessTimeFilter == 'This Month') {
         start = DateTime(now.year, now.month, 1);
         end = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+      } else if (_businessTimeFilter == 'Custom Month') {
+        start = DateTime(_selectedMonthYear.year, _selectedMonthYear.month, 1);
+        end = DateTime(_selectedMonthYear.year, _selectedMonthYear.month + 1, 0, 23, 59, 59);
       } else {
         start = DateTime(2020, 1, 1);
         end = DateTime(2099, 12, 31, 23, 59, 59);
@@ -206,6 +211,242 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
+  void _showBusinessMonthPickerModal() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    int displayYear = _selectedMonthYear.year;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final now = DateTime.now();
+            final months = [
+              {'name': 'Jan', 'month': 1, 'full': 'January'},
+              {'name': 'Feb', 'month': 2, 'full': 'February'},
+              {'name': 'Mar', 'month': 3, 'full': 'March'},
+              {'name': 'Apr', 'month': 4, 'full': 'April'},
+              {'name': 'May', 'month': 5, 'full': 'May'},
+              {'name': 'Jun', 'month': 6, 'full': 'June'},
+              {'name': 'Jul', 'month': 7, 'full': 'July'},
+              {'name': 'Aug', 'month': 8, 'full': 'August'},
+              {'name': 'Sep', 'month': 9, 'full': 'September'},
+              {'name': 'Oct', 'month': 10, 'full': 'October'},
+              {'name': 'Nov', 'month': 11, 'full': 'November'},
+              {'name': 'Dec', 'month': 12, 'full': 'December'},
+            ];
+
+            return Container(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF181B22) : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.18),
+                    blurRadius: 20,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Drag Handle
+                  Container(
+                    width: 42,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+
+                  // Header with Year Stepper
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Select Analytics Month',
+                            style: GoogleFonts.outfit(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                          Text(
+                            'Analyze P&L & sales for any month',
+                            style: GoogleFonts.inter(
+                              fontSize: 11.5,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF242936) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF333D4F) : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.chevron_left_rounded, size: 22),
+                              onPressed: () {
+                                HapticFeedback.selectionClick();
+                                setModalState(() => displayYear--);
+                              },
+                              padding: const EdgeInsets.all(6),
+                              constraints: const BoxConstraints(),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                              child: Text(
+                                '$displayYear',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.chevron_right_rounded, size: 22),
+                              onPressed: () {
+                                HapticFeedback.selectionClick();
+                                setModalState(() => displayYear++);
+                              },
+                              padding: const EdgeInsets.all(6),
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // 12 Months Grid
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      childAspectRatio: 2.1,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                    ),
+                    itemCount: months.length,
+                    itemBuilder: (context, index) {
+                      final item = months[index];
+                      final mInt = item['month'] as int;
+                      final isSelected = _businessTimeFilter == 'Custom Month' &&
+                          _selectedMonthYear.year == displayYear &&
+                          _selectedMonthYear.month == mInt;
+                      final isCurrentMonth = now.year == displayYear && now.month == mInt;
+
+                      return InkWell(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          Navigator.pop(ctx);
+                          setState(() {
+                            _selectedMonthYear = DateTime(displayYear, mInt);
+                            _businessTimeFilter = 'Custom Month';
+                          });
+                          _loadBusinessAnalytics();
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? const Color(0xFF3B82F6)
+                                : isCurrentMonth
+                                    ? (isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.4) : const Color(0xFFEFF6FF))
+                                    : (isDark ? const Color(0xFF222836) : const Color(0xFFF8FAFC)),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(0xFF3B82F6)
+                                  : isCurrentMonth
+                                      ? const Color(0xFF3B82F6).withValues(alpha: 0.6)
+                                      : (isDark ? const Color(0xFF2C3444) : const Color(0xFFE2E8F0)),
+                              width: (isSelected || isCurrentMonth) ? 1.5 : 1,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                item['name'] as String,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 14,
+                                  fontWeight: isSelected || isCurrentMonth ? FontWeight.bold : FontWeight.w600,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : isCurrentMonth
+                                          ? const Color(0xFF3B82F6)
+                                          : (isDark ? Colors.white70 : const Color(0xFF334155)),
+                                ),
+                              ),
+                              if (isCurrentMonth && !isSelected)
+                                Text(
+                                  'Current',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF3B82F6),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Quick Action: Return to Current Month
+                  if (_businessTimeFilter == 'Custom Month' && (_selectedMonthYear.year != now.year || _selectedMonthYear.month != now.month))
+                    TextButton.icon(
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        Navigator.pop(ctx);
+                        setState(() {
+                          _selectedMonthYear = DateTime(now.year, now.month);
+                          _businessTimeFilter = 'This Month';
+                        });
+                        _loadBusinessAnalytics();
+                      },
+                      icon: const Icon(Icons.today_rounded, size: 16, color: Color(0xFF3B82F6)),
+                      label: Text(
+                        'Jump to Current Month (${DateFormat('MMM yyyy').format(DateTime.now())})',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF3B82F6),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   // ══════════════════════════════════════════════════════════════════
   // 🏢 BUSINESS MODE ANALYTICS VIEW
   // ══════════════════════════════════════════════════════════════════
@@ -309,7 +550,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Filter Switcher
+          // ─── Filter Switcher (Today, This Week, This Month, All Time) ───
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
@@ -323,6 +564,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 return Expanded(
                   child: GestureDetector(
                     onTap: () {
+                      HapticFeedback.selectionClick();
                       setState(() => _businessTimeFilter = filter);
                       _loadBusinessAnalytics();
                     },
@@ -345,6 +587,105 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   ),
                 );
               }).toList(),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // ─── Custom Month & Year Selector Banner ───
+          InkWell(
+            onTap: _showBusinessMonthPickerModal,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: _businessTimeFilter == 'Custom Month'
+                    ? (isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.35) : const Color(0xFFEFF6FF))
+                    : (isDark ? const Color(0xFF181B22) : const Color(0xFFF1F5F9)),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _businessTimeFilter == 'Custom Month'
+                      ? const Color(0xFF3B82F6)
+                      : (isDark ? const Color(0xFF282F3E) : const Color(0xFFE2E8F0)),
+                  width: _businessTimeFilter == 'Custom Month' ? 1.5 : 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.calendar_month_rounded,
+                    size: 20,
+                    color: _businessTimeFilter == 'Custom Month' ? const Color(0xFF3B82F6) : Colors.grey,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _businessTimeFilter == 'Custom Month'
+                              ? 'Selected Month: ${DateFormat('MMMM yyyy').format(_selectedMonthYear)}'
+                              : 'Filter by Month & Year',
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: _businessTimeFilter == 'Custom Month'
+                                ? const Color(0xFF3B82F6)
+                                : (isDark ? Colors.white : const Color(0xFF1E293B)),
+                          ),
+                        ),
+                        Text(
+                          _businessTimeFilter == 'Custom Month'
+                              ? 'Showing exact P&L, sales & expenses for this month'
+                              : 'Tap to pick any month from 2020-2035',
+                          style: GoogleFonts.inter(
+                            fontSize: 10.5,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: _businessTimeFilter == 'Custom Month'
+                          ? const Color(0xFF3B82F6)
+                          : (isDark ? const Color(0xFF242936) : Colors.white),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: _businessTimeFilter == 'Custom Month'
+                            ? Colors.transparent
+                            : (isDark ? const Color(0xFF333D4F) : const Color(0xFFCBD5E1)),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _businessTimeFilter == 'Custom Month'
+                              ? DateFormat('MMM yyyy').format(_selectedMonthYear)
+                              : 'Select Month',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: _businessTimeFilter == 'Custom Month'
+                                ? Colors.white
+                                : (isDark ? Colors.white70 : const Color(0xFF334155)),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.arrow_drop_down_rounded,
+                          size: 18,
+                          color: _businessTimeFilter == 'Custom Month'
+                              ? Colors.white
+                              : (isDark ? Colors.white70 : const Color(0xFF334155)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 16),
