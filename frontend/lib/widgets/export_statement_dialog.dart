@@ -159,7 +159,7 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
       ]),
     ];
     final csvString = const ListToCsvConverter().convert(rows);
-    return Uint8List.fromList(csvString.codeUnits);
+    return Uint8List.fromList(utf8.encode(csvString));
   }
 
   // ────────────────────────────────────────────────────────────
