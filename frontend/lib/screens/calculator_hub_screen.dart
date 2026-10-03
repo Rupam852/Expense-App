@@ -1460,7 +1460,7 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
   // Manual Unit State (Starts Fresh & Empty)
   final _itemNameCtrl = TextEditingController();
   final _basePriceCtrl = TextEditingController();
-  final _baseQuantityCtrl = TextEditingController();
+  final _baseQuantityCtrl = TextEditingController(text: '1');
   String _selectedUnit = 'kg'; // 'kg', 'g', 'litre', 'ml', 'dozen', 'piece'
 
   // Custom Target Calc Box
@@ -1906,9 +1906,11 @@ class _MarketPriceCalculatorViewState extends State<_MarketPriceCalculatorView> 
                     child: TextField(
                       controller: _baseQuantityCtrl,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
                       decoration: InputDecoration(
                         labelText: str.forQty,
-                        hintText: 'e.g. 1',
+                        hintText: '1',
                       ),
                       onChanged: (_) => _recomputeManualRates(),
                     ),
