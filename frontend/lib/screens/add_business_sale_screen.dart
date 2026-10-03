@@ -576,7 +576,7 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween as MainAxisAlignment,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Customer Details', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
                       Row(
@@ -659,7 +659,7 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween as MainAxisAlignment,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Billing Items (${_itemRows.length})', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
                       TextButton.icon(
@@ -773,7 +773,7 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                   _buildSummaryRow('Subtotal', '₹${_subtotal.toStringAsFixed(2)}'),
                   _buildSummaryRow('GST / Tax Total', '₹${_taxTotal.toStringAsFixed(2)}', color: Colors.blueAccent),
                   Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween as MainAxisAlignment,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text('Discount (₹):'),
                       SizedBox(
@@ -900,7 +900,7 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween as MainAxisAlignment,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: GoogleFonts.inter(fontSize: fontSize, fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
           Text(value, style: GoogleFonts.outfit(fontSize: fontSize, fontWeight: isBold ? FontWeight.bold : FontWeight.w600, color: color)),

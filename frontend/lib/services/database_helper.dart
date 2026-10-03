@@ -568,6 +568,7 @@ class DatabaseHelper {
         receipt_url TEXT,
         is_recurring INTEGER NOT NULL,
         recurrence_period TEXT NOT NULL,
+        ledger_type TEXT NOT NULL DEFAULT 'personal',
         is_deleted INTEGER NOT NULL,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
@@ -787,13 +788,32 @@ class DatabaseHelper {
     );
   }
 
-  Future<List<Expense>> getExpenses() async {
+  Future<List<Expense>> getExpenses({String? ledgerType}) async {
     final db = await instance.database;
-    final result = await db.query(
-      'expenses',
-      where: 'is_deleted = 0',
-      orderBy: 'transaction_date DESC',
-    );
+    List<Map<String, dynamic>> result;
+    if (ledgerType != null) {
+      if (ledgerType == 'personal') {
+        result = await db.query(
+          'expenses',
+          where: 'is_deleted = 0 AND (ledger_type = ? OR ledger_type IS NULL)',
+          whereArgs: ['personal'],
+          orderBy: 'transaction_date DESC',
+        );
+      } else {
+        result = await db.query(
+          'expenses',
+          where: 'is_deleted = 0 AND ledger_type = ?',
+          whereArgs: [ledgerType],
+          orderBy: 'transaction_date DESC',
+        );
+      }
+    } else {
+      result = await db.query(
+        'expenses',
+        where: 'is_deleted = 0',
+        orderBy: 'transaction_date DESC',
+      );
+    }
     final decrypted = decryptExpenseMaps(result);
     return decrypted.map((json) => Expense.fromMap(json)).toList();
   }

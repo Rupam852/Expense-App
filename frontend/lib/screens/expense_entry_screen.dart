@@ -24,6 +24,7 @@ class ExpenseEntryScreen extends StatefulWidget {
   final double? initialAmount;
   final DateTime? initialDate;
   final String? initialCurrency;
+  final String? initialLedgerType;
 
   const ExpenseEntryScreen({
     super.key,
@@ -35,6 +36,7 @@ class ExpenseEntryScreen extends StatefulWidget {
     this.initialAmount,
     this.initialDate,
     this.initialCurrency,
+    this.initialLedgerType,
   });
 
   @override
@@ -44,6 +46,7 @@ class ExpenseEntryScreen extends StatefulWidget {
 class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   final _formKey = GlobalKey<FormState>();
   
+  late String _ledgerType;
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
   
@@ -96,6 +99,15 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   void initState() {
     super.initState();
     
+    // Determine ledger type (personal vs business)
+    if (_isRealEdit) {
+      _ledgerType = widget.editExpense!.ledgerType;
+    } else if (widget.initialLedgerType != null) {
+      _ledgerType = widget.initialLedgerType!;
+    } else {
+      _ledgerType = Provider.of<UserProvider>(context, listen: false).isBusinessMode ? 'business' : 'personal';
+    }
+
     // Check if we are in real edit mode or draft creation
     if (_isRealEdit) {
       final exp = widget.editExpense!;
@@ -419,12 +431,13 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
           currency: _selectedCurrency,
           isRecurring: _isRecurring,
           recurrencePeriod: _isRecurring ? _recurrencePeriod : 'none',
+          ledgerType: _ledgerType,
           receiptUrl: _receiptLocalPath,
           updatedAt: DateTime.now(),
         );
         await expenseProvider.editExpense(updated);
         if (mounted) {
-          CustomToast.show(context, 'Expense updated successfully! ✨');
+          CustomToast.show(context, _ledgerType == 'business' ? 'Business expense updated! 💼' : 'Expense updated successfully! ✨');
         }
       } else {
         await expenseProvider.addExpense(
@@ -436,9 +449,10 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
           isRecurring: _isRecurring,
           recurrencePeriod: _isRecurring ? _recurrencePeriod : 'none',
           receiptUrl: _receiptLocalPath,
+          ledgerType: _ledgerType,
         );
         if (mounted) {
-          CustomToast.show(context, 'Expense saved successfully! 🎉');
+          CustomToast.show(context, _ledgerType == 'business' ? 'Business expense saved! 💼' : 'Expense saved successfully! 🎉');
         }
       }
 
@@ -458,10 +472,13 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isBusinessExpense = _ledgerType == 'business';
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isRealEdit ? 'Edit Transaction' : 'Add Transaction'),
+        title: Text(_isRealEdit 
+            ? (isBusinessExpense ? 'Edit Business Expense' : 'Edit Transaction') 
+            : (isBusinessExpense ? '➕ Add Business Expense' : 'Add Transaction')),
         actions: [
           IconButton(
             onPressed: () => SmsExpenseParserDialog.show(context),

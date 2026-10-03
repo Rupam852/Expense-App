@@ -10,8 +10,10 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../services/ai_config_service.dart';
 import '../services/database_helper.dart';
 import '../services/expense_provider.dart';
+import '../services/user_provider.dart';
 import '../models/expense.dart';
 import '../models/split_bill.dart';
+import '../models/business_profile.dart';
 import '../widgets/ai_config_required_dialog.dart';
 import '../widgets/custom_toast.dart';
 import 'ai_config_screen.dart';
@@ -448,8 +450,150 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     'Punjabi': 'ਕੋਈ ਗੱਲ ਨਹੀਂ, ਮੈਂ ਇਸਨੂੰ ਰੱਦ ਕਰ ਦਿੱਤਾ ਹੈ। ਜੇਕਰ ਵੇਰਵੇ ਬਦਲਣੇ ਹਨ ਜਾਂ ਕੋਈ ਹੋਰ ਮਦਦ ਚਾਹੀਦੀ ਹੈ ਤਾਂ ਦੱਸੋ!',
   };
 
+  static const Map<String, List<String>> _localizedBusinessSuggestions = {
+    'English': [
+      '📊 Analyze today\'s sales & net profit margin',
+      '👥 Show pending customer dues & Khata balance',
+      '🧾 What is my GST collection this month?',
+      '💡 Give tips to reduce shop operating expenses',
+      '📈 How can I increase daily customer sales?',
+      '📖 Record ₹2,000 credit given to customer',
+      '➕ Record ₹1,500 inventory stock purchase',
+      '🔍 Compare this month sales with last month',
+    ],
+    'Hinglish': [
+      '📊 Aaj ki shop sales aur net profit margin dikhao',
+      '👥 Customers ka pending Khata/Udhar kitna baki hai?',
+      '🧾 Is mahine total kitna GST collect hua?',
+      '💡 Shop ke operating expenses kam karne ke tips do',
+      '📈 Dukan ki daily sales kaise badhayein?',
+      '📖 Customer ko ₹2,000 udhar diya note karo',
+      '➕ ₹1,500 ka stock purchase expense add karo',
+      '🔍 Pichle mahine aur is mahine ki sales compare karo',
+    ],
+    'Hindi': [
+      '📊 आज की बिक्री और शुद्ध लाभ (प्रॉफिट) मार्जिन बताएं',
+      '👥 ग्राहकों का कितना उधार (खाता) बाकी है?',
+      '🧾 इस महीने कुल कितना GST संग्रह हुआ?',
+      '💡 दुकान के परिचालन खर्च कम करने के उपाय बताएं',
+      '📈 दुकान की दैनिक बिक्री कैसे बढ़ाएं?',
+      '📖 ग्राहक को ₹2,000 उधार दिया खाते में दर्ज करें',
+      '➕ ₹1,500 का माल खरीद खर्च जोड़ें',
+      '🔍 पिछले महीने और इस महीने की बिक्री की तुलना करें',
+    ],
+    'Bengali': [
+      '📊 আজকের মোট বিক্রি এবং লাভ বিশ্লেষণ করুন',
+      '👥 গ্রাহকদের কত টাকা বাকি (খাতা) আছে?',
+      '🧾 এই মাসে মোট কত জিএসটি (GST) জমা হয়েছে?',
+      '💡 দোকানের খরচ কমানোর পরামর্শ দিন',
+      '📈 দোকানের দৈনিক বিক্রি কীভাবে বাড়াব?',
+      '📖 গ্রাহককে ₹2,000 বাকি দিয়েছি খাতায় লিখুন',
+      '➕ ₹1,500 মালের স্টক ক্রয় খরচ যোগ করুন',
+      '🔍 গত মাসের সাথে এই মাসের বিক্রির তুলনা করুন',
+    ],
+    'Marathi': [
+      '📊 आजची विक्री आणि निव्वळ नफा मार्जिन दाखवा',
+      '👥 ग्राहकांचे किती उधारी (खाते) बाकी आहे?',
+      '🧾 या महिन्यात किती GST गोळा झाला?',
+      '💡 दुकानाचे खर्च कमी करण्यासाठी टिप्स द्या',
+      '📈 दुकानाची विक्री कशी वाढवायची?',
+      '📖 ग्राहकाला ₹2,000 उधारी दिली नोंद करा',
+      '➕ ₹1,500 स्टॉक खरेदी खर्च जोडा',
+      '🔍 मागील महिना आणि या महिन्याच्या विक्रीची तुलना करा',
+    ],
+    'Gujarati': [
+      '📊 આજનું વેચાણ અને નફો (પ્રોફિટ) વિશ્લેષણ કરો',
+      '👥 ગ્રાહકોનું કેટલું ઉધાર (ખાતાવહી) બાકી છે?',
+      '🧾 આ મહિને કેટલો GST જમા થયો?',
+      '💡 દુકાનનો ખર્ચ ઘટાડવાની ટિપ્સ આપો',
+      '📈 દુકાનનું દૈનિક વેચાણ કેવી રીતે વધારવું?',
+      '📖 ગ્રાહકને ₹2,000 ઉધાર આપ્યા નોંધ કરો',
+      '➕ ₹1,500 નો સ્ટોક ખરીદ ખર્ચ ઉમેરો',
+      '🔍 ગયા મહિના અને આ મહિનાના વેચાણની સરખામણી કરો',
+    ],
+    'Tamil': [
+      '📊 இன்றைய விற்பனை மற்றும் லாப விபரங்களை பகுப்பாய்வு செய்யுங்கள்',
+      '👥 வாடிக்கையாளர்களின் நிலுவைத் தொகை எவ்வளவு?',
+      '🧾 இந்த மாதம் வசூலிக்கப்பட்ட GST எவ்வளவு?',
+      '💡 வணிகச் செலவுகளைக் குறைப்பதற்கான குறிப்புகள் கொடுங்கள்',
+      '📈 தினசரி விற்பனையை எவ்வாறு அதிகரிப்பது?',
+      '📖 வாடிக்கையாளருக்கு ₹2,000 கடன் கொடுத்துள்ளேன் பதிவு செய்',
+      '➕ ₹1,500 சரக்கு வாங்கிய செலவைச் சேர்க்கவும்',
+      '🔍 கடந்த மாத விற்பனையுடன் ஒப்பிட்டுப் பார்க்கவும்',
+    ],
+    'Telugu': [
+      '📊 నేటి వ్యాపార అమ్మకాలు మరియు లాభాల విశ్లేషణ చూపండి',
+      '👥 కస్టమర్ల నుండి రావాల్సిన బాకీలు (ఖాతా) ఎంత?',
+      '🧾 ఈ నెల ఎంత GST వసూలు అయింది?',
+      '💡 వ్యాపార ఖర్చులను తగ్గించడానికి సూచనలు ఇవ్వండి',
+      '📈 రోజువారీ అమ్మకాలను ఎలా పెంచుకోవాలి?',
+      '📖 కస్టమర్‌కు ₹2,000 అప్పు ఇచ్చాను రికార్డ్ చేయండి',
+      '➕ ₹1,500 సరుకు కొనుగోలు ఖర్చును జోడించండి',
+      '🔍 గత నెలతో పోల్చి అమ్మకాల వివరాలు చూపండి',
+    ],
+    'Kannada': [
+      '📊 ಇಂದಿನ ವ್ಯಾಪಾರ ಮಾರಾಟ ಮತ್ತು ಲಾಭದ ವಿವರ ನೀಡಿ',
+      '👥 ಗ್ರಾಹಕರಿಂದ ಬರಬೇಕಾದ ಬಾಕಿ (ಖಾತೆ) ಎಷ್ಟು?',
+      '🧾 ಈ ತಿಂಗಳು ಎಷ್ಟು GST ಸಂಗ್ರಹವಾಗಿದೆ?',
+      '💡 ಅಂಗಡಿಯ ಖರ್ಚು ಕಡಿಮೆ ಮಾಡಲು ಸಲಹೆ ನೀಡಿ',
+      '📈 ದೈನಂದಿನ ಮಾರಾಟವನ್ನು ಹೆಚ್ಚಿಸುವುದು ಹೇಗೆ?',
+      '📖 ಗ್ರಾಹಕರಿಗೆ ₹2,000 ಸಾಲ ನೀಡಿದ್ದನ್ನು ದಾಖಲಿಸಿ',
+      '➕ ₹1,500 ಸ್ಟಾಕ್ ಖರೀದಿ ವೆಚ್ಚವನ್ನು ಸೇರಿಸಿ',
+      '🔍 ಕಳೆದ ತಿಂಗಳೊಂದಿಗೆ ಮಾರಾಟವನ್ನು ಹೋಲಿಕೆ ಮಾಡಿ',
+    ],
+    'Malayalam': [
+      '📊 ഇന്നത്തെ വിൽപ്പനയും ലാഭവും വിശകലനം ചെയ്യുക',
+      '👥 ഉപഭോക്താക്കളിൽ നിന്ന് ലഭിക്കാനുള്ള കുടിശ്ശിക എത്ര?',
+      '🧾 ഈ മാസം എത്ര GST ലഭിച്ചു?',
+      '💡 കടയുടെ ചെലവ് കുറയ്ക്കാനുള്ള വഴികൾ പറയൂ',
+      '📈 പ്രതിദിന വിൽപ്പന എങ്ങനെ വർദ്ധിപ്പിക്കാം?',
+      '📖 ഉപഭോക്താവിന് ₹2,000 കടം കൊടുത്തത് രേഖപ്പെടുത്തുക',
+      '➕ ₹1,500 സ്റ്റോക്ക് വാങ്ങിയ ചെലവ് ചേർക്കുക',
+      '🔍 കഴിഞ്ഞ മാസത്തെ വിൽപ്പനയുമായി താരതമ്യം ചെയ്യുക',
+    ],
+    'Punjabi': [
+      '📊 ਅੱਜ ਦੀ ਵਿਕਰੀ ਅਤੇ ਮੁਨਾਫ਼ੇ ਦਾ ਵਿਸ਼ਲੇਸ਼ਣ ਕਰੋ',
+      '👥 ਗਾਹਕਾਂ ਦਾ ਕਿੰਨਾ ਉਧਾਰ (ਖਾਤਾ) ਬਾਕੀ ਹੈ?',
+      '🧾 ਇਸ ਮਹੀਨੇ ਕਿੰਨਾ GST ਇਕੱਠਾ ਹੋਇਆ?',
+      '💡 ਦੁਕਾਨ ਦੇ ਖਰਚੇ ਘਟਾਉਣ ਦੇ ਸੁਝਾਅ ਦਿਓ',
+      '📈 ਰੋਜ਼ਾਨਾ ਵਿਕਰੀ ਕਿਵੇਂ ਵਧਾਈਏ?',
+      '📖 ਗਾਹਕ ਨੂੰ ₹2,000 ਉਧਾਰ ਦਿੱਤਾ ਦਰਜ ਕਰੋ',
+      '➕ ₹1,500 ਦਾ ਸਟਾਕ ਖਰੀਦ ਖਰਚਾ ਜੋੜੋ',
+      '🔍 ਪਿਛਲੇ ਮਹੀਨੇ ਨਾਲ ਵਿਕਰੀ ਦੀ ਤੁਲਨਾ ਕਰੋ',
+    ],
+  };
+
+  static const Map<String, String> _localizedBusinessWelcomeMessages = {
+    'English':
+        'Hello! 🏢 Welcome to **Grow Expense Business AI CFO & Tax Advisor**.\n\nI can help you grow your business with:\n• 📊 **Sales & Margin Analysis** (Daily & Monthly P&L)\n• 👥 **Customer Khata Dues** (Udhar recovery tracking)\n• 🧾 **GST & Tax Accounting** (Slab calculations & invoicing)\n• 💼 **Operating Expenses** (Stock, rent, utilities & salaries)\n\nWhat would you like to analyze or record today?',
+    'Hindi':
+        'नमस्ते! 🏢 **Grow Expense Business AI CFO और टैक्स सलाहकार** में आपका स्वागत है।\n\nमैं आपके व्यापार को आगे बढ़ाने में मदद कर सकता हूँ:\n• 📊 **बिक्री और मुनाफा विश्लेषण** (दैनिक और मासिक लाभ-हानि)\n• 👥 **ग्राहक खाता उधारी** (उधार वसूली ट्रैकिंग)\n• 🧾 **GST और टैक्स गणना** (बिलिंग और टैक्स फाइलिंग सहायता)\n• 💼 **व्यापारिक खर्च** (स्टॉक, किराया, बिजली और वेतन)\n\nआज आपके व्यापार के लिए क्या सहायता करूँ?',
+    'Hinglish':
+        'Namaste! 🏢 **Grow Expense Business AI CFO & Tax Advisor** me aapka swagat hai.\n\nMain aapki business growth ke liye help kar sakta hoon:\n• 📊 **Sales & Margin Analysis** (Daily & Monthly P&L check)\n• 👥 **Customer Khata/Udhar Tracking** (Pending dues recovery)\n• 🧾 **GST & Tax Calculation** (Slabs & Invoicing insights)\n• 💼 **Business Expenses** (Stock purchase, rent, bills & salary)\n\nAaj aapke business me kya check ya record karna hai?',
+    'Bengali':
+        'নমস্কার! 🏢 **Grow Expense Business AI CFO & Tax Advisor**-এ আপনাকে স্বাগতম।\n\nআপনার ব্যবসার উন্নতিতে আমি সাহায্য করতে পারি:\n• 📊 **বিক্রি ও লাভ বিশ্লেষণ** (দৈনিক ও মাসিক লাভ-ক্ষতি)\n• 👥 **গ্রাহকদের খাতার হিসাব** (বাকি টাকা আদায়ের হিসাব)\n• 🧾 **জিএসটি ও ট্যাক্স হিসাব** (ইনভয়েসিং ও ট্যাক্স হিসাব)\n• 💼 **দোকানের খরচ** (স্টক ক্রয়, ভাড়া, বিল ও বেতন)\n\nআজ আপনার ব্যবসার জন্য কী করতে পারি?',
+    'Marathi':
+        'नमस्कार! 🏢 **Grow Expense Business AI CFO & Tax Advisor** मध्ये आपले स्वागत आहे.\n\nमी तुमच्या व्यवसायाच्या वाढीसाठी मदत करू शकतो:\n• 📊 **विक्री आणि नफा विश्लेषण** (दैनिक आणि मासिक नफा-तोटा)\n• 👥 **ग्राहक खाते आणि उधारी** (उधारी वसुली ट्रॅकिंग)\n• 🧾 **GST आणि कर हिशोब** (बिलिंग आणि कर विश्लेषण)\n• 💼 **व्यवसाय खर्च** (स्टॉक खरेदी, भाडे आणि पगार)\n\nआज आपल्या व्यवसायासाठी काय मदत करू?',
+    'Gujarati':
+        'નમસ્તે! 🏢 **Grow Expense Business AI CFO & Tax Advisor** માં આપનું સ્વાગત છે.\n\nહું તમારા વ્યવસાયના વિકાસમાં મદદ કરી શકું છું:\n• 📊 **વેચાણ અને નફાનું વિશ્લેષણ** (દૈનિક અને માસિક નફો-નુકસાન)\n• 👥 **ગ્રાહક ખાતાવહી અને ઉધાર** (બાકી નાણાં વસૂલાત)\n• 🧾 **GST અને ટેક્સ ગણતરી** (બિલિંગ અને ટેક્સ)\n• 💼 **વ્યવસાયિક ખર્ચ** (માલસામાન, ભાડું અને પગાર)\n\nઆજે તમારા વેપાર માટે શું વિશ્લેષણ કરવું છે?',
+    'Tamil':
+        'வணக்கம்! 🏢 **Grow Expense Business AI CFO & Tax Advisor**-க்கு உங்களை வரவேற்கிறோம்.\n\nஉங்கள் வணிக வளர்ச்சிக்கு நான் உதவ முடியும்:\n• 📊 **விற்பனை மற்றும் லாப பகுப்பாய்வு** (P&L கணக்கீடு)\n• 👥 **வாடிக்கையாளர் கடன் கணக்கு** (நிலுவைத் தொகை வசூல்)\n• 🧾 **GST மற்றும் வரி கணக்கு** (வரி கணக்கீடுகள்)\n• 💼 **வணிகச் செலவுகள்** (சரக்கு கொள்முதல், வாடகை மற்றும் சம்பளம்)\n\nஇன்று உங்கள் வணிகத்திற்கு நான் என்ன உதவி செய்ய வேண்டும்?',
+    'Telugu':
+        'నమస్కారం! 🏢 **Grow Expense Business AI CFO & Tax Advisor** కు స్వాగతం.\n\nమీ వ్యాపార వృద్ధికి నేను సహాయపడగలను:\n• 📊 **అమ్మకాలు & లాభాల విశ్లేషణ** (లాభనష్టాల లెక్కలు)\n• 👥 **కస్టమర్ ఖాతా బాకీలు** (వసూలు ట్రాకింగ్)\n• 🧾 **GST మరియు పన్ను గణన** (ఇన్వాయిస్ లెక్కలు)\n• 💼 **వ్యాపార ఖర్చులు** (సరుకు, అద్దె සහ జీతాలు)\n\nఈ రోజు మీ వ్యాపారం కోసం ఏమి చెక్ చేద్దాం?',
+    'Kannada':
+        'ನಮಸ್ಕಾರ! 🏢 **Grow Expense Business AI CFO & Tax Advisor** ಗೆ ಸುಸ್ವಾಗತ.\n\nನಿಮ್ಮ ವ್ಯವಹಾರದ ಬೆಳವಣಿಗೆಗೆ ನಾನು ಸಹಾಯ ಮಾಡಬಲ್ಲೆ:\n• 📊 **ಮಾರಾಟ ಮತ್ತು ಲಾಭದ ವಿಶ್ಲೇಷಣೆ** (ದೈನಂದಿನ P&L)\n• 👥 **ಗ್ರಾಹಕರ ಖಾತೆ ಬಾಕಿ** (ಸಾಲ ವಸೂಲಾತಿ ಟ್ರ್ಯಾಕಿಂಗ್)\n• 🧾 **GST ಮತ್ತು ತೆರಿಗೆ ಲೆಕ್ಕಾಚಾರ** (ಇನ್‌ವಾಯ್ಸ್ ವಿವರ)\n• 💼 **ವ್ಯವಹಾರ ವೆಚ್ಚಗಳು** (ಸ್ಟಾಕ್, ಬಾಡಿಗೆ ಮತ್ತು ಸಂಬಳ)\n\nಇಂದು ನಿಮ್ಮ ವ್ಯವಹಾರಕ್ಕಾಗಿ ಏನು ಪರಿಶೀಲಿಸಬೇಕು?',
+    'Malayalam':
+        'നമസ്കാരം! 🏢 **Grow Expense Business AI CFO & Tax Advisor**-ലേക്ക് സ്വാഗതം.\n\nനിങ്ങളുടെ ബിസിനസ്സ് വളർച്ചയ്ക്ക് എനിക്ക് സഹായിക്കാനാകും:\n• 📊 **വിൽപ്പനയും ലാഭവും വിശകലനം** (P&L കണക്കുകൾ)\n• 👥 **ഉപഭോക്തൃ കടം കണക്കുകൾ** (കുടിശ്ശിക ട്രാക്കിംഗ്)\n• 🧾 **GST & നികുതി കണക്കുകൂട്ടൽ** (ഇൻവോയ്സ് സഹായം)\n• 💼 **ബിസിനസ്സ് ചെലവുകൾ** (സ്റ്റോക്ക്, വാടക, ശമ്പളം)\n\nഇന്ന് നിങ്ങളുടെ ബിസിനസിനായി എന്താണ് വിശകലനം ചെയ്യേണ്ടത്?',
+    'Punjabi':
+        'ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ! 🏢 **Grow Expense Business AI CFO & Tax Advisor** ਵਿੱਚ ਤੁਹਾਡਾ ਸਵਾਗਤ ਹੈ।\n\nਮੈਂ ਤੁਹਾਡੇ ਕਾਰੋਬਾਰ ਦੇ ਵਾਧੇ ਲਈ ਮਦਦ ਕਰ ਸਕਦਾ ਹਾਂ:\n• 📊 **ਵਿਕਰੀ ਅਤੇ ਮੁਨਾਫ਼ਾ ਵਿਸ਼ਲੇਸ਼ਣ** (ਰੋਜ਼ਾਨਾ ਅਤੇ ਮਹੀਨਾਵਾਰ P&L)\n• 👥 **ਗਾਹਕ ਖਾਤਾ ਉਧਾਰ** (ਉਗਰਾਹੀ ਟ੍ਰੈਕਿੰਗ)\n• 🧾 **GST ਅਤੇ ਟੈਕਸ ਹਿਸਾਬ** (ਬਿਲਿੰਗ ਅਤੇ ਟੈਕਸ)\n• 💼 **ਕਾਰੋਬਾਰੀ ਖਰਚੇ** (ਸਟਾਕ ਖਰੀਦ, ਕਿਰਾਇਆ ਅਤੇ ਤਨਖਾਹਾਂ)\n\nਅੱਜ ਤੁਹਾਡੇ ਕਾਰੋਬਾਰ ਲਈ ਕੀ ਚੈੱਕ ਕਰਨਾ ਹੈ?',
+  };
+
   List<String> get _currentSuggestedPrompts {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
     final lang = AiConfigService.instance.responseLanguage;
+    if (userProvider.isBusinessMode) {
+      return _localizedBusinessSuggestions[lang] ?? _localizedBusinessSuggestions['English']!;
+    }
     return _localizedSuggestions[lang] ?? _localizedSuggestions['English']!;
   }
 
@@ -466,9 +610,13 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       // If the chat only has the initial welcome greeting, update it to the new language immediately
       if (_messages.length == 1 && !_messages[0].isUser && _messages[0].id == 'initial_welcome') {
         final lang = AiConfigService.instance.responseLanguage;
+        final isBusiness = Provider.of<UserProvider>(context, listen: false).isBusinessMode;
+        final msgText = isBusiness
+            ? (_localizedBusinessWelcomeMessages[lang] ?? _localizedBusinessWelcomeMessages['English']!)
+            : (_localizedWelcomeMessages[lang] ?? _localizedWelcomeMessages['English']!);
         _messages[0] = ChatMessage(
           id: 'initial_welcome',
-          text: _localizedWelcomeMessages[lang] ?? _localizedWelcomeMessages['English']!,
+          text: msgText,
           isUser: false,
           timestamp: _messages[0].timestamp,
         );
@@ -953,11 +1101,15 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
 
   void _addInitialWelcomeMessage() {
     final lang = AiConfigService.instance.responseLanguage;
+    final isBusiness = Provider.of<UserProvider>(context, listen: false).isBusinessMode;
+    final msgText = isBusiness
+        ? (_localizedBusinessWelcomeMessages[lang] ?? _localizedBusinessWelcomeMessages['English']!)
+        : (_localizedWelcomeMessages[lang] ?? _localizedWelcomeMessages['English']!);
     setState(() {
       _messages.add(
         ChatMessage(
           id: 'initial_welcome',
-          text: _localizedWelcomeMessages[lang] ?? _localizedWelcomeMessages['English']!,
+          text: msgText,
           isUser: false,
           timestamp: DateTime.now(),
         ),
@@ -986,6 +1138,79 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       TextPosition(offset: _textController.text.length),
     );
     _focusNode.requestFocus();
+  }
+
+  Future<String> _buildBusinessFinancialContext() async {
+    final prof = await DatabaseHelper.instance.getBusinessProfile();
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    final monthStart = DateTime(now.year, now.month, 1);
+
+    final todayMetrics = await DatabaseHelper.instance.getBusinessMetrics(start: todayStart, end: todayEnd);
+    final monthMetrics = await DatabaseHelper.instance.getBusinessMetrics(start: monthStart, end: todayEnd);
+
+    // Business Operating Expenses
+    final expRows = await DatabaseHelper.instance.getExpenses(ledgerType: 'business');
+    double todayBExp = 0.0;
+    double monthBExp = 0.0;
+    for (var e in expRows) {
+      if (e.transactionDate.isAfter(todayStart) && e.transactionDate.isBefore(todayEnd)) {
+        todayBExp += e.amount;
+      }
+      if (e.transactionDate.isAfter(monthStart) && e.transactionDate.isBefore(todayEnd)) {
+        monthBExp += e.amount;
+      }
+    }
+
+    // Customer Dues & Vendor Dues from Khata
+    final khataEntries = await DatabaseHelper.instance.getKhataEntries();
+    double customerLenaHai = 0.0;
+    double vendorDenaHai = 0.0;
+    for (var k in khataEntries) {
+      if (!k.isSettled) {
+        if (k.type == 'lent') {
+          customerLenaHai += k.amount;
+        } else {
+          vendorDenaHai += k.amount;
+        }
+      }
+    }
+
+    final recentSales = await DatabaseHelper.instance.getBusinessSales(limit: 6);
+
+    final StringBuffer buffer = StringBuffer();
+    buffer.writeln('=== BUSINESS / SHOP PROFILE ===');
+    buffer.writeln('Business Name: ${prof.businessName}');
+    if (prof.gstin != null && prof.gstin!.isNotEmpty) buffer.writeln('GSTIN: ${prof.gstin}');
+    buffer.writeln('Active Month: ${DateFormat('MMMM yyyy').format(now)}');
+
+    buffer.writeln('\n=== TODAY\'S PERFORMANCE ===');
+    buffer.writeln('Today\'s Total Sales: INR ${(todayMetrics['totalSales'] ?? 0.0).toStringAsFixed(2)}');
+    buffer.writeln('Today\'s GST Collected: INR ${(todayMetrics['taxCollected'] ?? 0.0).toStringAsFixed(2)}');
+    buffer.writeln('Today\'s Business Operating Expenses: INR ${todayBExp.toStringAsFixed(2)}');
+    final todayNet = (todayMetrics['totalSales'] ?? 0.0) - todayBExp;
+    buffer.writeln('Today\'s Net Estimated Profit: INR ${todayNet.toStringAsFixed(2)}');
+
+    buffer.writeln('\n=== THIS MONTH\'S METRICS ===');
+    buffer.writeln('Monthly Total Sales: INR ${(monthMetrics['totalSales'] ?? 0.0).toStringAsFixed(2)}');
+    buffer.writeln('Monthly GST Collected: INR ${(monthMetrics['taxCollected'] ?? 0.0).toStringAsFixed(2)}');
+    buffer.writeln('Monthly Business Expenses (Stock, Rent, Bills): INR ${monthBExp.toStringAsFixed(2)}');
+    final monthNet = (monthMetrics['totalSales'] ?? 0.0) - monthBExp;
+    buffer.writeln('Monthly Net Estimated Profit: INR ${monthNet.toStringAsFixed(2)}');
+
+    buffer.writeln('\n=== KHATA / CREDIT RECOVERY STATUS ===');
+    buffer.writeln('Total Customer Pending Dues (Lena Hai / Receivable): INR ${customerLenaHai.toStringAsFixed(2)}');
+    buffer.writeln('Total Supplier / Vendor Payables (Dena Hai): INR ${vendorDenaHai.toStringAsFixed(2)}');
+
+    if (recentSales.isNotEmpty) {
+      buffer.writeln('\n=== RECENT SALES INVOICES ===');
+      for (var s in recentSales) {
+        buffer.writeln('- Inv #${s.invoiceNo} to ${s.customerName}: INR ${s.finalAmount.toStringAsFixed(2)} (${s.paymentStatus}, ${s.paymentMode}) on ${DateFormat('dd MMM').format(s.saleDate)}');
+      }
+    }
+
+    return buffer.toString();
   }
 
   String _buildFinancialContext(ExpenseProvider provider) {
@@ -1097,8 +1322,15 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       timestamp: userMsg.timestamp,
     );
 
-    final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
-    final contextSummary = _buildFinancialContext(expenseProvider);
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final isBusiness = userProvider.isBusinessMode;
+    String contextSummary;
+    if (isBusiness) {
+      contextSummary = await _buildBusinessFinancialContext();
+    } else {
+      final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+      contextSummary = _buildFinancialContext(expenseProvider);
+    }
 
     final chatHistory = _messages
         .sublist(0, _messages.length - 1)
@@ -1905,7 +2137,9 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = Theme.of(context).primaryColor;
+    final userProvider = Provider.of<UserProvider>(context);
+    final isBusiness = userProvider.isBusinessMode;
+    final primaryColor = isBusiness ? const Color(0xFF3B82F6) : Theme.of(context).primaryColor;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -1929,10 +2163,14 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF00D09C).withValues(alpha: 0.15),
+                  color: primaryColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.psychology_alt_rounded, color: Color(0xFF00D09C), size: 22),
+                child: Icon(
+                  isBusiness ? Icons.insights_rounded : Icons.psychology_alt_rounded,
+                  color: primaryColor,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 10),
               Flexible(
@@ -1958,8 +2196,8 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                       ],
                     ),
                     Text(
-                      'Live Expense Intelligence',
-                      style: GoogleFonts.inter(fontSize: 10.5, color: Colors.grey),
+                      isBusiness ? '🏢 Business AI CFO & Tax Advisor' : 'Live Expense Intelligence',
+                      style: GoogleFonts.inter(fontSize: 10.5, color: isBusiness ? primaryColor : Colors.grey),
                     ),
                   ],
                 ),

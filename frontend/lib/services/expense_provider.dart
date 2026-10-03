@@ -184,7 +184,7 @@ class ExpenseProvider with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       _lastSyncTime = prefs.getString('last_sync_time');
-      _expenses = await _dbHelper.getExpenses();
+      _expenses = await _dbHelper.getExpenses(ledgerType: 'personal');
       _budgets = await _dbHelper.getBudgets();
       _paymentDetails = await _dbHelper.getPaymentDetails();
       _khataEntries = await _dbHelper.getKhataEntries();
@@ -218,6 +218,7 @@ class ExpenseProvider with ChangeNotifier {
     bool isRecurring = false,
     String recurrencePeriod = 'none',
     String? receiptUrl,
+    String ledgerType = 'personal',
   }) async {
     final expense = Expense(
       id: cryptoUuid(),
@@ -229,16 +230,21 @@ class ExpenseProvider with ChangeNotifier {
       isRecurring: isRecurring,
       recurrencePeriod: recurrencePeriod,
       receiptUrl: receiptUrl,
+      ledgerType: ledgerType,
     );
     await _dbHelper.insertExpense(expense);
-    _expenses.insert(0, expense);
-    notifyListeners();
-    // Check and push budget alert notification if threshold reached
-    NotificationService.instance.checkAndNotifyBudgetLimits(
-      budgets: _budgets,
-      expenses: _expenses,
-      currentMonth: _selectedMonthYear,
-    );
+    if (ledgerType == 'personal') {
+      _expenses.insert(0, expense);
+      notifyListeners();
+      // Check and push budget alert notification if threshold reached
+      NotificationService.instance.checkAndNotifyBudgetLimits(
+        budgets: _budgets,
+        expenses: _expenses,
+        currentMonth: _selectedMonthYear,
+      );
+    } else {
+      notifyListeners();
+    }
     // Silent background sync after adding
     triggerQuietSync();
   }
@@ -990,7 +996,7 @@ class ExpenseProvider with ChangeNotifier {
       }
 
       if (importedCount > 0) {
-        _expenses = await _dbHelper.getExpenses();
+        _expenses = await _dbHelper.getExpenses(ledgerType: 'personal');
         notifyListeners();
         _isLoading = false;
         notifyListeners();
@@ -1156,7 +1162,7 @@ class ExpenseProvider with ChangeNotifier {
         _syncErrorMessage = null;
       }
 
-      _expenses = await _dbHelper.getExpenses();
+      _expenses = await _dbHelper.getExpenses(ledgerType: 'personal');
       _budgets = await _dbHelper.getBudgets();
       _paymentDetails = await _dbHelper.getPaymentDetails();
       _khataEntries = await _dbHelper.getKhataEntries();
@@ -1286,7 +1292,7 @@ class ExpenseProvider with ChangeNotifier {
         _lastSyncTime = prefs.getString('last_sync_time');
 
         // Reload memory lists
-        _expenses = await _dbHelper.getExpenses();
+        _expenses = await _dbHelper.getExpenses(ledgerType: 'personal');
         _budgets = await _dbHelper.getBudgets();
         _paymentDetails = await _dbHelper.getPaymentDetails();
         _khataEntries = await _dbHelper.getKhataEntries();
@@ -1301,7 +1307,7 @@ class ExpenseProvider with ChangeNotifier {
       print('[Sync] Restore Backup error: $e');
       _syncErrorMessage = 'Backup restore failed: $e';
       // Re-load whatever lists are left
-      _expenses = await _dbHelper.getExpenses();
+      _expenses = await _dbHelper.getExpenses(ledgerType: 'personal');
       _budgets = await _dbHelper.getBudgets();
       _paymentDetails = await _dbHelper.getPaymentDetails();
       _khataEntries = await _dbHelper.getKhataEntries();

@@ -114,9 +114,10 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
 
   void _openQuickAddExpense() {
     _closeFabMenu();
+    final isBusiness = Provider.of<UserProvider>(context, listen: false).isBusinessMode;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const ExpenseEntryScreen(),
+        builder: (context) => ExpenseEntryScreen(initialLedgerType: isBusiness ? 'business' : 'personal'),
       ),
     );
   }
@@ -132,9 +133,10 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
 
   void _openOcrScanner() {
     _closeFabMenu();
+    final isBusiness = Provider.of<UserProvider>(context, listen: false).isBusinessMode;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const ExpenseEntryScreen(openCameraScanner: true),
+        builder: (context) => ExpenseEntryScreen(openCameraScanner: true, initialLedgerType: isBusiness ? 'business' : 'personal'),
       ),
     );
   }
@@ -267,12 +269,12 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
                             ),
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: const Color(0xFF00D09C).withValues(alpha: 0.85),
+                              color: (isBusiness ? const Color(0xFF3B82F6) : const Color(0xFF00D09C)).withValues(alpha: 0.85),
                               width: 1.8,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF00D09C).withValues(alpha: 0.35),
+                                color: (isBusiness ? const Color(0xFF3B82F6) : const Color(0xFF00D09C)).withValues(alpha: 0.35),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),
@@ -283,10 +285,10 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
                               ),
                             ],
                           ),
-                          child: const Center(
+                          child: Center(
                             child: Icon(
-                              Icons.chat_bubble_rounded,
-                              color: Color(0xFF00D09C),
+                              isBusiness ? Icons.insights_rounded : Icons.chat_bubble_rounded,
+                              color: isBusiness ? const Color(0xFF3B82F6) : const Color(0xFF00D09C),
                               size: 24,
                             ),
                           ),

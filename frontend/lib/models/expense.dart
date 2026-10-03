@@ -10,6 +10,7 @@ class Expense {
   final String? receiptUrl;
   final bool isRecurring;
   final String recurrencePeriod;
+  final String ledgerType; // 'personal' or 'business'
   final bool isDeleted;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -24,6 +25,7 @@ class Expense {
     this.receiptUrl,
     this.isRecurring = false,
     this.recurrencePeriod = 'none',
+    this.ledgerType = 'personal',
     this.isDeleted = false,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -41,6 +43,7 @@ class Expense {
     String? receiptUrl,
     bool? isRecurring,
     String? recurrencePeriod,
+    String? ledgerType,
     bool? isDeleted,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -55,6 +58,7 @@ class Expense {
       receiptUrl: receiptUrl ?? this.receiptUrl,
       isRecurring: isRecurring ?? this.isRecurring,
       recurrencePeriod: recurrencePeriod ?? this.recurrencePeriod,
+      ledgerType: ledgerType ?? this.ledgerType,
       isDeleted: isDeleted ?? this.isDeleted,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -73,6 +77,7 @@ class Expense {
       'receipt_url': receiptUrl,
       'is_recurring': isRecurring ? 1 : 0,
       'recurrence_period': recurrencePeriod,
+      'ledger_type': ledgerType,
       'is_deleted': isDeleted ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -94,6 +99,7 @@ class Expense {
       receiptUrl: map['receipt_url'],
       isRecurring: map['is_recurring'] == 1 || map['is_recurring'] == true,
       recurrencePeriod: map['recurrence_period'] ?? 'none',
+      ledgerType: map['ledger_type']?.toString() ?? 'personal',
       isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true,
       createdAt: map['created_at'] != null
           ? DateTime.parse(map['created_at'])

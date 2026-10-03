@@ -9,6 +9,7 @@ import '../services/database_helper.dart';
 import '../services/user_provider.dart';
 import '../widgets/custom_toast.dart';
 import 'add_business_sale_screen.dart';
+import 'expense_entry_screen.dart';
 import 'khata_screen.dart';
 import 'invoice_screen.dart';
 import 'calculator_hub_screen.dart';
@@ -60,8 +61,8 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
 
       final metrics = await DatabaseHelper.instance.getBusinessMetrics(start: start, end: end);
 
-      // Fetch Today's Business Expenses
-      final expRows = await DatabaseHelper.instance.getExpenses();
+      // Fetch Business Operating Expenses (only business ledger)
+      final expRows = await DatabaseHelper.instance.getExpenses(ledgerType: 'business');
       double bExp = 0.0;
       for (var e in expRows) {
         if (e.transactionDate.isAfter(start) && e.transactionDate.isBefore(end)) {
@@ -314,14 +315,25 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
               const SizedBox(width: 10),
               // Expenses (Cash-out)
               Expanded(
-                child: _buildMetricCard(
-                  isDark: isDark,
-                  title: 'Business Expense',
-                  amount: '₹${_todayExpenses.toStringAsFixed(0)}',
-                  subtitle: 'Purchases & Ops',
-                  icon: Icons.trending_down_rounded,
-                  iconColor: Colors.orangeAccent,
-                  accentColor: Colors.orangeAccent,
+                child: GestureDetector(
+                  onTap: () async {
+                    HapticFeedback.lightImpact();
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ExpenseEntryScreen(initialLedgerType: 'business'),
+                      ),
+                    );
+                    _loadDashboardData();
+                  },
+                  child: _buildMetricCard(
+                    isDark: isDark,
+                    title: 'Business Expense',
+                    amount: '₹${_todayExpenses.toStringAsFixed(0)}',
+                    subtitle: 'Tap to log (+)',
+                    icon: Icons.trending_down_rounded,
+                    iconColor: Colors.orangeAccent,
+                    accentColor: Colors.orangeAccent,
+                  ),
                 ),
               ),
             ],
