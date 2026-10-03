@@ -362,19 +362,11 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
 
   void _presentDatePicker() async {
     final now = DateTime.now();
-    final firstDayCurrentMonth = DateTime(now.year, now.month, 1);
-    final lastDayCurrentMonth = DateTime(now.year, now.month + 1, 0);
-
-    DateTime initial = _selectedDate;
-    if (initial.isBefore(firstDayCurrentMonth) || initial.isAfter(lastDayCurrentMonth)) {
-      initial = now;
-    }
-
     final picked = await showDatePicker(
       context: context,
-      initialDate: initial,
-      firstDate: firstDayCurrentMonth,
-      lastDate: lastDayCurrentMonth,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020, 1, 1),
+      lastDate: DateTime(2100, 12, 31),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(

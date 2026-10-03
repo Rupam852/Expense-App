@@ -740,19 +740,16 @@ class _ExportStatementDialogState extends State<ExportStatementDialog> {
                   Expanded(
                     child: InkWell(
                       onTap: () async {
-                        final monthStart = DateTime(selectedMonth.year, selectedMonth.month, 1);
-                        final monthEnd = DateTime(selectedMonth.year, selectedMonth.month + 1, 0);
-
                         final picked = await showDateRangePicker(
                           context: context,
-                          firstDate: monthStart,
-                          lastDate: monthEnd,
+                          firstDate: DateTime(2020, 1, 1),
+                          lastDate: DateTime(2100, 12, 31),
                           initialDateRange: _customDateRange ??
                               DateTimeRange(
-                                start: monthStart,
-                                end: DateTime.now().isBefore(monthEnd) ? DateTime.now() : monthEnd,
+                                start: DateTime(selectedMonth.year, selectedMonth.month, 1),
+                                end: DateTime.now(),
                               ),
-                          helpText: 'Select range in ${DateFormat('MMMM yyyy').format(selectedMonth)}',
+                          helpText: 'Select custom date range to export',
                           builder: (context, child) {
                             return Theme(
                               data: isDark

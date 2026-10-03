@@ -40,7 +40,8 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
   double _totalLenaHai = 0.0;
   double _totalDenaHai = 0.0;
 
-  String _filterPeriod = 'This Month'; // Today, This Week, This Month, All Time
+  String _filterPeriod = 'This Month'; // Today, This Week, This Month, Last Month, This Quarter, This FY, All Time, Custom Range
+  DateTimeRange? _customSelectedRange;
   String _recentTab = 'sales'; // 'sales' or 'expenses'
 
   @override
@@ -69,6 +70,21 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
       } else if (_filterPeriod == 'This Month') {
         start = DateTime(now.year, now.month, 1);
         end = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+      } else if (_filterPeriod == 'Last Month') {
+        final prevMonth = DateTime(now.year, now.month - 1, 1);
+        start = prevMonth;
+        end = DateTime(now.year, now.month, 0, 23, 59, 59);
+      } else if (_filterPeriod == 'This Quarter') {
+        final quarterMonth = ((now.month - 1) ~/ 3) * 3 + 1;
+        start = DateTime(now.year, quarterMonth, 1);
+        end = DateTime(now.year, quarterMonth + 3, 0, 23, 59, 59);
+      } else if (_filterPeriod == 'This FY') {
+        final fyYear = now.month >= 4 ? now.year : now.year - 1;
+        start = DateTime(fyYear, 4, 1);
+        end = DateTime(fyYear + 1, 3, 31, 23, 59, 59);
+      } else if (_customSelectedRange != null) {
+        start = _customSelectedRange!.start;
+        end = _customSelectedRange!.end;
       } else {
         start = DateTime(2020, 1, 1);
         end = DateTime(2099, 12, 31, 23, 59, 59);
@@ -483,23 +499,66 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: ['Today', 'This Week', 'This Month', 'All Time'].map((p) {
-                  final isSelected = _filterPeriod == p;
-                  return Padding(
+                children: [
+                  ...['Today', 'This Week', 'This Month', 'Last Month', 'This Quarter', 'This FY', 'All Time'].map((p) {
+                    final isSelected = _filterPeriod == p && _customSelectedRange == null;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(p, style: TextStyle(fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                        selected: isSelected,
+                        selectedColor: primaryColor.withValues(alpha: 0.2),
+                        onSelected: (val) {
+                          if (val) {
+                            setState(() {
+                              _filterPeriod = p;
+                              _customSelectedRange = null;
+                            });
+                            _loadDashboardData(isQuiet: true);
+                          }
+                        },
+                      ),
+                    );
+                  }),
+                  Padding(
                     padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(p, style: TextStyle(fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-                      selected: isSelected,
-                      selectedColor: primaryColor.withValues(alpha: 0.2),
-                      onSelected: (val) {
-                        if (val) {
-                          setState(() => _filterPeriod = p);
+                    child: ActionChip(
+                      avatar: const Icon(Icons.date_range_rounded, size: 16, color: Color(0xFF3B82F6)),
+                      label: Text(
+                        _customSelectedRange != null
+                            ? '${DateFormat('dd MMM').format(_customSelectedRange!.start)} - ${DateFormat('dd MMM').format(_customSelectedRange!.end)}'
+                            : 'Choose Range / Month 🗓️',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: _customSelectedRange != null ? FontWeight.bold : FontWeight.normal,
+                          color: _customSelectedRange != null ? const Color(0xFF3B82F6) : null,
+                        ),
+                      ),
+                      backgroundColor: _customSelectedRange != null
+                          ? const Color(0xFF3B82F6).withValues(alpha: 0.15)
+                          : null,
+                      onPressed: () async {
+                        final picked = await showDateRangePicker(
+                          context: context,
+                          firstDate: DateTime(2020, 1, 1),
+                          lastDate: DateTime(2100, 12, 31),
+                          initialDateRange: _customSelectedRange ??
+                              DateTimeRange(
+                                start: DateTime(DateTime.now().year, DateTime.now().month, 1),
+                                end: DateTime.now(),
+                              ),
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            _customSelectedRange = picked;
+                            _filterPeriod = 'Custom Range';
+                          });
                           _loadDashboardData(isQuiet: true);
                         }
                       },
                     ),
-                  );
-                }).toList(),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 14),

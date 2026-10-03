@@ -656,6 +656,77 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // ── INVOICE DATE & TYPE HEADER ──────────────────────
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today_rounded, size: 16, color: Color(0xFF1E88E5)),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Invoice Date:',
+                        style: GoogleFonts.inter(fontSize: 12.5, color: isDark ? Colors.grey[400] : Colors.grey[700]),
+                      ),
+                    ],
+                  ),
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _saleDate,
+                        firstDate: DateTime(2020, 1, 1),
+                        lastDate: DateTime(2100, 12, 31),
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          _saleDate = DateTime(
+                            picked.year,
+                            picked.month,
+                            picked.day,
+                            _saleDate.hour,
+                            _saleDate.minute,
+                          );
+                        });
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E88E5).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF1E88E5).withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            DateFormat('dd MMM yyyy').format(_saleDate),
+                            style: GoogleFonts.inter(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF1E88E5),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.edit_calendar_rounded, size: 14, color: Color(0xFF1E88E5)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             // ── CUSTOMER CARD ──────────────────────────────────
             _buildCard(
               isDark: isDark,
