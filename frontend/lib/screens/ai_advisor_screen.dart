@@ -145,12 +145,25 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
 
   final List<String> _suggestedPrompts = [
     '➕ ₹500 petrol kharcha add karo',
+    '➕ ₹250 Chai & Nashta add karo',
+    '➕ ₹1,200 Grocery shopping add karo',
+    '➕ ₹350 Swiggy dinner add karo',
+    '➕ ₹1,500 Electricity bill paid add karo',
     '🎯 Set Food budget to ₹5,000',
+    '🎯 Set Shopping budget to ₹8,000',
+    '🎯 Mera budget status dikhao',
     '📖 Rahul ko ₹1,000 udhar diya khate me likho',
+    '📖 Aman se ₹500 udhar liya note karo',
+    '📖 Khata list aur balances dikhao',
     '👥 Split ₹1,500 dinner with Aman and Rohit',
+    '👥 Split ₹600 cab fare with Rahul',
+    '📊 Is mahine total kitna kharcha hua?',
     '🍕 Food & Dining pe kitna kharcha hua?',
-    '💡 Main har mahine ₹3,000 kaise bachaun?',
     '📊 Mera sabse bada kharcha kaunsa hai?',
+    '📅 Pichle mahine aur is mahine ka comparison dikhao',
+    '💡 Main har mahine ₹3,000 kaise bachaun?',
+    '💡 Mere kharche kam karne ke tips do',
+    '📈 Meri daily spending average kitni hai?',
   ];
 
   @override
