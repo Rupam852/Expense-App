@@ -121,6 +121,7 @@ class AiAdvisorScreen extends StatefulWidget {
 class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _focusNode = FocusNode();
   final List<ChatMessage> _messages = [];
   bool _isLoading = false;
 
@@ -347,8 +348,22 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
   void dispose() {
     _textController.dispose();
     _scrollController.dispose();
+    _focusNode.dispose();
     _speech.stop();
     super.dispose();
+  }
+
+  void _onPromptTapped(String prompt) {
+    HapticFeedback.lightImpact();
+    // Strip leading decorative emojis (like ➕, 🎯, 📖, 👥, 🍕, 💡, 📊) for clean editable text
+    String cleanText = prompt.replaceAll(RegExp(r'^[^\w₹a-zA-Z0-9\u0900-\u097F]+\s*'), '').trim();
+    if (cleanText.isEmpty) cleanText = prompt;
+
+    _textController.text = cleanText;
+    _textController.selection = TextSelection.fromPosition(
+      TextPosition(offset: _textController.text.length),
+    );
+    _focusNode.requestFocus();
   }
 
   String _buildFinancialContext(ExpenseProvider provider) {
@@ -1046,29 +1061,36 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
               ),
             ),
 
-          // Suggested Prompts Horizontal Bar (shown when less than 3 messages)
-          if (_messages.length <= 2 && !_isLoading)
+          // Suggested Prompts Horizontal Bar (Always available when not loading)
+          if (!_isLoading)
             Container(
-              height: 40,
-              margin: const EdgeInsets.only(bottom: 8),
+              height: 38,
+              margin: const EdgeInsets.only(bottom: 6),
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
                 itemCount: _suggestedPrompts.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
                   final prompt = _suggestedPrompts[index];
                   return InkWell(
-                    onTap: () => _sendMessage(prompt),
+                    onTap: () => _onPromptTapped(prompt),
                     borderRadius: BorderRadius.circular(20),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
                       decoration: BoxDecoration(
                         color: isDark ? const Color(0xFF181B22) : Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: isDark ? const Color(0xFF242936) : const Color(0xFFE5E9F0),
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
                       ),
                       child: Center(
                         child: Text(
@@ -1127,6 +1149,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                           Expanded(
                             child: TextField(
                               controller: _textController,
+                              focusNode: _focusNode,
                               textCapitalization: TextCapitalization.sentences,
                               style: GoogleFonts.inter(
                                 fontSize: 13.5,
