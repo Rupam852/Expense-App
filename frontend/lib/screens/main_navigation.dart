@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -119,6 +120,7 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
     VoiceExpenseDialog.show(context);
   }
 
+  bool _isFabVisible = true;
   bool _isNavigating = false;
 
   void _openAiAdvisorChat() {
@@ -150,16 +152,39 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
         if (_currentIndex > 0) {
           setState(() {
             _currentIndex = 0; // Seamlessly go back to Home tab
+            _isFabVisible = true;
           });
         }
       },
       child: Scaffold(
-        body: Stack(
-          children: [
-            IndexedStack(
-              index: _currentIndex,
-              children: _screens,
-            ),
+        body: NotificationListener<UserScrollNotification>(
+          onNotification: (notification) {
+            if (_currentIndex == 0 && notification.metrics.axis == Axis.vertical) {
+              if (notification.direction == ScrollDirection.reverse) {
+                // User is scrolling DOWN -> smoothly hide floating buttons
+                if (_isFabVisible && notification.metrics.pixels > 50) {
+                  setState(() {
+                    _isFabVisible = false;
+                    _closeFabMenu();
+                  });
+                }
+              } else if (notification.direction == ScrollDirection.forward || notification.metrics.pixels <= 20) {
+                // User is scrolling UP or near top -> smoothly show floating buttons
+                if (!_isFabVisible) {
+                  setState(() {
+                    _isFabVisible = true;
+                  });
+                }
+              }
+            }
+            return false;
+          },
+          child: Stack(
+            children: [
+              IndexedStack(
+                index: _currentIndex,
+                children: _screens,
+              ),
 
             // ══════════════════════════════════════════════════════
             // BACKDROP OVERLAY (Dismisses FAB menu on tap anywhere)
@@ -181,26 +206,28 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
               ),
 
             // ══════════════════════════════════════════════════════
-            // FLOATING GROWWAI CHAT BUTTON (Always accessible on Home tab)
+            // FLOATING GROWWAI CHAT BUTTON (Auto-hides on scroll down, shows on scroll up)
             // ══════════════════════════════════════════════════════
             if (_currentIndex == 0)
               Positioned(
                 right: 18,
                 bottom: 84, // Directly above the + FAB button
                 child: AnimatedScale(
-                  scale: _isFabOpen ? 0.0 : 1.0,
-                  duration: const Duration(milliseconds: 200),
+                  scale: (_isFabVisible && !_isFabOpen) ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 220),
                   curve: Curves.easeOutCubic,
                   child: AnimatedOpacity(
-                    opacity: _isFabOpen ? 0.0 : 1.0,
-                    duration: const Duration(milliseconds: 200),
+                    opacity: (_isFabVisible && !_isFabOpen) ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 220),
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          _openAiAdvisorChat();
-                        },
+                        onTap: (_isFabVisible && !_isFabOpen)
+                            ? () {
+                                HapticFeedback.lightImpact();
+                                _openAiAdvisorChat();
+                              }
+                            : null,
                         borderRadius: BorderRadius.circular(28),
                         child: Container(
                           width: 50,
@@ -308,6 +335,7 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
                 ),
             ],
           ),
+        ),
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: (index) {
@@ -315,6 +343,7 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
             HapticFeedback.selectionClick();
             setState(() {
               _currentIndex = index;
+              _isFabVisible = true;
             });
           },
           items: const [
@@ -346,17 +375,26 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
           ],
         ),
         floatingActionButton: _currentIndex == 0
-            ? FloatingActionButton(
-                onPressed: _toggleFabMenu,
-                tooltip: _isFabOpen ? 'Close Menu' : 'Add Expense',
-                elevation: _isFabOpen ? 8 : 4,
-                backgroundColor: _isFabOpen ? const Color(0xFFEF4444) : primaryColor,
-                foregroundColor: _isFabOpen ? Colors.white : Colors.black,
-                child: RotationTransition(
-                  turns: _rotateAnimation,
-                  child: const Icon(
-                    Icons.add,
-                    size: 28,
+            ? AnimatedScale(
+                scale: _isFabVisible ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                child: AnimatedOpacity(
+                  opacity: _isFabVisible ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 220),
+                  child: FloatingActionButton(
+                    onPressed: _isFabVisible ? _toggleFabMenu : null,
+                    tooltip: _isFabOpen ? 'Close Menu' : 'Add Expense',
+                    elevation: _isFabOpen ? 8 : 4,
+                    backgroundColor: _isFabOpen ? const Color(0xFFEF4444) : primaryColor,
+                    foregroundColor: _isFabOpen ? Colors.white : Colors.black,
+                    child: RotationTransition(
+                      turns: _rotateAnimation,
+                      child: const Icon(
+                        Icons.add,
+                        size: 28,
+                      ),
+                    ),
                   ),
                 ),
               )
