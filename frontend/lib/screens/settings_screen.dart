@@ -1152,6 +1152,32 @@ class SettingsScreen extends StatelessWidget {
                         );
                       },
                     ),
+                    Divider(height: 1, color: borderColor),
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent, size: 22),
+                      ),
+                      title: Text(
+                        userProvider.isBusinessMode
+                            ? 'Delete Month Business Data'
+                            : 'Delete Month Personal Data',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.redAccent),
+                      ),
+                      subtitle: Text(
+                        userProvider.isBusinessMode
+                            ? 'Permanently delete sales & expenses of a chosen month'
+                            : 'Permanently delete personal expenses of a chosen month',
+                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                      ),
+                      trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.redAccent),
+                      onTap: () => _showDeleteMonthRecordsDialog(context, userProvider.isBusinessMode, expenseProvider),
+                    ),
                   ],
                 ),
 
@@ -1655,6 +1681,235 @@ class SettingsScreen extends StatelessWidget {
       child: Column(
         children: children,
       ),
+    );
+  }
+
+  Future<void> _showDeleteMonthRecordsDialog(
+    BuildContext context,
+    bool isBusinessMode,
+    ExpenseProvider expenseProvider,
+  ) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    DateTime selectedMonth = DateTime.now();
+
+    await showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            final monthStr = DateFormat('yyyy-MM').format(selectedMonth);
+            final monthLabel = DateFormat('MMMM yyyy').format(selectedMonth);
+
+            int personalExpenseCount = 0;
+            int businessExpenseCount = 0;
+
+            if (!isBusinessMode) {
+              personalExpenseCount = expenseProvider.expenses
+                  .where((e) =>
+                      !e.isDeleted &&
+                      e.ledgerType == 'personal' &&
+                      DateFormat('yyyy-MM').format(e.transactionDate) == monthStr)
+                  .length;
+            } else {
+              businessExpenseCount = expenseProvider.expenses
+                  .where((e) =>
+                      !e.isDeleted &&
+                      e.ledgerType == 'business' &&
+                      DateFormat('yyyy-MM').format(e.transactionDate) == monthStr)
+                  .length;
+            }
+
+            return FutureBuilder<List<BusinessSale>>(
+              future: isBusinessMode ? DatabaseHelper.instance.getBusinessSales() : Future.value([]),
+              builder: (context, snapshot) {
+                final sales = snapshot.data ?? [];
+                final salesCount = sales.where((s) => DateFormat('yyyy-MM').format(s.saleDate) == monthStr).length;
+
+                final totalRecords = isBusinessMode
+                    ? (businessExpenseCount + salesCount)
+                    : personalExpenseCount;
+
+                final hasData = totalRecords > 0;
+
+                return AlertDialog(
+                  backgroundColor: isDark ? const Color(0xFF1E2433) : Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  title: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          isBusinessMode ? 'Delete Month Business Data' : 'Delete Month Personal Data',
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 17),
+                        ),
+                      ),
+                    ],
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Select the month you wish to clean up:',
+                        style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 10),
+                      InkWell(
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: selectedMonth,
+                            firstDate: DateTime(2020, 1, 1),
+                            lastDate: DateTime(2100, 12, 31),
+                            helpText: 'Select Month to Clean Data',
+                          );
+                          if (picked != null) {
+                            setDialogState(() {
+                              selectedMonth = picked;
+                            });
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF131722) : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.calendar_month_rounded, size: 18, color: Colors.redAccent),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    monthLabel,
+                                    style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              const Icon(Icons.edit_calendar_rounded, size: 16, color: Colors.grey),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      if (!hasData)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.info_outline_rounded, color: Colors.amber, size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'No ${isBusinessMode ? 'business' : 'personal'} records found for $monthLabel. Nothing to delete.',
+                                  style: GoogleFonts.inter(fontSize: 12, color: isDark ? Colors.amber.shade200 : Colors.amber.shade900),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Found ${isBusinessMode ? '$salesCount sales & $businessExpenseCount business expenses' : '$personalExpenseCount personal expenses'} in $monthLabel. This action is irreversible.',
+                                  style: GoogleFonts.inter(fontSize: 12, color: isDark ? Colors.redAccent.shade100 : Colors.red.shade900),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                  actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: Text('Cancel', style: GoogleFonts.inter(color: Colors.grey)),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: Colors.grey.withValues(alpha: 0.3),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: !hasData
+                          ? null
+                          : () async {
+                              Navigator.of(ctx).pop();
+                              if (!isBusinessMode) {
+                                final toDelete = expenseProvider.expenses
+                                    .where((e) =>
+                                        !e.isDeleted &&
+                                        e.ledgerType == 'personal' &&
+                                        DateFormat('yyyy-MM').format(e.transactionDate) == monthStr)
+                                    .toList();
+                                for (var exp in toDelete) {
+                                  await expenseProvider.deleteExpense(exp.id);
+                                }
+                                if (context.mounted) {
+                                  CustomToast.show(context, '🗑️ Deleted ${toDelete.length} personal expenses for $monthLabel.');
+                                }
+                              } else {
+                                final expToDelete = expenseProvider.expenses
+                                    .where((e) =>
+                                        !e.isDeleted &&
+                                        e.ledgerType == 'business' &&
+                                        DateFormat('yyyy-MM').format(e.transactionDate) == monthStr)
+                                    .toList();
+                                for (var exp in expToDelete) {
+                                  await expenseProvider.deleteExpense(exp.id);
+                                }
+                                final sales = await DatabaseHelper.instance.getBusinessSales();
+                                final salesToDelete = sales.where((s) => DateFormat('yyyy-MM').format(s.saleDate) == monthStr).toList();
+                                for (var s in salesToDelete) {
+                                  await DatabaseHelper.instance.deleteBusinessSale(s.id);
+                                }
+                                if (context.mounted) {
+                                  CustomToast.show(context, '🗑️ Deleted ${salesToDelete.length} sales & ${expToDelete.length} business expenses for $monthLabel.');
+                                }
+                              }
+                            },
+                      child: Text(
+                        'Delete Data',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }
