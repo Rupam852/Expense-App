@@ -1247,49 +1247,115 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                             ),
                           ],
                         ),
-                        SizedBox(
-                          width: 130,
-                          child: _discountType == '%'
-                              ? Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    SizedBox(
-                                      width: 50,
-                                      child: TextFormField(
-                                        controller: _discountPercentController,
-                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                        textAlign: TextAlign.end,
-                                        decoration: const InputDecoration(
-                                          isDense: true,
-                                          suffixText: '%',
-                                          border: UnderlineInputBorder(),
-                                        ),
-                                        onChanged: (_) {
-                                          setState(() {
-                                            _updateDiscountFromPercent();
-                                          });
-                                        },
+                        const SizedBox(width: 8),
+                        _discountType == '%'
+                            ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 72,
+                                    height: 38,
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? const Color(0xFF242936) : const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: primaryColor.withOpacity(0.5),
+                                        width: 1.2,
                                       ),
                                     ),
-                                    const SizedBox(width: 6),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: TextFormField(
+                                            controller: _discountPercentController,
+                                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                            textAlign: TextAlign.center,
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: isDark ? Colors.white : Colors.black87,
+                                            ),
+                                            decoration: const InputDecoration(
+                                              isDense: true,
+                                              contentPadding: EdgeInsets.symmetric(vertical: 8),
+                                              border: InputBorder.none,
+                                              hintText: '0',
+                                            ),
+                                            onChanged: (_) {
+                                              setState(() {
+                                                _updateDiscountFromPercent();
+                                              });
+                                            },
+                                          ),
+                                        ),
+                                        Text(
+                                          '%',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: primaryColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '(-₹${_discount.toStringAsFixed(0)})',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: Colors.orange.shade700,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Container(
+                                width: 100,
+                                height: 38,
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF242936) : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: primaryColor.withOpacity(0.5),
+                                    width: 1.2,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
                                     Text(
-                                      '(-₹${_discount.toStringAsFixed(0)})',
-                                      style: TextStyle(fontSize: 11, color: Colors.orange.shade700, fontWeight: FontWeight.bold),
+                                      '₹',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: primaryColor,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: _discountController,
+                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                        textAlign: TextAlign.right,
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark ? Colors.white : Colors.black87,
+                                        ),
+                                        decoration: const InputDecoration(
+                                          isDense: true,
+                                          contentPadding: EdgeInsets.symmetric(vertical: 8),
+                                          border: InputBorder.none,
+                                          hintText: '0',
+                                        ),
+                                        onChanged: (_) => setState(() {}),
+                                      ),
                                     ),
                                   ],
-                                )
-                              : TextFormField(
-                                  controller: _discountController,
-                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  textAlign: TextAlign.end,
-                                  decoration: const InputDecoration(
-                                    isDense: true,
-                                    prefixText: '₹ ',
-                                    border: UnderlineInputBorder(),
-                                  ),
-                                  onChanged: (_) => setState(() {}),
                                 ),
-                        ),
+                              ),
                       ],
                     ),
                   ),
