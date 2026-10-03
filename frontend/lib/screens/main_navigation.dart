@@ -256,70 +256,7 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
                 ),
               ),
 
-            // ══════════════════════════════════════════════════════
-            // FLOATING GROW EXPENSE AI CHAT BUTTON (Auto-hides on scroll down, shows on scroll up)
-            // ══════════════════════════════════════════════════════
-            if (_currentIndex == 0)
-              Positioned(
-                right: 18,
-                bottom: 84, // Directly above the + FAB button
-                child: AnimatedScale(
-                  scale: (_isFabVisible && !_isFabOpen) ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOutCubic,
-                  child: AnimatedOpacity(
-                    opacity: (_isFabVisible && !_isFabOpen) ? 1.0 : 0.0,
-                    duration: const Duration(milliseconds: 220),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: (_isFabVisible && !_isFabOpen)
-                            ? () {
-                                HapticFeedback.lightImpact();
-                                _openAiAdvisorChat();
-                              }
-                            : null,
-                        borderRadius: BorderRadius.circular(28),
-                        child: Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: (isBusiness ? const Color(0xFF3B82F6) : const Color(0xFF00D09C)).withValues(alpha: 0.85),
-                              width: 1.8,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: (isBusiness ? const Color(0xFF3B82F6) : const Color(0xFF00D09C)).withValues(alpha: 0.35),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Icon(
-                              isBusiness ? Icons.insights_rounded : Icons.chat_bubble_rounded,
-                              color: isBusiness ? const Color(0xFF3B82F6) : const Color(0xFF00D09C),
-                              size: 24,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+
 
               // ══════════════════════════════════════════════════════
               // SPEED DIAL POPUP ITEMS (Mode-aware actions)
@@ -511,28 +448,98 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
                 ],
         ),
         floatingActionButton: _currentIndex == 0
-            ? AnimatedScale(
-                scale: _isFabVisible ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOutCubic,
-                child: AnimatedOpacity(
-                  opacity: _isFabVisible ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 220),
-                  child: FloatingActionButton(
-                    onPressed: _isFabVisible ? _toggleFabMenu : null,
-                    tooltip: _isFabOpen ? 'Close Menu' : 'Add Expense',
-                    elevation: _isFabOpen ? 8 : 4,
-                    backgroundColor: _isFabOpen ? const Color(0xFFEF4444) : primaryColor,
-                    foregroundColor: _isFabOpen ? Colors.white : Colors.black,
-                    child: RotationTransition(
-                      turns: _rotateAnimation,
-                      child: const Icon(
-                        Icons.add,
-                        size: 28,
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // 1. Floating AI Chat Button (Clean, accurate 100% tap target)
+                  if (!_isFabOpen)
+                    AnimatedScale(
+                      scale: _isFabVisible ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      child: AnimatedOpacity(
+                        opacity: _isFabVisible ? 1.0 : 0.0,
+                        duration: const Duration(milliseconds: 220),
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: Material(
+                            color: Colors.transparent,
+                            shape: const CircleBorder(),
+                            clipBehavior: Clip.antiAlias,
+                            child: InkWell(
+                              onTap: _isFabVisible
+                                  ? () {
+                                      HapticFeedback.lightImpact();
+                                      _openAiAdvisorChat();
+                                    }
+                                  : null,
+                              child: Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: (isBusiness ? const Color(0xFF3B82F6) : const Color(0xFF00D09C)).withValues(alpha: 0.85),
+                                    width: 1.8,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: (isBusiness ? const Color(0xFF3B82F6) : const Color(0xFF00D09C)).withValues(alpha: 0.35),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.3),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    isBusiness ? Icons.insights_rounded : Icons.chat_bubble_rounded,
+                                    color: isBusiness ? const Color(0xFF3B82F6) : const Color(0xFF00D09C),
+                                    size: 22,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // 2. Main Speed Dial / Add FAB Button
+                  AnimatedScale(
+                    scale: _isFabVisible ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    child: AnimatedOpacity(
+                      opacity: _isFabVisible ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 220),
+                      child: FloatingActionButton(
+                        onPressed: _isFabVisible ? _toggleFabMenu : null,
+                        tooltip: _isFabOpen ? 'Close Menu' : 'Add Expense',
+                        elevation: _isFabOpen ? 8 : 4,
+                        backgroundColor: _isFabOpen ? const Color(0xFFEF4444) : primaryColor,
+                        foregroundColor: _isFabOpen ? Colors.white : Colors.black,
+                        child: RotationTransition(
+                          turns: _rotateAnimation,
+                          child: const Icon(
+                            Icons.add,
+                            size: 28,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                ],
               )
             : null,
         floatingActionButtonLocation: FloatingActionButtonLocation.miniEndFloat,
