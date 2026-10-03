@@ -16,6 +16,7 @@ import 'backup_scope_screen.dart';
 import 'notification_settings_screen.dart';
 import '../widgets/report_issue_modal.dart';
 import '../models/business_profile.dart';
+import '../models/business_sale.dart';
 import '../services/database_helper.dart';
 import '../services/supabase_service.dart';
 import 'business_catalog_screen.dart';
