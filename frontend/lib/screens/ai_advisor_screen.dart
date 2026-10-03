@@ -521,7 +521,11 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       });
 
       if (hasPastMessages && mounted) {
-        await _showNewMonthChatDialog(currentMonthKey, monthName, prefs);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _showNewMonthChatDialog(currentMonthKey, monthName, prefs);
+          }
+        });
       } else {
         await prefs.setString('last_seen_chat_month', currentMonthKey);
       }
