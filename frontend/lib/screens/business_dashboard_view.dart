@@ -62,7 +62,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
     }
     try {
       final prof = await DatabaseHelper.instance.getBusinessProfile();
-      final sales = await DatabaseHelper.instance.getBusinessSales(limit: 50);
+      final allSales = await DatabaseHelper.instance.getBusinessSales(limit: 500);
 
       final now = DateTime.now();
       DateTime start;
@@ -95,6 +95,11 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
         start = DateTime(2020, 1, 1);
         end = DateTime(2099, 12, 31, 23, 59, 59);
       }
+
+      final periodSales = allSales.where((s) =>
+        s.saleDate.isAfter(start.subtract(const Duration(seconds: 1))) &&
+        s.saleDate.isBefore(end.add(const Duration(seconds: 1)))
+      ).toList();
 
       final metrics = await DatabaseHelper.instance.getBusinessMetrics(start: start, end: end);
 
@@ -129,7 +134,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
       if (mounted) {
         setState(() {
           _businessProfile = prof;
-          _sales = sales;
+          _sales = periodSales;
           _businessExpenses = periodExpenses;
           _metrics = metrics;
           _todayExpenses = bExp;
@@ -300,9 +305,10 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = const Color(0xFF3B82F6); // Sapphire Blue for Business
 
-    final totalSales = _metrics['totalSales'] ?? 0.0;
+    double totalSales = 0.0;
     double totalGoodsCost = 0.0;
     for (var s in _sales) {
+      totalSales += s.finalAmount;
       totalGoodsCost += s.totalPurchaseCost;
     }
     final netProfit = totalGoodsCost > 0
@@ -578,7 +584,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                     isDark: isDark,
                     title: 'Sales ($_filterPeriod)',
                     amount: '₹${totalSales.toStringAsFixed(0)}',
-                    subtitle: '${_metrics['saleCount']?.toInt() ?? 0} bills generated',
+                    subtitle: '${_sales.length} bills generated',
                     icon: Icons.trending_up_rounded,
                     iconColor: Colors.greenAccent.shade700,
                     accentColor: Colors.greenAccent.shade700,

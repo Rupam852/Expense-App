@@ -398,6 +398,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
     final file = await BusinessExportHelper.generateCustomerInvoicePdf(sale, _businessProfile);
     if (!mounted) return;
     if (file != null) {
+      CustomToast.show(context, '📁 Saved to Downloads & Opening...');
       await OpenFile.open(file.path);
     } else {
       CustomToast.show(context, 'Failed to generate PDF', isError: true);
@@ -517,6 +518,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
     );
     if (!mounted) return;
     if (file != null) {
+      CustomToast.show(context, '📁 Saved to Downloads & Opening...');
       await OpenFile.open(file.path);
     } else {
       CustomToast.show(context, 'Failed to export Tax Report PDF', isError: true);
@@ -535,6 +537,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
     );
     if (!mounted) return;
     if (file != null) {
+      CustomToast.show(context, '📁 Saved to Downloads & Opening...');
       final result = await OpenFile.open(file.path);
       if (result.type != ResultType.done && mounted) {
         await Share.shareXFiles([XFile(file.path)], text: 'Business Tax & P&L Statement (${_reportPeriod})');

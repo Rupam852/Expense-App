@@ -8,6 +8,7 @@ import 'package:excel/excel.dart';
 import '../models/business_sale.dart';
 import '../models/business_profile.dart';
 import '../models/expense.dart';
+import '../services/supabase_service.dart';
 import 'pdf_unicode_helper.dart';
 
 class BusinessExportHelper {
@@ -204,9 +205,23 @@ class BusinessExportHelper {
         ),
       );
 
+      final pdfBytes = await pdf.save();
       final tempDir = await getTemporaryDirectory();
       final file = File('${tempDir.path}/${sale.invoiceNo}.pdf');
-      await file.writeAsBytes(await pdf.save());
+      await file.writeAsBytes(pdfBytes);
+
+      if (Platform.isAndroid) {
+        try {
+          await SupabaseService.saveFileToDownloads(
+            fileName: '${sale.invoiceNo}.pdf',
+            bytes: pdfBytes,
+            mimeType: 'application/pdf',
+          );
+        } catch (e) {
+          debugPrint('[BusinessExportHelper] Save to Downloads fallback: $e');
+        }
+      }
+
       return file;
     } catch (e) {
       debugPrint('[BusinessExportHelper] Invoice PDF Error: $e');
@@ -341,9 +356,23 @@ class BusinessExportHelper {
         ),
       );
 
+      final pdfBytes = await pdf.save();
       final tempDir = await getTemporaryDirectory();
       final file = File('${tempDir.path}/Voucher_$voucherNo.pdf');
-      await file.writeAsBytes(await pdf.save());
+      await file.writeAsBytes(pdfBytes);
+
+      if (Platform.isAndroid) {
+        try {
+          await SupabaseService.saveFileToDownloads(
+            fileName: 'Voucher_$voucherNo.pdf',
+            bytes: pdfBytes,
+            mimeType: 'application/pdf',
+          );
+        } catch (e) {
+          debugPrint('[BusinessExportHelper] Save Voucher to Downloads fallback: $e');
+        }
+      }
+
       return file;
     } catch (e) {
       debugPrint('[BusinessExportHelper] Expense Voucher PDF Error: $e');
@@ -538,10 +567,25 @@ class BusinessExportHelper {
         ),
       );
 
+      final pdfBytes = await pdf.save();
       final tempDir = await getTemporaryDirectory();
       final dateSlug = '${DateFormat('yyyyMMdd').format(startDate)}_${DateFormat('yyyyMMdd').format(endDate)}';
-      final file = File('${tempDir.path}/Business_Tax_Report_$dateSlug.pdf');
-      await file.writeAsBytes(await pdf.save());
+      final fileName = 'Business_Tax_Report_$dateSlug.pdf';
+      final file = File('${tempDir.path}/$fileName');
+      await file.writeAsBytes(pdfBytes);
+
+      if (Platform.isAndroid) {
+        try {
+          await SupabaseService.saveFileToDownloads(
+            fileName: fileName,
+            bytes: pdfBytes,
+            mimeType: 'application/pdf',
+          );
+        } catch (e) {
+          debugPrint('[BusinessExportHelper] Save Tax PDF to Downloads fallback: $e');
+        }
+      }
+
       return file;
     } catch (e) {
       debugPrint('[BusinessExportHelper] Tax Statement PDF Error: $e');
@@ -660,8 +704,23 @@ class BusinessExportHelper {
 
       final tempDir = await getTemporaryDirectory();
       final dateSlug = '${DateFormat('yyyyMMdd').format(startDate)}_${DateFormat('yyyyMMdd').format(endDate)}';
-      final file = File('${tempDir.path}/Business_Tax_Report_$dateSlug.xlsx');
-      await file.writeAsBytes(fileBytes);
+      final fileName = 'Business_Tax_Report_$dateSlug.xlsx';
+      final file = File('${tempDir.path}/$fileName');
+      final u8Bytes = Uint8List.fromList(fileBytes);
+      await file.writeAsBytes(u8Bytes);
+
+      if (Platform.isAndroid) {
+        try {
+          await SupabaseService.saveFileToDownloads(
+            fileName: fileName,
+            bytes: u8Bytes,
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          );
+        } catch (e) {
+          debugPrint('[BusinessExportHelper] Save Tax Excel to Downloads fallback: $e');
+        }
+      }
+
       return file;
     } catch (e) {
       debugPrint('[BusinessExportHelper] Excel Export Error: $e');
