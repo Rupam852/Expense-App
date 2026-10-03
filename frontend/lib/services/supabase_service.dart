@@ -1447,16 +1447,6 @@ class SupabaseService {
       } catch (_) {}
     }
 
-    // Save to cloud history (silent)
-    saveInvoiceToHistory(
-      fileName: fileName,
-      monthYear: myMonthYear,
-      pdfBytes: pdfBytes,
-    ).catchError((Object e) {
-      print('[History] Silent cloud save failed: $e');
-      return null;
-    });
-
     return file.path;
   }
 

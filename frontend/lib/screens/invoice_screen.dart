@@ -42,6 +42,7 @@ class InvoiceScreen extends StatefulWidget {
 class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProviderStateMixin {
   // ── PERSONAL MODE STATE ──────────────────────────────────────────
   final List<String> _selectedExpenseIds = [];
+  DateTime _personalSelectedMonthYear = DateTime.now();
 
   // ── BUSINESS MODE STATE ──────────────────────────────────────────
   late TabController _tabController;
@@ -124,11 +125,29 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
     });
   }
 
+  void _onSelectMonthYear(DateTime picked, List<Expense> allExpenses) {
+    final pickedStr = DateFormat('yyyy-MM').format(picked);
+    final monthExpenses = allExpenses.where((e) =>
+      !e.isDeleted && e.ledgerType == 'personal' && DateFormat('yyyy-MM').format(e.transactionDate) == pickedStr
+    ).toList();
+
+    setState(() {
+      _personalSelectedMonthYear = picked;
+      _selectedExpenseIds.clear();
+      if (monthExpenses.isEmpty) {
+        CustomToast.show(context, '⚠️ No transactions found for ${DateFormat('MMMM yyyy').format(picked)}', isError: true);
+      } else {
+        _selectedExpenseIds.addAll(monthExpenses.map((e) => e.id));
+        CustomToast.show(context, '✅ Auto-selected ${monthExpenses.length} transactions for ${DateFormat('MMMM yyyy').format(picked)}');
+      }
+    });
+  }
+
   void _generatePersonalInvoice() async {
     if (_selectedExpenseIds.isEmpty) return;
 
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
-    final selectedMonthStr = DateFormat('yyyy-MM').format(expenseProvider.selectedMonthYear);
+    final selectedMonthStr = DateFormat('yyyy-MM').format(_personalSelectedMonthYear);
 
     double progress = 0.0;
     String statusText = 'Compiling selected transactions...';
@@ -1207,9 +1226,9 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
     final expenseProvider = Provider.of<ExpenseProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final selectedMonthStr = DateFormat('yyyy-MM').format(expenseProvider.selectedMonthYear);
+    final selectedMonthStr = DateFormat('yyyy-MM').format(_personalSelectedMonthYear);
     final activeExpenses = expenseProvider.expenses.where((e) =>
-      !e.isDeleted && DateFormat('yyyy-MM').format(e.transactionDate) == selectedMonthStr
+      !e.isDeleted && e.ledgerType == 'personal' && DateFormat('yyyy-MM').format(e.transactionDate) == selectedMonthStr
     ).toList();
 
     final double selectedTotal = activeExpenses
@@ -1240,7 +1259,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
         children: [
           // Descriptive Header
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             color: isDark ? const Color(0xFF181B22) : Colors.white,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1253,6 +1272,66 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
                 Text(
                   'Select personal transactions to compile a clean PDF expense statement for reimbursement claims.',
                   style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[500]),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+
+          // ── MONTH & YEAR SELECTOR BAR ────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            color: isDark ? const Color(0xFF1E2433) : const Color(0xFFF1F5F9),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.calendar_month_rounded, size: 18, color: Color(0xFF00D09C)),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Statement Month:',
+                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey),
+                    ),
+                  ],
+                ),
+                InkWell(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _personalSelectedMonthYear,
+                      firstDate: DateTime(2020, 1, 1),
+                      lastDate: DateTime(2100, 12, 31),
+                      helpText: 'Select Month & Year for Statement',
+                    );
+                    if (picked != null) {
+                      _onSelectMonthYear(picked, expenseProvider.expenses);
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00D09C).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF00D09C).withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          DateFormat('MMMM yyyy').format(_personalSelectedMonthYear),
+                          style: GoogleFonts.inter(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF00D09C),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: Color(0xFF00D09C)),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
