@@ -6,6 +6,7 @@ import 'package:open_file/open_file.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../models/expense.dart';
 import '../models/business_sale.dart';
 import '../models/business_profile.dart';
 import '../services/database_helper.dart';
@@ -29,12 +30,14 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
   bool _isLoading = true;
   BusinessProfile _businessProfile = BusinessProfile(id: 'default', businessName: 'My Business');
   List<BusinessSale> _sales = [];
+  List<Expense> _businessExpenses = [];
   Map<String, double> _metrics = {};
   double _todayExpenses = 0.0;
   double _totalLenaHai = 0.0;
   double _totalDenaHai = 0.0;
 
   String _filterPeriod = 'This Month'; // Today, This Week, This Month, All Time
+  String _recentTab = 'sales'; // 'sales' or 'expenses'
 
   @override
   void initState() {
@@ -69,12 +72,17 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
 
       // Fetch Business Operating Expenses (only business ledger)
       final expRows = await DatabaseHelper.instance.getExpenses(ledgerType: 'business');
+      final List<Expense> periodExpenses = [];
       double bExp = 0.0;
       for (var e in expRows) {
-        if (e.transactionDate.isAfter(start) && e.transactionDate.isBefore(end)) {
+        if (!e.isDeleted &&
+            e.transactionDate.isAfter(start.subtract(const Duration(seconds: 1))) &&
+            e.transactionDate.isBefore(end.add(const Duration(seconds: 1)))) {
           bExp += e.amount;
+          periodExpenses.add(e);
         }
       }
+      periodExpenses.sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
 
       // Fetch Khata Dues
       final khataEntries = await DatabaseHelper.instance.getKhataEntries();
@@ -94,6 +102,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
         setState(() {
           _businessProfile = prof;
           _sales = sales;
+          _businessExpenses = periodExpenses;
           _metrics = metrics;
           _todayExpenses = bExp;
           _totalLenaHai = lenaHai;
@@ -521,33 +530,126 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
             ),
             const SizedBox(height: 20),
 
-            // ── RECENT SALES & INVOICES LIST ───────────────────
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Recent Sales & Invoices', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
-                if (_sales.isNotEmpty)
-                  Text('${_sales.length} records • Tap for options', style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey)),
-              ],
+            // ── RECENT ACTIVITIES (SALES & EXPENSES TOGGLE) ───────────
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _recentTab = 'sales');
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 9),
+                        decoration: BoxDecoration(
+                          color: _recentTab == 'sales'
+                              ? (isDark ? const Color(0xFF3B82F6) : Colors.white)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: _recentTab == 'sales' && !isDark
+                              ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))]
+                              : null,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.point_of_sale_rounded, size: 16, color: _recentTab == 'sales' ? (_recentTab == 'sales' && isDark ? Colors.white : const Color(0xFF3B82F6)) : Colors.grey),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Sales (${_sales.length})',
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: _recentTab == 'sales' ? (_recentTab == 'sales' && isDark ? Colors.white : const Color(0xFF3B82F6)) : Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _recentTab = 'expenses');
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 9),
+                        decoration: BoxDecoration(
+                          color: _recentTab == 'expenses'
+                              ? (isDark ? const Color(0xFFF59E0B) : Colors.white)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: _recentTab == 'expenses' && !isDark
+                              ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))]
+                              : null,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.receipt_rounded, size: 16, color: _recentTab == 'expenses' ? (_recentTab == 'expenses' && isDark ? Colors.white : const Color(0xFFD97706)) : Colors.grey),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Expenses (${_businessExpenses.length})',
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: _recentTab == 'expenses' ? (_recentTab == 'expenses' && isDark ? Colors.white : const Color(0xFFD97706)) : Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
 
-            if (_sales.isEmpty)
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
-                alignment: Alignment.center,
-                child: Column(
-                  children: [
-                    Icon(Icons.receipt_outlined, size: 48, color: Colors.grey.withValues(alpha: 0.5)),
-                    const SizedBox(height: 8),
-                    Text('No Sales Recorded Yet', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
-                    const SizedBox(height: 4),
-                    Text('Tap "+ New Sale" above to record your first customer bill!', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center),
-                  ],
-                ),
-              )
-            else
-              ..._sales.map((sale) => _buildSaleTile(sale: sale, isDark: isDark, primaryColor: primaryColor)),
+            // ── TAB CONTENT ──────────────────────────────────
+            if (_recentTab == 'sales') ...[
+              if (_sales.isEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+                  alignment: Alignment.center,
+                  child: Column(
+                    children: [
+                      Icon(Icons.receipt_outlined, size: 48, color: Colors.grey.withValues(alpha: 0.5)),
+                      const SizedBox(height: 8),
+                      Text('No Sales Recorded Yet', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
+                      const SizedBox(height: 4),
+                      Text('Tap "+ New Sale" above to record your first customer bill!', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center),
+                    ],
+                  ),
+                )
+              else
+                ..._sales.map((sale) => _buildSaleTile(sale: sale, isDark: isDark, primaryColor: primaryColor)),
+            ] else ...[
+              if (_businessExpenses.isEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+                  alignment: Alignment.center,
+                  child: Column(
+                    children: [
+                      Icon(Icons.receipt_long_outlined, size: 48, color: Colors.grey.withValues(alpha: 0.5)),
+                      const SizedBox(height: 8),
+                      Text('No Business Expenses in $_filterPeriod', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
+                      const SizedBox(height: 4),
+                      Text('Tap "+ Business Expense" above to log stock, rent, salary or bills!', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center),
+                    ],
+                  ),
+                )
+              else
+                ..._businessExpenses.map((exp) => _buildExpenseTile(expense: exp, isDark: isDark)),
+            ],
           ],
         ),
       ),
@@ -822,11 +924,11 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         margin: const EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: Colors.redAccent,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.all(Radius.circular(14)),
         ),
-        child: Row(
+        child: const Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: const [
             Text('Swipe to Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
@@ -901,6 +1003,245 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                               onPressed: () => _editSale(sale),
                             ),
                           ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _viewExpenseVoucherPdf(Expense expense) async {
+    CustomToast.show(context, 'Generating Payment Voucher PDF...');
+    final file = await BusinessExportHelper.generateExpenseVoucherPdf(expense, _businessProfile);
+    if (!mounted) return;
+    if (file != null) {
+      await OpenFile.open(file.path);
+    } else {
+      CustomToast.show(context, 'Failed to generate PDF', isError: true);
+    }
+  }
+
+  Future<void> _editExpense(Expense expense) async {
+    final res = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ExpenseEntryScreen(editExpense: expense, initialLedgerType: 'business'),
+      ),
+    );
+    if (res == true) {
+      _loadDashboardData();
+    }
+  }
+
+  Future<void> _deleteExpense(Expense expense) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Business Expense?'),
+        content: Text('Are you sure you want to delete "${expense.category}" expense of ₹${expense.amount.toStringAsFixed(2)}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await DatabaseHelper.instance.deleteExpense(expense.id);
+      if (mounted) {
+        CustomToast.show(context, 'Expense deleted');
+        _loadDashboardData();
+      }
+    }
+  }
+
+  void _showExpenseOptionsBottomSheet(Expense expense) {
+    HapticFeedback.lightImpact();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      expense.category,
+                      style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      '₹${expense.amount.toStringAsFixed(2)}',
+                      style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFFF59E0B)),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 20),
+              ListTile(
+                leading: const Icon(Icons.receipt_long_rounded, color: Color(0xFFF59E0B)),
+                title: const Text('View & Download Payment Voucher PDF'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _viewExpenseVoucherPdf(expense);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.edit_rounded, color: Colors.blueAccent),
+                title: const Text('Edit Business Expense'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _editExpense(expense);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                title: const Text('Delete Expense', style: TextStyle(color: Colors.redAccent)),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _deleteExpense(expense);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExpenseTile({
+    required Expense expense,
+    required bool isDark,
+  }) {
+    final dateStr = DateFormat('dd MMM, hh:mm a').format(expense.transactionDate);
+
+    return Dismissible(
+      key: ValueKey(expense.id),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (direction) async {
+        return await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Delete Expense?'),
+            content: Text('Are you sure you want to delete "${expense.category}" expense of ₹${expense.amount.toStringAsFixed(2)}?'),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+        );
+      },
+      onDismissed: (direction) async {
+        await DatabaseHelper.instance.deleteExpense(expense.id);
+        if (mounted) {
+          CustomToast.show(context, '🗑️ Expense deleted');
+          _loadDashboardData();
+        }
+      },
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: const BoxDecoration(
+          color: Colors.redAccent,
+          borderRadius: BorderRadius.all(Radius.circular(14)),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: const [
+            Text('Swipe to Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+            SizedBox(width: 8),
+            Icon(Icons.delete_forever_rounded, color: Colors.white, size: 24),
+          ],
+        ),
+      ),
+      child: InkWell(
+        onTap: () => _showExpenseOptionsBottomSheet(expense),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                child: const Icon(
+                  Icons.receipt_rounded,
+                  color: Color(0xFFF59E0B),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          expense.category,
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                        Text(
+                          '₹${expense.amount.toStringAsFixed(2)}',
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15, color: const Color(0xFFF59E0B)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            expense.description.isNotEmpty ? '${expense.description} • $dateStr' : dateStr,
+                            style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined, size: 16, color: Colors.grey),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () => _editExpense(expense),
                         ),
                       ],
                     ),
