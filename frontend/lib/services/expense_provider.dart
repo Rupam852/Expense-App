@@ -143,6 +143,20 @@ class ExpenseProvider with ChangeNotifier {
 
   double get netKhataBalance => totalYouWillGet - totalYouWillGive;
 
+  List<KhataEntry> khataEntriesFor(String ledgerType) {
+    return _khataEntries.where((k) => !k.isDeleted && (k.ledgerType == ledgerType || (ledgerType == 'personal' && k.ledgerType.isEmpty))).toList();
+  }
+
+  double totalYouWillGetFor(String ledgerType) => _khataEntries
+      .where((k) => !k.isDeleted && !k.isSettled && k.isLent && (k.ledgerType == ledgerType || (ledgerType == 'personal' && k.ledgerType.isEmpty)))
+      .fold<double>(0.0, (sum, k) => sum + k.amount);
+
+  double totalYouWillGiveFor(String ledgerType) => _khataEntries
+      .where((k) => !k.isDeleted && !k.isSettled && k.isBorrowed && (k.ledgerType == ledgerType || (ledgerType == 'personal' && k.ledgerType.isEmpty)))
+      .fold<double>(0.0, (sum, k) => sum + k.amount);
+
+  double netKhataBalanceFor(String ledgerType) => totalYouWillGetFor(ledgerType) - totalYouWillGiveFor(ledgerType);
+
   double get totalSplitReceivable => _splitBills
       .where((b) => !b.isDeleted)
       .fold<double>(0.0, (sum, b) => sum + b.pendingCollection);
@@ -395,6 +409,7 @@ class ExpenseProvider with ChangeNotifier {
     required DateTime entryDate,
     DateTime? dueDate,
     String? note,
+    String ledgerType = 'personal',
   }) async {
     final entry = KhataEntry(
       id: cryptoUuid(),
@@ -405,6 +420,7 @@ class ExpenseProvider with ChangeNotifier {
       entryDate: entryDate,
       dueDate: dueDate,
       note: note?.trim().isEmpty == true ? null : note?.trim(),
+      ledgerType: ledgerType,
     );
 
     await _dbHelper.insertKhataEntry(entry);

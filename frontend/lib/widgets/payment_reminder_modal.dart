@@ -100,13 +100,24 @@ class _PaymentReminderModalState extends State<PaymentReminderModal> {
         ? ' regarding "${widget.titleOrNote!.trim()}"'
         : '';
 
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final isBusiness = userProvider.isBusinessMode;
+
     if (upiId != null && upiId.trim().isNotEmpty) {
       final cleanUpi = upiId.trim();
       final nameParam = Uri.encodeComponent(payeeName ?? 'Payee');
-      final noteParam = Uri.encodeComponent(widget.titleOrNote ?? (widget.isKhata ? 'Khata Settlement' : 'Split Bill Share'));
+      final noteParam = Uri.encodeComponent(widget.titleOrNote ?? (widget.isKhata ? (isBusiness ? 'Bill Payment' : 'Khata Settlement') : 'Split Bill Share'));
       final upiUri = 'upi://pay?pa=$cleanUpi&pn=$nameParam&am=${_activeAmount.toStringAsFixed(2)}&cu=INR&tn=$noteParam';
 
-      if (widget.isKhata) {
+      if (isBusiness && widget.isKhata) {
+        return '🧾 *Payment Reminder*\n\n'
+            'Dear $_activePersonName,\n'
+            'This is a payment reminder for pending balance of *$formattedAmt*$notePart.\n\n'
+            '📱 *Pay directly via UPI:*\n'
+            '• UPI ID: $cleanUpi\n'
+            '• Fast Pay Link: $upiUri\n\n'
+            'Thank you for your business! 🙏';
+      } else if (widget.isKhata) {
         return 'Hi $_activePersonName! 👋\n\n'
             'This is a friendly reminder for $formattedAmt$notePart on Grow Expense App.\n\n'
             '📱 Pay directly via UPI:\n'
@@ -123,8 +134,12 @@ class _PaymentReminderModalState extends State<PaymentReminderModal> {
       }
     }
 
-    // Clean message without payment method (NOTE IS NOT INCLUDED IN SHARED TEXT)
-    if (widget.isKhata) {
+    if (isBusiness && widget.isKhata) {
+      return '🧾 *Payment Reminder*\n\n'
+          'Dear $_activePersonName,\n'
+          'This is a gentle payment reminder regarding outstanding balance of *$formattedAmt*$notePart.\n\n'
+          'Thank you for doing business with us! 🙏';
+    } else if (widget.isKhata) {
       return 'Hi $_activePersonName! 👋\n\n'
           'This is a friendly reminder regarding $formattedAmt$notePart on Grow Expense App.\n\n'
           'Please settle whenever convenient. Thank you! 🙏';

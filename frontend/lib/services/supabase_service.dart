@@ -882,6 +882,7 @@ class SupabaseService {
         'entry_date': e['entry_date']?.toString() ?? DateTime.now().toIso8601String(),
         'due_date': e['due_date']?.toString(),
         'note': e['note']?.toString(),
+        'ledger_type': e['ledger_type']?.toString() ?? 'personal',
         'is_settled': e['is_settled'] == 1 || e['is_settled'] == true,
         'settled_at': e['settled_at']?.toString(),
         'is_deleted': e['is_deleted'] == 1 || e['is_deleted'] == true,

@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/khata_entry.dart';
 import '../services/expense_provider.dart';
+import '../services/user_provider.dart';
 import '../widgets/custom_toast.dart';
 import '../widgets/payment_reminder_modal.dart';
-import 'payment_details_screen.dart';
 
 class KhataScreen extends StatefulWidget {
   const KhataScreen({super.key});
@@ -36,12 +35,13 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
     super.dispose();
   }
 
-  void _openKhataSheet({KhataEntry? existing}) {
+  void _openKhataSheet(bool isBusiness, {KhataEntry? existing}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => _KhataEntrySheet(
+        isBusiness: isBusiness,
         existingEntry: existing,
         onSave: (entry) async {
           final provider = Provider.of<ExpenseProvider>(context, listen: false);
@@ -54,9 +54,15 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
               entryDate: entry.entryDate,
               dueDate: entry.dueDate,
               note: entry.note,
+              ledgerType: isBusiness ? 'business' : 'personal',
             );
             if (mounted) {
-              CustomToast.show(context, '📒 Khata entry added for ${entry.personName}');
+              CustomToast.show(
+                context,
+                isBusiness
+                    ? '📒 Customer/Vendor ledger added for ${entry.personName}'
+                    : '📒 Khata entry added for ${entry.personName}',
+              );
             }
           } else {
             await provider.updateKhataEntry(entry);
@@ -83,26 +89,31 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
+    final userProvider = Provider.of<UserProvider>(context);
+    final isBusiness = userProvider.isBusinessMode;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isBusiness ? const Color(0xFF3B82F6) : const Color(0xFF00D09C);
+    final currentLedger = isBusiness ? 'business' : 'personal';
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Khata Book',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 19),
+          isBusiness ? '🏢 Business Khata & Udhar Ledger' : 'Personal Khata Book',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         elevation: 0,
         actions: [
           IconButton(
-            tooltip: 'Add Entry',
-            icon: const Icon(Icons.person_add_alt_1_rounded, color: Color(0xFF00D09C)),
-            onPressed: () => _openKhataSheet(),
+            tooltip: isBusiness ? 'Add Customer/Vendor Udhar' : 'Add Khata Entry',
+            icon: Icon(Icons.person_add_alt_1_rounded, color: primaryColor),
+            onPressed: () => _openKhataSheet(isBusiness),
           ),
         ],
       ),
       body: Consumer<ExpenseProvider>(
         builder: (context, provider, _) {
-          final entries = provider.khataEntries.where((k) => !k.isDeleted).toList();
+          // Strictly isolate entries based on active mode ledger
+          final entries = provider.khataEntriesFor(currentLedger);
 
           final filtered = entries.where((e) {
             if (_searchQuery.isNotEmpty) {
@@ -118,6 +129,9 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
           final borrowedList = filtered.where((e) => !e.isSettled && e.isBorrowed).toList();
           final settledList = filtered.where((e) => e.isSettled).toList();
 
+          final totalGet = provider.totalYouWillGetFor(currentLedger);
+          final totalGive = provider.totalYouWillGiveFor(currentLedger);
+
           final userUpi = provider.paymentDetails.isNotEmpty ? provider.paymentDetails.first.upiId : null;
 
           return Column(
@@ -125,19 +139,22 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
               // 1. Top Summary Banner
               _buildSummaryHeader(
                 isDark: isDark,
-                totalGet: provider.totalYouWillGet,
-                totalGive: provider.totalYouWillGive,
-                netBalance: provider.netKhataBalance,
+                isBusiness: isBusiness,
+                totalGet: totalGet,
+                totalGive: totalGive,
+                primaryColor: primaryColor,
               ),
 
               // 2. Search Bar
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
                 child: TextField(
                   controller: _searchController,
                   onChanged: (v) => setState(() => _searchQuery = v.trim()),
                   decoration: InputDecoration(
-                    hintText: 'Search by person name or note...',
+                    hintText: isBusiness
+                        ? 'Search customer name, vendor or invoice note...'
+                        : 'Search by person name or note...',
                     hintStyle: GoogleFonts.inter(fontSize: 13, color: Colors.grey),
                     prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Colors.grey),
                     suffixIcon: _searchQuery.isNotEmpty
@@ -160,7 +177,7 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
                 ),
               ),
 
-              // 3. Tab Bar (Scrollable to prevent label truncation)
+              // 3. Tab Bar
               Align(
                 alignment: Alignment.centerLeft,
                 child: TabBar(
@@ -169,18 +186,25 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
                   tabAlignment: TabAlignment.start,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   labelPadding: const EdgeInsets.symmetric(horizontal: 14),
-                  indicatorColor: const Color(0xFF00D09C),
+                  indicatorColor: primaryColor,
                   indicatorWeight: 3,
-                  labelColor: const Color(0xFF00D09C),
+                  labelColor: primaryColor,
                   unselectedLabelColor: Colors.grey,
-                  labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
-                  unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 13),
-                  tabs: [
-                    Tab(text: 'All (${filtered.length})'),
-                    Tab(text: 'You\'ll Get (${lentList.length})'),
-                    Tab(text: 'You\'ll Give (${borrowedList.length})'),
-                    Tab(text: 'Settled (${settledList.length})'),
-                  ],
+                  labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12.5),
+                  unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 12.5),
+                  tabs: isBusiness
+                      ? [
+                          Tab(text: 'All (${filtered.length})'),
+                          Tab(text: 'Customer Udhar (${lentList.length})'),
+                          Tab(text: 'Vendor Payable (${borrowedList.length})'),
+                          Tab(text: 'Settled (${settledList.length})'),
+                        ]
+                      : [
+                          Tab(text: 'All (${filtered.length})'),
+                          Tab(text: 'You\'ll Get (${lentList.length})'),
+                          Tab(text: 'You\'ll Give (${borrowedList.length})'),
+                          Tab(text: 'Settled (${settledList.length})'),
+                        ],
                 ),
               ),
 
@@ -189,10 +213,10 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    _buildEntryList(filtered, isDark, userUpi),
-                    _buildEntryList(lentList, isDark, userUpi),
-                    _buildEntryList(borrowedList, isDark, userUpi),
-                    _buildEntryList(settledList, isDark, userUpi),
+                    _buildEntryList(filtered, isDark, userUpi, isBusiness, primaryColor),
+                    _buildEntryList(lentList, isDark, userUpi, isBusiness, primaryColor),
+                    _buildEntryList(borrowedList, isDark, userUpi, isBusiness, primaryColor),
+                    _buildEntryList(settledList, isDark, userUpi, isBusiness, primaryColor),
                   ],
                 ),
               ),
@@ -201,11 +225,11 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openKhataSheet(),
-        backgroundColor: const Color(0xFF00D09C),
+        onPressed: () => _openKhataSheet(isBusiness),
+        backgroundColor: primaryColor,
         icon: const Icon(Icons.add_rounded, color: Colors.white),
         label: Text(
-          'Add Khata',
+          isBusiness ? 'Add Customer Udhar' : 'Add Khata',
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
         ),
       ),
@@ -214,12 +238,13 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
 
   Widget _buildSummaryHeader({
     required bool isDark,
+    required bool isBusiness,
     required double totalGet,
     required double totalGive,
-    required double netBalance,
+    required Color primaryColor,
   }) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 6),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E222D) : Colors.white,
@@ -237,7 +262,7 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
       ),
       child: Row(
         children: [
-          // You will get (Lent)
+          // You will get / Customer Udhar (Lent)
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -247,19 +272,19 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
                     Container(
                       width: 8,
                       height: 8,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF00D09C),
+                      decoration: BoxDecoration(
+                        color: isBusiness ? Colors.green : const Color(0xFF00D09C),
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      'YOU WILL GET',
+                      isBusiness ? 'CUSTOMER UDHAR (LENA HAI)' : 'YOU WILL GET',
                       style: GoogleFonts.inter(
-                        fontSize: 10.5,
+                        fontSize: 10,
                         fontWeight: FontWeight.bold,
                         color: Colors.grey,
-                        letterSpacing: 0.5,
+                        letterSpacing: 0.4,
                       ),
                     ),
                   ],
@@ -270,7 +295,7 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
                   style: GoogleFonts.outfit(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF00D09C),
+                    color: isBusiness ? Colors.green : const Color(0xFF00D09C),
                   ),
                 ),
               ],
@@ -281,7 +306,7 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
             width: 1,
             color: isDark ? Colors.white12 : Colors.black12,
           ),
-          // You will give (Borrowed)
+          // You will give / Vendor Payable (Borrowed)
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(left: 16.0),
@@ -300,12 +325,12 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'YOU WILL GIVE',
+                        isBusiness ? 'VENDOR PAYABLE (DENA HAI)' : 'YOU WILL GIVE',
                         style: GoogleFonts.inter(
-                          fontSize: 10.5,
+                          fontSize: 10,
                           fontWeight: FontWeight.bold,
                           color: Colors.grey,
-                          letterSpacing: 0.5,
+                          letterSpacing: 0.4,
                         ),
                       ),
                     ],
@@ -328,7 +353,7 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
     );
   }
 
-  Widget _buildEntryList(List<KhataEntry> list, bool isDark, String? userUpiId) {
+  Widget _buildEntryList(List<KhataEntry> list, bool isDark, String? userUpiId, bool isBusiness, Color primaryColor) {
     if (list.isEmpty) {
       return Center(
         child: Column(
@@ -337,12 +362,14 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
             Icon(Icons.menu_book_rounded, size: 54, color: Colors.grey[400]),
             const SizedBox(height: 14),
             Text(
-              'No khata entries found',
+              isBusiness ? 'No business ledger entries found' : 'No personal khata entries found',
               style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(
-              'Tap "+ Add Khata" to log money given or taken',
+              isBusiness
+                  ? 'Record customer udhar dues or vendor credit payments'
+                  : 'Tap "+ Add Khata" to log money given or taken',
               style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
             ),
           ],
@@ -355,14 +382,14 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
       itemCount: list.length,
       itemBuilder: (context, index) {
         final entry = list[index];
-        return _buildKhataCard(entry, isDark, userUpiId);
+        return _buildKhataCard(entry, isDark, userUpiId, isBusiness, primaryColor);
       },
     );
   }
 
-  Widget _buildKhataCard(KhataEntry entry, bool isDark, String? userUpiId) {
+  Widget _buildKhataCard(KhataEntry entry, bool isDark, String? userUpiId, bool isBusiness, Color primaryColor) {
     final isLent = entry.isLent;
-    final color = isLent ? const Color(0xFF00D09C) : const Color(0xFFEB5757);
+    final color = isLent ? (isBusiness ? Colors.green : const Color(0xFF00D09C)) : const Color(0xFFEB5757);
     final formattedDate = DateFormat('dd MMM yyyy').format(entry.entryDate);
     final hasDueDate = entry.dueDate != null;
     final formattedDueDate = hasDueDate ? DateFormat('dd MMM yyyy').format(entry.dueDate!) : null;
@@ -397,7 +424,6 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Avatar
                 CircleAvatar(
                   radius: 20,
                   backgroundColor: color.withValues(alpha: 0.15),
@@ -412,7 +438,6 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
                 ),
                 const SizedBox(width: 12),
 
-                // Name & Metadata
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -444,7 +469,9 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
                       Row(
                         children: [
                           Text(
-                            isLent ? 'Gave on $formattedDate' : 'Took on $formattedDate',
+                            isBusiness
+                                ? (isLent ? 'Customer Udhar • $formattedDate' : 'Vendor Credit • $formattedDate')
+                                : (isLent ? 'Gave on $formattedDate' : 'Took on $formattedDate'),
                             style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey),
                           ),
                           if (entry.isSettled) ...[
@@ -529,7 +556,6 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Settle / Reopen Toggle
                 TextButton.icon(
                   onPressed: () {
                     final provider = Provider.of<ExpenseProvider>(context, listen: false);
@@ -542,21 +568,20 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
                   icon: Icon(
                     entry.isSettled ? Icons.replay_rounded : Icons.check_circle_outline_rounded,
                     size: 16,
-                    color: entry.isSettled ? Colors.grey : const Color(0xFF00D09C),
+                    color: entry.isSettled ? Colors.grey : color,
                   ),
                   label: Text(
                     entry.isSettled ? 'Mark Active' : 'Settle',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: entry.isSettled ? Colors.grey : const Color(0xFF00D09C),
+                      color: entry.isSettled ? Colors.grey : color,
                     ),
                   ),
                 ),
 
                 Row(
                   children: [
-                    // WhatsApp / UPI Payment Reminder (only for lent & unsettled)
                     if (isLent && !entry.isSettled) ...[
                       OutlinedButton.icon(
                         onPressed: () => _openReminderModal(entry),
@@ -579,14 +604,13 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
                       const SizedBox(width: 8),
                     ],
 
-                    // More actions (Edit / Delete)
                     PopupMenuButton<String>(
                       icon: const Icon(Icons.more_vert_rounded, size: 18, color: Colors.grey),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       onSelected: (val) {
                         final provider = Provider.of<ExpenseProvider>(context, listen: false);
                         if (val == 'edit') {
-                          _openKhataSheet(existing: entry);
+                          _openKhataSheet(isBusiness, existing: entry);
                         } else if (val == 'delete') {
                           provider.deleteKhataEntry(entry.id);
                           CustomToast.show(context, 'Entry deleted');
@@ -627,10 +651,15 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
 }
 
 class _KhataEntrySheet extends StatefulWidget {
+  final bool isBusiness;
   final KhataEntry? existingEntry;
   final ValueChanged<KhataEntry> onSave;
 
-  const _KhataEntrySheet({this.existingEntry, required this.onSave});
+  const _KhataEntrySheet({
+    required this.isBusiness,
+    this.existingEntry,
+    required this.onSave,
+  });
 
   @override
   State<_KhataEntrySheet> createState() => _KhataEntrySheetState();
@@ -672,7 +701,7 @@ class _KhataEntrySheetState extends State<_KhataEntrySheet> {
     final amountText = _amountController.text.trim();
 
     if (name.isEmpty) {
-      CustomToast.show(context, 'Please enter person name', isError: true);
+      CustomToast.show(context, widget.isBusiness ? 'Please enter customer / vendor name' : 'Please enter person name', isError: true);
       return;
     }
 
@@ -691,6 +720,7 @@ class _KhataEntrySheetState extends State<_KhataEntrySheet> {
       entryDate: _entryDate,
       dueDate: _dueDate,
       note: _noteController.text.trim(),
+      ledgerType: widget.isBusiness ? 'business' : 'personal',
       isSettled: widget.existingEntry?.isSettled ?? false,
       settledAt: widget.existingEntry?.settledAt,
     );
@@ -702,6 +732,7 @@ class _KhataEntrySheetState extends State<_KhataEntrySheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = widget.isBusiness ? const Color(0xFF3B82F6) : const Color(0xFF00D09C);
 
     return Container(
       padding: EdgeInsets.only(
@@ -723,7 +754,9 @@ class _KhataEntrySheetState extends State<_KhataEntrySheet> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  widget.existingEntry == null ? 'Add Khata Entry' : 'Edit Khata Entry',
+                  widget.existingEntry == null
+                      ? (widget.isBusiness ? 'Add Business Udhar Entry' : 'Add Khata Entry')
+                      : (widget.isBusiness ? 'Edit Business Udhar' : 'Edit Khata Entry'),
                   style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 IconButton(
@@ -744,13 +777,13 @@ class _KhataEntrySheetState extends State<_KhataEntrySheet> {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
                         color: _type == 'lent'
-                            ? const Color(0xFF00D09C).withValues(alpha: 0.15)
+                            ? primaryColor.withValues(alpha: 0.15)
                             : isDark
                                 ? const Color(0xFF1E222D)
                                 : const Color(0xFFF4F6F9),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: _type == 'lent' ? const Color(0xFF00D09C) : Colors.transparent,
+                          color: _type == 'lent' ? primaryColor : Colors.transparent,
                           width: 1.5,
                         ),
                       ),
@@ -758,17 +791,17 @@ class _KhataEntrySheetState extends State<_KhataEntrySheet> {
                         children: [
                           Icon(
                             Icons.arrow_upward_rounded,
-                            color: _type == 'lent' ? const Color(0xFF00D09C) : Colors.grey,
+                            color: _type == 'lent' ? primaryColor : Colors.grey,
                             size: 20,
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'You Lent\n(You\'ll Get)',
+                            widget.isBusiness ? 'Customer Udhar\n(You\'ll Receive)' : 'You Lent\n(You\'ll Get)',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.inter(
                               fontSize: 11.5,
                               fontWeight: FontWeight.bold,
-                              color: _type == 'lent' ? const Color(0xFF00D09C) : Colors.grey,
+                              color: _type == 'lent' ? primaryColor : Colors.grey,
                             ),
                           ),
                         ],
@@ -803,7 +836,7 @@ class _KhataEntrySheetState extends State<_KhataEntrySheet> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'You Borrowed\n(You\'ll Give)',
+                            widget.isBusiness ? 'Vendor Credit\n(You\'ll Pay)' : 'You Borrowed\n(You\'ll Give)',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.inter(
                               fontSize: 11.5,
@@ -820,12 +853,26 @@ class _KhataEntrySheetState extends State<_KhataEntrySheet> {
             ),
             const SizedBox(height: 16),
 
-            // Person Name
+            // Person / Customer Name
             TextField(
               controller: _nameController,
               decoration: InputDecoration(
-                labelText: 'Person Name *',
+                labelText: widget.isBusiness ? 'Customer / Vendor Name *' : 'Person Name *',
+                hintText: widget.isBusiness ? 'e.g. Ramesh Kumar' : 'e.g. Rahul Sharma',
                 prefixIcon: const Icon(Icons.person_outline_rounded),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Phone Number
+            TextField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                labelText: 'Mobile Number (Optional)',
+                hintText: 'e.g. 9876543210',
+                prefixIcon: const Icon(Icons.phone_android_rounded),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
@@ -834,7 +881,7 @@ class _KhataEntrySheetState extends State<_KhataEntrySheet> {
             // Amount
             TextField(
               controller: _amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: TextInputType.number,
               decoration: InputDecoration(
                 labelText: 'Amount (₹) *',
                 prefixIcon: const Icon(Icons.currency_rupee_rounded),
@@ -843,106 +890,30 @@ class _KhataEntrySheetState extends State<_KhataEntrySheet> {
             ),
             const SizedBox(height: 12),
 
-            // Phone (Optional)
-            TextField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                labelText: 'WhatsApp Phone Number (Optional)',
-                hintText: '+91 9876543210',
-                prefixIcon: const Icon(Icons.phone_outlined),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Date Pickers Row (Entry Date & Due Date)
-            Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: _entryDate,
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                      );
-                      if (picked != null) setState(() => _entryDate = picked);
-                    },
-                    child: InputDecorator(
-                      decoration: InputDecoration(
-                        labelText: 'Date Given/Taken',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: Text(
-                        DateFormat('dd MMM yyyy').format(_entryDate),
-                        style: GoogleFonts.inter(fontSize: 12.5),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: InkWell(
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: _dueDate ?? DateTime.now().add(const Duration(days: 7)),
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime.now().add(const Duration(days: 730)),
-                      );
-                      if (picked != null) setState(() => _dueDate = picked);
-                    },
-                    child: InputDecorator(
-                      decoration: InputDecoration(
-                        labelText: 'Due Date (Optional)',
-                        suffixIcon: _dueDate != null
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, size: 16),
-                                onPressed: () => setState(() => _dueDate = null),
-                              )
-                            : null,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: Text(
-                        _dueDate != null ? DateFormat('dd MMM yyyy').format(_dueDate!) : 'Not set',
-                        style: GoogleFonts.inter(
-                          fontSize: 12.5,
-                          color: _dueDate != null ? null : Colors.grey,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
             // Note
             TextField(
               controller: _noteController,
               decoration: InputDecoration(
-                labelText: 'Note / Reason (Optional)',
-                hintText: 'e.g. Goa trip advance, Lunch bill',
+                labelText: widget.isBusiness ? 'Bill / Item Details or Remarks' : 'Note (Optional)',
+                hintText: widget.isBusiness ? 'e.g. Bill #1042 - 5kg Rice' : 'e.g. Goa Trip Dinner',
                 prefixIcon: const Icon(Icons.notes_rounded),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
-            // Save Button
+            // Submit Button
             ElevatedButton(
               onPressed: _submit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00D09C),
+                backgroundColor: primaryColor,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: Text(
                 widget.existingEntry == null ? 'Save Entry' : 'Update Entry',
-                style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold),
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
               ),
             ),
           ],

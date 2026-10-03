@@ -9,6 +9,7 @@ class KhataEntry {
   final DateTime entryDate;
   final DateTime? dueDate;
   final String? note;
+  final String ledgerType; // 'personal' or 'business'
   final bool isSettled;
   final DateTime? settledAt;
   final bool isDeleted;
@@ -24,6 +25,7 @@ class KhataEntry {
     required this.entryDate,
     this.dueDate,
     this.note,
+    this.ledgerType = 'personal',
     this.isSettled = false,
     this.settledAt,
     this.isDeleted = false,
@@ -52,6 +54,7 @@ class KhataEntry {
     DateTime? entryDate,
     DateTime? dueDate,
     String? note,
+    String? ledgerType,
     bool? isSettled,
     DateTime? settledAt,
     bool? isDeleted,
@@ -67,6 +70,7 @@ class KhataEntry {
       entryDate: entryDate ?? this.entryDate,
       dueDate: dueDate ?? this.dueDate,
       note: note ?? this.note,
+      ledgerType: ledgerType ?? this.ledgerType,
       isSettled: isSettled ?? this.isSettled,
       settledAt: settledAt ?? this.settledAt,
       isDeleted: isDeleted ?? this.isDeleted,
@@ -85,6 +89,7 @@ class KhataEntry {
       'entry_date': entryDate.toIso8601String(),
       'due_date': dueDate?.toIso8601String(),
       'note': note,
+      'ledger_type': ledgerType,
       'is_settled': isSettled ? 1 : 0,
       'settled_at': settledAt?.toIso8601String(),
       'is_deleted': isDeleted ? 1 : 0,
@@ -103,6 +108,7 @@ class KhataEntry {
       entryDate: map['entry_date'] != null ? DateTime.parse(map['entry_date']) : DateTime.now(),
       dueDate: map['due_date'] != null ? DateTime.parse(map['due_date']) : null,
       note: map['note'],
+      ledgerType: map['ledger_type']?.toString() ?? 'personal',
       isSettled: map['is_settled'] == 1 || map['is_settled'] == true,
       settledAt: map['settled_at'] != null ? DateTime.parse(map['settled_at']) : null,
       isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true,

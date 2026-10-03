@@ -373,6 +373,9 @@ class DatabaseHelper {
     try {
       await db.execute("ALTER TABLE expenses ADD COLUMN ledger_type TEXT NOT NULL DEFAULT 'personal'");
     } catch (_) {}
+    try {
+      await db.execute("ALTER TABLE khata_entries ADD COLUMN ledger_type TEXT NOT NULL DEFAULT 'personal'");
+    } catch (_) {}
   }
 
   Future<Database> _initDB(String filePath) async {
@@ -1084,13 +1087,23 @@ class DatabaseHelper {
     );
   }
 
-  Future<List<KhataEntry>> getKhataEntries() async {
+  Future<List<KhataEntry>> getKhataEntries({String? ledgerType}) async {
     final db = await instance.database;
-    final result = await db.query(
-      'khata_entries',
-      where: 'is_deleted = 0',
-      orderBy: 'entry_date DESC',
-    );
+    final List<Map<String, dynamic>> result;
+    if (ledgerType != null) {
+      result = await db.query(
+        'khata_entries',
+        where: 'is_deleted = 0 AND (ledger_type = ? OR (ledger_type IS NULL AND ? = \'personal\'))',
+        whereArgs: [ledgerType, ledgerType],
+        orderBy: 'entry_date DESC',
+      );
+    } else {
+      result = await db.query(
+        'khata_entries',
+        where: 'is_deleted = 0',
+        orderBy: 'entry_date DESC',
+      );
+    }
     final decrypted = decryptKhataMaps(result);
     return decrypted.map((json) => KhataEntry.fromMap(json)).toList();
   }
