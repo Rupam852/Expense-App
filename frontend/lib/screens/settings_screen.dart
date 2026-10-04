@@ -12,6 +12,7 @@ import '../services/app_update_service.dart';
 import 'app_update_screen.dart';
 import 'about_screen.dart';
 import 'backup_scope_screen.dart';
+import 'cloud_backup_screen.dart';
 import 'notification_settings_screen.dart';
 import '../widgets/report_issue_modal.dart';
 import '../models/business_profile.dart';
@@ -1047,137 +1048,57 @@ class SettingsScreen extends StatelessWidget {
                   borderColor: borderColor,
                   children: [
                     ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                       leading: Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           color: const Color(0xFF00D09C).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
                           expenseProvider.isSyncing ? Icons.sync_rounded : Icons.cloud_done_rounded,
                           color: const Color(0xFF00D09C),
-                          size: 22,
+                          size: 24,
                         ),
                       ),
-                      title: Text(
-                        'Cloud Sync & Backup',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                      title: Row(
+                        children: [
+                          Text(
+                            'Backup & Cloud Sync',
+                            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14.5),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF00D09C).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              expenseProvider.isSyncing ? 'SYNCING' : 'ACTIVE',
+                              style: GoogleFonts.inter(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF00D09C),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       subtitle: Text(
                         expenseProvider.isSyncing
                             ? 'Syncing data to cloud...'
                             : (expenseProvider.lastSyncTime != null
-                                ? 'Last synced: ${_formatSyncTime(expenseProvider.lastSyncTime!)}'
-                                : 'Sync active (Auto-backup enabled)'),
-                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                                ? 'Last synced: ${_formatSyncTime(expenseProvider.lastSyncTime!)} • Tap to manage'
+                                : 'Auto-backup enabled • Tap to manage & restore'),
+                        style: GoogleFonts.inter(fontSize: 11.5, color: isDark ? Colors.grey[400] : Colors.grey[600]),
                       ),
-                      trailing: expenseProvider.isSyncing
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00D09C)),
-                            )
-                          : TextButton.icon(
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                backgroundColor: const Color(0xFF00D09C).withValues(alpha: 0.1),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                              ),
-                              icon: const Icon(Icons.sync_rounded, size: 16, color: Color(0xFF00D09C)),
-                              label: Text(
-                                'Sync Now',
-                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF00D09C)),
-                              ),
-                              onPressed: () async {
-                                final success = await expenseProvider.triggerManualSync();
-                                if (context.mounted) {
-                                  if (success) {
-                                    CustomToast.show(context, 'Data synced to cloud successfully!');
-                                  } else {
-                                    CustomToast.show(
-                                      context,
-                                      expenseProvider.syncErrorMessage ?? 'Sync failed.',
-                                      isError: true,
-                                    );
-                                  }
-                                }
-                              },
-                            ),
-                    ),
-                    Divider(height: 1, color: borderColor),
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.blueAccent.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.cloud_download_rounded, color: Colors.blueAccent, size: 22),
-                      ),
-                      title: Text(
-                        'Restore Cloud Backup',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        'Restore all expenses, khata, split bills & accounts from cloud',
-                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
-                      ),
-                      trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
-                      onTap: () => _showRestoreBackupDialog(context, expenseProvider),
-                    ),
-                    Divider(height: 1, color: borderColor),
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF00D09C).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.shield_outlined, color: Color(0xFF00D09C), size: 22),
-                      ),
-                      title: Text(
-                        'What Gets Backed Up?',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        'See what data is synced to cloud vs stored privately on device',
-                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
-                      ),
-                      trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+                      trailing: const Icon(Icons.chevron_right, size: 22, color: Colors.grey),
                       onTap: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const BackupScopeScreen()),
+                          MaterialPageRoute(builder: (_) => const CloudBackupScreen()),
                         );
                       },
-                    ),
-                    Divider(height: 1, color: borderColor),
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.redAccent.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent, size: 22),
-                      ),
-                      title: Text(
-                        userProvider.isBusinessMode
-                            ? 'Delete Month Business Data'
-                            : 'Delete Month Personal Data',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.redAccent),
-                      ),
-                      subtitle: Text(
-                        userProvider.isBusinessMode
-                            ? 'Permanently delete sales & expenses of a chosen month'
-                            : 'Permanently delete personal expenses of a chosen month',
-                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
-                      ),
-                      trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.redAccent),
-                      onTap: () => _showDeleteMonthRecordsDialog(context, userProvider.isBusinessMode, expenseProvider),
                     ),
                   ],
                 ),
