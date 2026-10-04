@@ -243,12 +243,15 @@ a {
   justify-content: space-between;
   align-items: center;
   padding: 0 24px;
+  flex-wrap: nowrap;
+  gap: 16px;
 }
 
 .logo-area {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .nav-logo {
@@ -256,6 +259,7 @@ a {
   height: 36px;
   object-fit: contain;
   filter: drop-shadow(0 2px 8px var(--primary-green-glow));
+  flex-shrink: 0;
 }
 
 .nav-brand {
@@ -263,6 +267,7 @@ a {
   font-size: 1.25rem;
   font-weight: 800;
   white-space: nowrap;
+  flex-shrink: 0;
   background: linear-gradient(135deg, #ffffff 0%, var(--text-muted) 100%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -272,16 +277,18 @@ a {
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 22px;
+  flex-shrink: 0;
 }
 
 .nav-links a,
 .nav-link-btn {
-  font-size: 0.9rem;
-  font-weight: 500;
+  font-size: 0.88rem;
+  font-weight: 600;
   color: var(--text-muted);
   transition: var(--transition-smooth);
   position: relative;
+  white-space: nowrap;
 }
 
 .nav-link-btn {
@@ -321,13 +328,14 @@ a {
   gap: 6px;
   background: var(--gradient-primary);
   color: #000 !important;
-  font-weight: 600 !important;
-  padding: 8px 18px;
+  font-weight: 700 !important;
+  padding: 8px 16px;
   border-radius: 30px;
-  font-size: 0.85rem !important;
+  font-size: 0.84rem !important;
   transition: var(--transition-bounce) !important;
   box-shadow: 0 4px 15px rgba(0, 208, 156, 0.2);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .download-btn-small:hover {
@@ -337,6 +345,15 @@ a {
 
 .download-btn-small::after {
   display: none !important;
+}
+
+@media (max-width: 992px) {
+  .nav-links a:not(.download-btn-small), .nav-link-btn {
+    display: none;
+  }
+  .nav-links {
+    gap: 8px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -353,18 +370,12 @@ a {
     gap: 10px;
   }
   .nav-logo {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
   }
   .nav-brand {
     font-size: 1.1rem;
     white-space: nowrap;
-  }
-  .nav-links a:not(.download-btn-small), .nav-link-btn {
-    display: none;
-  }
-  .nav-links {
-    gap: 8px;
   }
   .download-btn-small {
     padding: 6px 14px;
