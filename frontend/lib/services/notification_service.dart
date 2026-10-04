@@ -17,6 +17,7 @@ import '../screens/expense_entry_screen.dart';
 import '../screens/budget_screen.dart';
 import '../screens/analytics_screen.dart';
 import '../screens/invoice_screen.dart';
+import '../screens/business_catalog_screen.dart';
 import 'app_update_service.dart';
 import 'supabase_service.dart';
 import 'user_provider.dart';
@@ -77,6 +78,7 @@ class NotificationService with ChangeNotifier {
   bool _vendorPayableAlertsEnabled = true;
   bool _weeklyBusinessReportEnabled = true;
   bool _gstAlertsEnabled = true;
+  bool _lowStockAlertsEnabled = true;
 
   String _notificationLanguage = 'en'; // 'en', 'hi', 'bn', 'hinglish'
 
@@ -101,6 +103,7 @@ class NotificationService with ChangeNotifier {
   bool get vendorPayableAlertsEnabled => _vendorPayableAlertsEnabled;
   bool get weeklyBusinessReportEnabled => _weeklyBusinessReportEnabled;
   bool get gstAlertsEnabled => _gstAlertsEnabled;
+  bool get lowStockAlertsEnabled => _lowStockAlertsEnabled;
 
   String get notificationLanguage => _notificationLanguage;
 
@@ -139,6 +142,7 @@ class NotificationService with ChangeNotifier {
       _vendorPayableAlertsEnabled = prefs.getBool('notif_biz_vendor_payable_enabled') ?? true;
       _weeklyBusinessReportEnabled = prefs.getBool('notif_biz_weekly_report_enabled') ?? true;
       _gstAlertsEnabled = prefs.getBool('notif_biz_gst_enabled') ?? true;
+      _lowStockAlertsEnabled = prefs.getBool('notif_biz_low_stock_enabled') ?? true;
 
       _notificationLanguage = prefs.getString('notif_language') ?? 'en';
       _fcmToken = prefs.getString('cached_fcm_token');
@@ -253,6 +257,13 @@ class NotificationService with ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('notif_biz_gst_enabled', val);
+  }
+
+  Future<void> setLowStockAlertsEnabled(bool val) async {
+    _lowStockAlertsEnabled = val;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notif_biz_low_stock_enabled', val);
   }
 
   Future<void> setNotificationLanguage(String langCode) async {
@@ -574,6 +585,10 @@ class NotificationService with ChangeNotifier {
       } else if (payload.startsWith('vendor_payable')) {
         Navigator.of(context).push(
           MaterialPageRoute(builder: (context) => const KhataScreen()),
+        );
+      } else if (payload.startsWith('biz_low_stock') || payload.startsWith('catalog')) {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => const BusinessCatalogScreen(initialFilterLowStock: true)),
         );
       }
     } catch (e) {
@@ -1980,4 +1995,90 @@ class NotificationService with ChangeNotifier {
       debugPrint('[NotificationService] Error showing GST filing notification: $e');
     }
   }
+
+  // ──────────────────────────────────────────────────────────
+  // 16. LOW STOCK INVENTORY ALERT
+  // ──────────────────────────────────────────────────────────
+  Future<void> showLowStockNotification({
+    required String itemName,
+    required double currentStock,
+    required String unit,
+    required double limit,
+  }) async {
+    if (!_masterEnabled || !_lowStockAlertsEnabled) return;
+
+    try {
+      if (!_isInitialized) await initialize();
+
+      final isOut = currentStock <= 0;
+      final stockStr = currentStock.toStringAsFixed(currentStock.truncateToDouble() == currentStock ? 0 : 2);
+
+      String title;
+      String body;
+
+      switch (_notificationLanguage) {
+        case 'hi':
+          title = isOut ? '🔴 आउट ऑफ स्टॉक: $itemName' : '⚠️ लो स्टॉक अलर्ट: $itemName';
+          body = isOut
+              ? '$itemName का पूरा स्टॉक खत्म हो गया है (0 $unit)। तुरंत रीफिल करें!'
+              : 'केवल $stockStr $unit बचे हैं (लिमिट: ${limit.toStringAsFixed(0)})। नया स्टॉक ऑर्डर करें।';
+          break;
+        case 'bn':
+          title = isOut ? '🔴 স্টক শেষ: $itemName' : '⚠️ কম স্টক সতর্কতা: $itemName';
+          body = isOut
+              ? '$itemName এর স্টক শেষ হয়ে গেছে (0 $unit)। দ্রুত রিফিল করুন!'
+              : 'মাত্র $stockStr $unit অবশিষ্ট আছে (সীমা: ${limit.toStringAsFixed(0)})। নতুন স্টক অর্ডার করুন।';
+          break;
+        case 'hinglish':
+          title = isOut ? '🔴 Out of Stock: $itemName' : '⚠️ Low Stock Alert: $itemName';
+          body = isOut
+              ? '$itemName ka stock khatam ho gaya hai (0 $unit). Turant refill karein!'
+              : 'Sirf $stockStr $unit bache hain (Limit: ${limit.toStringAsFixed(0)}). Naya stock mangwayein.';
+          break;
+        case 'en':
+        default:
+          title = isOut ? '🔴 Out of Stock: $itemName' : '⚠️ Low Stock Alert: $itemName';
+          body = isOut
+              ? '$itemName is completely out of stock (0 $unit). Please refill inventory!'
+              : 'Only $stockStr $unit remaining (Threshold: ${limit.toStringAsFixed(0)}). Consider reordering.';
+          break;
+      }
+
+      final bigTextStyleInformation = BigTextStyleInformation(
+        body,
+        htmlFormatBigText: false,
+        contentTitle: title,
+        htmlFormatContentTitle: false,
+        summaryText: isOut ? 'Out of Stock' : 'Low Stock Warning',
+        htmlFormatSummaryText: false,
+      );
+
+      final androidDetails = AndroidNotificationDetails(
+        _businessChannelId,
+        _businessChannelName,
+        channelDescription: _businessChannelDescription,
+        importance: Importance.high,
+        priority: Priority.high,
+        showWhen: true,
+        icon: '@mipmap/ic_launcher',
+        styleInformation: bigTextStyleInformation,
+        color: isOut ? const Color(0xFFEF4444) : const Color(0xFFF59E0B),
+      );
+
+      final notificationDetails = NotificationDetails(android: androidDetails);
+      final notifId = 88000 + (itemName.hashCode.abs() % 1000);
+
+      await _notificationsPlugin.show(
+        notifId,
+        title,
+        body,
+        notificationDetails,
+        payload: 'biz_low_stock',
+      );
+      debugPrint('[NotificationService] Fired Low Stock notification for $itemName.');
+    } catch (e) {
+      debugPrint('[NotificationService] Error showing Low Stock notification: $e');
+    }
+  }
 }
+

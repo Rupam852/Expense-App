@@ -1268,6 +1268,23 @@ class ExpenseProvider with ChangeNotifier {
     _businessItems = await _dbHelper.getBusinessItems();
     notifyListeners();
     triggerQuietSync();
+
+    // Check if any sold item dropped to low stock or out of stock and notify
+    for (final it in items) {
+      final name = (it['name'] ?? it['title'] ?? '').toString().trim();
+      final matched = _businessItems.firstWhere(
+        (bi) => bi.name.trim().toLowerCase() == name.toLowerCase(),
+        orElse: () => BusinessItem(id: '', name: ''),
+      );
+      if (matched.id.isNotEmpty && matched.trackStock && (matched.isLowStock || matched.isOutOfStock)) {
+        NotificationService.instance.showLowStockNotification(
+          itemName: matched.name,
+          currentStock: matched.stockQuantity,
+          unit: matched.unit,
+          limit: matched.lowStockLimit,
+        );
+      }
+    }
   }
 
   Future<bool> triggerQuietSync() async {

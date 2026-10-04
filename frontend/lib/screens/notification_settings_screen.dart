@@ -836,6 +836,32 @@ class NotificationSettingsScreen extends StatelessWidget {
                                 }
                               },
                             ),
+                            Divider(height: 1, color: borderColor),
+
+                            // 6. Low Stock Inventory Alert
+                            _buildFeatureTileWithTest(
+                              context: context,
+                              isDark: isDark,
+                              primaryColor: primaryColor,
+                              icon: Icons.inventory_2_rounded,
+                              iconColor: const Color(0xFFEF4444),
+                              title: 'Low Stock & Inventory Alerts',
+                              subtitle: 'Dukan ke items khatam hone ya low threshold par aane par turant alert notification',
+                              isEnabled: isMasterOn && service.lowStockAlertsEnabled,
+                              isMasterOn: isMasterOn,
+                              onToggle: (val) => service.setLowStockAlertsEnabled(val),
+                              onTestTap: () async {
+                                await service.showLowStockNotification(
+                                  itemName: 'Fortune Sunflower Oil 1L',
+                                  currentStock: 2,
+                                  unit: 'ltr',
+                                  limit: 5,
+                                );
+                                if (context.mounted) {
+                                  CustomToast.show(context, '📦 Test Low Stock Alert sent to status bar!');
+                                }
+                              },
+                            ),
                           ],
                         ),
                       ],
