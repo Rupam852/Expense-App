@@ -1,42 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../widgets/custom_toast.dart';
+import 'package:provider/provider.dart';
+import '../services/user_provider.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SUPPORTED LANGUAGES FOR BACKUP SCOPE SCREEN
-// ═══════════════════════════════════════════════════════════════════════════
-
-class BackupScopeLanguage {
-  final String code;
-  final String name;
-  final String nativeName;
-  final String flag;
-
-  const BackupScopeLanguage({
-    required this.code,
-    required this.name,
-    required this.nativeName,
-    required this.flag,
-  });
-}
-
-const String kPrefBackupScopeLang = 'backup_scope_lang_code';
-
-const List<BackupScopeLanguage> kSupportedBackupScopeLanguages = [
-  BackupScopeLanguage(code: 'en_IN', name: 'English', nativeName: 'English (India)', flag: '🇮🇳'),
-  BackupScopeLanguage(code: 'bn_IN', name: 'Bengali', nativeName: 'বাংলা (ভারত)', flag: '🇮🇳'),
-  BackupScopeLanguage(code: 'hi_IN', name: 'Hindi', nativeName: 'हिन्दी', flag: '🇮🇳'),
-  BackupScopeLanguage(code: 'hinglish', name: 'Hinglish', nativeName: 'Colloquial Mix', flag: '🇮🇳'),
-  BackupScopeLanguage(code: 'ta_IN', name: 'Tamil', nativeName: 'தமிழ்', flag: '🇮🇳'),
-  BackupScopeLanguage(code: 'te_IN', name: 'Telugu', nativeName: 'తెలుగు', flag: '🇮🇳'),
-  BackupScopeLanguage(code: 'mr_IN', name: 'Marathi', nativeName: 'मराठी', flag: '🇮🇳'),
-  BackupScopeLanguage(code: 'gu_IN', name: 'Gujarati', nativeName: 'ગુજરાતી', flag: '🇮🇳'),
-  BackupScopeLanguage(code: 'kn_IN', name: 'Kannada', nativeName: 'ಕನ್ನಡ', flag: '🇮🇳'),
-];
-
-// ═══════════════════════════════════════════════════════════════════════════
-// LOCALIZATION STRINGS
+// LOCALIZATION STRINGS (English, Hindi, Bengali)
 // ═══════════════════════════════════════════════════════════════════════════
 
 class BackupScopeStrings {
@@ -48,9 +16,6 @@ class BackupScopeStrings {
   final String backupHeaderDesc;
   final String noBackupHeaderTitle;
   final String noBackupHeaderDesc;
-  final String selectLanguage;
-  final String selectLanguageDesc;
-  final String langUpdated;
 
   // Backup Item Titles & Descs
   final String itemExpensesTitle;
@@ -96,9 +61,6 @@ class BackupScopeStrings {
     required this.backupHeaderDesc,
     required this.noBackupHeaderTitle,
     required this.noBackupHeaderDesc,
-    required this.selectLanguage,
-    required this.selectLanguageDesc,
-    required this.langUpdated,
     required this.itemExpensesTitle,
     required this.itemExpensesDesc,
     required this.itemBudgetsTitle,
@@ -141,9 +103,6 @@ class BackupScopeStrings {
         backupHeaderDesc: 'ফোন পরিবর্তন বা অ্যাপ পুনরায় ইনস্টল করলে এই সমস্ত ডেটা স্বয়ংক্রিয়ভাবে পুনরুদ্ধার হবে।',
         noBackupHeaderTitle: '১০০% স্থানীয় ও ব্যক্তিগত ডেটা',
         noBackupHeaderDesc: 'এই সমস্ত ডেটা শুধুমাত্র আপনার ফোনে সুরক্ষিত থাকে এবং কখনোই কোনো সার্ভারে আপলোড হয় না।',
-        selectLanguage: 'ভাষা নির্বাচন করুন',
-        selectLanguageDesc: 'আপনার পছন্দের ভাষায় ব্যাকআপ সংক্রান্ত তথ্য দেখুন।',
-        langUpdated: 'ভাষা সফলভাবে পরিবর্তিত হয়েছে 🌐',
         itemExpensesTitle: 'দৈনিক খরচ ও লেনদেন',
         itemExpensesDesc: 'টাকার পরিমাণ, বিভাগ, বিবরণ, তারিখ, পেমেন্ট মাধ্যম এবং রিকারিং স্ট্যাটাস।',
         itemBudgetsTitle: 'মাসিক বাজেট ও সীমা',
@@ -159,7 +118,7 @@ class BackupScopeStrings {
         itemProfileTitle: 'ব্যবহারকারীর প্রোফাইল',
         itemProfileDesc: 'নাম, অবতার ছবি, পছন্দের মুদ্রা, কাস্টম এআই কি এবং পুশ টোকেন।',
         itemInvoicesTitle: 'মাসিক স্টেটমেন্ট পিডিএফ',
-        itemInvoicesDesc: 'PDF ফাইল ক্লাউডে জমা হয় না। প্রয়োজন মতো অ্যাপটি আপনার লেনদেন ডেটা থেকে ফোনে সরাসরি নতুন PDF স্টেটমেন্ট তৈরি করে নেয়।',
+        itemInvoicesDesc: 'PDF ফাইল ক্লাউডে জমা হয় না। প্রয়োজন মতো অ্যাপটি আপনার লেনদেন ডেটা থেকে সরাসরি ফোনে নতুন PDF তৈরি করে নেয়।',
         itemChatTitle: 'এআই চ্যাট বার্তা',
         itemChatDesc: 'সম্পূর্ণ ব্যক্তিগত কথোপকথন যা কেবল আপনার ফোনের SQLite ডেটাবেসে থাকে।',
         itemCalcHistoryTitle: 'ক্যালকুলেটর ইতিহাস',
@@ -174,7 +133,7 @@ class BackupScopeStrings {
         badgeLocalOnly: 'স্থানীয় নিরাপদ',
         badgeEncrypted: 'এনক্রিপ্টেড',
       );
-    } else if (code.startsWith('hi') || code == 'hinglish') {
+    } else if (code.startsWith('hi')) {
       return const BackupScopeStrings(
         title: 'बैकअप व प्राइवेसी विवरण',
         subtitle: 'क्लाउड में क्या सेव होता है और क्या सिर्फ फोन में रहता है',
@@ -184,9 +143,6 @@ class BackupScopeStrings {
         backupHeaderDesc: 'फोन बदलने या ऐप री-इंस्टॉल करने पर यह सारा डेटा अपने आप रीस्टोर हो जाएगा।',
         noBackupHeaderTitle: '100% लोकल व प्राइवेट डेटा',
         noBackupHeaderDesc: 'यह डेटा सिर्फ आपके फोन की मेमोरी में सुरक्षित रहता है और कभी क्लाउड पर नहीं जाता।',
-        selectLanguage: 'भाषा चुनें',
-        selectLanguageDesc: 'अपनी पसंदीदा भाषा में बैकअप का पूरा विवरण देखें।',
-        langUpdated: 'भाषा सफलतापूर्वक बदली गई 🌐',
         itemExpensesTitle: 'दैनिक खर्चे व लेनदेन',
         itemExpensesDesc: 'खर्च राशि, कैटेगरी, विवरण, तारीख, पेमेंट मोड और रिकरिंग सेटिंग्स।',
         itemBudgetsTitle: 'मासिक बजट व सीमाएं',
@@ -217,221 +173,6 @@ class BackupScopeStrings {
         badgeLocalOnly: 'सिर्फ फोन में',
         badgeEncrypted: 'एन्क्रिप्टेड',
       );
-    } else if (code.startsWith('ta')) {
-      return const BackupScopeStrings(
-        title: 'காப்புப்பிரதி மற்றும் தனியுரிமை',
-        subtitle: 'கிளவுடில் எது சேமிக்கப்படுகிறது மற்றும் போனில் மட்டுமே இருப்பது எது',
-        tabBackup: 'காப்புப்பிரதி (Cloud)',
-        tabNoBackup: 'காப்புப்பிரதி இல்லை (Local)',
-        backupHeaderTitle: 'கிளவுடில் பாதுகாப்பான காப்புப்பிரதி',
-        backupHeaderDesc: 'போனை மாற்றினாலும் இந்தத் தரவு தானாகவே மீட்டமைக்கப்படும்.',
-        noBackupHeaderTitle: '100% உள்ளூர் மற்றும் தனிப்பட்ட தரவு',
-        noBackupHeaderDesc: 'இந்தத் தரவு உங்கள் போனில் மட்டுமே இருக்கும், சேவையகத்திற்கு பதிவேற்றப்படாது.',
-        selectLanguage: 'மொழியைத் தேர்ந்தெடுக்கவும்',
-        selectLanguageDesc: 'உங்கள் விருப்பமான மொழியில் தகவல்களைக் காண்க.',
-        langUpdated: 'மொழி மாற்றப்பட்டது 🌐',
-        itemExpensesTitle: 'செலவுகள் மற்றும் பரிவர்த்தனைகள்',
-        itemExpensesDesc: 'தொகை, வகை, விவரம், தேதி மற்றும் கட்டண முறை.',
-        itemBudgetsTitle: 'மாதாந்திர வரவு செலவு திட்டம்',
-        itemBudgetsDesc: 'ஒவ்வொரு வகைக்குமான மாதாந்திர வரம்புகள்.',
-        itemKhataTitle: 'கடன் / உதார்கணக்கு',
-        itemKhataDesc: 'பெயர், தொலைபேசி எண், கடன் தொகை மற்றும் நிலுவைத் தேதி.',
-        itemSubsTitle: 'சந்தாக்கள் மற்றும் கட்டணங்கள்',
-        itemSubsDesc: 'சேவை பெயர், தொகை, புதுப்பித்தல் தேதி மற்றும் நினைவூட்டல்கள்.',
-        itemSplitsTitle: 'பகிர்வு பில்கள்',
-        itemSplitsDesc: 'குழு பில்கள், மொத்த தொகை மற்றும் பகிர்வு கணக்குகள்.',
-        itemPaymentTitle: 'கட்டண விவரங்கள் & QR குறியீடு',
-        itemPaymentDesc: 'UPI ஐடி மற்றும் பாதுகாப்பான QR குறியீடு படங்கள்.',
-        itemProfileTitle: 'பயனர் சுயவிவரம்',
-        itemProfileDesc: 'பெயர், அவதார், நாணயம் மற்றும் தனிப்பயன் விசைகள்.',
-        itemInvoicesTitle: 'மாதாந்திர அறிக்கைகள் (PDF)',
-        itemInvoicesDesc: 'PDF கோப்புகள் கிளவுடில் சேமிக்கப்படுவதில்லை. உங்கள் பரிவர்த்தனை தரவிலிருந்து போனில் நேரடியாக புதிய PDF உருவாக்கப்படுகிறது.',
-        itemChatTitle: 'AI அரட்டை உரையாடல்கள்',
-        itemChatDesc: 'போனில் மட்டுமே உள்ள 100% தனிப்பட்ட உரையாடல்கள்.',
-        itemCalcHistoryTitle: 'கால்குலேட்டர் வரலாறு',
-        itemCalcHistoryDesc: 'சந்தை விலை மற்றும் EMI வரலாற்றின் 50 பதிவுகள்.',
-        itemBiometricsTitle: 'பயோமெட்ரிக் & ஆப் லாக்',
-        itemBiometricsDesc: 'கைரேகை மற்றும் பின் போனின் பாதுகாப்பான நினைவகத்தில் சேமிக்கப்படுகிறது.',
-        itemThemeTitle: 'தீம் அமைப்புகள்',
-        itemThemeDesc: 'டார்க்/லைட் பயன்முறை அமைப்புகள்.',
-        itemTempScanTitle: 'ஸ்கேன் செய்யப்பட்ட தற்காலிக கோப்புகள்',
-        itemTempScanDesc: 'AI செயலாக்கத்திற்குப் பிறகு ரசீது படங்கள் தானாக நீக்கப்படும்.',
-        badgeCloud: 'கிளவுட் ஒத்திசைவு',
-        badgeLocalOnly: 'உள்ளூர் மட்டும்',
-        badgeEncrypted: 'குறியாக்கம்',
-      );
-    } else if (code.startsWith('te')) {
-      return const BackupScopeStrings(
-        title: 'బ్యాకప్ మరియు గోప్యతా వివరాలు',
-        subtitle: 'క్లౌడ్‌లో ఏమి సేవ్ చేయబడుతుంది మరియు ఫోన్‌లో మాత్రమే ఉండేది ఏమిటి',
-        tabBackup: 'బ్యాకప్ అవుతుంది (Cloud)',
-        tabNoBackup: 'బ్యాకప్ కాదు (Local)',
-        backupHeaderTitle: 'క్లౌడ్‌లో సురక్షిత బ్యాకప్',
-        backupHeaderDesc: 'ఫోన్ మార్చినా ఈ డేటా స్వయంచాలకంగా పునరుద్ధరించబడుతుంది.',
-        noBackupHeaderTitle: '100% స్థానిక మరియు వ్యక్తిగత డేటా',
-        noBackupHeaderDesc: 'ఈ డేటా మీ ఫోన్‌లో మాత్రమే సురక్షితంగా ఉంటుంది, క్లౌడ్‌కు అప్‌లోడ్ చేయబడదు.',
-        selectLanguage: 'భాషను ఎంచుకోండి',
-        selectLanguageDesc: 'మీకు నచ్చిన భాషలో వివరాలను చూడండి.',
-        langUpdated: 'భాష విజయవంతంగా మార్చబడింది 🌐',
-        itemExpensesTitle: 'ఖర్చులు మరియు లావాదేవీలు',
-        itemExpensesDesc: 'మొత్తం, వర్గం, వివరణ, తేదీ మరియు చెల్లింపు విధానం.',
-        itemBudgetsTitle: 'నెలవారీ బడ్జెట్ పరిమితులు',
-        itemBudgetsDesc: 'ప్రతి వర్గానికి నిర్ణయించిన బడ్జెట్.',
-        itemKhataTitle: 'ఖాతా మరియు అప్పుల లెక్కలు',
-        itemKhataDesc: 'పేరు, ఫోన్ నంబర్, ఇచ్చిన/తీసుకున్న మొత్తం మరియు గడువు తేదీ.',
-        itemSubsTitle: 'సబ్‌స్క్రిప్షన్లు మరియు బిల్లులు',
-        itemSubsDesc: 'సర్వీస్ పేరు, మొత్తం, పునరుద్ధరణ తేదీ మరియు రిమైండర్లు.',
-        itemSplitsTitle: 'స్ప్లిట్ బిల్లులు',
-        itemSplitsDesc: 'గ్రూప్ బిల్లులు, మొత్తం మరియు వ్యక్తుల వాటాలు.',
-        itemPaymentTitle: 'చెల్లింపు వివరాలు & QR కోడ్',
-        itemPaymentDesc: 'UPI ID మరియు సురక్షిత QR కోడ్ చిత్రాలు.',
-        itemProfileTitle: 'వినియోగదారు ప్రొఫైల్',
-        itemProfileDesc: 'పేరు, అవతార్, కరెన్సీ మరియు నోటిఫికేషన్ టోకెన్.',
-        itemInvoicesTitle: 'నెలవారీ స్టేట్‌మెంట్‌లు (PDF)',
-        itemInvoicesDesc: 'PDF ఫైళ్లు క్లౌడ్‌లో నిల్వ చేయబడవు. అవసరమైనప్పుడు మీ లావాదేవీల డేటా నుండి నేరుగా ఫోన్‌లో కొత్త PDF రూపొందించబడుతుంది.',
-        itemChatTitle: 'AI చాట్ సంభాషణలు',
-        itemChatDesc: 'మీ ఫోన్ SQLite డేటాబేస్‌లో మాత్రమే ఉండే 100% ప్రైవేట్ చాట్.',
-        itemCalcHistoryTitle: 'కాలిక్యులేటర్ చరిత్ర',
-        itemCalcHistoryDesc: 'మార్కెట్ ధరలు, EMI మరియు SIP 50 ఇటీవలి రికార్డులు.',
-        itemBiometricsTitle: 'బయోమెట్రిక్ & యాప్ లాక్',
-        itemBiometricsDesc: 'ఫింగర్‌ప్రింట్ మరియు పిన్ ఫోన్ సెక్యూర్ ఎన్‌క్లేవ్‌లో ఉంటాయి.',
-        itemThemeTitle: 'యాప్ థీమ్ సెట్టింగ్‌లు',
-        itemThemeDesc: 'డార్క్/లైట్ మోడ్ ప్రాధాన్యతలు.',
-        itemTempScanTitle: 'తాత్కాలిక స్కాన్ ఫైళ్లు',
-        itemTempScanDesc: 'AI ప్రాసెసింగ్ తర్వాత రసీదు ఫోటోలు స్వయంచాలకంగా తొలగించబడతాయి.',
-        badgeCloud: 'క్లౌడ్ సింక్',
-        badgeLocalOnly: 'స్థానిక మాత్రమే',
-        badgeEncrypted: 'ఎన్‌క్రిప్ట్ చేయబడింది',
-      );
-    } else if (code.startsWith('mr')) {
-      return const BackupScopeStrings(
-        title: 'बॅकअप व गोपनीयता तपशील',
-        subtitle: 'क्लाउडवर काय सेव्ह होते आणि काय फक्त फोनमध्ये राहते',
-        tabBackup: 'बॅकअप होईल (Cloud)',
-        tabNoBackup: 'बॅकअप होणार नाही (Local)',
-        backupHeaderTitle: 'क्लाउडवर सुरक्षित बॅकअप',
-        backupHeaderDesc: 'फोन बदलल्यास किंवा अ‍ॅप री-इन्स्टॉल केल्यास हा डेटा आपोआप परत मिळेल.',
-        noBackupHeaderTitle: '100% स्थानिक व खाजगी डेटा',
-        noBackupHeaderDesc: 'हा डेटा फक्त तुमच्या फोनमध्ये सुरक्षित राहतो आणि कधीही सर्व्हरवर जात नाही.',
-        selectLanguage: 'भाषा निवडा',
-        selectLanguageDesc: 'तुमच्या पसंतीच्या भाषेत तपशील पहा.',
-        langUpdated: 'भाषा यशस्वीरित्या बदलली 🌐',
-        itemExpensesTitle: 'दैनिक खर्च व व्यवहार',
-        itemExpensesDesc: 'खर्च रक्कम, श्रेणी, तपशील, तारीख आणि पेमेंट मोड.',
-        itemBudgetsTitle: 'मासिक बजेट व मर्यादा',
-        itemBudgetsDesc: 'प्रत्येक श्रेणीसाठी ठरवलेले बजेट आणि मासिक मर्यादा.',
-        itemKhataTitle: 'खाते व उधारी लेझर',
-        itemKhataDesc: 'व्यक्तीचे नाव, फोन नंबर, दिलेली/घेतलेली रक्कम आणि सेटलमेंट स्थिती.',
-        itemSubsTitle: 'सदस्यता व नियमित बिले',
-        itemSubsDesc: 'अ‍ॅप/सर्व्हिस नाव, बिलाची रक्कम, रिन्यूअल तारीख आणि रिमाइंडर्स.',
-        itemSplitsTitle: 'स्प्लिट बिले व ग्रुप खर्च',
-        itemSplitsDesc: 'ग्रुप बिल, एकूण रक्कम, प्रत्येकाचा वाटा आणि हिशोब.',
-        itemPaymentTitle: 'पेमेंट तपशील व QR कोड',
-        itemPaymentDesc: 'UPI आयडी आणि क्लाउडवर सुरक्षित ठेवलेला QR कोड.',
-        itemProfileTitle: 'वापरकर्ता प्रोफाइल',
-        itemProfileDesc: 'नाव, प्रोफाइल फोटो, चलन आणि सूचना टोकन.',
-        itemInvoicesTitle: 'मासिक स्टेटमेंट (PDF)',
-        itemInvoicesDesc: 'PDF फायली क्लाउडवर सेव्ह होत नाहीत. गरज असेल तेव्हा तुमच्या व्यवहारांच्या डेटावरून थेट फोनवर नवीन PDF स्टेटमेंट तयार केले जाते.',
-        itemChatTitle: 'AI चॅट संभाषणे',
-        itemChatDesc: '100% खाजगी संभाषणे जी फक्त फोनच्या SQLite डेटाबेसमध्ये राहतात.',
-        itemCalcHistoryTitle: 'कॅल्क्युलेटर इतिहास',
-        itemCalcHistoryDesc: 'बाजार भाव, EMI, GST आणि SIP च्या 50 अलीकडील नोंदी.',
-        itemBiometricsTitle: 'बायोमेट्रिक व अ‍ॅप लॉक',
-        itemBiometricsDesc: 'फिंगरप्रिंट आणि पिन फोनच्या सुरक्षित मेमरीमध्ये राहतात.',
-        itemThemeTitle: 'थीम व डिस्प्ले सेटिंग्ज',
-        itemThemeDesc: 'डार्क/लाइट मोड प्राधान्ये.',
-        itemTempScanTitle: 'तात्पुरत्या स्कॅन फाइल्स',
-        itemTempScanDesc: 'AI द्वारे डेटा काढल्यानंतर पावत्यांचे फोटो आपोआप हटवले जातात.',
-        badgeCloud: 'क्लाउड सिंक',
-        badgeLocalOnly: 'फक्त फोनमध्ये',
-        badgeEncrypted: 'एनक्रिप्टेड',
-      );
-    } else if (code.startsWith('gu')) {
-      return const BackupScopeStrings(
-        title: 'બેકઅપ અને ગોપનીયતા વિગતો',
-        subtitle: 'ક્લાઉડમાં શું સાચવવામાં આવે છે અને શું માત્ર ફોનમાં રહે છે',
-        tabBackup: 'બેકઅપ થશે (Cloud)',
-        tabNoBackup: 'બેકઅપ નહીં થાય (Local)',
-        backupHeaderTitle: 'ક્લાઉડમાં સુરક્ષિત બેકઅપ',
-        backupHeaderDesc: 'ફોન બદલવા પર આ તમામ ડેટા આપમેળે પુનઃપ્રાપ્ત થઈ જશે.',
-        noBackupHeaderTitle: '100% સ્થાનિક અને ખાનગી ડેટા',
-        noBackupHeaderDesc: 'આ ડેટા ફક્ત તમારા ફોનમાં રહે છે અને સર્વર પર અપલોડ થતો નથી.',
-        selectLanguage: 'ભાષા પસંદ કરો',
-        selectLanguageDesc: 'તમારી મનપસંદ ભાષામાં વિગતો જુઓ.',
-        langUpdated: 'ભાષા સફળતાપૂર્વક બદલાઈ 🌐',
-        itemExpensesTitle: 'દૈનિક ખર્ચા અને વ્યવહારો',
-        itemExpensesDesc: 'ખર્ચ રકમ, શ્રેણી, વિગત, તારીખ અને ચુકવણી મોડ.',
-        itemBudgetsTitle: 'માસિક બજેટ અને મર્યાદા',
-        itemBudgetsDesc: 'દરેક શ્રેણીનું નિર્ધારિત બજેટ.',
-        itemKhataTitle: 'ખાતાવહી અને ઉધાર-જમા',
-        itemKhataDesc: 'વ્યક્તિનું નામ, ફોન નંબર, આપેલ/લીધેલ રકમ અને બાકી તારીખ.',
-        itemSubsTitle: 'સબ્સ્ક્રિપ્શન્સ અને બિલ',
-        itemSubsDesc: 'સેવાનું નામ, બિલ રકમ, રિન્યુઅલ તારીખ અને રિમાઇન્ડર્સ.',
-        itemSplitsTitle: 'સ્પ્લિટ બિલ અને ગ્રુપ ખર્ચા',
-        itemSplitsDesc: 'ગ્રુપ બિલ, કુલ રકમ અને દરેકનો હિસ્સો.',
-        itemPaymentTitle: 'ચુકવણી વિગતો અને QR કોડ',
-        itemPaymentDesc: 'UPI ID અને સુરક્ષિત QR કોડ ઈમેજ.',
-        itemProfileTitle: 'વપરાશકર્તા પ્રોફાઇલ',
-        itemProfileDesc: 'નામ, અવતાર, ચલણ અને કસ્ટમ કીઝ.',
-        itemInvoicesTitle: 'માસિક સ્ટેટમેન્ટ્સ (PDF)',
-        itemInvoicesDesc: 'PDF ફાઇલો ક્લાઉડમાં સાચવવામાં આવતી નથી. જરૂર પડ્યે તમારા વ્યવહાર ડેટામાંથી સીધા ફોનમાં નવું PDF સ્ટેટમેન્ટ બનાવવામાં આવે છે.',
-        itemChatTitle: 'AI ચેટ વાતચીત',
-        itemChatDesc: '100% ખાનગી વાતચીત જે ફક્ત ફોનના SQLite ડેટાબેઝમાં રહે છે.',
-        itemCalcHistoryTitle: 'કેલ્ક્યુલેટર ઇતિહાસ',
-        itemCalcHistoryDesc: 'બજાર ભાવ અને EMI ના 50 તાજેતરના હિસાબ.',
-        itemBiometricsTitle: 'બાયોમેટ્રિક અને એપ લૉક',
-        itemBiometricsDesc: 'ફિંગરપ્રિન્ટ અને પિન ફોનની સુરક્ષિત મેમરીમાં રહે છે.',
-        itemThemeTitle: 'થીમ સેટિંગ્સ',
-        itemThemeDesc: 'ડાર્ક/લાઇટ મોડ પસંદગીઓ.',
-        itemTempScanTitle: 'કામચલાઉ સ્કેન ફાઇલો',
-        itemTempScanDesc: 'AI પ્રોસેસિંગ પછી રસીદના ફોટા આપમેળે કાઢી નાખવામાં આવે છે.',
-        badgeCloud: 'ક્લાઉડ સિંક',
-        badgeLocalOnly: 'માત્ર ફોનમાં',
-        badgeEncrypted: 'એન્ક્રિપ્ટેડ',
-      );
-    } else if (code.startsWith('kn')) {
-      return const BackupScopeStrings(
-        title: 'ಬ್ಯಾಕಪ್ ಮತ್ತು ಗೌಪ್ಯತೆ ವಿವರಗಳು',
-        subtitle: 'ಕ್ಲೌಡ್‌ನಲ್ಲಿ ಏನು ಉಳಿಸಲಾಗುತ್ತದೆ ಮತ್ತು ಫೋನ್‌ನಲ್ಲಿ ಮಾತ್ರ ಉಳಿಯುವುದು ಏನು',
-        tabBackup: 'ಬ್ಯಾಕಪ್ ಆಗುತ್ತದೆ (Cloud)',
-        tabNoBackup: 'ಬ್ಯಾಕಪ್ ಆಗುವುದಿಲ್ಲ (Local)',
-        backupHeaderTitle: 'ಕ್ಲೌಡ್‌ನಲ್ಲಿ ಸುರಕ್ಷಿತ ಬ್ಯಾಕಪ್',
-        backupHeaderDesc: 'ಫೋನ್ ಬದಲಾಯಿಸಿದರೂ ಈ ಎಲ್ಲಾ ಡೇಟಾ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಮರುಸ್ಥಾಪನೆಯಾಗುತ್ತದೆ.',
-        noBackupHeaderTitle: '100% ಸ್ಥಳೀಯ ಮತ್ತು ಖಾಸಗಿ ಡೇಟಾ',
-        noBackupHeaderDesc: 'ಈ ಡೇಟಾ ನಿಮ್ಮ ಫೋನ್‌ನಲ್ಲಿ ಮಾತ್ರ ಇರುತ್ತದೆ ಮತ್ತು ಸರ್ವರ್‌ಗೆ ಅಪ್‌ಲೋಡ್ ಆಗುವುದಿಲ್ಲ.',
-        selectLanguage: 'ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ',
-        selectLanguageDesc: 'ನಿಮ್ಮ ನೆಚ್ಚಿನ ಭಾಷೆಯಲ್ಲಿ ವಿವರಗಳನ್ನು ನೋಡಿ.',
-        langUpdated: 'ಭಾಷೆ ಯಶಸ್ವಿಯಾಗಿ ಬದಲಾಗಿದೆ 🌐',
-        itemExpensesTitle: 'ದೈನಂದಿನ ಖರ್ಚುಗಳು ಮತ್ತು ವಹಿವಾಟುಗಳು',
-        itemExpensesDesc: 'ಮೊತ್ತ, ವರ್ಗ, ವಿವರಣೆ, ದಿನಾಂಕ ಮತ್ತು ಪಾವತಿ ವಿಧಾನ.',
-        itemBudgetsTitle: 'ಮಾಸಿಕ ಬಜೆಟ್ ಮತ್ತು ಮಿತಿಗಳು',
-        itemBudgetsDesc: 'ಪ್ರತಿ ವರ್ಗಕ್ಕೆ ನಿಗದಿಪಡಿಸಿದ ಬಜೆಟ್.',
-        itemKhataTitle: 'ಖಾತೆ ಮತ್ತು ಸಾಲದ ಲೆಕ್ಕಗಳು',
-        itemKhataDesc: 'ಹೆಸರು, ಫೋನ್ ಸಂಖ್ಯೆ, ನೀಡಿದ/ಪಡೆದ ಮೊತ್ತ ಮತ್ತು ಅಂತಿಮ ದಿನಾಂಕ.',
-        itemSubsTitle: 'ಚಂದಾದಾರಿಕೆಗಳು ಮತ್ತು ಬಿಲ್‌ಗಳು',
-        itemSubsDesc: 'ಸೇವೆಯ ಹೆಸರು, ಬಿಲ್ ಮೊತ್ತ, ನವೀಕರಣ ದಿನಾಂಕ ಮತ್ತು ಜ್ಞಾಪನೆಗಳು.',
-        itemSplitsTitle: 'ಸ್ಪ್ಲಿಟ್ ಬಿಲ್‌ಗಳು ಮತ್ತು ಗುಂಪು ಖರ್ಚುಗಳು',
-        itemSplitsDesc: 'ಗುಂಪು ಬಿಲ್‌ಗಳು, ಒಟ್ಟು ಮೊತ್ತ ಮತ್ತು ಪ್ರತಿಯೊಬ್ಬರ ಪಾಲು.',
-        itemPaymentTitle: 'ಪಾವತಿ ವಿವರಗಳು ಮತ್ತು QR ಕೋಡ್',
-        itemPaymentDesc: 'UPI ID ಮತ್ತು ಸುರಕ್ಷಿತ QR ಕೋಡ್ ಚಿತ್ರಗಳು.',
-        itemProfileTitle: 'ಬಳಕೆದಾರರ ಪ್ರೊಫೈಲ್',
-        itemProfileDesc: 'ಹೆಸರು, ಅವತಾರ, ಕರೆನ್ಸಿ ಮತ್ತು ಪುಶ್ ಟೋಕನ್.',
-        itemInvoicesTitle: 'ಮಾಸಿಕ ಸ್ಟೇಟ್‌ಮೆಂಟ್‌ಗಳು (PDF)',
-        itemInvoicesDesc: 'PDF ಫೈಲ್‌ಗಳನ್ನು ಕ್ಲೌಡ್‌ನಲ್ಲಿ ಸಂಗ್ರಹಿಸಲಾಗುವುದಿಲ್ಲ. ಅಗತ್ಯವಿದ್ದಾಗ ನಿಮ್ಮ ವಹಿವಾಟು ಡೇಟಾದಿಂದ ನೇರವಾಗಿ ಫೋನ್‌ನಲ್ಲಿ ಹೊಸ PDF ರಚಿಸಲಾಗುತ್ತದೆ.',
-        itemChatTitle: 'AI ಚಾಟ್ ಸಂಭಾಷಣೆಗಳು',
-        itemChatDesc: 'ನಿಮ್ಮ ಫೋನ್‌ನ SQLite ಡೇಟಾಬೇಸ್‌ನಲ್ಲಿ ಮಾತ್ರ ಇರುವ 100% ಖಾಸಗಿ ಚಾಟ್.',
-        itemCalcHistoryTitle: 'ಕ್ಯಾಲ್ಕುಲೇಟರ್ ಇತಿಹಾಸ',
-        itemCalcHistoryDesc: 'ಮಾರುಕಟ್ಟೆ ಬೆಲೆಗಳು, EMI ಮತ್ತು SIP ಯ 50 ಇತ್ತೀಚಿನ ದಾಖಲೆಗಳು.',
-        itemBiometricsTitle: 'ಬಯೋಮೆಟ್ರಿಕ್ ಮತ್ತು ಆ್ಯಪ್ ಲಾಕ್',
-        itemBiometricsDesc: 'ಫಿಂಗರ್‌ಪ್ರಿಂಟ್ ಮತ್ತು ಪಿನ್ ಫೋನ್‌ನ ಸುರಕ್ಷಿತ ಮೆಮೊರಿಯಲ್ಲಿರುತ್ತದೆ.',
-        itemThemeTitle: 'ಥೀಮ್ ಸೆಟ್ಟಿಂಗ್‌ಗಳು',
-        itemThemeDesc: 'ಡಾರ್ಕ್/ಲೈಟ್ ಮೋಡ್ ಆದ್ಯತೆಗಳು.',
-        itemTempScanTitle: 'ತಾತ್ಕಾಲಿಕ ಸ್ಕ್ಯಾನ್ ಫೈಲ್‌ಗಳು',
-        itemTempScanDesc: 'AI ಪ್ರಕ್ರಿಯೆಯ ನಂತರ ರಸೀದಿ ಫೋಟೋಗಳು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಅಳಿಸಲ್ಪಡುತ್ತವೆ.',
-        badgeCloud: 'ಕ್ಲೌಡ್ ಸಿಂಕ್',
-        badgeLocalOnly: 'ಸ್ಥಳೀಯ ಮಾತ್ರ',
-        badgeEncrypted: 'ಎನ್‌ಕ್ರಿಪ್ಟ್ ಮಾಡಲಾಗಿದೆ',
-      );
     }
 
     // Default English
@@ -444,9 +185,6 @@ class BackupScopeStrings {
       backupHeaderDesc: 'Synced to your private Supabase cloud account. Seamlessly restored when you log in on any device.',
       noBackupHeaderTitle: '100% Local & Device-Private',
       noBackupHeaderDesc: 'Stored strictly on your phone’s SQLite memory. Never uploaded to the cloud for complete privacy.',
-      selectLanguage: 'Select Screen Language',
-      selectLanguageDesc: 'Information will comfortably adapt to your chosen language.',
-      langUpdated: 'Language preference saved 🌐',
       itemExpensesTitle: 'Daily Expenses & Transactions',
       itemExpensesDesc: 'Amounts, categories, notes, transaction dates, payment methods, and recurring settings.',
       itemBudgetsTitle: 'Monthly Budgets & Category Limits',
@@ -493,8 +231,6 @@ class BackupScopeScreen extends StatefulWidget {
 
 class _BackupScopeScreenState extends State<BackupScopeScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  String _selectedLangCode = 'en_IN';
-  bool _isLoadingLang = true;
 
   @override
   void initState() {
@@ -503,36 +239,12 @@ class _BackupScopeScreenState extends State<BackupScopeScreen> with SingleTicker
     _tabController.addListener(() {
       if (mounted) setState(() {});
     });
-    _loadSavedLanguage();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadSavedLanguage() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getString(kPrefBackupScopeLang);
-    if (mounted) {
-      setState(() {
-        if (saved != null && saved.isNotEmpty) {
-          _selectedLangCode = saved;
-        }
-        _isLoadingLang = false;
-      });
-    }
-  }
-
-  Future<void> _changeLanguage(String code) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(kPrefBackupScopeLang, code);
-    if (mounted) {
-      setState(() => _selectedLangCode = code);
-      final str = BackupScopeStrings.of(code);
-      CustomToast.show(context, str.langUpdated);
-    }
   }
 
   _ScopeItemData _getCatalogItemData(String langCode, String badge) {
@@ -544,50 +256,10 @@ class _BackupScopeScreenState extends State<BackupScopeScreen> with SingleTicker
         color: const Color(0xFF10B981),
         badge: badge,
       );
-    } else if (langCode.startsWith('hi') || langCode == 'hinglish') {
+    } else if (langCode.startsWith('hi')) {
       return _ScopeItemData(
         title: 'सामान कैटलॉग व इन्वेंटरी स्टॉक',
         desc: 'सामान का नाम, खरीद/बिक्री मूल्य, बारकोड नंबर, स्टॉक मात्रा और लो-स्टॉक सीमा।',
-        icon: Icons.inventory_2_outlined,
-        color: const Color(0xFF10B981),
-        badge: badge,
-      );
-    } else if (langCode.startsWith('ta')) {
-      return _ScopeItemData(
-        title: 'பொருள் பட்டியல் & இருப்பு',
-        desc: 'பொருள் பெயர், வாங்கு/விற்பனை விலை, பார்கோடு, இருப்பு மற்றும் குறைந்த இருப்பு வரம்பு.',
-        icon: Icons.inventory_2_outlined,
-        color: const Color(0xFF10B981),
-        badge: badge,
-      );
-    } else if (langCode.startsWith('te')) {
-      return _ScopeItemData(
-        title: 'వస్తువుల జాబితా & స్టాక్',
-        desc: 'వస్తువు పేరు, కొనుగోలు/అమ్మకం ధర, బార్‌కోడ్, ప్రస్తుత స్టాక్ మరియు లో-స్టాక్ పరిమితి.',
-        icon: Icons.inventory_2_outlined,
-        color: const Color(0xFF10B981),
-        badge: badge,
-      );
-    } else if (langCode.startsWith('mr')) {
-      return _ScopeItemData(
-        title: 'वस्तू कॅटलॉग व इन्व्हेंटरी स्टॉक',
-        desc: 'वस्तूचे नाव, खरेदी/विक्री किंमत, बारकोड, शिल्लक स्टॉक आणि कमी स्टॉक मर्यादा.',
-        icon: Icons.inventory_2_outlined,
-        color: const Color(0xFF10B981),
-        badge: badge,
-      );
-    } else if (langCode.startsWith('gu')) {
-      return _ScopeItemData(
-        title: 'પ્રોડક્ટ કેટલોગ અને સ્ટોક',
-        desc: 'વસ્તુનું નામ, ખરીદ/વેચાણ કિંમત, બારકોડ, વર્તમાન સ્ટોક અને લો-સ્ટોક મર્યાદા.',
-        icon: Icons.inventory_2_outlined,
-        color: const Color(0xFF10B981),
-        badge: badge,
-      );
-    } else if (langCode.startsWith('kn')) {
-      return _ScopeItemData(
-        title: 'ಉತ್ಪನ್ನ ಕ್ಯಾಟಲಾಗ್ ಮತ್ತು ದಾಸ್ತಾನು',
-        desc: 'ಉತ್ಪನ್ನದ ಹೆಸರು, ಖರೀದಿ/ಮಾರಾಟ ಬೆಲೆ, ಬಾರ್‌ಕೋಡ್, ಪ್ರಸ್ತುತ ದಾಸ್ತಾನು ಮತ್ತು ಕಡಿಮೆ ದಾಸ್ತಾನು ಮಿತಿ.',
         icon: Icons.inventory_2_outlined,
         color: const Color(0xFF10B981),
         badge: badge,
@@ -611,50 +283,10 @@ class _BackupScopeScreenState extends State<BackupScopeScreen> with SingleTicker
         color: const Color(0xFF6366F1),
         badge: badge,
       );
-    } else if (langCode.startsWith('hi') || langCode == 'hinglish') {
+    } else if (langCode.startsWith('hi')) {
       return _ScopeItemData(
         title: 'दुकान बिक्री व GST बिलिंग',
         desc: 'ग्राहक बिल, बेचे गए सामान, टैक्स, छूट, नकद/ऑनलाइन/उधार पेमेंट और मुनाफा मार्जिन।',
-        icon: Icons.point_of_sale_rounded,
-        color: const Color(0xFF6366F1),
-        badge: badge,
-      );
-    } else if (langCode.startsWith('ta')) {
-      return _ScopeItemData(
-        title: 'விற்பனை & ஜிஎஸ்டி பில்கள்',
-        desc: 'வாடிக்கையாளர் பில்கள், விற்கப்பட்ட பொருட்கள், ஜிஎஸ்டி, தள்ளுபடி மற்றும் கட்டண முறைகள்.',
-        icon: Icons.point_of_sale_rounded,
-        color: const Color(0xFF6366F1),
-        badge: badge,
-      );
-    } else if (langCode.startsWith('te')) {
-      return _ScopeItemData(
-        title: 'వ్యాపార అమ్మకాలు & GST బిల్లులు',
-        desc: 'కస్టమర్ బిల్లులు, అమ్మిన వస్తువులు, GST, తగ్గింపులు మరియు చెల్లింపు విధానాలు.',
-        icon: Icons.point_of_sale_rounded,
-        color: const Color(0xFF6366F1),
-        badge: badge,
-      );
-    } else if (langCode.startsWith('mr')) {
-      return _ScopeItemData(
-        title: 'दुकान विक्री व GST बिले',
-        desc: 'ग्राहक बिल, विकलेल्या वस्तू, GST कर, सवलत आणि पेमेंट पद्धती.',
-        icon: Icons.point_of_sale_rounded,
-        color: const Color(0xFF6366F1),
-        badge: badge,
-      );
-    } else if (langCode.startsWith('gu')) {
-      return _ScopeItemData(
-        title: 'દુકાન વેચાણ અને GST બિલ',
-        desc: 'ગ્રાહક બિલ, વેચેલી વસ્તુઓ, GST, ડિસ્કાઉન્ટ અને ચુકવણી પદ્ધતિઓ.',
-        icon: Icons.point_of_sale_rounded,
-        color: const Color(0xFF6366F1),
-        badge: badge,
-      );
-    } else if (langCode.startsWith('kn')) {
-      return _ScopeItemData(
-        title: 'ವ್ಯಾಪಾರ ಮಾರಾಟ ಮತ್ತು GST ಬಿಲ್‌ಗಳು',
-        desc: 'ಗ್ರಾಹಕರ ಬಿಲ್‌ಗಳು, ಮಾರಾಟವಾದ ವಸ್ತುಗಳು, GST, ರಿಯಾಯಿತಿ ಮತ್ತು ಪಾವತಿ ವಿಧಾನಗಳು.',
         icon: Icons.point_of_sale_rounded,
         color: const Color(0xFF6366F1),
         badge: badge,
@@ -678,50 +310,10 @@ class _BackupScopeScreenState extends State<BackupScopeScreen> with SingleTicker
         color: const Color(0xFF3B82F6),
         badge: badge,
       );
-    } else if (langCode.startsWith('hi') || langCode == 'hinglish') {
+    } else if (langCode.startsWith('hi')) {
       return _ScopeItemData(
         title: 'दुकान व व्यापार प्रोफ़ाइल',
         desc: 'दुकान का नाम, मालिक, मोबाइल नंबर, पता, GSTIN और लिंक्ड UPI पेमेंट ID।',
-        icon: Icons.storefront_rounded,
-        color: const Color(0xFF3B82F6),
-        badge: badge,
-      );
-    } else if (langCode.startsWith('ta')) {
-      return _ScopeItemData(
-        title: 'கடை மற்றும் வணிக சுயவிவரம்',
-        desc: 'கடை பெயர், உரிமையாளர், தொலைபேசி எண், முகவரி, ஜிஎஸ்டின் மற்றும் UPI ஐடி.',
-        icon: Icons.storefront_rounded,
-        color: const Color(0xFF3B82F6),
-        badge: badge,
-      );
-    } else if (langCode.startsWith('te')) {
-      return _ScopeItemData(
-        title: 'దుకాణం & వ్యాపార ప్రొఫైల్',
-        desc: 'దుకాణం పేరు, యజమాని, ఫోన్ నంబర్, చిరునామా, GSTIN మరియు UPI ID.',
-        icon: Icons.storefront_rounded,
-        color: const Color(0xFF3B82F6),
-        badge: badge,
-      );
-    } else if (langCode.startsWith('mr')) {
-      return _ScopeItemData(
-        title: 'दुकान व व्यवसाय प्रोफाइल',
-        desc: 'दुकानाचे नाव, मालक, मोबाईल नंबर, पत्ता, GSTIN आणि लिंक्ड UPI आयडी.',
-        icon: Icons.storefront_rounded,
-        color: const Color(0xFF3B82F6),
-        badge: badge,
-      );
-    } else if (langCode.startsWith('gu')) {
-      return _ScopeItemData(
-        title: 'દુકાન અને વ્યવસાય પ્રોફાઇલ',
-        desc: 'દુકાનનું નામ, માલિક, ફોન નંબર, સરનામું, GSTIN અને UPI ID.',
-        icon: Icons.storefront_rounded,
-        color: const Color(0xFF3B82F6),
-        badge: badge,
-      );
-    } else if (langCode.startsWith('kn')) {
-      return _ScopeItemData(
-        title: 'ಅಂಗಡಿ ಮತ್ತು ವ್ಯಾಪಾರ ಪ್ರೊಫೈಲ್',
-        desc: 'ಅಂಗಡಿಯ ಹೆಸರು, ಮಾಲೀಕರು, ಫೋನ್ ಸಂಖ್ಯೆ, ವಿಳಾಸ, GSTIN ಮತ್ತು UPI ID.',
         icon: Icons.storefront_rounded,
         color: const Color(0xFF3B82F6),
         badge: badge,
@@ -736,122 +328,14 @@ class _BackupScopeScreenState extends State<BackupScopeScreen> with SingleTicker
     );
   }
 
-  void _showLanguagePicker(BuildContext context, BackupScopeStrings str, bool isDark) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: isDark ? const Color(0xFF181B22) : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[400],
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    const Icon(Icons.translate_rounded, color: Color(0xFF00D09C), size: 22),
-                    const SizedBox(width: 10),
-                    Text(
-                      str.selectLanguage,
-                      style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  str.selectLanguageDesc,
-                  style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[500]),
-                ),
-                const SizedBox(height: 14),
-                Flexible(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: kSupportedBackupScopeLanguages.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, idx) {
-                      final item = kSupportedBackupScopeLanguages[idx];
-                      final isSelected = item.code == _selectedLangCode;
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        leading: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? const Color(0xFF00D09C).withValues(alpha: 0.15)
-                                : (isDark ? const Color(0xFF1E222D) : const Color(0xFFF1F5F9)),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: isSelected ? const Color(0xFF00D09C) : Colors.transparent,
-                            ),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(item.flag, style: const TextStyle(fontSize: 20)),
-                        ),
-                        title: Row(
-                          children: [
-                            Text(
-                              item.name,
-                              style: GoogleFonts.inter(
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                                fontSize: 14,
-                                color: isSelected ? const Color(0xFF00D09C) : null,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              item.nativeName,
-                              style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[500]),
-                            ),
-                          ],
-                        ),
-                        trailing: isSelected
-                            ? const Icon(Icons.check_circle_rounded, color: Color(0xFF00D09C), size: 22)
-                            : null,
-                        onTap: () {
-                          Navigator.of(ctx).pop();
-                          _changeLanguage(item.code);
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final str = BackupScopeStrings.of(_selectedLangCode);
-    const primaryColor = Color(0xFF00D09C);
+    final userProvider = Provider.of<UserProvider>(context);
+    final currentLang = userProvider.appLanguage;
+    final str = BackupScopeStrings.of(currentLang);
     final cardBg = isDark ? const Color(0xFF181B22) : Colors.white;
     final borderColor = isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0);
-
-    if (_isLoadingLang) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: Color(0xFF00D09C))),
-      );
-    }
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F1115) : const Color(0xFFF8FAFC),
@@ -862,22 +346,6 @@ class _BackupScopeScreenState extends State<BackupScopeScreen> with SingleTicker
         ),
         elevation: 0,
         backgroundColor: isDark ? const Color(0xFF181B22) : Colors.white,
-        actions: [
-          IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
-              ),
-              child: const Icon(Icons.translate_rounded, color: Color(0xFF00D09C), size: 18),
-            ),
-            tooltip: str.selectLanguage,
-            onPressed: () => _showLanguagePicker(context, str, isDark),
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       body: Column(
         children: [
@@ -986,6 +454,7 @@ class _BackupScopeScreenState extends State<BackupScopeScreen> with SingleTicker
                 _buildBackupList(
                   isDark: isDark,
                   str: str,
+                  currentLang: currentLang,
                   cardBg: cardBg,
                   borderColor: borderColor,
                 ),
@@ -1008,6 +477,7 @@ class _BackupScopeScreenState extends State<BackupScopeScreen> with SingleTicker
   Widget _buildBackupList({
     required bool isDark,
     required BackupScopeStrings str,
+    required String currentLang,
     required Color cardBg,
     required Color borderColor,
   }) {
@@ -1061,9 +531,9 @@ class _BackupScopeScreenState extends State<BackupScopeScreen> with SingleTicker
         color: const Color(0xFF06B6D4),
         badge: str.badgeCloud,
       ),
-      _getCatalogItemData(_selectedLangCode, str.badgeCloud),
-      _getBizSalesItemData(_selectedLangCode, str.badgeCloud),
-      _getBizProfileItemData(_selectedLangCode, str.badgeCloud),
+      _getCatalogItemData(currentLang, str.badgeCloud),
+      _getBizSalesItemData(currentLang, str.badgeCloud),
+      _getBizProfileItemData(currentLang, str.badgeCloud),
     ];
 
     return ListView(
@@ -1171,7 +641,7 @@ class _BackupScopeScreenState extends State<BackupScopeScreen> with SingleTicker
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
       children: [
-        // Informative Hero Banner for No-Backup
+        // Informative Hero Banner
         Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(14),
@@ -1183,7 +653,7 @@ class _BackupScopeScreenState extends State<BackupScopeScreen> with SingleTicker
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.shield_outlined, color: Color(0xFFEF4444), size: 22),
+              const Icon(Icons.phonelink_lock_rounded, color: Color(0xFFEF4444), size: 22),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
