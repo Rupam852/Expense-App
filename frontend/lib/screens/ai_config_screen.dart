@@ -847,91 +847,94 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
 
           const SizedBox(height: 16),
 
-          // Model Selection Dropdown
+          // Model Selection Field (Modern Bottom Sheet Trigger)
           Text(
             'Select Model',
             style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey),
           ),
           const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF161920) : const Color(0xFFF1F4F9),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: borderColor),
+          InkWell(
+            onTap: () => _showModelSelectionBottomSheet(
+              context: context,
+              isDark: isDark,
+              providerName: providerName,
+              accentColor: accentColor,
+              icon: icon,
+              currentModel: selectedModel,
+              availableModels: availableModels,
+              onSelected: (val) => onModelChanged(val),
             ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: availableModels.contains(selectedModel) ? selectedModel : availableModels.first,
-                isExpanded: true,
-                dropdownColor: isDark ? const Color(0xFF1E232E) : Colors.white,
-                items: availableModels.map((m) {
-                  final tag = _getModelTag(m);
-                  final tagColor = _getModelTagColor(m);
-                  final isRecommended = m == 'gemini-2.5-flash';
-                  return DropdownMenuItem<String>(
-                    value: m,
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: tagColor.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            tag,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF161920) : const Color(0xFFF1F4F9),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: borderColor),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _getModelTagColor(selectedModel).withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      _getModelTag(selectedModel),
+                      style: GoogleFonts.inter(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        color: _getModelTagColor(selectedModel),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      selectedModel,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (selectedModel == 'gemini-2.5-flash') ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withOpacity(0.18),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFF10B981).withOpacity(0.4), width: 1),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.star_rounded, size: 11, color: Color(0xFF10B981)),
+                          const SizedBox(width: 2),
+                          Text(
+                            'RECOMMENDED',
                             style: GoogleFonts.inter(
-                              fontSize: 9,
+                              fontSize: 8.5,
                               fontWeight: FontWeight.bold,
-                              color: tagColor,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            m,
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? Colors.white : Colors.black87,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (isRecommended) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF10B981).withOpacity(0.18),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFF10B981).withOpacity(0.4), width: 1),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.star_rounded, size: 11, color: Color(0xFF10B981)),
-                                const SizedBox(width: 2),
-                                Text(
-                                  'RECOMMENDED',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 8.5,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF10B981),
-                                    letterSpacing: 0.2,
-                                  ),
-                                ),
-                              ],
+                              color: const Color(0xFF10B981),
+                              letterSpacing: 0.2,
                             ),
                           ),
                         ],
-                      ],
+                      ),
                     ),
-                  );
-                }).toList(),
-                onChanged: onModelChanged,
+                  ],
+                  const SizedBox(width: 6),
+                  Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 20,
+                    color: isDark ? Colors.white70 : Colors.black54,
+                  ),
+                ],
               ),
             ),
           ),
@@ -1016,6 +1019,214 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showModelSelectionBottomSheet({
+    required BuildContext context,
+    required bool isDark,
+    required String providerName,
+    required Color accentColor,
+    required IconData icon,
+    required String currentModel,
+    required List<String> availableModels,
+    required ValueChanged<String> onSelected,
+  }) {
+    HapticFeedback.lightImpact();
+    final modalBg = isDark ? const Color(0xFF131722) : Colors.white;
+    final itemBg = isDark ? const Color(0xFF1A1F2C) : const Color(0xFFF4F6F9);
+    final borderColor = isDark ? const Color(0xFF2C3242) : const Color(0xFFE5E9F0);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: modalBg,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Drag Handle
+                Center(
+                  child: Container(
+                    width: 42,
+                    height: 4.5,
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.grey[700] : Colors.grey[300],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Header Row
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: accentColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(icon, color: accentColor, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Select $providerName Model',
+                            style: GoogleFonts.outfit(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                          Text(
+                            'Choose model for AI OCR, Voice & Advisor',
+                            style: GoogleFonts.inter(
+                              fontSize: 11.5,
+                              color: isDark ? Colors.white60 : Colors.black54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close_rounded, size: 20, color: isDark ? Colors.white60 : Colors.black54),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Model Cards List
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: availableModels.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (ctx, index) {
+                      final model = availableModels[index];
+                      final isSelected = model == currentModel;
+                      final isRecommended = model == 'gemini-2.5-flash';
+                      final tag = _getModelTag(model);
+                      final tagColor = _getModelTagColor(model);
+
+                      return InkWell(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          onSelected(model);
+                          Navigator.pop(ctx);
+                        },
+                        borderRadius: BorderRadius.circular(14),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isSelected ? accentColor.withOpacity(0.12) : itemBg,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isSelected ? accentColor : borderColor,
+                              width: isSelected ? 1.6 : 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              // Tag Pill
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: tagColor.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  tag,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: tagColor,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+
+                              // Model Name
+                              Expanded(
+                                child: Text(
+                                  model,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13.5,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                    color: isSelected
+                                        ? (isDark ? Colors.white : Colors.black87)
+                                        : (isDark ? Colors.white70 : Colors.black87),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+
+                              // Recommended Badge
+                              if (isRecommended) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10B981).withOpacity(0.18),
+                                    borderRadius: BorderRadius.circular(7),
+                                    border: Border.all(
+                                      color: const Color(0xFF10B981).withOpacity(0.4),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.star_rounded, size: 12, color: Color(0xFF10B981)),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        'RECOMMENDED',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 8.5,
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color(0xFF10B981),
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+
+                              const SizedBox(width: 10),
+
+                              // Radio / Check Indicator
+                              Icon(
+                                isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                                color: isSelected ? accentColor : Colors.grey[500],
+                                size: 19,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
