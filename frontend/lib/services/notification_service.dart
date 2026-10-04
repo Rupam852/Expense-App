@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -54,6 +53,10 @@ class NotificationService with ChangeNotifier {
   static const String _generalChannelName = 'Daily & Monthly Summaries';
   static const String _generalChannelDescription = 'Daily evening log reminders and monthly savings reports';
 
+  static const String _businessChannelId = 'business_alerts_channel';
+  static const String _businessChannelName = 'Business & Shop Alerts';
+  static const String _businessChannelDescription = 'Alerts for Invoices, Daily Sales, Vendor Dues, GST & P&L Reports';
+
   // Preference states
   bool _masterEnabled = true;
   bool _budgetAlertsEnabled = true;
@@ -65,6 +68,14 @@ class NotificationService with ChangeNotifier {
   bool _monthEndAlertsEnabled = true;
   bool _newMonthStartAlertsEnabled = true;
   bool _appUpdatesEnabled = true;
+  
+  // Business Mode Specific Preference states
+  bool _invoiceAlertsEnabled = true;
+  bool _dailyBusinessSummaryEnabled = true;
+  bool _vendorPayableAlertsEnabled = true;
+  bool _weeklyBusinessReportEnabled = true;
+  bool _gstAlertsEnabled = true;
+
   String _notificationLanguage = 'en'; // 'en', 'hi', 'bn', 'hinglish'
 
   String? _fcmToken;
@@ -81,6 +92,14 @@ class NotificationService with ChangeNotifier {
   bool get monthEndAlertsEnabled => _monthEndAlertsEnabled;
   bool get newMonthStartAlertsEnabled => _newMonthStartAlertsEnabled;
   bool get appUpdatesEnabled => _appUpdatesEnabled;
+
+  // Business Getters
+  bool get invoiceAlertsEnabled => _invoiceAlertsEnabled;
+  bool get dailyBusinessSummaryEnabled => _dailyBusinessSummaryEnabled;
+  bool get vendorPayableAlertsEnabled => _vendorPayableAlertsEnabled;
+  bool get weeklyBusinessReportEnabled => _weeklyBusinessReportEnabled;
+  bool get gstAlertsEnabled => _gstAlertsEnabled;
+
   String get notificationLanguage => _notificationLanguage;
 
   String get languageDisplayName {
@@ -111,6 +130,14 @@ class NotificationService with ChangeNotifier {
       _monthEndAlertsEnabled = prefs.getBool('notif_month_end_enabled') ?? true;
       _newMonthStartAlertsEnabled = prefs.getBool('notif_new_month_start_enabled') ?? true;
       _appUpdatesEnabled = prefs.getBool('notif_app_updates_enabled') ?? true;
+
+      // Business Preferences
+      _invoiceAlertsEnabled = prefs.getBool('notif_biz_invoice_enabled') ?? true;
+      _dailyBusinessSummaryEnabled = prefs.getBool('notif_biz_daily_summary_enabled') ?? true;
+      _vendorPayableAlertsEnabled = prefs.getBool('notif_biz_vendor_payable_enabled') ?? true;
+      _weeklyBusinessReportEnabled = prefs.getBool('notif_biz_weekly_report_enabled') ?? true;
+      _gstAlertsEnabled = prefs.getBool('notif_biz_gst_enabled') ?? true;
+
       _notificationLanguage = prefs.getString('notif_language') ?? 'en';
       _fcmToken = prefs.getString('cached_fcm_token');
       notifyListeners();
@@ -188,6 +215,42 @@ class NotificationService with ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('notif_app_updates_enabled', val);
+  }
+
+  // Business Setters
+  Future<void> setInvoiceAlertsEnabled(bool val) async {
+    _invoiceAlertsEnabled = val;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notif_biz_invoice_enabled', val);
+  }
+
+  Future<void> setDailyBusinessSummaryEnabled(bool val) async {
+    _dailyBusinessSummaryEnabled = val;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notif_biz_daily_summary_enabled', val);
+  }
+
+  Future<void> setVendorPayableAlertsEnabled(bool val) async {
+    _vendorPayableAlertsEnabled = val;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notif_biz_vendor_payable_enabled', val);
+  }
+
+  Future<void> setWeeklyBusinessReportEnabled(bool val) async {
+    _weeklyBusinessReportEnabled = val;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notif_biz_weekly_report_enabled', val);
+  }
+
+  Future<void> setGstAlertsEnabled(bool val) async {
+    _gstAlertsEnabled = val;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notif_biz_gst_enabled', val);
   }
 
   Future<void> setNotificationLanguage(String langCode) async {
@@ -277,6 +340,16 @@ class NotificationService with ChangeNotifier {
               _generalChannelId,
               _generalChannelName,
               description: _generalChannelDescription,
+              importance: Importance.high,
+              playSound: true,
+              enableVibration: true,
+            ),
+          );
+          await androidPlugin.createNotificationChannel(
+            const AndroidNotificationChannel(
+              _businessChannelId,
+              _businessChannelName,
+              description: _businessChannelDescription,
               importance: Importance.high,
               playSound: true,
               enableVibration: true,
@@ -468,9 +541,17 @@ class NotificationService with ChangeNotifier {
         Navigator.of(context).push(
           MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
         );
-      } else if (payload == 'month_end_reminder' || payload == 'new_month_start') {
+      } else if (payload == 'month_end_reminder' || payload == 'new_month_start' || payload.startsWith('invoice') || payload.startsWith('gst_filing')) {
         Navigator.of(context).push(
           MaterialPageRoute(builder: (context) => const InvoiceScreen()),
+        );
+      } else if (payload.startsWith('biz_summary') || payload.startsWith('biz_report')) {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
+        );
+      } else if (payload.startsWith('vendor_payable')) {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => const KhataScreen()),
         );
       }
     } catch (e) {
@@ -1486,6 +1567,395 @@ class NotificationService with ChangeNotifier {
     } catch (e) {
       debugPrint('[NotificationService] Error firing test notification: $e');
       return false;
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // 11. INVOICE DUE & OVERDUE ALERTS (Business Mode)
+  // ──────────────────────────────────────────────────────────
+  Future<void> showInvoiceDueNotification({
+    required String customerName,
+    required String invoiceNumber,
+    required double amount,
+    required bool isOverdue,
+    int daysOverdue = 0,
+  }) async {
+    if (!_masterEnabled || !_invoiceAlertsEnabled) return;
+
+    try {
+      if (!_isInitialized) await initialize();
+
+      final amt = '₹${amount.toStringAsFixed(0)}';
+      String title;
+      String body;
+
+      if (isOverdue) {
+        switch (_notificationLanguage) {
+          case 'hi':
+            title = '🚨 बकाया इनवॉइस: $customerName';
+            body = 'इनवॉइस #$invoiceNumber ($amt) का भुगतान $daysOverdue दिन से बकाया है। ग्राहक को याद दिलाएं।';
+            break;
+          case 'bn':
+            title = '🚨 বকেয়া ইনভয়েস: $customerName';
+            body = 'ইনভয়েস #$invoiceNumber ($amt) $daysOverdue দিন ধরে বকেয়া রয়েছে। পেমেন্ট রিমাইন্ডার পাঠান।';
+            break;
+          case 'hinglish':
+            title = '🚨 Overdue Invoice: $customerName';
+            body = 'Invoice #$invoiceNumber ($amt) $daysOverdue din se pending hai. Customer ko payment reminder bhejein.';
+            break;
+          case 'en':
+          default:
+            title = '🚨 Overdue Invoice: $customerName';
+            body = 'Invoice #$invoiceNumber ($amt) is overdue by $daysOverdue day(s). Tap to send reminder & collect payment.';
+        }
+      } else {
+        switch (_notificationLanguage) {
+          case 'hi':
+            title = '⚠️ आज देय है: इनवॉइस #$invoiceNumber';
+            body = '$customerName से $amt का भुगतान आज देय है। इनवॉइस स्टेटस चेक करें।';
+            break;
+          case 'bn':
+            title = '⚠️ আজ দিতে হবে: ইনভয়েস #$invoiceNumber';
+            body = '$customerName-এর থেকে $amt পেমেন্ট আজ পাওয়ার কথা।';
+            break;
+          case 'hinglish':
+            title = '⚠️ Due Today: Invoice #$invoiceNumber';
+            body = '$customerName se $amt ka payment aaj due hai. Tap karke status check karein.';
+            break;
+          case 'en':
+          default:
+            title = '⚠️ Due Today: Invoice #$invoiceNumber';
+            body = 'Payment of $amt for $customerName is due today. Tap to view invoice details.';
+        }
+      }
+
+      final bigTextStyleInformation = BigTextStyleInformation(
+        body,
+        htmlFormatBigText: false,
+        contentTitle: title,
+        htmlFormatContentTitle: false,
+        summaryText: isOverdue ? 'Overdue Invoice' : 'Invoice Due Today',
+        htmlFormatSummaryText: false,
+      );
+
+      final androidDetails = AndroidNotificationDetails(
+        _businessChannelId,
+        _businessChannelName,
+        channelDescription: _businessChannelDescription,
+        importance: Importance.high,
+        priority: Priority.high,
+        showWhen: true,
+        icon: '@mipmap/ic_launcher',
+        styleInformation: bigTextStyleInformation,
+        color: const Color(0xFF3B82F6),
+      );
+
+      final notificationDetails = NotificationDetails(android: androidDetails);
+      final notifId = (invoiceNumber.hashCode & 0x7FFFFFFF);
+
+      await _notificationsPlugin.show(
+        notifId,
+        title,
+        body,
+        notificationDetails,
+        payload: 'invoice_$invoiceNumber',
+      );
+      debugPrint('[NotificationService] Fired Invoice Due notification: $invoiceNumber');
+    } catch (e) {
+      debugPrint('[NotificationService] Error showing invoice due notification: $e');
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // 12. DAILY SHOP CLOSING (EOD Summary at 8:30 PM)
+  // ──────────────────────────────────────────────────────────
+  Future<void> showDailyBusinessSummaryNotification({
+    required double totalSales,
+    required double netCash,
+    required double pendingCredit,
+  }) async {
+    if (!_masterEnabled || !_dailyBusinessSummaryEnabled) return;
+
+    try {
+      if (!_isInitialized) await initialize();
+
+      final salesStr = '₹${totalSales.toStringAsFixed(0)}';
+      final cashStr = '₹${netCash.toStringAsFixed(0)}';
+      final creditStr = '₹${pendingCredit.toStringAsFixed(0)}';
+
+      String title;
+      String body;
+
+      switch (_notificationLanguage) {
+        case 'hi':
+          title = '🏪 आज का दुकान हिसाब (Daily Summary)';
+          body = 'कुल बिक्री: $salesStr | नकद: $cashStr | बाकी उधार: $creditStr। आज का हिसाब बंद करने के लिए टैप करें।';
+          break;
+        case 'bn':
+          title = '🏪 আজকের ব্যবসার দৈনিক হিসাব';
+          body = 'মোট বিক্রি: $salesStr | নগদ: $cashStr | বাকি ধার: $creditStr। দিনের হিসাব মেলাতে ট্যাপ করুন।';
+          break;
+        case 'hinglish':
+          title = '🏪 Aaj Ka Shop Hisab (Daily Summary)';
+          body = 'Total Sales: $salesStr | Cash: $cashStr | Pending Udhar: $creditStr. Aaj ka hisab close karne ke liye tap karein.';
+          break;
+        case 'en':
+        default:
+          title = '🏪 Today\'s Business Closing Summary';
+          body = 'Total Sales: $salesStr | Cash Collected: $cashStr | Pending Dues: $creditStr. Tap to review your day\'s profit.';
+      }
+
+      final bigTextStyleInformation = BigTextStyleInformation(
+        '📊 Daily Shop Closing Tally:\n• Total Sales: $salesStr\n• Cash In Hand: $cashStr\n• Pending Customer Credit: $creditStr\n\nTap to verify your daily registers & analytics.',
+        htmlFormatBigText: false,
+        contentTitle: title,
+        htmlFormatContentTitle: false,
+        summaryText: 'Daily Shop Closing',
+        htmlFormatSummaryText: false,
+      );
+
+      final androidDetails = AndroidNotificationDetails(
+        _businessChannelId,
+        _businessChannelName,
+        channelDescription: _businessChannelDescription,
+        importance: Importance.high,
+        priority: Priority.high,
+        showWhen: true,
+        icon: '@mipmap/ic_launcher',
+        styleInformation: bigTextStyleInformation,
+        color: const Color(0xFF00D09C),
+      );
+
+      final notificationDetails = NotificationDetails(android: androidDetails);
+
+      await _notificationsPlugin.show(
+        7701,
+        title,
+        body,
+        notificationDetails,
+        payload: 'biz_summary_daily',
+      );
+      debugPrint('[NotificationService] Fired Daily Business Summary notification.');
+    } catch (e) {
+      debugPrint('[NotificationService] Error showing daily business summary notification: $e');
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // 13. SUPPLIER & VENDOR PAYABLE DUES (Business Mode)
+  // ──────────────────────────────────────────────────────────
+  Future<void> showVendorPayableNotification({
+    required String vendorName,
+    required double amount,
+    required DateTime dueDate,
+  }) async {
+    if (!_masterEnabled || !_vendorPayableAlertsEnabled) return;
+
+    try {
+      if (!_isInitialized) await initialize();
+
+      final amt = '₹${amount.toStringAsFixed(0)}';
+      String title;
+      String body;
+
+      switch (_notificationLanguage) {
+        case 'hi':
+          title = '🔔 सप्लायर भुगतान अलर्ट: $vendorName';
+          body = '$vendorName को $amt का भुगतान देय है। कृपया सप्लायर खाता चेक करें।';
+          break;
+        case 'bn':
+          title = '🔔 সরবরাহকারী পেমেন্ট অ্যালার্ট: $vendorName';
+          body = '$vendorName-কে $amt পেমেন্ট করতে হবে। খাতা দেখে পরিশোধ করুন।';
+          break;
+        case 'hinglish':
+          title = '🔔 Vendor Payment Alert: $vendorName';
+          body = '$vendorName ko $amt ka payment due hai. Wholesaler khata check karein.';
+          break;
+        case 'en':
+        default:
+          title = '🔔 Vendor Payment Alert: $vendorName';
+          body = 'Payment of $amt is due to supplier $vendorName. Tap to view ledger and settle dues.';
+      }
+
+      final bigTextStyleInformation = BigTextStyleInformation(
+        body,
+        htmlFormatBigText: false,
+        contentTitle: title,
+        htmlFormatContentTitle: false,
+        summaryText: 'Vendor Payable Due',
+        htmlFormatSummaryText: false,
+      );
+
+      final androidDetails = AndroidNotificationDetails(
+        _businessChannelId,
+        _businessChannelName,
+        channelDescription: _businessChannelDescription,
+        importance: Importance.high,
+        priority: Priority.high,
+        showWhen: true,
+        icon: '@mipmap/ic_launcher',
+        styleInformation: bigTextStyleInformation,
+        color: const Color(0xFFF59E0B),
+      );
+
+      final notificationDetails = NotificationDetails(android: androidDetails);
+      final notifId = (vendorName.hashCode & 0x7FFFFFFF);
+
+      await _notificationsPlugin.show(
+        notifId,
+        title,
+        body,
+        notificationDetails,
+        payload: 'vendor_payable_$vendorName',
+      );
+      debugPrint('[NotificationService] Fired Vendor Payable notification for $vendorName');
+    } catch (e) {
+      debugPrint('[NotificationService] Error showing vendor payable notification: $e');
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // 14. WEEKLY BUSINESS P&L REPORT (Sunday Evening)
+  // ──────────────────────────────────────────────────────────
+  Future<void> showWeeklyBusinessReportNotification({
+    required double netProfit,
+    required double marginPercent,
+    required double totalRevenue,
+  }) async {
+    if (!_masterEnabled || !_weeklyBusinessReportEnabled) return;
+
+    try {
+      if (!_isInitialized) await initialize();
+
+      final profitStr = '₹${netProfit.toStringAsFixed(0)}';
+      final revStr = '₹${totalRevenue.toStringAsFixed(0)}';
+      final marginStr = '${marginPercent.toStringAsFixed(1)}%';
+
+      String title;
+      String body;
+
+      switch (_notificationLanguage) {
+        case 'hi':
+          title = '🚀 साप्ताहिक बिज़नेस रिपोर्ट: $profitStr का शुद्ध लाभ';
+          body = 'इस हफ़्ते कुल रेवेन्यू $revStr रहा और प्रॉफ़िट मार्जिन $marginStr है। पूरा विश्लेषण देखें।';
+          break;
+        case 'bn':
+          title = '🚀 সাপ্তাহিক ব্যবসার রিপোর্ট: $profitStr লাভ';
+          body = 'এই সপ্তাহে মোট বিক্রি $revStr এবং প্রফিট মার্জিন $marginStr। সম্পূর্ণ রিপোর্ট দেখতে ট্যাপ করুন।';
+          break;
+        case 'hinglish':
+          title = '🚀 Weekly Business Report: $profitStr Net Profit';
+          body = 'Is week total revenue $revStr raha aur profit margin $marginStr hai. Detailed P&L report check karein.';
+          break;
+        case 'en':
+        default:
+          title = '🚀 Weekly Business Report: $profitStr Net Profit';
+          body = 'This week\'s revenue reached $revStr with a healthy $marginStr margin. Tap to view full analytics.';
+      }
+
+      final bigTextStyleInformation = BigTextStyleInformation(
+        '📈 Weekly Performance Summary:\n• Total Revenue: $revStr\n• Net Profit: $profitStr\n• Margin: $marginStr\n\nTap to explore sales growth and profit trends.',
+        htmlFormatBigText: false,
+        contentTitle: title,
+        htmlFormatContentTitle: false,
+        summaryText: 'Weekly Business P&L',
+        htmlFormatSummaryText: false,
+      );
+
+      final androidDetails = AndroidNotificationDetails(
+        _businessChannelId,
+        _businessChannelName,
+        channelDescription: _businessChannelDescription,
+        importance: Importance.high,
+        priority: Priority.high,
+        showWhen: true,
+        icon: '@mipmap/ic_launcher',
+        styleInformation: bigTextStyleInformation,
+        color: const Color(0xFF6366F1),
+      );
+
+      final notificationDetails = NotificationDetails(android: androidDetails);
+
+      await _notificationsPlugin.show(
+        7702,
+        title,
+        body,
+        notificationDetails,
+        payload: 'biz_report_weekly',
+      );
+      debugPrint('[NotificationService] Fired Weekly Business Report notification.');
+    } catch (e) {
+      debugPrint('[NotificationService] Error showing weekly business report notification: $e');
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // 15. GST & TAX FILING REMINDER (10th & 20th of Month)
+  // ──────────────────────────────────────────────────────────
+  Future<void> showGstFilingNotification({
+    required String monthName,
+    required int daysLeft,
+  }) async {
+    if (!_masterEnabled || !_gstAlertsEnabled) return;
+
+    try {
+      if (!_isInitialized) await initialize();
+
+      String title;
+      String body;
+
+      switch (_notificationLanguage) {
+        case 'hi':
+          title = '🏛️ GST रिटर्न फाइलिंग रिमाइंडर ($monthName)';
+          body = 'GSTR रिटर्न फाइल करने में $daysLeft दिन शेष हैं। इनवॉइस सेल्स रिपोर्ट तुरंत एक्सपोर्ट करें।';
+          break;
+        case 'bn':
+          title = '🏛️ GST রিটার্ন ফাইলিং রিমাইন্ডার ($monthName)';
+          body = 'GSTR রিটার্ন ফাইলের জন্য আর $daysLeft দিন বাকি। বিক্রয় ইনভয়েস রিপোর্ট এক্সপোর্ট করতে ট্যাপ করুন।';
+          break;
+        case 'hinglish':
+          title = '🏛️ GST Return Filing Reminder ($monthName)';
+          body = 'GST return file karne ke liye $daysLeft days bache hain. Sales invoices report export karein.';
+          break;
+        case 'en':
+        default:
+          title = '🏛️ GST Return Filing Reminder ($monthName)';
+          body = 'GSTR-1 / 3B tax filing is due in $daysLeft days. Tap to export monthly GST sales invoice report.';
+      }
+
+      final bigTextStyleInformation = BigTextStyleInformation(
+        body,
+        htmlFormatBigText: false,
+        contentTitle: title,
+        htmlFormatContentTitle: false,
+        summaryText: 'GST Tax Compliance',
+        htmlFormatSummaryText: false,
+      );
+
+      final androidDetails = AndroidNotificationDetails(
+        _businessChannelId,
+        _businessChannelName,
+        channelDescription: _businessChannelDescription,
+        importance: Importance.high,
+        priority: Priority.high,
+        showWhen: true,
+        icon: '@mipmap/ic_launcher',
+        styleInformation: bigTextStyleInformation,
+        color: const Color(0xFF0EA5E9),
+      );
+
+      final notificationDetails = NotificationDetails(android: androidDetails);
+
+      await _notificationsPlugin.show(
+        7703,
+        title,
+        body,
+        notificationDetails,
+        payload: 'gst_filing_reminder',
+      );
+      debugPrint('[NotificationService] Fired GST Filing notification.');
+    } catch (e) {
+      debugPrint('[NotificationService] Error showing GST filing notification: $e');
     }
   }
 }

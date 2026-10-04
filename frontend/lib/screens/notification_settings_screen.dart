@@ -701,6 +701,143 @@ class NotificationSettingsScreen extends StatelessWidget {
                             ),
                           ],
                         ),
+
+                        const SizedBox(height: 24),
+
+                        // 4. BUSINESS & SHOP MODE ALERTS (Active even in Personal Mode)
+                        _buildSectionHeader('BUSINESS & SHOP ALERTS', isDark),
+                        const SizedBox(height: 8),
+                        _buildSettingsCard(
+                          isDark: isDark,
+                          cardBg: cardBg,
+                          borderColor: borderColor,
+                          children: [
+                            // 1. Invoice Due & Overdue
+                            _buildFeatureTileWithTest(
+                              context: context,
+                              isDark: isDark,
+                              primaryColor: primaryColor,
+                              icon: Icons.receipt_long_rounded,
+                              iconColor: const Color(0xFF3B82F6),
+                              title: 'Invoice Due & Overdue Alerts',
+                              subtitle: 'Alerts when customer invoices are due or overdue with 1-tap WhatsApp link',
+                              isEnabled: isMasterOn && service.invoiceAlertsEnabled,
+                              isMasterOn: isMasterOn,
+                              onToggle: (val) => service.setInvoiceAlertsEnabled(val),
+                              onTestTap: () async {
+                                await service.showInvoiceDueNotification(
+                                  customerName: 'Ramesh Trading Co.',
+                                  invoiceNumber: 'INV-1048',
+                                  amount: 8500,
+                                  isOverdue: true,
+                                  daysOverdue: 3,
+                                );
+                                if (context.mounted) {
+                                  CustomToast.show(context, '🧾 Test Overdue Invoice Alert sent to status bar!');
+                                }
+                              },
+                            ),
+                            Divider(height: 1, color: borderColor),
+
+                            // 2. Daily Shop Closing
+                            _buildFeatureTileWithTest(
+                              context: context,
+                              isDark: isDark,
+                              primaryColor: primaryColor,
+                              icon: Icons.storefront_rounded,
+                              iconColor: const Color(0xFF00D09C),
+                              title: 'Daily Shop Closing (EOD Summary)',
+                              subtitle: 'Raat ko 8:30 PM par din bhar ki sales, cash aur udhar ka tally hisab',
+                              isEnabled: isMasterOn && service.dailyBusinessSummaryEnabled,
+                              isMasterOn: isMasterOn,
+                              onToggle: (val) => service.setDailyBusinessSummaryEnabled(val),
+                              onTestTap: () async {
+                                await service.showDailyBusinessSummaryNotification(
+                                  totalSales: 24500,
+                                  netCash: 18200,
+                                  pendingCredit: 6300,
+                                );
+                                if (context.mounted) {
+                                  CustomToast.show(context, '🏪 Test Daily Shop Closing Summary sent to status bar!');
+                                }
+                              },
+                            ),
+                            Divider(height: 1, color: borderColor),
+
+                            // 3. Vendor Payable Dues
+                            _buildFeatureTileWithTest(
+                              context: context,
+                              isDark: isDark,
+                              primaryColor: primaryColor,
+                              icon: Icons.local_shipping_rounded,
+                              iconColor: const Color(0xFFF59E0B),
+                              title: 'Supplier & Vendor Payable Alerts',
+                              subtitle: 'Wholesalers aur suppliers ko diye jaane wale payments ki upcoming reminder',
+                              isEnabled: isMasterOn && service.vendorPayableAlertsEnabled,
+                              isMasterOn: isMasterOn,
+                              onToggle: (val) => service.setVendorPayableAlertsEnabled(val),
+                              onTestTap: () async {
+                                await service.showVendorPayableNotification(
+                                  vendorName: 'Metro Wholesalers',
+                                  amount: 15000,
+                                  dueDate: DateTime.now().add(const Duration(days: 1)),
+                                );
+                                if (context.mounted) {
+                                  CustomToast.show(context, '🔔 Test Vendor Payable Alert sent to status bar!');
+                                }
+                              },
+                            ),
+                            Divider(height: 1, color: borderColor),
+
+                            // 4. Weekly Business P&L Report
+                            _buildFeatureTileWithTest(
+                              context: context,
+                              isDark: isDark,
+                              primaryColor: primaryColor,
+                              icon: Icons.trending_up_rounded,
+                              iconColor: const Color(0xFF8B5CF6),
+                              title: 'Weekly Profit & Loss (P&L) Report',
+                              subtitle: 'Sunday evening ko business ka net profit, margin aur sales growth report',
+                              isEnabled: isMasterOn && service.weeklyBusinessReportEnabled,
+                              isMasterOn: isMasterOn,
+                              onToggle: (val) => service.setWeeklyBusinessReportEnabled(val),
+                              onTestTap: () async {
+                                await service.showWeeklyBusinessReportNotification(
+                                  netProfit: 34200,
+                                  marginPercent: 28.5,
+                                  totalRevenue: 120000,
+                                );
+                                if (context.mounted) {
+                                  CustomToast.show(context, '📈 Test Weekly P&L Report sent to status bar!');
+                                }
+                              },
+                            ),
+                            Divider(height: 1, color: borderColor),
+
+                            // 5. GST & Tax Filing Reminder
+                            _buildFeatureTileWithTest(
+                              context: context,
+                              isDark: isDark,
+                              primaryColor: primaryColor,
+                              icon: Icons.account_balance_rounded,
+                              iconColor: const Color(0xFF0EA5E9),
+                              title: 'GST & Tax Filing Reminders',
+                              subtitle: 'Monthly GSTR-1, 3B returns aur invoice sales export reminders',
+                              isEnabled: isMasterOn && service.gstAlertsEnabled,
+                              isMasterOn: isMasterOn,
+                              onToggle: (val) => service.setGstAlertsEnabled(val),
+                              onTestTap: () async {
+                                await service.showGstFilingNotification(
+                                  monthName: 'October',
+                                  daysLeft: 3,
+                                );
+                                if (context.mounted) {
+                                  CustomToast.show(context, '🏛️ Test GST Filing Reminder sent to status bar!');
+                                }
+                              },
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
