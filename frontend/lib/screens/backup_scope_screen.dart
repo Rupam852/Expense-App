@@ -245,7 +245,7 @@ class BackupScopeStrings {
         itemProfileTitle: 'பயனர் சுயவிவரம்',
         itemProfileDesc: 'பெயர், அவதார், நாணயம் மற்றும் தனிப்பயன் விசைகள்.',
         itemInvoicesTitle: 'மாதாந்திர அறிக்கைகள் (PDF)',
-        itemInvoicesDesc: 'உருவாக்கப்பட்ட சமீபத்திய 15 PDF அறிக்கைகள்.',
+        itemInvoicesDesc: 'PDF கோப்புகள் கிளவுடில் சேமிக்கப்படுவதில்லை. உங்கள் பரிவர்த்தனை தரவிலிருந்து போனில் நேரடியாக புதிய PDF உருவாக்கப்படுகிறது.',
         itemChatTitle: 'AI அரட்டை உரையாடல்கள்',
         itemChatDesc: 'போனில் மட்டுமே உள்ள 100% தனிப்பட்ட உரையாடல்கள்.',
         itemCalcHistoryTitle: 'கால்குலேட்டர் வரலாறு',
@@ -288,7 +288,7 @@ class BackupScopeStrings {
         itemProfileTitle: 'వినియోగదారు ప్రొఫైల్',
         itemProfileDesc: 'పేరు, అవతార్, కరెన్సీ మరియు నోటిఫికేషన్ టోకెన్.',
         itemInvoicesTitle: 'నెలవారీ స్టేట్‌మెంట్‌లు (PDF)',
-        itemInvoicesDesc: 'క్లౌడ్‌లో భద్రపరచబడిన తాజా 15 PDF స్టేట్‌మెంట్‌లు.',
+        itemInvoicesDesc: 'PDF ఫైళ్లు క్లౌడ్‌లో నిల్వ చేయబడవు. అవసరమైనప్పుడు మీ లావాదేవీల డేటా నుండి నేరుగా ఫోన్‌లో కొత్త PDF రూపొందించబడుతుంది.',
         itemChatTitle: 'AI చాట్ సంభాషణలు',
         itemChatDesc: 'మీ ఫోన్ SQLite డేటాబేస్‌లో మాత్రమే ఉండే 100% ప్రైవేట్ చాట్.',
         itemCalcHistoryTitle: 'కాలిక్యులేటర్ చరిత్ర',
@@ -331,7 +331,7 @@ class BackupScopeStrings {
         itemProfileTitle: 'वापरकर्ता प्रोफाइल',
         itemProfileDesc: 'नाव, प्रोफाइल फोटो, चलन आणि सूचना टोकन.',
         itemInvoicesTitle: 'मासिक स्टेटमेंट (PDF)',
-        itemInvoicesDesc: 'तयार केलेली नवीनतम 15 मासिक PDF स्टेटमेंट्स.',
+        itemInvoicesDesc: 'PDF फायली क्लाउडवर सेव्ह होत नाहीत. गरज असेल तेव्हा तुमच्या व्यवहारांच्या डेटावरून थेट फोनवर नवीन PDF स्टेटमेंट तयार केले जाते.',
         itemChatTitle: 'AI चॅट संभाषणे',
         itemChatDesc: '100% खाजगी संभाषणे जी फक्त फोनच्या SQLite डेटाबेसमध्ये राहतात.',
         itemCalcHistoryTitle: 'कॅल्क्युलेटर इतिहास',
@@ -374,7 +374,7 @@ class BackupScopeStrings {
         itemProfileTitle: 'વપરાશકર્તા પ્રોફાઇલ',
         itemProfileDesc: 'નામ, અવતાર, ચલણ અને કસ્ટમ કીઝ.',
         itemInvoicesTitle: 'માસિક સ્ટેટમેન્ટ્સ (PDF)',
-        itemInvoicesDesc: 'ક્લાઉડમાં સાચવેલા છેલ્લા 15 PDF સ્ટેટમેન્ટ્સ.',
+        itemInvoicesDesc: 'PDF ફાઇલો ક્લાઉડમાં સાચવવામાં આવતી નથી. જરૂર પડ્યે તમારા વ્યવહાર ડેટામાંથી સીધા ફોનમાં નવું PDF સ્ટેટમેન્ટ બનાવવામાં આવે છે.',
         itemChatTitle: 'AI ચેટ વાતચીત',
         itemChatDesc: '100% ખાનગી વાતચીત જે ફક્ત ફોનના SQLite ડેટાબેઝમાં રહે છે.',
         itemCalcHistoryTitle: 'કેલ્ક્યુલેટર ઇતિહાસ',
@@ -417,7 +417,7 @@ class BackupScopeStrings {
         itemProfileTitle: 'ಬಳಕೆದಾರರ ಪ್ರೊಫೈಲ್',
         itemProfileDesc: 'ಹೆಸರು, ಅವತಾರ, ಕರೆನ್ಸಿ ಮತ್ತು ಪುಶ್ ಟೋಕನ್.',
         itemInvoicesTitle: 'ಮಾಸಿಕ ಸ್ಟೇಟ್‌ಮೆಂಟ್‌ಗಳು (PDF)',
-        itemInvoicesDesc: 'ಕ್ಲೌಡ್‌ನಲ್ಲಿ ಉಳಿಸಲಾದ ಇತ್ತೀಚಿನ 15 PDF ಸ್ಟೇಟ್‌ಮೆಂಟ್‌ಗಳು.',
+        itemInvoicesDesc: 'PDF ಫೈಲ್‌ಗಳನ್ನು ಕ್ಲೌಡ್‌ನಲ್ಲಿ ಸಂಗ್ರಹಿಸಲಾಗುವುದಿಲ್ಲ. ಅಗತ್ಯವಿದ್ದಾಗ ನಿಮ್ಮ ವಹಿವಾಟು ಡೇಟಾದಿಂದ ನೇರವಾಗಿ ಫೋನ್‌ನಲ್ಲಿ ಹೊಸ PDF ರಚಿಸಲಾಗುತ್ತದೆ.',
         itemChatTitle: 'AI ಚಾಟ್ ಸಂಭಾಷಣೆಗಳು',
         itemChatDesc: 'ನಿಮ್ಮ ಫೋನ್‌ನ SQLite ಡೇಟಾಬೇಸ್‌ನಲ್ಲಿ ಮಾತ್ರ ಇರುವ 100% ಖಾಸಗಿ ಚಾಟ್.',
         itemCalcHistoryTitle: 'ಕ್ಯಾಲ್ಕುಲೇಟರ್ ಇತಿಹಾಸ',
@@ -552,6 +552,46 @@ class _BackupScopeScreenState extends State<BackupScopeScreen> with SingleTicker
         color: const Color(0xFF10B981),
         badge: badge,
       );
+    } else if (langCode.startsWith('ta')) {
+      return _ScopeItemData(
+        title: 'பொருள் பட்டியல் & இருப்பு',
+        desc: 'பொருள் பெயர், வாங்கு/விற்பனை விலை, பார்கோடு, இருப்பு மற்றும் குறைந்த இருப்பு வரம்பு.',
+        icon: Icons.inventory_2_outlined,
+        color: const Color(0xFF10B981),
+        badge: badge,
+      );
+    } else if (langCode.startsWith('te')) {
+      return _ScopeItemData(
+        title: 'వస్తువుల జాబితా & స్టాక్',
+        desc: 'వస్తువు పేరు, కొనుగోలు/అమ్మకం ధర, బార్‌కోడ్, ప్రస్తుత స్టాక్ మరియు లో-స్టాక్ పరిమితి.',
+        icon: Icons.inventory_2_outlined,
+        color: const Color(0xFF10B981),
+        badge: badge,
+      );
+    } else if (langCode.startsWith('mr')) {
+      return _ScopeItemData(
+        title: 'वस्तू कॅटलॉग व इन्व्हेंटरी स्टॉक',
+        desc: 'वस्तूचे नाव, खरेदी/विक्री किंमत, बारकोड, शिल्लक स्टॉक आणि कमी स्टॉक मर्यादा.',
+        icon: Icons.inventory_2_outlined,
+        color: const Color(0xFF10B981),
+        badge: badge,
+      );
+    } else if (langCode.startsWith('gu')) {
+      return _ScopeItemData(
+        title: 'પ્રોડક્ટ કેટલોગ અને સ્ટોક',
+        desc: 'વસ્તુનું નામ, ખરીદ/વેચાણ કિંમત, બારકોડ, વર્તમાન સ્ટોક અને લો-સ્ટોક મર્યાદા.',
+        icon: Icons.inventory_2_outlined,
+        color: const Color(0xFF10B981),
+        badge: badge,
+      );
+    } else if (langCode.startsWith('kn')) {
+      return _ScopeItemData(
+        title: 'ಉತ್ಪನ್ನ ಕ್ಯಾಟಲಾಗ್ ಮತ್ತು ದಾಸ್ತಾನು',
+        desc: 'ಉತ್ಪನ್ನದ ಹೆಸರು, ಖರೀದಿ/ಮಾರಾಟ ಬೆಲೆ, ಬಾರ್‌ಕೋಡ್, ಪ್ರಸ್ತುತ ದಾಸ್ತಾನು ಮತ್ತು ಕಡಿಮೆ ದಾಸ್ತಾನು ಮಿತಿ.',
+        icon: Icons.inventory_2_outlined,
+        color: const Color(0xFF10B981),
+        badge: badge,
+      );
     }
     return _ScopeItemData(
       title: 'Product Catalog & Inventory Stock',
@@ -579,6 +619,46 @@ class _BackupScopeScreenState extends State<BackupScopeScreen> with SingleTicker
         color: const Color(0xFF6366F1),
         badge: badge,
       );
+    } else if (langCode.startsWith('ta')) {
+      return _ScopeItemData(
+        title: 'விற்பனை & ஜிஎஸ்டி பில்கள்',
+        desc: 'வாடிக்கையாளர் பில்கள், விற்கப்பட்ட பொருட்கள், ஜிஎஸ்டி, தள்ளுபடி மற்றும் கட்டண முறைகள்.',
+        icon: Icons.point_of_sale_rounded,
+        color: const Color(0xFF6366F1),
+        badge: badge,
+      );
+    } else if (langCode.startsWith('te')) {
+      return _ScopeItemData(
+        title: 'వ్యాపార అమ్మకాలు & GST బిల్లులు',
+        desc: 'కస్టమర్ బిల్లులు, అమ్మిన వస్తువులు, GST, తగ్గింపులు మరియు చెల్లింపు విధానాలు.',
+        icon: Icons.point_of_sale_rounded,
+        color: const Color(0xFF6366F1),
+        badge: badge,
+      );
+    } else if (langCode.startsWith('mr')) {
+      return _ScopeItemData(
+        title: 'दुकान विक्री व GST बिले',
+        desc: 'ग्राहक बिल, विकलेल्या वस्तू, GST कर, सवलत आणि पेमेंट पद्धती.',
+        icon: Icons.point_of_sale_rounded,
+        color: const Color(0xFF6366F1),
+        badge: badge,
+      );
+    } else if (langCode.startsWith('gu')) {
+      return _ScopeItemData(
+        title: 'દુકાન વેચાણ અને GST બિલ',
+        desc: 'ગ્રાહક બિલ, વેચેલી વસ્તુઓ, GST, ડિસ્કાઉન્ટ અને ચુકવણી પદ્ધતિઓ.',
+        icon: Icons.point_of_sale_rounded,
+        color: const Color(0xFF6366F1),
+        badge: badge,
+      );
+    } else if (langCode.startsWith('kn')) {
+      return _ScopeItemData(
+        title: 'ವ್ಯಾಪಾರ ಮಾರಾಟ ಮತ್ತು GST ಬಿಲ್‌ಗಳು',
+        desc: 'ಗ್ರಾಹಕರ ಬಿಲ್‌ಗಳು, ಮಾರಾಟವಾದ ವಸ್ತುಗಳು, GST, ರಿಯಾಯಿತಿ ಮತ್ತು ಪಾವತಿ ವಿಧಾನಗಳು.',
+        icon: Icons.point_of_sale_rounded,
+        color: const Color(0xFF6366F1),
+        badge: badge,
+      );
     }
     return _ScopeItemData(
       title: 'Business Sales & GST Invoices',
@@ -602,6 +682,46 @@ class _BackupScopeScreenState extends State<BackupScopeScreen> with SingleTicker
       return _ScopeItemData(
         title: 'दुकान व व्यापार प्रोफ़ाइल',
         desc: 'दुकान का नाम, मालिक, मोबाइल नंबर, पता, GSTIN और लिंक्ड UPI पेमेंट ID।',
+        icon: Icons.storefront_rounded,
+        color: const Color(0xFF3B82F6),
+        badge: badge,
+      );
+    } else if (langCode.startsWith('ta')) {
+      return _ScopeItemData(
+        title: 'கடை மற்றும் வணிக சுயவிவரம்',
+        desc: 'கடை பெயர், உரிமையாளர், தொலைபேசி எண், முகவரி, ஜிஎஸ்டின் மற்றும் UPI ஐடி.',
+        icon: Icons.storefront_rounded,
+        color: const Color(0xFF3B82F6),
+        badge: badge,
+      );
+    } else if (langCode.startsWith('te')) {
+      return _ScopeItemData(
+        title: 'దుకాణం & వ్యాపార ప్రొఫైల్',
+        desc: 'దుకాణం పేరు, యజమాని, ఫోన్ నంబర్, చిరునామా, GSTIN మరియు UPI ID.',
+        icon: Icons.storefront_rounded,
+        color: const Color(0xFF3B82F6),
+        badge: badge,
+      );
+    } else if (langCode.startsWith('mr')) {
+      return _ScopeItemData(
+        title: 'दुकान व व्यवसाय प्रोफाइल',
+        desc: 'दुकानाचे नाव, मालक, मोबाईल नंबर, पत्ता, GSTIN आणि लिंक्ड UPI आयडी.',
+        icon: Icons.storefront_rounded,
+        color: const Color(0xFF3B82F6),
+        badge: badge,
+      );
+    } else if (langCode.startsWith('gu')) {
+      return _ScopeItemData(
+        title: 'દુકાન અને વ્યવસાય પ્રોફાઇલ',
+        desc: 'દુકાનનું નામ, માલિક, ફોન નંબર, સરનામું, GSTIN અને UPI ID.',
+        icon: Icons.storefront_rounded,
+        color: const Color(0xFF3B82F6),
+        badge: badge,
+      );
+    } else if (langCode.startsWith('kn')) {
+      return _ScopeItemData(
+        title: 'ಅಂಗಡಿ ಮತ್ತು ವ್ಯಾಪಾರ ಪ್ರೊಫೈಲ್',
+        desc: 'ಅಂಗಡಿಯ ಹೆಸರು, ಮಾಲೀಕರು, ಫೋನ್ ಸಂಖ್ಯೆ, ವಿಳಾಸ, GSTIN ಮತ್ತು UPI ID.',
         icon: Icons.storefront_rounded,
         color: const Color(0xFF3B82F6),
         badge: badge,
