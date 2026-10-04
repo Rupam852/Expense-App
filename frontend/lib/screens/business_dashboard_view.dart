@@ -23,6 +23,7 @@ import 'khata_screen.dart';
 import 'invoice_screen.dart';
 import 'calculator_hub_screen.dart';
 import 'settings_screen.dart';
+import '../utils/app_strings.dart';
 
 class BusinessDashboardView extends StatefulWidget {
   const BusinessDashboardView({super.key});
@@ -815,7 +816,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                 Expanded(
                   child: _buildMetricCard(
                     isDark: isDark,
-                    title: 'Sales ($_filterPeriod)',
+                    title: '${AppStrings.tr(context, 'sales')} ($_filterPeriod)',
                     amount: '₹${totalSales.toStringAsFixed(0)}',
                     subtitle: '${_sales.length} bills generated',
                     icon: Icons.trending_up_rounded,
@@ -838,7 +839,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                     },
                     child: _buildMetricCard(
                       isDark: isDark,
-                      title: 'Expenses ($_filterPeriod)',
+                      title: '${AppStrings.tr(context, 'expenses')} ($_filterPeriod)',
                       amount: '₹${_periodExpensesTotal.toStringAsFixed(0)}',
                       subtitle: '${_businessExpenses.length} entries • Tap (+)',
                       icon: Icons.trending_down_rounded,
@@ -874,7 +875,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'NET PROFIT & MARGIN',
+                        AppStrings.tr(context, 'net_profit').toUpperCase(),
                         style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white70, letterSpacing: 0.8),
                       ),
                       const SizedBox(height: 4),
@@ -935,7 +936,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
-                                'To Receive',
+                                AppStrings.tr(context, 'to_receive'),
                                 style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -969,7 +970,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
-                                'To Pay',
+                                AppStrings.tr(context, 'to_pay'),
                                 style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
                                 overflow: TextOverflow.ellipsis,
                               ),

@@ -70,10 +70,12 @@ class GrowExpenseApp extends StatelessWidget {
           theme: GrowwTheme.lightTheme,
           darkTheme: GrowwTheme.darkTheme,
           themeMode: userProvider.themeMode, // System Default (Device Default), Dark, or Light
-          locale: const Locale('en', 'IN'), // Forces DD/MM/YYYY date inputs in date picker
+          locale: Locale(userProvider.appLanguage, 'IN'),
           supportedLocales: const [
             Locale('en', 'IN'),
             Locale('en', 'US'),
+            Locale('hi', 'IN'),
+            Locale('bn', 'IN'),
           ],
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,

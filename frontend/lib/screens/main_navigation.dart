@@ -17,6 +17,7 @@ import 'add_business_sale_screen.dart';
 import 'ai_advisor_screen.dart';
 import '../widgets/voice_expense_dialog.dart';
 import '../widgets/monthly_rollover_dialog.dart';
+import '../utils/app_strings.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -392,58 +393,58 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
             });
           },
           items: isBusiness
-              ? const [
+              ? [
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.storefront_outlined),
-                    activeIcon: Icon(Icons.storefront_rounded),
-                    label: 'Business',
+                    icon: const Icon(Icons.storefront_outlined),
+                    activeIcon: const Icon(Icons.storefront_rounded),
+                    label: AppStrings.tr(context, 'tab_business'),
                   ),
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.receipt_long_outlined),
-                    activeIcon: Icon(Icons.receipt_long),
-                    label: 'Invoices',
+                    icon: const Icon(Icons.receipt_long_outlined),
+                    activeIcon: const Icon(Icons.receipt_long),
+                    label: AppStrings.tr(context, 'tab_invoices'),
                   ),
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.menu_book_outlined),
-                    activeIcon: Icon(Icons.menu_book_rounded),
-                    label: 'Khata',
+                    icon: const Icon(Icons.menu_book_outlined),
+                    activeIcon: const Icon(Icons.menu_book_rounded),
+                    label: AppStrings.tr(context, 'tab_khata'),
                   ),
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.bar_chart_outlined),
-                    activeIcon: Icon(Icons.bar_chart),
-                    label: 'Analytics',
+                    icon: const Icon(Icons.bar_chart_outlined),
+                    activeIcon: const Icon(Icons.bar_chart),
+                    label: AppStrings.tr(context, 'tab_analytics'),
                   ),
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.account_balance_outlined),
-                    activeIcon: Icon(Icons.account_balance),
-                    label: 'Payments',
+                    icon: const Icon(Icons.account_balance_outlined),
+                    activeIcon: const Icon(Icons.account_balance),
+                    label: AppStrings.tr(context, 'tab_payments'),
                   ),
                 ]
-              : const [
+              : [
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.dashboard_outlined),
-                    activeIcon: Icon(Icons.dashboard),
-                    label: 'Home',
+                    icon: const Icon(Icons.dashboard_outlined),
+                    activeIcon: const Icon(Icons.dashboard),
+                    label: AppStrings.tr(context, 'tab_home'),
                   ),
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.pie_chart_outline_outlined),
-                    activeIcon: Icon(Icons.pie_chart),
-                    label: 'Budgets',
+                    icon: const Icon(Icons.pie_chart_outline_outlined),
+                    activeIcon: const Icon(Icons.pie_chart),
+                    label: AppStrings.tr(context, 'tab_budgets'),
                   ),
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.bar_chart_outlined),
-                    activeIcon: Icon(Icons.bar_chart),
-                    label: 'Analytics',
+                    icon: const Icon(Icons.bar_chart_outlined),
+                    activeIcon: const Icon(Icons.bar_chart),
+                    label: AppStrings.tr(context, 'tab_analytics'),
                   ),
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.receipt_long_outlined),
-                    activeIcon: Icon(Icons.receipt_long),
-                    label: 'Invoices',
+                    icon: const Icon(Icons.receipt_long_outlined),
+                    activeIcon: const Icon(Icons.receipt_long),
+                    label: AppStrings.tr(context, 'tab_invoices'),
                   ),
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.account_balance_outlined),
-                    activeIcon: Icon(Icons.account_balance),
-                    label: 'Payments',
+                    icon: const Icon(Icons.account_balance_outlined),
+                    activeIcon: const Icon(Icons.account_balance),
+                    label: AppStrings.tr(context, 'tab_payments'),
                   ),
                 ],
         ),

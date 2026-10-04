@@ -583,7 +583,7 @@ class SettingsScreen extends StatelessWidget {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'Settings',
+          AppStrings.tr(context, 'settings_title'),
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -934,7 +934,7 @@ class SettingsScreen extends StatelessWidget {
                 // 2.1. DEDICATED BUSINESS SETTINGS SECTION (Visible only in Business Mode)
                 if (userProvider.isBusinessMode) ...[
                   const SizedBox(height: 24),
-                  _buildSectionHeader('BUSINESS MANAGEMENT', isDark),
+                  _buildSectionHeader(AppStrings.tr(context, 'business_settings'), isDark),
                   const SizedBox(height: 8),
                   _buildSettingsCard(
                     isDark: isDark,
@@ -973,7 +973,7 @@ class SettingsScreen extends StatelessWidget {
                 const SizedBox(height: 24),
 
                 // 3. AI CONFIGURATION SECTION (Featured)
-                _buildSectionHeader('AI & SMART RECOGNITION', isDark),
+                _buildSectionHeader(AppStrings.tr(context, 'ai_extensions'), isDark),
                 const SizedBox(height: 8),
                 ListenableBuilder(
                   listenable: aiService,
@@ -1055,7 +1055,7 @@ class SettingsScreen extends StatelessWidget {
                 const SizedBox(height: 24),
 
                 // 3. BACKUP & CLOUD SYNC SECTION
-                _buildSectionHeader('BACKUP & CLOUD SYNC', isDark),
+                _buildSectionHeader(AppStrings.tr(context, 'data_backup'), isDark),
                 const SizedBox(height: 8),
                 _buildSettingsCard(
                   isDark: isDark,
@@ -1121,7 +1121,7 @@ class SettingsScreen extends StatelessWidget {
                 const SizedBox(height: 24),
 
                 // 4. APPEARANCE & THEME SECTION
-                _buildSectionHeader('APPEARANCE & THEME', isDark),
+                _buildSectionHeader(AppStrings.tr(context, 'appearance_theme'), isDark),
                 const SizedBox(height: 8),
                 _buildSettingsCard(
                   isDark: isDark,
@@ -1252,7 +1252,7 @@ class SettingsScreen extends StatelessWidget {
                 const SizedBox(height: 24),
 
                 // 4. SECURITY & PREFERENCES SECTION
-                _buildSectionHeader('SECURITY & PREFERENCES', isDark),
+                _buildSectionHeader(AppStrings.tr(context, 'security_preferences'), isDark),
                 const SizedBox(height: 8),
                 _buildSettingsCard(
                   isDark: isDark,
@@ -1576,7 +1576,7 @@ class SettingsScreen extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                   icon: const Icon(Icons.logout, size: 20),
-                  label: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: Text(AppStrings.tr(context, 'logout'), style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
 
                 const SizedBox(height: 12),
@@ -1592,7 +1592,7 @@ class SettingsScreen extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                   icon: const Icon(Icons.delete_forever_outlined, size: 20),
-                  label: const Text('Delete Account Permanently', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: Text(AppStrings.tr(context, 'delete_account'), style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
 
                 const SizedBox(height: 30),

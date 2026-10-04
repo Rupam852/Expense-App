@@ -7,6 +7,7 @@ import '../services/expense_provider.dart';
 import '../services/user_provider.dart';
 import '../widgets/custom_toast.dart';
 import '../widgets/payment_reminder_modal.dart';
+import '../utils/app_strings.dart';
 
 class KhataScreen extends StatefulWidget {
   const KhataScreen({super.key});
@@ -236,15 +237,15 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
                   unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 12.5),
                   tabs: isBusiness
                       ? [
-                          Tab(text: 'All (${filtered.length})'),
-                          Tab(text: 'Customer Udhar (${lentList.length})'),
-                          Tab(text: 'Vendor Payable (${borrowedList.length})'),
+                          Tab(text: '${AppStrings.tr(context, 'all_time')} (${filtered.length})'),
+                          Tab(text: '${AppStrings.tr(context, 'customer_udhar')} (${lentList.length})'),
+                          Tab(text: '${AppStrings.tr(context, 'vendor_payable')} (${borrowedList.length})'),
                           Tab(text: 'Settled (${settledList.length})'),
                         ]
                       : [
-                          Tab(text: 'All (${filtered.length})'),
-                          Tab(text: 'You Will Get (${lentList.length})'),
-                          Tab(text: 'You Will Give (${borrowedList.length})'),
+                          Tab(text: '${AppStrings.tr(context, 'all_time')} (${filtered.length})'),
+                          Tab(text: '${AppStrings.tr(context, 'you_will_get')} (${lentList.length})'),
+                          Tab(text: '${AppStrings.tr(context, 'you_will_give')} (${borrowedList.length})'),
                           Tab(text: 'Settled (${settledList.length})'),
                         ],
                 ),
@@ -327,7 +328,7 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
-                            isBusiness ? 'CUSTOMER UDHAR' : 'YOU WILL GET',
+                            isBusiness ? AppStrings.tr(context, 'customer_udhar').toUpperCase() : AppStrings.tr(context, 'you_will_get').toUpperCase(),
                             style: GoogleFonts.inter(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
@@ -377,7 +378,7 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
-                              isBusiness ? 'VENDOR PAYABLE' : 'YOU WILL GIVE',
+                              isBusiness ? AppStrings.tr(context, 'vendor_payable').toUpperCase() : AppStrings.tr(context, 'you_will_give').toUpperCase(),
                               style: GoogleFonts.inter(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
@@ -429,7 +430,7 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'Total Outstanding Balance:',
+                        '${AppStrings.tr(context, 'total_outstanding')}:',
                         style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: isDark ? Colors.white70 : Colors.black87),
                       ),
                     ],
