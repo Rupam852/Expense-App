@@ -7,7 +7,6 @@ import '../services/expense_provider.dart';
 import '../services/ai_config_service.dart';
 import '../widgets/custom_toast.dart';
 import 'ai_config_screen.dart';
-import 'payment_details_screen.dart';
 import '../services/app_update_service.dart';
 import 'app_update_screen.dart';
 import 'about_screen.dart';
@@ -1328,44 +1327,6 @@ class SettingsScreen extends StatelessWidget {
                   ],
                 ),
 
-                const SizedBox(height: 24),
-
-                // 5. FINANCIAL RECORDS & EXPORTS
-                _buildSectionHeader(AppStrings.tr(context, 'financial_records'), isDark),
-                const SizedBox(height: 8),
-                _buildSettingsCard(
-                  isDark: isDark,
-                  cardBg: cardBg,
-                  borderColor: borderColor,
-                  children: [
-
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.account_balance_wallet_outlined, color: Color(0xFF8B5CF6), size: 22),
-                      ),
-                      title: Text(
-                        AppStrings.tr(context, 'saved_payment_accounts'),
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        AppStrings.tr(context, 'saved_payment_accounts_sub'),
-                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
-                      ),
-                      trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const PaymentDetailsScreen()),
-                        );
-                      },
-                    ),
-                  ],
-                ),
 
                 const SizedBox(height: 24),
 
