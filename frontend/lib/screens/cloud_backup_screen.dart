@@ -389,7 +389,7 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = const Color(0xFF00D09C);
+    const primaryColor = Color(0xFF00D09C);
     final cardBg = isDark ? const Color(0xFF1E232E) : Colors.white;
     final borderColor = isDark ? const Color(0xFF2C3242) : const Color(0xFFE2E8F0);
 
