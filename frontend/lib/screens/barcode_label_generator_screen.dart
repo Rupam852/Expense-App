@@ -14,7 +14,7 @@ import '../services/database_helper.dart';
 import '../services/expense_provider.dart';
 import '../services/barcode_label_service.dart';
 import '../widgets/custom_toast.dart';
-import 'scan_receipt_screen.dart';
+import '../widgets/barcode_scanner_modal.dart';
 
 class BarcodeLabelGeneratorScreen extends StatefulWidget {
   final BusinessItem? initialItem;
@@ -131,10 +131,9 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
   }
 
   Future<void> _scanBarcodeFromCamera() async {
-    final scannedCode = await Navigator.of(context).push<String>(
-      MaterialPageRoute(
-        builder: (_) => const ScanReceiptScreen(isBarcodeMode: true),
-      ),
+    final scannedCode = await BarcodeScannerModal.scan(
+      context,
+      title: 'Scan Product Barcode',
     );
 
     if (scannedCode != null && scannedCode.trim().isNotEmpty) {
