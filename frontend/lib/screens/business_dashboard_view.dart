@@ -66,7 +66,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
     }
     try {
       final prof = await DatabaseHelper.instance.getBusinessProfile();
-      final allSales = await DatabaseHelper.instance.getBusinessSales(limit: 500);
+      final allSales = await DatabaseHelper.instance.getBusinessSales();
 
       final now = DateTime.now();
       DateTime start;
@@ -82,14 +82,17 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
         end = DateTime(sunday.year, sunday.month, sunday.day, 23, 59, 59, 999);
       } else if (_filterPeriod == 'This Month') {
         start = DateTime(now.year, now.month, 1, 0, 0, 0, 0);
-        end = DateTime(now.year, now.month + 1, 0, 23, 59, 59, 999);
+        final lastDay = DateTime(now.year, now.month + 1, 0);
+        end = DateTime(lastDay.year, lastDay.month, lastDay.day, 23, 59, 59, 999);
       } else if (_filterPeriod == 'Last Month') {
-        start = DateTime(now.year, now.month - 1, 1, 0, 0, 0, 0);
-        end = DateTime(now.year, now.month, 0, 23, 59, 59, 999);
+        final prevMonthLastDay = DateTime(now.year, now.month, 0);
+        start = DateTime(prevMonthLastDay.year, prevMonthLastDay.month, 1, 0, 0, 0, 0);
+        end = DateTime(prevMonthLastDay.year, prevMonthLastDay.month, prevMonthLastDay.day, 23, 59, 59, 999);
       } else if (_filterPeriod == 'This Quarter') {
         final quarterMonth = ((now.month - 1) ~/ 3) * 3 + 1;
         start = DateTime(now.year, quarterMonth, 1, 0, 0, 0, 0);
-        end = DateTime(now.year, quarterMonth + 3, 0, 23, 59, 59, 999);
+        final qEnd = DateTime(now.year, quarterMonth + 3, 0);
+        end = DateTime(qEnd.year, qEnd.month, qEnd.day, 23, 59, 59, 999);
       } else if (_filterPeriod == 'This FY') {
         final fyStartYear = now.month >= 4 ? now.year : now.year - 1;
         start = DateTime(fyStartYear, 4, 1, 0, 0, 0, 0);
@@ -510,6 +513,37 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
     );
   }
 
+  String _getActivePeriodSubtitle() {
+    final now = DateTime.now();
+    if (_filterPeriod == 'Today') {
+      return 'Showing today (${DateFormat('dd MMM yyyy').format(now)})';
+    } else if (_filterPeriod == 'This Week') {
+      final monday = now.subtract(Duration(days: now.weekday - 1));
+      final sunday = monday.add(const Duration(days: 6));
+      return 'This Week (${DateFormat('dd MMM').format(monday)} - ${DateFormat('dd MMM yyyy').format(sunday)})';
+    } else if (_filterPeriod == 'This Month') {
+      return 'This Month (${DateFormat('MMMM yyyy').format(now)})';
+    } else if (_filterPeriod == 'Last Month') {
+      final prevMonthLastDay = DateTime(now.year, now.month, 0);
+      return 'Last Month (${DateFormat('MMMM yyyy').format(prevMonthLastDay)})';
+    } else if (_filterPeriod == 'This Quarter') {
+      final quarterMonth = ((now.month - 1) ~/ 3) * 3 + 1;
+      final qNum = ((now.month - 1) ~/ 3) + 1;
+      final qStart = DateTime(now.year, quarterMonth, 1);
+      final qEnd = DateTime(now.year, quarterMonth + 3, 0);
+      return 'Q$qNum (${DateFormat('MMM').format(qStart)} - ${DateFormat('MMM yyyy').format(qEnd)})';
+    } else if (_filterPeriod == 'This FY') {
+      final fyStartYear = now.month >= 4 ? now.year : now.year - 1;
+      return 'FY $fyStartYear-${(fyStartYear + 1).toString().substring(2)} (1 Apr $fyStartYear - 31 Mar ${fyStartYear + 1})';
+    } else if (_customSelectedRange != null) {
+      return '${DateFormat('dd MMM yyyy').format(_customSelectedRange!.start)} - ${DateFormat('dd MMM yyyy').format(_customSelectedRange!.end)}';
+    } else if (_filterPeriod.contains('202')) {
+      return _filterPeriod;
+    } else {
+      return 'All time historical business records';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
@@ -806,6 +840,37 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                 ],
               ),
             ),
+            const SizedBox(height: 8),
+
+            // Active Period Date Range Banner
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: primaryColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.calendar_today_rounded, size: 13, color: primaryColor),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _getActivePeriodSubtitle(),
+                      style: GoogleFonts.inter(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.grey[300] : const Color(0xFF1E293B),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             // ── LOW STOCK ALERT BANNER ────────────────────────
             Consumer<ExpenseProvider>(
               builder: (context, expProv, _) {

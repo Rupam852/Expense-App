@@ -2373,29 +2373,34 @@ class DatabaseHelper {
   // ── BUSINESS AGGREGATED METRICS ───────────────────────────
   Future<Map<String, double>> getBusinessMetrics({DateTime? start, DateTime? end}) async {
     final db = await instance.database;
-    String where = '';
-    List<dynamic> whereArgs = [];
-    if (start != null && end != null) {
-      where = 'sale_date >= ? AND sale_date <= ?';
-      whereArgs = [start.toIso8601String(), end.toIso8601String()];
-    }
-
-    final salesRows = await db.query(
-      'business_sales',
-      where: where.isNotEmpty ? where : null,
-      whereArgs: whereArgs.isNotEmpty ? whereArgs : null,
-    );
+    final salesRows = await db.query('business_sales', orderBy: 'sale_date DESC');
 
     double totalSales = 0.0;
     double totalCollected = 0.0;
     double totalBalanceDue = 0.0;
     double totalTax = 0.0;
+    int count = 0;
+
+    final startMs = start?.millisecondsSinceEpoch;
+    final endMs = end?.millisecondsSinceEpoch;
 
     for (final row in salesRows) {
+      if (startMs != null && endMs != null) {
+        final rawDate = row['sale_date']?.toString();
+        final dt = rawDate != null ? DateTime.tryParse(rawDate) : null;
+        if (dt != null) {
+          final localMs = dt.toLocal().millisecondsSinceEpoch;
+          if (localMs < startMs || localMs > endMs) {
+            continue;
+          }
+        }
+      }
+
       totalSales += (row['final_amount'] as num?)?.toDouble() ?? 0.0;
       totalCollected += (row['paid_amount'] as num?)?.toDouble() ?? 0.0;
       totalBalanceDue += (row['balance_due'] as num?)?.toDouble() ?? 0.0;
       totalTax += (row['tax_amount'] as num?)?.toDouble() ?? 0.0;
+      count++;
     }
 
     return {
@@ -2403,7 +2408,7 @@ class DatabaseHelper {
       'totalCollected': totalCollected,
       'totalBalanceDue': totalBalanceDue,
       'totalTax': totalTax,
-      'saleCount': salesRows.length.toDouble(),
+      'saleCount': count.toDouble(),
     };
   }
 

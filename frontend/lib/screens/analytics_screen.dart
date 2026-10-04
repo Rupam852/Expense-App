@@ -422,9 +422,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     final Map<String, double> paymentModeSums = {};
 
     for (var sale in _businessSales) {
-      totalSales += sale.finalTotal;
+      totalSales += sale.finalAmount;
       totalGoodsCost += sale.totalPurchaseCost;
-      totalDue += sale.dueAmount;
+      totalDue += sale.balanceDue;
 
       final mode = sale.paymentMode.isNotEmpty ? sale.paymentMode : 'Cash';
       paymentModeSums[mode] = (paymentModeSums[mode] ?? 0.0) + sale.paidAmount;
@@ -1091,7 +1091,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         final slotSum = _businessSales.where((s) {
           final d = s.saleDate.toLocal();
           return d.year == now.year && d.month == now.month && d.day == now.day && d.hour >= startH && d.hour < endH;
-        }).fold<double>(0.0, (sum, s) => sum + s.finalTotal);
+        }).fold<double>(0.0, (sum, s) => sum + s.finalAmount);
 
         barGroups.add(BarChartGroupData(
           x: i,
@@ -1117,7 +1117,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         final daySum = _businessSales.where((s) {
           final d = s.saleDate.toLocal();
           return d.year == targetDate.year && d.month == targetDate.month && d.day == targetDate.day;
-        }).fold<double>(0.0, (sum, s) => sum + s.finalTotal);
+        }).fold<double>(0.0, (sum, s) => sum + s.finalAmount);
 
         barGroups.add(BarChartGroupData(
           x: i,
@@ -1152,7 +1152,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           final d = s.saleDate.toLocal();
           final ms = d.millisecondsSinceEpoch;
           return ms >= chunkStart.millisecondsSinceEpoch && ms <= actualEnd.millisecondsSinceEpoch;
-        }).fold<double>(0.0, (sum, s) => sum + s.finalTotal);
+        }).fold<double>(0.0, (sum, s) => sum + s.finalAmount);
 
         barGroups.add(BarChartGroupData(
           x: slotIdx++,
@@ -1179,7 +1179,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           final d = s.saleDate.toLocal();
           final ms = d.millisecondsSinceEpoch;
           return ms >= monthDate.millisecondsSinceEpoch && ms <= monthEnd.millisecondsSinceEpoch;
-        }).fold<double>(0.0, (sum, s) => sum + s.finalTotal);
+        }).fold<double>(0.0, (sum, s) => sum + s.finalAmount);
 
         barGroups.add(BarChartGroupData(
           x: 5 - i,
