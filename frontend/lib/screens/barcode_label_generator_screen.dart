@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:printing/printing.dart';
 
 import '../models/business_item.dart';
 import '../models/barcode_label_batch.dart';
@@ -285,8 +286,8 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
     );
   }
 
-  Future<void> _handleGenerateAndExport({bool previewOnly = false}) async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<Uint8List?> _generateCurrentPdfBytes() async {
+    if (!_formKey.currentState!.validate()) return null;
 
     final productName = _productNameController.text.trim();
     final barcodeData = _barcodeController.text.trim();
@@ -296,15 +297,90 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
 
     if (barcodeData.isEmpty) {
       CustomToast.show(context, 'Please enter or generate a barcode number', isError: true);
-      return;
+      return null;
     }
 
+    return await BarcodeLabelService.instance.generateLabelsPdf(
+      productName: productName,
+      barcodeData: barcodeData,
+      barcodeType: _barcodeType,
+      price: price,
+      quantity: quantity,
+      columnsCount: _columnsCount,
+      shopName: shopName,
+      showShopName: _showShopName,
+      showPrice: _showPrice,
+      showBarcodeText: _showBarcodeText,
+      showCutBorders: _showCutBorders,
+    );
+  }
+
+  /// 1. PREVIEW ONLY (In-App Preview without saving to history, catalog, or downloading file)
+  Future<void> _handlePreviewOnly() async {
     setState(() => _isGenerating = true);
+    try {
+      final pdfBytes = await _generateCurrentPdfBytes();
+      if (pdfBytes != null && mounted) {
+        setState(() => _isGenerating = false);
+        final productName = _productNameController.text.trim();
+        final quantity = int.tryParse(_quantityController.text.trim()) ?? 24;
+        _showInAppPdfPreviewModal(pdfBytes, productName, quantity);
+      } else {
+        if (mounted) setState(() => _isGenerating = false);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isGenerating = false);
+        CustomToast.show(context, 'Error generating preview: $e', isError: true);
+      }
+    }
+  }
+
+  /// 2. DIRECT SAVE TO HISTORY & CATALOG (No print or file download)
+  Future<void> _handleDirectSaveOnly() async {
+    setState(() => _isGenerating = true);
+    try {
+      final pdfBytes = await _generateCurrentPdfBytes();
+      if (pdfBytes != null) {
+        await _saveBatchAndCatalog(pdfBytes, exportFile: false);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isGenerating = false);
+        CustomToast.show(context, 'Error saving: $e', isError: true);
+      }
+    }
+  }
+
+  /// 3. DIRECT PRINT & EXPORT PDF (Saves to history & catalog and triggers print/export)
+  Future<void> _handleDirectPrintExport() async {
+    setState(() => _isGenerating = true);
+    try {
+      final pdfBytes = await _generateCurrentPdfBytes();
+      if (pdfBytes != null) {
+        await _saveBatchAndCatalog(pdfBytes, exportFile: true);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isGenerating = false);
+        CustomToast.show(context, 'Error generating: $e', isError: true);
+      }
+    }
+  }
+
+  /// Core saving logic for catalog and SQLite history
+  Future<void> _saveBatchAndCatalog(Uint8List pdfBytes, {required bool exportFile}) async {
+    final productName = _productNameController.text.trim();
+    final barcodeData = _barcodeController.text.trim();
+    final price = double.tryParse(_priceController.text.trim()) ?? 0.0;
+    final quantity = int.tryParse(_quantityController.text.trim()) ?? 24;
+    final shopName = _shopNameController.text.trim();
 
     try {
-      // 1. If user checked "Save to Catalog" and this item doesn't exist yet
+      final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+
+      // A. If user checked "Save to Catalog" and this item doesn't exist yet
       if (_saveToCatalog && _selectedItemId == null) {
-        final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
         final costPrice = double.tryParse(_costPriceController.text.trim()) ?? 0.0;
         final stock = double.tryParse(_stockQuantityController.text.trim()) ?? quantity.toDouble();
 
@@ -323,30 +399,30 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
 
         await expenseProvider.addBusinessItem(newItem);
         _selectedItemId = newItem.id;
-        CustomToast.show(context, '📦 "$productName" added to Catalog with barcode!');
+      } else if (_selectedItemId != null) {
+        // If an existing item was selected and modified, update catalog item
+        final existingItem = expenseProvider.businessItems.firstWhere(
+          (it) => it.id == _selectedItemId,
+          orElse: () => BusinessItem(
+            id: _selectedItemId!,
+            name: productName,
+            purchasePrice: 0,
+            sellingPrice: price,
+            taxRate: 0,
+            unit: 'pcs',
+          ),
+        );
+
+        if (existingItem.barcode != barcodeData || (price > 0 && existingItem.sellingPrice != price)) {
+          final updated = existingItem.copyWith(
+            barcode: barcodeData,
+            sellingPrice: price > 0 ? price : existingItem.sellingPrice,
+          );
+          await expenseProvider.updateBusinessItem(updated);
+        }
       }
 
-      // 2. Generate PDF bytes
-      final pdfBytes = await BarcodeLabelService.instance.generateLabelsPdf(
-        productName: productName,
-        barcodeData: barcodeData,
-        barcodeType: _barcodeType,
-        price: price,
-        quantity: quantity,
-        columnsCount: _columnsCount,
-        shopName: shopName,
-        showShopName: _showShopName,
-        showPrice: _showPrice,
-        showBarcodeText: _showBarcodeText,
-        showCutBorders: _showCutBorders,
-      );
-
-      final file = await BarcodeLabelService.instance.savePdfToFile(
-        bytes: pdfBytes,
-        fileName: 'Stickers_${productName}_$barcodeData',
-      );
-
-      // 3. Save to History Batches
+      // B. Save to SQLite History Batches
       final batch = BarcodeLabelBatch(
         id: 'batch_${DateTime.now().millisecondsSinceEpoch}',
         itemId: _selectedItemId,
@@ -360,22 +436,201 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
       );
 
       await DatabaseHelper.instance.insertBarcodeLabelBatch(batch);
-      _loadHistoryBatches();
+      await _loadHistoryBatches();
 
-      if (mounted) {
-        setState(() => _isGenerating = false);
-        if (previewOnly) {
-          await BarcodeLabelService.instance.openPdf(file);
-        } else {
+      // C. Export File or Toast
+      if (exportFile) {
+        final file = await BarcodeLabelService.instance.savePdfToFile(
+          bytes: pdfBytes,
+          fileName: 'Stickers_${productName}_$barcodeData',
+        );
+
+        if (mounted) {
+          setState(() => _isGenerating = false);
           _showPdfSuccessSheet(file, productName, quantity);
+        }
+      } else {
+        if (mounted) {
+          setState(() => _isGenerating = false);
+          CustomToast.show(context, '✅ Saved to Batch History & Catalog!');
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isGenerating = false);
-        CustomToast.show(context, 'Error generating stickers: $e', isError: true);
+        CustomToast.show(context, 'Error saving: $e', isError: true);
       }
     }
+  }
+
+  /// In-App Full Interactive PDF Preview Modal (Viewer without saving/downloading)
+  void _showInAppPdfPreviewModal(Uint8List pdfBytes, String productName, int quantity) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF181B22) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalCtx) {
+        return Container(
+          height: MediaQuery.of(modalCtx).size.height * 0.92,
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF0F1115) : const Color(0xFFF8FAFC),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              // Top Bar with Drag Handle & Title & Close
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  border: Border(bottom: BorderSide(color: borderColor)),
+                ),
+                child: Column(
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF00D09C).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.preview_rounded, color: Color(0xFF00D09C), size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Sticker Sheet Preview',
+                                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                              Text(
+                                '$productName • $quantity Labels (${_columnsCount == 3 ? "Standard 3-Col" : "Compact 4-Col"})',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          tooltip: 'Close Preview',
+                          onPressed: () => Navigator.of(modalCtx).pop(),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // PDF Interactive Render View
+              Expanded(
+                child: PdfPreview(
+                  build: (format) async => pdfBytes,
+                  allowPrinting: false,
+                  allowSharing: false,
+                  canChangeOrientation: false,
+                  canChangePageFormat: false,
+                  canDebug: false,
+                  maxPageWidth: 440,
+                  scrollViewDecoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF0F1115) : const Color(0xFFF1F5F9),
+                  ),
+                  previewPageMargin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  loadingWidget: const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF00D09C)),
+                  ),
+                ),
+              ),
+
+              // Bottom Action Bar (Save vs Print/Export)
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  border: Border(top: BorderSide(color: borderColor)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, -3),
+                    ),
+                  ],
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Row(
+                    children: [
+                      // Save Only Button
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            side: BorderSide(color: borderColor),
+                          ),
+                          onPressed: () async {
+                            Navigator.of(modalCtx).pop();
+                            await _saveBatchAndCatalog(pdfBytes, exportFile: false);
+                          },
+                          icon: const Icon(Icons.bookmark_add_outlined, size: 18),
+                          label: Text(
+                            'Save to History',
+                            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12.5),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Print / Export PDF Button
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF00D09C),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 2,
+                          ),
+                          onPressed: () async {
+                            Navigator.of(modalCtx).pop();
+                            await _saveBatchAndCatalog(pdfBytes, exportFile: true);
+                          },
+                          icon: const Icon(Icons.print_rounded, size: 18),
+                          label: Text(
+                            'Print / Export PDF',
+                            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13.5),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _showPdfSuccessSheet(File file, String productName, int quantity) {
@@ -403,12 +658,12 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Sticker Sheet Ready! 🎉',
+                  'Sticker Sheet Exported! 🎉',
                   style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '$quantity sticker labels generated for "$productName" in printable A4 format.',
+                  '$quantity sticker labels generated for "$productName" & saved to History.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(fontSize: 13, color: Colors.grey),
                 ),
@@ -941,18 +1196,38 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
           // ── 3. ACTION BUTTONS ─────────────────────────────────────
           Row(
             children: [
+              // 1. Preview Button (In-app viewer without saving)
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    side: BorderSide(color: borderColor),
                   ),
-                  onPressed: _isGenerating ? null : () => _handleGenerateAndExport(previewOnly: true),
-                  icon: const Icon(Icons.visibility_outlined, size: 20),
-                  label: Text('Preview PDF', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                  onPressed: _isGenerating ? null : _handlePreviewOnly,
+                  icon: const Icon(Icons.visibility_outlined, size: 18),
+                  label: Text('Preview', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
+
+              // 2. Save Only Button (Saves to History & Catalog without downloading)
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    side: BorderSide(color: const Color(0xFF1E88E5).withValues(alpha: 0.6)),
+                    foregroundColor: const Color(0xFF1E88E5),
+                  ),
+                  onPressed: _isGenerating ? null : _handleDirectSaveOnly,
+                  icon: const Icon(Icons.bookmark_add_outlined, size: 18),
+                  label: Text('Save Only', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // 3. Print / Export PDF Button
               Expanded(
                 flex: 2,
                 child: ElevatedButton.icon(
@@ -963,13 +1238,13 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     elevation: 2,
                   ),
-                  onPressed: _isGenerating ? null : () => _handleGenerateAndExport(previewOnly: false),
+                  onPressed: _isGenerating ? null : _handleDirectPrintExport,
                   icon: _isGenerating
                       ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Icon(Icons.print_rounded, size: 20),
+                      : const Icon(Icons.print_rounded, size: 18),
                   label: Text(
-                    _isGenerating ? 'Generating...' : 'Print / Export A4 PDF',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14),
+                    _isGenerating ? 'Processing...' : 'Print / Export',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13.5),
                   ),
                 ),
               ),
