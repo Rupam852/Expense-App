@@ -671,6 +671,8 @@ class SettingsScreen extends StatelessWidget {
                               ),
                             ),
                           ],
+                        ),
+                      ),
                       IconButton(
                         icon: Icon(
                           Icons.edit_outlined,
