@@ -254,7 +254,6 @@ class UserProvider with ChangeNotifier {
         'gemini_model': profile?['gemini_model'],
         'nvidia_model': profile?['nvidia_model'],
         'primary_provider': profile?['primary_provider'],
-        'response_language': profile?['response_language'],
       };
       _isAuthenticated = true;
 
@@ -480,7 +479,6 @@ class UserProvider with ChangeNotifier {
     String? geminiModel,
     String? nvidiaModel,
     String? primaryProvider,
-    String? responseLanguage,
   }) async {
     _isLoading = true;
     notifyListeners();
@@ -498,7 +496,6 @@ class UserProvider with ChangeNotifier {
         if (geminiModel != null) 'gemini_model': geminiModel,
         if (nvidiaModel != null) 'nvidia_model': nvidiaModel,
         if (primaryProvider != null) 'primary_provider': primaryProvider,
-        if (responseLanguage != null) 'response_language': responseLanguage,
       };
       await _saveProfileLocally();
       notifyListeners();
@@ -515,7 +512,6 @@ class UserProvider with ChangeNotifier {
         if (geminiModel != null) 'gemini_model': geminiModel,
         if (nvidiaModel != null) 'nvidia_model': nvidiaModel,
         if (primaryProvider != null) 'primary_provider': primaryProvider,
-        if (responseLanguage != null) 'response_language': responseLanguage,
       });
     } catch (e) {
       print('[UserProvider] Profile update deferred (offline): $e');
