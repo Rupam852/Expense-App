@@ -41,11 +41,11 @@ class SettingsScreen extends StatelessWidget {
 
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (ctx) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
-            'Edit Profile Details',
+            AppStrings.tr(context, 'edit_profile_title'),
             style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
           ),
           content: Column(
@@ -53,25 +53,25 @@ class SettingsScreen extends StatelessWidget {
             children: [
               TextFormField(
                 controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Display Name',
-                  hintText: 'Enter your name',
+                decoration: InputDecoration(
+                  labelText: AppStrings.tr(context, 'display_name'),
+                  hintText: AppStrings.tr(context, 'enter_name_hint'),
                 ),
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: photoUrlController,
-                decoration: const InputDecoration(
-                  labelText: 'Profile Image URL',
-                  hintText: 'Paste image link (optional)',
+                decoration: InputDecoration(
+                  labelText: AppStrings.tr(context, 'profile_image_url'),
+                  hintText: AppStrings.tr(context, 'profile_image_hint'),
                 ),
               ),
             ],
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(AppStrings.tr(context, 'cancel')),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -83,14 +83,14 @@ class SettingsScreen extends StatelessWidget {
                     photoUrl: photoUrl.isNotEmpty ? photoUrl : null,
                   );
                 }
-                if (context.mounted) Navigator.of(context).pop();
+                if (ctx.mounted) Navigator.of(ctx).pop();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).primaryColor,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('Save Changes'),
+              child: Text(AppStrings.tr(context, 'save_changes')),
             ),
           ],
         );
@@ -120,7 +120,7 @@ class SettingsScreen extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Delete Account?',
+                      AppStrings.tr(context, 'delete_acc_title'),
                       style: GoogleFonts.outfit(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
@@ -134,12 +134,12 @@ class SettingsScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Warning: This action is permanent and irreversible.',
+                    AppStrings.tr(context, 'delete_acc_warning'),
                     style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.redAccent, fontSize: 13),
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Your account and all associated data (transactions, statement history, budgets, UPI settings) will be permanently deleted from the cloud database and local storage.',
+                    AppStrings.tr(context, 'delete_acc_desc'),
                     style: GoogleFonts.inter(fontSize: 13, height: 1.4),
                   ),
                   if (isDeleting) ...[
@@ -155,7 +155,7 @@ class SettingsScreen extends StatelessWidget {
                 TextButton(
                   onPressed: isDeleting ? null : () => Navigator.of(context).pop(),
                   child: Text(
-                    'Cancel',
+                    AppStrings.tr(context, 'cancel'),
                     style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -199,7 +199,7 @@ class SettingsScreen extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                   child: Text(
-                    'Permanently Delete',
+                    AppStrings.tr(context, 'permanently_delete'),
                     style: GoogleFonts.inter(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -249,7 +249,7 @@ class SettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Choose App Theme',
+                AppStrings.tr(context, 'choose_app_theme'),
                 style: GoogleFonts.outfit(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -258,7 +258,7 @@ class SettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Select your preferred visual style or sync with device',
+                AppStrings.tr(context, 'choose_theme_sub'),
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   color: isDark ? Colors.grey[400] : Colors.grey[600],
@@ -267,7 +267,7 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 16),
               _buildThemeOptionTile(
                 context: ctx,
-                title: 'Device Default (System)',
+                title: AppStrings.tr(context, 'theme_system'),
                 subtitle: 'Automatically matches your phone’s dark/light mode',
                 icon: Icons.smartphone_rounded,
                 iconColor: Colors.blueAccent,
@@ -282,7 +282,7 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 8),
               _buildThemeOptionTile(
                 context: ctx,
-                title: 'Dark Mode',
+                title: AppStrings.tr(context, 'theme_dark'),
                 subtitle: 'Sleek OLED deep slate background for low eye strain',
                 icon: Icons.dark_mode_rounded,
                 iconColor: const Color(0xFF8B5CF6),
@@ -297,7 +297,7 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 8),
               _buildThemeOptionTile(
                 context: ctx,
-                title: 'Light Mode',
+                title: AppStrings.tr(context, 'theme_light'),
                 subtitle: 'Clean soft-white background with high contrast elements',
                 icon: Icons.light_mode_rounded,
                 iconColor: Colors.amber,
@@ -425,7 +425,7 @@ class SettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Choose App Language',
+                AppStrings.tr(context, 'choose_app_language'),
                 style: GoogleFonts.outfit(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -434,7 +434,7 @@ class SettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Select your preferred display & AI chat response language',
+                AppStrings.tr(context, 'choose_lang_sub'),
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   color: isDark ? Colors.grey[400] : Colors.grey[600],
@@ -671,20 +671,20 @@ class SettingsScreen extends StatelessWidget {
                               ),
                             ),
                           ],
-                        ),
-                      ),
                       IconButton(
-                        icon: Icon(Icons.edit_outlined, color: primaryColor, size: 22),
+                        icon: Icon(
+                          Icons.edit_outlined,
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          size: 20,
+                        ),
                         onPressed: () => _showEditProfileDialog(context, userProvider),
                       ),
                     ],
                   ),
                 ),
-
-                const SizedBox(height: 24),
-
+                const SizedBox(height: 20),
                 // 2. WORKING MODE SECTION (Personal vs Business)
-                _buildSectionHeader('APP WORKING MODE', isDark),
+                _buildSectionHeader(AppStrings.tr(context, 'app_working_mode'), isDark),
                 const SizedBox(height: 8),
                 _buildSettingsCard(
                   isDark: isDark,
@@ -702,7 +702,7 @@ class SettingsScreen extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'ACTIVE PROFILE',
+                                AppStrings.tr(context, 'active_profile'),
                                 style: GoogleFonts.inter(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
@@ -740,7 +740,9 @@ class SettingsScreen extends StatelessWidget {
                                     ),
                                     const SizedBox(width: 5),
                                     Text(
-                                      userProvider.isBusinessMode ? 'BUSINESS MODE' : 'PERSONAL MODE',
+                                      userProvider.isBusinessMode 
+                                          ? AppStrings.tr(context, 'business_mode_badge') 
+                                          : AppStrings.tr(context, 'personal_mode_badge'),
                                       style: GoogleFonts.inter(
                                         fontSize: 10.5,
                                         fontWeight: FontWeight.bold,
@@ -783,7 +785,7 @@ class SettingsScreen extends StatelessWidget {
                                       decoration: BoxDecoration(
                                         gradient: !userProvider.isBusinessMode
                                             ? const LinearGradient(
-                                                colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                                                colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
                                               )
                                             : null,
                                         color: !userProvider.isBusinessMode ? null : Colors.transparent,
@@ -810,7 +812,7 @@ class SettingsScreen extends StatelessWidget {
                                           ),
                                           const SizedBox(width: 7),
                                           Text(
-                                            'Personal',
+                                            AppStrings.tr(context, 'personal'),
                                             style: GoogleFonts.inter(
                                               fontSize: 13.5,
                                               fontWeight: FontWeight.bold,
@@ -869,7 +871,7 @@ class SettingsScreen extends StatelessWidget {
                                           ),
                                           const SizedBox(width: 7),
                                           Text(
-                                            'Business',
+                                            AppStrings.tr(context, 'business'),
                                             style: GoogleFonts.inter(
                                               fontSize: 13.5,
                                               fontWeight: FontWeight.bold,
@@ -914,8 +916,8 @@ class SettingsScreen extends StatelessWidget {
                                 Expanded(
                                   child: Text(
                                     userProvider.isBusinessMode
-                                        ? 'Sales billing, GST invoices, customer Udhar Khata & Business Net Profit enabled.'
-                                        : 'Personal budgeting, daily expenses, subscriptions & trip tags enabled.',
+                                        ? AppStrings.tr(context, 'mode_biz_caption')
+                                        : AppStrings.tr(context, 'mode_personal_caption'),
                                     style: GoogleFonts.inter(
                                       fontSize: 11.5,
                                       color: isDark ? Colors.grey[300] : Colors.grey[800],
@@ -952,11 +954,11 @@ class SettingsScreen extends StatelessWidget {
                           child: const Icon(Icons.storefront_rounded, color: Color(0xFF1E88E5), size: 22),
                         ),
                         title: Text(
-                          'Business Settings',
+                          AppStrings.tr(context, 'biz_settings_title'),
                           style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14.5),
                         ),
                         subtitle: Text(
-                          'Shop profile, GSTIN, UPI details & Product Catalog',
+                          AppStrings.tr(context, 'biz_settings_sub'),
                           style: GoogleFonts.inter(fontSize: 11.5, color: isDark ? Colors.grey[400] : Colors.grey[600]),
                         ),
                         trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
@@ -984,7 +986,7 @@ class SettingsScreen extends StatelessWidget {
                     final providerLabel = isPrimaryGemini ? 'Gemini' : 'NVIDIA NIM';
                     final subtitle = hasKey
                         ? 'Primary: $providerLabel ($primaryModel)'
-                        : 'API keys not configured (Tap to setup)';
+                        : AppStrings.tr(context, 'ai_config_sub');
 
                     return _buildSettingsCard(
                       isDark: isDark,
@@ -1008,7 +1010,7 @@ class SettingsScreen extends StatelessWidget {
                           title: Row(
                             children: [
                               Text(
-                                'AI Configuration',
+                                AppStrings.tr(context, 'ai_config_title'),
                                 style: GoogleFonts.inter(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
@@ -1023,7 +1025,9 @@ class SettingsScreen extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  hasKey ? 'CONFIGURED' : 'SETUP REQUIRED',
+                                  hasKey 
+                                      ? AppStrings.tr(context, 'ai_configured') 
+                                      : AppStrings.tr(context, 'ai_setup_required'),
                                   style: GoogleFonts.inter(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
@@ -1079,7 +1083,7 @@ class SettingsScreen extends StatelessWidget {
                       title: Row(
                         children: [
                           Text(
-                            'Backup & Cloud Sync',
+                            AppStrings.tr(context, 'backup_sync_title'),
                             style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14.5),
                           ),
                           const SizedBox(width: 8),
@@ -1090,7 +1094,9 @@ class SettingsScreen extends StatelessWidget {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              expenseProvider.isSyncing ? 'SYNCING' : 'ACTIVE',
+                              expenseProvider.isSyncing 
+                                  ? AppStrings.tr(context, 'syncing') 
+                                  : AppStrings.tr(context, 'active'),
                               style: GoogleFonts.inter(
                                 fontSize: 9.5,
                                 fontWeight: FontWeight.bold,
@@ -1105,7 +1111,7 @@ class SettingsScreen extends StatelessWidget {
                             ? 'Syncing data to cloud...'
                             : (expenseProvider.lastSyncTime != null
                                 ? 'Last synced: ${_formatSyncTime(expenseProvider.lastSyncTime!)} • Tap to manage'
-                                : 'Auto-backup enabled • Tap to manage & restore'),
+                                : AppStrings.tr(context, 'backup_sync_sub')),
                         style: GoogleFonts.inter(fontSize: 11.5, color: isDark ? Colors.grey[400] : Colors.grey[600]),
                       ),
                       trailing: const Icon(Icons.chevron_right, size: 22, color: Colors.grey),
@@ -1139,11 +1145,15 @@ class SettingsScreen extends StatelessWidget {
                         child: Icon(themeIcon, color: themeIconColor, size: 22),
                       ),
                       title: Text(
-                        'App Theme',
+                        AppStrings.tr(context, 'app_theme'),
                         style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
                       ),
                       subtitle: Text(
-                        themeLabel,
+                        currentThemeMode == ThemeMode.dark 
+                            ? AppStrings.tr(context, 'theme_dark') 
+                            : (currentThemeMode == ThemeMode.light 
+                                ? AppStrings.tr(context, 'theme_light') 
+                                : AppStrings.tr(context, 'theme_system')),
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
@@ -1161,7 +1171,7 @@ class SettingsScreen extends StatelessWidget {
                               border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
                             ),
                             child: Text(
-                              'Change',
+                              AppStrings.tr(context, 'change'),
                               style: GoogleFonts.inter(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
@@ -1187,7 +1197,7 @@ class SettingsScreen extends StatelessWidget {
                         child: const Icon(Icons.language_rounded, color: Color(0xFF6366F1), size: 22),
                       ),
                       title: Text(
-                        'App Language',
+                        AppStrings.tr(context, 'app_language'),
                         style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
                       ),
                       subtitle: Text(
@@ -1209,7 +1219,7 @@ class SettingsScreen extends StatelessWidget {
                               border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
                             ),
                             child: Text(
-                              'Change',
+                              AppStrings.tr(context, 'change'),
                               style: GoogleFonts.inter(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
@@ -1236,11 +1246,11 @@ class SettingsScreen extends StatelessWidget {
                         child: const Icon(Icons.speed_rounded, color: Color(0xFF10B981), size: 22),
                       ),
                       title: Text(
-                        'Max Refresh Rate (120Hz / 90Hz)',
+                        AppStrings.tr(context, 'max_refresh_rate'),
                         style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
                       ),
                       subtitle: Text(
-                        'Unlock ultra-smooth frame rate (Default ON)',
+                        AppStrings.tr(context, 'max_refresh_rate_sub'),
                         style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
                       ),
                       value: userProvider.highRefreshRateEnabled,
@@ -1271,11 +1281,11 @@ class SettingsScreen extends StatelessWidget {
                         child: const Icon(Icons.fingerprint, color: Colors.blue, size: 22),
                       ),
                       title: Text(
-                        'Biometric / Device Lock',
+                        AppStrings.tr(context, 'biometric_lock'),
                         style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
                       ),
                       subtitle: Text(
-                        'Lock app access with fingerprint / screen lock',
+                        AppStrings.tr(context, 'biometric_lock_sub'),
                         style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
                       ),
                       value: userProvider.biometricsEnabled,
@@ -1303,11 +1313,11 @@ class SettingsScreen extends StatelessWidget {
                         child: const Icon(Icons.analytics_outlined, color: Color(0xFF00D09C), size: 22),
                       ),
                       title: Text(
-                        'Spending Forecast & Runway',
+                        AppStrings.tr(context, 'spending_forecast'),
                         style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
                       ),
                       subtitle: Text(
-                        'Show burn rate & budget forecast inside Budgets screen (Default OFF)',
+                        AppStrings.tr(context, 'spending_forecast_sub'),
                         style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
                       ),
                       value: userProvider.showSpendingPredictionInBudget,
@@ -1319,7 +1329,7 @@ class SettingsScreen extends StatelessWidget {
                 const SizedBox(height: 24),
 
                 // 5. FINANCIAL RECORDS & EXPORTS
-                _buildSectionHeader('FINANCIAL RECORDS', isDark),
+                _buildSectionHeader(AppStrings.tr(context, 'financial_records'), isDark),
                 const SizedBox(height: 8),
                 _buildSettingsCard(
                   isDark: isDark,
@@ -1338,11 +1348,11 @@ class SettingsScreen extends StatelessWidget {
                         child: const Icon(Icons.account_balance_wallet_outlined, color: Color(0xFF8B5CF6), size: 22),
                       ),
                       title: Text(
-                        'Saved Payment Accounts',
+                        AppStrings.tr(context, 'saved_payment_accounts'),
                         style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
                       ),
                       subtitle: Text(
-                        'Manage linked bank and UPI accounts',
+                        AppStrings.tr(context, 'saved_payment_accounts_sub'),
                         style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
                       ),
                       trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
@@ -1358,7 +1368,7 @@ class SettingsScreen extends StatelessWidget {
                 const SizedBox(height: 24),
 
                 // 6. APP UPDATES & SYSTEM
-                _buildSectionHeader('UPDATES & SYSTEM', isDark),
+                _buildSectionHeader(AppStrings.tr(context, 'updates_system'), isDark),
                 const SizedBox(height: 8),
                 ListenableBuilder(
                   listenable: AppUpdateService.instance,
@@ -1394,7 +1404,7 @@ class SettingsScreen extends StatelessWidget {
                           title: Row(
                             children: [
                               Text(
-                                'App Updates',
+                                AppStrings.tr(context, 'app_updates'),
                                 style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
                               ),
                               const SizedBox(width: 8),
@@ -1461,11 +1471,11 @@ class SettingsScreen extends StatelessWidget {
                             ),
                           ),
                           title: Text(
-                            'About App & Developer',
+                            AppStrings.tr(context, 'about_app'),
                             style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
                           ),
                           subtitle: Text(
-                            'Developer social handles, project repo & support',
+                            AppStrings.tr(context, 'about_app_sub'),
                             style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
                           ),
                           trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
@@ -1491,11 +1501,11 @@ class SettingsScreen extends StatelessWidget {
                             ),
                           ),
                           title: Text(
-                            'Help & Problem Report',
+                            AppStrings.tr(context, 'help_report'),
                             style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
                           ),
                           subtitle: Text(
-                            'Encountered an error or bug? Contact developer directly',
+                            AppStrings.tr(context, 'help_report_sub'),
                             style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
                           ),
                           trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
@@ -1519,11 +1529,11 @@ class SettingsScreen extends StatelessWidget {
                             ),
                           ),
                           title: Text(
-                            'Notification Settings',
+                            AppStrings.tr(context, 'notifications_settings'),
                             style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
                           ),
                           subtitle: Text(
-                            'Master on/off, alert language & feature reminders',
+                            AppStrings.tr(context, 'notifications_settings_sub'),
                             style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
                           ),
                           trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
@@ -1546,17 +1556,17 @@ class SettingsScreen extends StatelessWidget {
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        title: const Text('Sign Out'),
-                        content: const Text('Are you sure you want to sign out from this device?'),
+                        title: Text(AppStrings.tr(context, 'signout_title')),
+                        content: Text(AppStrings.tr(context, 'signout_confirm')),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.of(ctx).pop(false),
-                            child: const Text('Cancel'),
+                            child: Text(AppStrings.tr(context, 'cancel')),
                           ),
                           ElevatedButton(
                             onPressed: () => Navigator.of(ctx).pop(true),
                             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-                            child: const Text('Sign Out', style: TextStyle(color: Colors.white)),
+                            child: Text(AppStrings.tr(context, 'logout'), style: const TextStyle(color: Colors.white)),
                           ),
                         ],
                       ),

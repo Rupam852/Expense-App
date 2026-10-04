@@ -8,6 +8,7 @@ import '../services/expense_provider.dart';
 import '../services/supabase_service.dart';
 import '../widgets/custom_toast.dart';
 import 'business_catalog_screen.dart';
+import '../utils/app_strings.dart';
 
 class BusinessSettingsScreen extends StatefulWidget {
   const BusinessSettingsScreen({super.key});
@@ -38,7 +39,7 @@ class _BusinessSettingsScreenState extends State<BusinessSettingsScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'Business Settings',
+          AppStrings.tr(context, 'biz_settings_title'),
           style: GoogleFonts.outfit(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -83,7 +84,7 @@ class _BusinessSettingsScreenState extends State<BusinessSettingsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Business & Shop Profile',
+                          AppStrings.tr(context, 'biz_profile_title'),
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -92,7 +93,7 @@ class _BusinessSettingsScreenState extends State<BusinessSettingsScreen> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          'Configure shop details for invoices, GST billing, UPI QR & fast product catalog.',
+                          AppStrings.tr(context, 'biz_profile_sub'),
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             color: isDark ? Colors.grey[300] : const Color(0xFF3B82F6),

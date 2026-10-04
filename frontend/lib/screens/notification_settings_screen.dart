@@ -4,6 +4,7 @@ import '../services/notification_service.dart';
 import '../models/subscription_item.dart';
 import '../services/app_update_service.dart';
 import '../widgets/custom_toast.dart';
+import '../utils/app_strings.dart';
 
 class NotificationSettingsScreen extends StatelessWidget {
   const NotificationSettingsScreen({super.key});
@@ -310,7 +311,7 @@ class NotificationSettingsScreen extends StatelessWidget {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'Notification Settings',
+          AppStrings.tr(context, 'notif_settings_title'),
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
             fontSize: 19,
