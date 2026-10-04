@@ -47,8 +47,8 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
 
   String _barcodeType = 'barcode'; // 'barcode' or 'qr'
   int _columnsCount = 3; // 3 or 4
-  bool _showShopName = true;
-  bool _showPrice = true;
+  bool _showShopName = false;
+  bool _showPrice = false;
   bool _showBarcodeText = true;
   bool _showCutBorders = true;
 
