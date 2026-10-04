@@ -1491,39 +1491,63 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Billing Items (${_itemRows.length})', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
                       Row(
                         children: [
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF10B981),
-                              side: const BorderSide(color: Color(0xFF10B981), width: 1.2),
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            onPressed: _scanBarcodeAndAddItem,
-                            icon: const Icon(Icons.qr_code_scanner, size: 16),
-                            label: Text('Scan Barcode', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
-                          ),
+                          Icon(Icons.receipt_long_rounded, size: 20, color: primaryColor),
                           const SizedBox(width: 8),
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF1E88E5),
-                              side: const BorderSide(color: Color(0xFF1E88E5), width: 1.2),
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            onPressed: () => _showCatalogPickerModal(),
-                            icon: const Icon(Icons.inventory_2_outlined, size: 16),
-                            label: Text('Catalog', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
-                          ),
-                          const SizedBox(width: 8),
-                          TextButton.icon(
-                            onPressed: _addNewItemRow,
-                            icon: const Icon(Icons.add, size: 18),
-                            label: const Text('Add Manual'),
+                          Text(
+                            'Billing Items (${_itemRows.length})',
+                            style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                         ],
+                      ),
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          foregroundColor: primaryColor,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        onPressed: _addNewItemRow,
+                        icon: const Icon(Icons.add_circle_outline_rounded, size: 17),
+                        label: Text('+ Add Item', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF10B981),
+                            side: const BorderSide(color: Color(0xFF10B981), width: 1.2),
+                            padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: _scanBarcodeAndAddItem,
+                          icon: const Icon(Icons.qr_code_scanner_rounded, size: 16),
+                          label: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text('Scan Barcode', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF1E88E5),
+                            side: const BorderSide(color: Color(0xFF1E88E5), width: 1.2),
+                            padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: () => _showCatalogPickerModal(),
+                          icon: const Icon(Icons.inventory_2_outlined, size: 16),
+                          label: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text('Pick Catalog', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
                       ),
                     ],
                   ),
