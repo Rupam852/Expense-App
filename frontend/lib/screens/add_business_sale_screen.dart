@@ -1509,7 +1509,7 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                         ),
                         onPressed: _addNewItemRow,
                         icon: const Icon(Icons.add_circle_outline_rounded, size: 17),
-                        label: Text('+ Add Item', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
+                        label: Text('Add Item', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
                       ),
                     ],
                   ),

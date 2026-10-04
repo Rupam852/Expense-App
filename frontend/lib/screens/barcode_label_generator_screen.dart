@@ -836,8 +836,8 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
                 controller: _barcodeController,
                 keyboardType: TextInputType.text,
                 decoration: InputDecoration(
-                  labelText: 'Barcode / SKU Number *',
-                  hintText: 'Enter code or click Auto-Gen',
+                  labelText: 'Barcode / SKU *',
+                  hintText: 'Enter code or tap Auto-Gen',
                   prefixIcon: const Icon(Icons.qr_code_scanner_rounded),
                   suffixIcon: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -847,12 +847,32 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
                         icon: const Icon(Icons.camera_alt_outlined, color: Color(0xFF10B981)),
                         onPressed: _scanBarcodeFromCamera,
                       ),
-                      TextButton.icon(
-                        onPressed: _generateUniqueBarcode,
-                        icon: const Icon(Icons.auto_awesome, size: 14, color: Color(0xFF00D09C)),
-                        label: Text('Auto-Gen', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF00D09C))),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: InkWell(
+                          onTap: _generateUniqueBarcode,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF00D09C).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFF00D09C).withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.auto_awesome, size: 12, color: Color(0xFF00D09C)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Auto-Gen',
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF00D09C)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
-                      const SizedBox(width: 4),
                     ],
                   ),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -862,36 +882,31 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
               ),
               const SizedBox(height: 14),
 
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _priceController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: InputDecoration(
-                        labelText: 'Selling Price (MRP ₹)',
-                        hintText: 'e.g. 199',
-                        prefixText: '₹ ',
-                        prefixIcon: const Icon(Icons.currency_rupee_rounded),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        isDense: true,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _shopNameController,
-                      decoration: InputDecoration(
-                        labelText: 'Shop Name (Tag Header)',
-                        hintText: 'My Store',
-                        prefixIcon: const Icon(Icons.storefront_outlined),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        isDense: true,
-                      ),
-                    ),
-                  ),
-                ],
+              // Selling Price
+              TextFormField(
+                controller: _priceController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'Selling Price (MRP ₹)',
+                  hintText: 'e.g. 199',
+                  prefixText: '₹ ',
+                  prefixIcon: const Icon(Icons.currency_rupee_rounded),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  isDense: true,
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Shop Name
+              TextFormField(
+                controller: _shopNameController,
+                decoration: InputDecoration(
+                  labelText: 'Shop Name on Tag (Optional)',
+                  hintText: 'e.g. My Store / Brand Name',
+                  prefixIcon: const Icon(Icons.storefront_outlined),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  isDense: true,
+                ),
               ),
 
               // ── SAVE TO CATALOG CHECKBOX ──────────────────────────

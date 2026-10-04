@@ -401,7 +401,7 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
               ),
               icon: const Icon(Icons.add_rounded),
               label: Text(
-                '+ Add First Payment Card',
+                'Add First Payment Card',
                 style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold),
               ),
             ),
