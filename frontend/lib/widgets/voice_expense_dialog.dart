@@ -429,13 +429,18 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
 
       if (mounted) {
         final expProvider = Provider.of<ExpenseProvider>(context, listen: false);
-        expProvider.loadLocalData();
+        if (saleItems.isNotEmpty) {
+          await expProvider.deductStockForSale(saleItems.map((e) => e.toMap()).toList());
+        }
+        await expProvider.loadLocalData();
         expProvider.triggerQuietSync();
-        Navigator.of(context).pop();
-        CustomToast.show(
-          context,
-          'Sale recorded: ₹${totalAmount.toStringAsFixed(0)} (Bill #$autoInvNo)',
-        );
+        if (mounted) {
+          Navigator.of(context).pop();
+          CustomToast.show(
+            context,
+            'Sale recorded: ₹${totalAmount.toStringAsFixed(0)} (Bill #$autoInvNo)',
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

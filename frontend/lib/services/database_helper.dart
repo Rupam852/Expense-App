@@ -2468,13 +2468,14 @@ class DatabaseHelper {
     final db = await instance.database;
     await db.transaction((txn) async {
       for (final it in items) {
-        final name = (it['name'] ?? it['title'] ?? '').toString().trim();
-        final qty = (it['quantity'] ?? it['qty'] ?? 1.0) as num;
+        final name = (it['item_name'] ?? it['itemName'] ?? it['name'] ?? it['title'] ?? '').toString().trim();
+        final rawQty = it['quantity'] ?? it['qty'];
+        final double qty = rawQty is num ? rawQty.toDouble() : (double.tryParse(rawQty?.toString() ?? '1') ?? 1.0);
         if (name.isEmpty || qty <= 0) continue;
 
         final matching = await txn.query(
           'business_items',
-          where: 'LOWER(name) = ? AND is_deleted = 0',
+          where: 'LOWER(TRIM(name)) = ? AND is_deleted = 0',
           whereArgs: [name.toLowerCase()],
           limit: 1,
         );
@@ -2482,7 +2483,7 @@ class DatabaseHelper {
         if (matching.isNotEmpty) {
           final item = BusinessItem.fromMap(matching.first);
           if (item.trackStock) {
-            final newStock = (item.stockQuantity - qty.toDouble()).clamp(-999999.0, 999999.0);
+            final newStock = (item.stockQuantity - qty).clamp(-999999.0, 999999.0);
             await txn.update(
               'business_items',
               {

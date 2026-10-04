@@ -103,9 +103,8 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
       }
 
       bool isWithinRange(DateTime dt) {
-        final localDt = dt.toLocal();
-        return (localDt.isAfter(start) || localDt.isAtSameMomentAs(start)) &&
-               (localDt.isBefore(end) || localDt.isAtSameMomentAs(end));
+        final localMs = dt.toLocal().millisecondsSinceEpoch;
+        return localMs >= start.millisecondsSinceEpoch && localMs <= end.millisecondsSinceEpoch;
       }
 
       final periodSales = allSales.where((s) => isWithinRange(s.saleDate)).toList();
@@ -733,13 +732,11 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                         selected: isSelected,
                         selectedColor: primaryColor.withValues(alpha: 0.2),
                         onSelected: (val) {
-                          if (val) {
-                            setState(() {
-                              _filterPeriod = p;
-                              _customSelectedRange = null;
-                            });
-                            _loadDashboardData(isQuiet: true);
-                          }
+                          setState(() {
+                            _filterPeriod = p;
+                            _customSelectedRange = null;
+                          });
+                          _loadDashboardData(isQuiet: true);
                         },
                       ),
                     );

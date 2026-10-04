@@ -1271,7 +1271,7 @@ class ExpenseProvider with ChangeNotifier {
 
     // Check if any sold item dropped to low stock or out of stock and notify
     for (final it in items) {
-      final name = (it['name'] ?? it['title'] ?? '').toString().trim();
+      final name = (it['item_name'] ?? it['itemName'] ?? it['name'] ?? it['title'] ?? '').toString().trim();
       final matched = _businessItems.firstWhere(
         (bi) => bi.name.trim().toLowerCase() == name.toLowerCase(),
         orElse: () => BusinessItem(id: '', name: ''),
