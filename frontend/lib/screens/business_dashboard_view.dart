@@ -24,6 +24,7 @@ import 'invoice_screen.dart';
 import 'calculator_hub_screen.dart';
 import 'settings_screen.dart';
 import 'business_catalog_screen.dart';
+import 'barcode_label_generator_screen.dart';
 import '../utils/app_strings.dart';
 
 class BusinessDashboardView extends StatefulWidget {
@@ -1101,16 +1102,11 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                 ),
                 const SizedBox(width: 8),
                 _buildActionButton(
-                  label: 'Mandi Calc',
-                  subtitle: 'Rates & Crop',
-                  icon: Icons.calculate_rounded,
+                  label: 'More Tools',
+                  subtitle: 'Labels & Calc',
+                  icon: Icons.grid_view_rounded,
                   color: const Color(0xFF10B981),
-                  onTap: () async {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const CalculatorHubScreen(initialTabIndex: 1)),
-                    );
-                    _loadDashboardData(isQuiet: true);
-                  },
+                  onTap: _showMoreBusinessToolsModal,
                 ),
               ],
             ),
@@ -1461,6 +1457,264 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                           const SizedBox(height: 2),
                           Text(
                             'Log shop expenses, stock purchase, rent, utility bills',
+                            style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFFF59E0B)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showMoreBusinessToolsModal() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Drag Handle & Close Button
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const SizedBox(width: 32),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 20, color: Colors.grey),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // Header Title
+            Text(
+              'Business Tools & Features',
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            Text(
+              'Product barcodes, stickers, inventory catalog & agricultural rates',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Option 1: Barcode & QR Label Maker (NEW)
+            InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () async {
+                Navigator.of(ctx).pop();
+                await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const BarcodeLabelGeneratorScreen()),
+                );
+                _loadDashboardData(isQuiet: true);
+              },
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00D09C).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFF00D09C).withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF00D09C), Color(0xFF059669)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.qr_code_2_rounded, color: Colors.white, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Barcode & QR Label Maker',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF00D09C).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text('NEW', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: const Color(0xFF00D09C))),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Generate printable A4 sticker sheets for items with price & SKU',
+                            style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF00D09C)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Option 2: Product Catalog & Stock
+            InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () async {
+                Navigator.of(ctx).pop();
+                await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const BusinessCatalogScreen()),
+                );
+                _loadDashboardData(isQuiet: true);
+              },
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3B82F6).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.inventory_2_outlined, color: Colors.white, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Product Catalog & Inventory',
+                            style: GoogleFonts.outfit(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Manage items, buy/sell prices, stock levels & low stock alerts',
+                            style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF3B82F6)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Option 3: Mandi & Crop Calculator
+            InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () async {
+                Navigator.of(ctx).pop();
+                await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const CalculatorHubScreen(initialTabIndex: 1)),
+                );
+                _loadDashboardData(isQuiet: true);
+              },
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.calculate_rounded, color: Colors.white, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Mandi Price & Crop Calculator',
+                            style: GoogleFonts.outfit(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Mandi unit rate conversion & AI voice market price analyzer',
                             style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey),
                           ),
                         ],

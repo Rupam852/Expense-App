@@ -5,6 +5,7 @@ import '../models/business_item.dart';
 import '../services/expense_provider.dart';
 import '../widgets/custom_toast.dart';
 import '../widgets/barcode_scanner_modal.dart';
+import 'barcode_label_generator_screen.dart';
 
 class BusinessCatalogScreen extends StatefulWidget {
   final bool initialFilterLowStock;
@@ -442,6 +443,15 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
         ),
         actions: [
           IconButton(
+            tooltip: 'Print Barcode Stickers',
+            icon: const Icon(Icons.qr_code_2_rounded, color: Color(0xFF00D09C), size: 24),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const BarcodeLabelGeneratorScreen()),
+              );
+            },
+          ),
+          IconButton(
             tooltip: 'Add New Item',
             icon: const Icon(Icons.add_circle_outline, color: _businessBlue, size: 26),
             onPressed: () => _showItemEditorSheet(context),
@@ -745,7 +755,11 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
               PopupMenuButton<String>(
                 icon: Icon(Icons.more_vert, color: isDark ? Colors.white60 : Colors.black54, size: 20),
                 onSelected: (val) {
-                  if (val == 'refill') {
+                  if (val == 'stickers') {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => BarcodeLabelGeneratorScreen(initialItem: item)),
+                    );
+                  } else if (val == 'refill') {
                     _showRefillStockDialog(context, item);
                   } else if (val == 'edit') {
                     _showItemEditorSheet(context, existingItem: item);
@@ -754,6 +768,16 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                   }
                 },
                 itemBuilder: (ctx) => [
+                  const PopupMenuItem(
+                    value: 'stickers',
+                    child: Row(
+                      children: [
+                        Icon(Icons.qr_code_2_rounded, size: 18, color: Color(0xFF00D09C)),
+                        SizedBox(width: 8),
+                        Text('Print Barcode Stickers'),
+                      ],
+                    ),
+                  ),
                   const PopupMenuItem(
                     value: 'refill',
                     child: Row(

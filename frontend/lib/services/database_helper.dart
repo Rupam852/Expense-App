@@ -12,6 +12,7 @@ import '../models/subscription_item.dart';
 import '../models/business_sale.dart';
 import '../models/business_profile.dart';
 import '../models/business_item.dart';
+import '../models/barcode_label_batch.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -427,6 +428,24 @@ class DatabaseHelper {
     } catch (_) {}
     try {
       await db.execute('ALTER TABLE business_items ADD COLUMN low_stock_limit REAL DEFAULT 5.0');
+    } catch (_) {}
+    try {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS barcode_label_batches (
+          id TEXT PRIMARY KEY,
+          user_id TEXT,
+          item_id TEXT,
+          product_name TEXT NOT NULL,
+          barcode_data TEXT NOT NULL,
+          barcode_type TEXT NOT NULL DEFAULT 'barcode',
+          price REAL NOT NULL DEFAULT 0.0,
+          quantity INTEGER NOT NULL DEFAULT 24,
+          columns_count INTEGER NOT NULL DEFAULT 3,
+          shop_name TEXT,
+          sync_status INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL
+        )
+      ''');
     } catch (_) {}
     try {
       await db.execute('ALTER TABLE business_items ADD COLUMN track_stock INTEGER DEFAULT 1');
@@ -2544,6 +2563,69 @@ class DatabaseHelper {
         map['is_synced'] = 1;
         await txn.insert(
           'business_items',
+          map,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
+  }
+
+  // ─── BARCODE LABEL BATCHES ──────────────────────────────────────────
+
+  Future<int> insertBarcodeLabelBatch(BarcodeLabelBatch batch) async {
+    final db = await instance.database;
+    return await db.insert(
+      'barcode_label_batches',
+      batch.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<BarcodeLabelBatch>> getBarcodeLabelBatches() async {
+    final db = await instance.database;
+    final maps = await db.query(
+      'barcode_label_batches',
+      orderBy: 'created_at DESC',
+    );
+    return maps.map((m) => BarcodeLabelBatch.fromMap(m)).toList();
+  }
+
+  Future<int> deleteBarcodeLabelBatch(String id) async {
+    final db = await instance.database;
+    return await db.delete(
+      'barcode_label_batches',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getUnsyncedBarcodeLabelBatches() async {
+    final db = await instance.database;
+    return await db.query(
+      'barcode_label_batches',
+      where: 'sync_status = 0',
+    );
+  }
+
+  Future<void> markBarcodeLabelBatchesSynced(List<String> ids) async {
+    final db = await instance.database;
+    if (ids.isEmpty) return;
+    await db.update(
+      'barcode_label_batches',
+      {'sync_status': 1},
+      where: 'id IN (${ids.map((_) => '?').join(', ')})',
+      whereArgs: ids,
+    );
+  }
+
+  Future<void> syncDownBarcodeLabelBatches(List<BarcodeLabelBatch> batches) async {
+    final db = await instance.database;
+    await db.transaction((txn) async {
+      for (final b in batches) {
+        final map = b.toMap();
+        map['sync_status'] = 1;
+        await txn.insert(
+          'barcode_label_batches',
           map,
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
