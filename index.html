@@ -585,21 +585,21 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
             </div>
             <h3>Product Catalog & Inventory</h3>
-            <p>Maintain your product catalog with buy price, selling price, and GST tax slabs for fast 1-tap billing during customer checkout.</p>
+            <p>Maintain your product catalog with buy price, selling price, stock quantities, and low stock alerts for fast 1-tap checkout billing.</p>
+          </div>
+          <div class="mode-feature-card business-card">
+            <div class="mode-card-icon orange">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 5v14M8 5v14M12 5v14M17 5v14M21 5v14"/></svg>
+            </div>
+            <h3>Barcode & QR Sticker Maker</h3>
+            <p>Generate printable A4 sticker PDF sheets with 3 or 4 columns, auto-generated unique retail barcodes, and 1-tap product catalog sync.</p>
           </div>
           <div class="mode-feature-card business-card">
             <div class="mode-card-icon purple">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
             </div>
-            <h3>Customer Khata & Ledger</h3>
-            <p>Manage customer credit ledgers (Udhar Given & Taken), credit limits, payment history, and auto payment reminders on WhatsApp.</p>
-          </div>
-          <div class="mode-feature-card business-card">
-            <div class="mode-card-icon orange">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-            </div>
-            <h3>Shop Profile & UPI QR on Bills</h3>
-            <p>Set up your shop name, address, GST number, and business UPI QR code so customers can scan and pay right off their invoices.</p>
+            <h3>Customer Khata & WhatsApp</h3>
+            <p>Manage customer credit ledgers (Udhar Given & Taken), track due dates, and send friendly WhatsApp payment reminders in 1 click.</p>
           </div>
         </div>
       </div>
@@ -710,25 +710,39 @@
         </div>
       </div>
 
+      <!-- Card: Product Barcode & QR Label Sheet Maker (NEW) -->
+      <div class="bento-card bento-wide" id="barcode-maker">
+        <div class="feature-icon-wrapper">
+          <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#00d09c;"><path d="M3 5v14M8 5v14M12 5v14M17 5v14M21 5v14"/><rect x="2" y="3" width="20" height="18" rx="2"/></svg>
+        </div>
+        <div class="bento-content">
+          <div class="feature-tag-badge">NEW • A4 PDF STICKER SHEETS</div>
+          <h3>Product Barcode & QR Label Sheet Maker</h3>
+          <p>Generate printable A4 sticker PDF sheets with 3-column (Standard 65x35mm) or 4-column (Compact 48x25mm) layouts. Automatically create unique 12-digit Indian retail barcodes (<code>890...</code>) or QR codes, save directly to your Product Catalog with stock counts & cost price, and re-print batch history with a single tap.</p>
+        </div>
+      </div>
+
       <!-- Card 8: Secure Encrypted Database -->
       <div class="bento-card">
         <div class="feature-icon-wrapper">
           <svg class="feature-svg-icon lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path class="lock-shackle" d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
         </div>
         <div class="bento-content">
+          <div class="feature-tag-badge">PRIVACY FIRST</div>
           <h3>AES-Encrypted Local Sandbox</h3>
-          <p>All data stays 100% offline inside an AES-encrypted local database on your device with biometric fingerprint protection.</p>
+          <p>All data stays 100% offline inside an AES-encrypted local SQLite database on your device with biometric fingerprint & screen lock protection.</p>
         </div>
       </div>
 
-      <!-- Card 9: Full Multi-Table Supabase Sync -->
+      <!-- Card 9: Full Multi-Table Supabase Sync & Backup Scope -->
       <div class="bento-card">
         <div class="feature-icon-wrapper">
           <svg class="feature-svg-icon cloud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.2 15c.9-1.2 1.4-2.7 1.4-4.2a7.5 7.5 0 0 0-14.8-1.5A5.5 5.5 0 0 0 2.5 15"></path><path d="M12 13v8M9 16l3-3 3 3"></path></svg>
         </div>
         <div class="bento-content">
-          <h3>Full Multi-Table Cloud Backup</h3>
-          <p>Sync all 6 entities—Expenses, Budgets, Payment Cards, Khata entries, Subscriptions, and Split bills—to your private Supabase cloud.</p>
+          <div class="feature-tag-badge">ENCRYPTED CLOUD</div>
+          <h3>Multi-Table Sync & Backup Scope</h3>
+          <p>Sync all entities—Expenses, Budgets, Cards, Khata, Subscriptions, Split bills & Barcodes—to private Supabase cloud with transparent table scope transparency.</p>
         </div>
       </div>
 
@@ -1030,6 +1044,24 @@
         </div>
         <div class="faq-answer">
           <p>Whenever an error occurs or if you have suggestions, simply tap "Help / Report" in error popups or Settings. Your message and optional debug details are transmitted straight to developer email (<code>rupambairagiya08@gmail.com</code>) via secure SMTP.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">
+          <h3>How do I create & print Barcode or QR sticker label sheets for my shop?</h3>
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-answer">
+          <p>Switch to <strong>Business Mode</strong>, open Quick Actions &gt; <em>"Barcode Labels"</em> (or tap any product in your Product Catalog). Enter the product name, price, and select sticker layout (3 columns for standard 65x35mm or 4 columns for compact 48x25mm). The app automatically generates unique retail barcodes or QR codes and formats an A4 PDF sheet ready for instant printing or sharing.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-question">
+          <h3>What data gets backed up, and can I control my Backup Scope?</h3>
+          <span class="faq-icon">+</span>
+        </div>
+        <div class="faq-answer">
+          <p>Grow Expense is 100% local-first. When you enable optional cloud sync, you can view the transparent <strong>Backup Scope</strong> screen inside Settings. It clearly highlights all 7 synced tables (Expenses, Budgets, Cards, Khata, Subscriptions, Split Bills, Barcodes) and confirms that sensitive device credentials remain strictly on your phone.</p>
         </div>
       </div>
       <div class="faq-item">
