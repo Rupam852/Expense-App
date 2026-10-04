@@ -535,6 +535,87 @@ class _BackupScopeScreenState extends State<BackupScopeScreen> with SingleTicker
     }
   }
 
+  _ScopeItemData _getCatalogItemData(String langCode, String badge) {
+    if (langCode.startsWith('bn')) {
+      return _ScopeItemData(
+        title: 'পণ্য ক্যাটালগ ও স্টক ইনভেন্টরি',
+        desc: 'পণ্যের নাম, কেনা/বেচা দাম, বারকোড নম্বর, বর্তমান স্টক পরিমাণ ও কম স্টক সতর্কতা সীমা।',
+        icon: Icons.inventory_2_outlined,
+        color: const Color(0xFF10B981),
+        badge: badge,
+      );
+    } else if (langCode.startsWith('hi') || langCode == 'hinglish') {
+      return _ScopeItemData(
+        title: 'सामान कैटलॉग व इन्वेंटरी स्टॉक',
+        desc: 'सामान का नाम, खरीद/बिक्री मूल्य, बारकोड नंबर, स्टॉक मात्रा और लो-स्टॉक सीमा।',
+        icon: Icons.inventory_2_outlined,
+        color: const Color(0xFF10B981),
+        badge: badge,
+      );
+    }
+    return _ScopeItemData(
+      title: 'Product Catalog & Inventory Stock',
+      desc: 'Product names, buy/sell prices, barcode numbers, available stock & low-stock limits.',
+      icon: Icons.inventory_2_outlined,
+      color: const Color(0xFF10B981),
+      badge: badge,
+    );
+  }
+
+  _ScopeItemData _getBizSalesItemData(String langCode, String badge) {
+    if (langCode.startsWith('bn')) {
+      return _ScopeItemData(
+        title: 'দোকান বিক্রি ও GST চালান',
+        desc: 'কাস্টমার বিল, বিক্রিত পণ্য, ট্যাক্স, ছাড়, নগদ/অনলাইন/বাকি পেমেন্ট ও নিট লাভ।',
+        icon: Icons.point_of_sale_rounded,
+        color: const Color(0xFF6366F1),
+        badge: badge,
+      );
+    } else if (langCode.startsWith('hi') || langCode == 'hinglish') {
+      return _ScopeItemData(
+        title: 'दुकान बिक्री व GST बिलिंग',
+        desc: 'ग्राहक बिल, बेचे गए सामान, टैक्स, छूट, नकद/ऑनलाइन/उधार पेमेंट और मुनाफा मार्जिन।',
+        icon: Icons.point_of_sale_rounded,
+        color: const Color(0xFF6366F1),
+        badge: badge,
+      );
+    }
+    return _ScopeItemData(
+      title: 'Business Sales & GST Invoices',
+      desc: 'Customer sale bills, item lists, GST taxes, discounts, cash/online/udhar payments & profit margins.',
+      icon: Icons.point_of_sale_rounded,
+      color: const Color(0xFF6366F1),
+      badge: badge,
+    );
+  }
+
+  _ScopeItemData _getBizProfileItemData(String langCode, String badge) {
+    if (langCode.startsWith('bn')) {
+      return _ScopeItemData(
+        title: 'দোকান ও ব্যবসা প্রোফাইল',
+        desc: 'দোকানের নাম, মালিকের নাম, মোবাইল নম্বর, ঠিকানা, GSTIN ও সংযুক্ত UPI আইডি।',
+        icon: Icons.storefront_rounded,
+        color: const Color(0xFF3B82F6),
+        badge: badge,
+      );
+    } else if (langCode.startsWith('hi') || langCode == 'hinglish') {
+      return _ScopeItemData(
+        title: 'दुकान व व्यापार प्रोफ़ाइल',
+        desc: 'दुकान का नाम, मालिक, मोबाइल नंबर, पता, GSTIN और लिंक्ड UPI पेमेंट ID।',
+        icon: Icons.storefront_rounded,
+        color: const Color(0xFF3B82F6),
+        badge: badge,
+      );
+    }
+    return _ScopeItemData(
+      title: 'Shop & Business Profile',
+      desc: 'Shop name, contact person, phone number, address, GSTIN and linked UPI QR payment ID.',
+      icon: Icons.storefront_rounded,
+      color: const Color(0xFF3B82F6),
+      badge: badge,
+    );
+  }
+
   void _showLanguagePicker(BuildContext context, BackupScopeStrings str, bool isDark) {
     showModalBottomSheet(
       context: context,
@@ -867,6 +948,9 @@ class _BackupScopeScreenState extends State<BackupScopeScreen> with SingleTicker
         color: const Color(0xFFF97316),
         badge: str.badgeCloud,
       ),
+      _getCatalogItemData(_selectedLangCode, str.badgeCloud),
+      _getBizSalesItemData(_selectedLangCode, str.badgeCloud),
+      _getBizProfileItemData(_selectedLangCode, str.badgeCloud),
     ];
 
     return ListView(
