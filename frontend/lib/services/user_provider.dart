@@ -31,6 +31,7 @@ class UserProvider with ChangeNotifier {
   bool _needsVerification = false;
   String? _unverifiedEmail;
   ThemeMode _themeMode = ThemeMode.system;
+  String _appLanguage = 'en'; // 'en', 'hi', 'bn'
 
   Map<String, dynamic>? get userProfile => _userProfile;
   bool get isAuthenticated => _isAuthenticated;
@@ -47,6 +48,7 @@ class UserProvider with ChangeNotifier {
   bool get needsVerification => _needsVerification;
   String? get unverifiedEmail => _unverifiedEmail;
   ThemeMode get themeMode => _themeMode;
+  String get appLanguage => _appLanguage;
   String get themeModeString {
     switch (_themeMode) {
       case ThemeMode.light:
@@ -55,6 +57,24 @@ class UserProvider with ChangeNotifier {
         return 'dark';
       case ThemeMode.system:
         return 'system';
+    }
+  }
+
+  Future<void> setAppLanguage(String langCode) async {
+    if (langCode != 'en' && langCode != 'hi' && langCode != 'bn') return;
+    _appLanguage = langCode;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('app_display_language', langCode);
+      // Synchronize notification language
+      await NotificationService.instance.setNotificationLanguage(langCode);
+
+      // Synchronize AI Chat response language
+      final aiLang = langCode == 'hi' ? 'Hindi' : (langCode == 'bn' ? 'Bengali' : 'English');
+      await AiConfigService.instance.setResponseLanguage(aiLang);
+    } catch (e) {
+      debugPrint('[UserProvider] Error saving app language: $e');
     }
   }
 
@@ -162,6 +182,9 @@ class UserProvider with ChangeNotifier {
       _highRefreshRateEnabled = prefs.getBool('high_refresh_rate') ?? true;
       _applyRefreshRate(_highRefreshRateEnabled);
       _showSpendingPredictionInBudget = prefs.getBool('show_spending_prediction_in_budget') ?? false;
+
+      _appLanguage = prefs.getString('app_display_language') ?? 'en';
+      NotificationService.instance.setNotificationLanguage(_appLanguage);
 
       _userGeminiApiKey = prefs.getString('user_gemini_api_key');
       final cachedProfileStr = prefs.getString('cached_user_profile');

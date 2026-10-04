@@ -15,6 +15,7 @@ import 'cloud_backup_screen.dart';
 import 'notification_settings_screen.dart';
 import '../widgets/report_issue_modal.dart';
 import 'business_settings_screen.dart';
+import '../utils/app_strings.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -351,6 +352,185 @@ class SettingsScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                      color: isSelected ? primaryColor : (isDark ? Colors.white : Colors.black87),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Icon(Icons.check_circle_rounded, color: primaryColor, size: 20)
+            else
+              Icon(Icons.radio_button_unchecked, color: isDark ? Colors.grey[600] : Colors.grey[400], size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showLanguageSelectionBottomSheet(BuildContext context, UserProvider userProvider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = const Color(0xFF00D09C);
+    final currentLang = userProvider.appLanguage;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E232E) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 20,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.grey[700] : Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Choose App Language',
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Select your preferred display & AI chat response language',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildLanguageOptionTile(
+                context: ctx,
+                title: '🇬🇧 English (Default)',
+                subtitle: 'Standard English interface & AI responses',
+                code: 'en',
+                isSelected: currentLang == 'en',
+                onTap: () {
+                  userProvider.setAppLanguage('en');
+                  Navigator.of(ctx).pop();
+                  CustomToast.show(context, 'App language set to English 🇬🇧');
+                },
+                isDark: isDark,
+                primaryColor: primaryColor,
+              ),
+              const SizedBox(height: 8),
+              _buildLanguageOptionTile(
+                context: ctx,
+                title: '🇮🇳 हिंदी (Hindi)',
+                subtitle: 'हिंदी इंटरफेस एवं AI चैट प्रतिक्रियाएं',
+                code: 'hi',
+                isSelected: currentLang == 'hi',
+                onTap: () {
+                  userProvider.setAppLanguage('hi');
+                  Navigator.of(ctx).pop();
+                  CustomToast.show(context, 'ऐप की भाषा हिंदी सेट हो गई है 🇮🇳');
+                },
+                isDark: isDark,
+                primaryColor: primaryColor,
+              ),
+              const SizedBox(height: 8),
+              _buildLanguageOptionTile(
+                context: ctx,
+                title: '🇮🇳 বাংলা (Bengali)',
+                subtitle: 'বাংলা ইন্টারফেস এবং AI চ্যাট প্রতিক্রিয়া',
+                code: 'bn',
+                isSelected: currentLang == 'bn',
+                onTap: () {
+                  userProvider.setAppLanguage('bn');
+                  Navigator.of(ctx).pop();
+                  CustomToast.show(context, 'অ্যাপের ভাষা বাংলা সেট করা হয়েছে 🇮🇳');
+                },
+                isDark: isDark,
+                primaryColor: primaryColor,
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLanguageOptionTile({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required String code,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required bool isDark,
+    required Color primaryColor,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? primaryColor.withValues(alpha: isDark ? 0.12 : 0.08)
+              : (isDark ? const Color(0xFF14171E) : const Color(0xFFF8FAFC)),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? primaryColor : (isDark ? const Color(0xFF262E3D) : const Color(0xFFE2E8F0)),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: (isSelected ? primaryColor : Colors.indigoAccent).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.language_rounded,
+                color: isSelected ? primaryColor : Colors.indigoAccent,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -994,6 +1174,54 @@ class SettingsScreen extends StatelessWidget {
                         ],
                       ),
                       onTap: () => _showThemeSelectionBottomSheet(context, userProvider),
+                    ),
+                    Divider(height: 1, color: borderColor),
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6366F1).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.language_rounded, color: Color(0xFF6366F1), size: 22),
+                      ),
+                      title: Text(
+                        'App Language',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        AppStrings.getLanguageLabel(userProvider.appLanguage),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: primaryColor,
+                        ),
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: primaryColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
+                            ),
+                            child: Text(
+                              'Change',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: primaryColor,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+                        ],
+                      ),
+                      onTap: () => _showLanguageSelectionBottomSheet(context, userProvider),
                     ),
                     Divider(height: 1, color: borderColor),
                     SwitchListTile(
