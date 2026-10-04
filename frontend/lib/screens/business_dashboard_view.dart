@@ -935,7 +935,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
-                                'To Receive (Lena Hai)',
+                                'To Receive',
                                 style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -969,7 +969,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
-                                'To Pay (Dena Hai)',
+                                'To Pay',
                                 style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
                                 overflow: TextOverflow.ellipsis,
                               ),

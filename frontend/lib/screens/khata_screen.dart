@@ -243,8 +243,8 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
                         ]
                       : [
                           Tab(text: 'All (${filtered.length})'),
-                          Tab(text: 'You\'ll Get (${lentList.length})'),
-                          Tab(text: 'You\'ll Give (${borrowedList.length})'),
+                          Tab(text: 'You Will Get (${lentList.length})'),
+                          Tab(text: 'You Will Give (${borrowedList.length})'),
                           Tab(text: 'Settled (${settledList.length})'),
                         ],
                 ),
@@ -327,7 +327,7 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
-                            isBusiness ? 'CUSTOMER UDHAR (LENA HAI)' : 'YOU WILL GET',
+                            isBusiness ? 'CUSTOMER UDHAR' : 'YOU WILL GET',
                             style: GoogleFonts.inter(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
@@ -377,7 +377,7 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
-                              isBusiness ? 'VENDOR PAYABLE (DENA HAI)' : 'YOU WILL GIVE',
+                              isBusiness ? 'VENDOR PAYABLE' : 'YOU WILL GIVE',
                               style: GoogleFonts.inter(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
@@ -894,10 +894,10 @@ class _KhataEntrySheetState extends State<_KhataEntrySheet> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            widget.isBusiness ? 'Customer Udhar\n(You\'ll Receive)' : 'You Lent\n(You\'ll Get)',
+                            widget.isBusiness ? 'Customer Udhar' : 'You Will Get',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.inter(
-                              fontSize: 11.5,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: _type == 'lent' ? primaryColor : Colors.grey,
                             ),
@@ -934,10 +934,10 @@ class _KhataEntrySheetState extends State<_KhataEntrySheet> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            widget.isBusiness ? 'Vendor Credit\n(You\'ll Pay)' : 'You Borrowed\n(You\'ll Give)',
+                            widget.isBusiness ? 'Vendor Credit' : 'You Will Give',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.inter(
-                              fontSize: 11.5,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: _type == 'borrowed' ? const Color(0xFFEB5757) : Colors.grey,
                             ),

@@ -20,7 +20,7 @@ class SupportService {
     required String message,
     String? errorDetails,
     String? deviceInfo,
-    String appVersion = 'v1.2.0',
+    String appVersion = 'v1.3.0',
   }) async {
     final cleanName = name.trim().isEmpty ? 'Grow Expense User' : name.trim();
     final cleanEmail = email.trim().isEmpty ? 'Not Provided' : email.trim();

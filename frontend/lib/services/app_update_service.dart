@@ -40,7 +40,7 @@ class AppUpdateService with ChangeNotifier {
 
   factory AppUpdateService() => instance;
 
-  static const String currentAppVersion = 'v1.2.0';
+  static const String currentAppVersion = 'v1.3.0';
   static const String updateApiUrl = 'https://api.neofilestransfer.site/api/version/apk_473b1286700c42a2';
   static const String defaultDownloadWebUrl = 'https://neofilestransfer.site/download/a1d6633466f3';
   static const String _keyAutoCheck = 'app_auto_check_updates_enabled';
