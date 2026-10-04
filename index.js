@@ -16,6 +16,37 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('scroll', handleScroll);
   handleScroll();
 
+  // Smooth Scroll & Clean URL (Prevents /#hash from polluting the URL bar)
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function(e) {
+      const targetId = this.getAttribute('href');
+      if (targetId && targetId !== '#') {
+        const targetElement = document.querySelector(targetId);
+        if (targetElement) {
+          e.preventDefault();
+          const headerOffset = 80;
+          const elementPosition = targetElement.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+          });
+
+          // Clean URL bar to avoid /#ai-hub or /#features in browser address
+          if (window.history && window.history.replaceState) {
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+        }
+      }
+    });
+  });
+
+  // Clean initial hash if present on load
+  if (window.location.hash && window.history && window.history.replaceState) {
+    window.history.replaceState(null, '', window.location.pathname);
+  }
+
   // 2. Privacy Policy Modal Controls
   const privacyModal = document.getElementById('privacy-modal');
   const openPrivacyBtn = document.getElementById('open-privacy-btn');
