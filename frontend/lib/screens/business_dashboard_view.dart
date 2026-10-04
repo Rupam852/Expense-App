@@ -947,11 +947,6 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                           '₹${_totalLenaHai.toStringAsFixed(0)}',
                           style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.green),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Total Outstanding',
-                          style: GoogleFonts.inter(fontSize: 9.5, color: Colors.grey),
-                        ),
                       ],
                     ),
                   ),
@@ -985,11 +980,6 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                         Text(
                           '₹${_totalDenaHai.toStringAsFixed(0)}',
                           style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.redAccent),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Total Outstanding',
-                          style: GoogleFonts.inter(fontSize: 9.5, color: Colors.grey),
                         ),
                       ],
                     ),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -179,18 +178,9 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
 
           return Column(
             children: [
-              // 1. Top Summary Banner
-              _buildSummaryHeader(
-                isDark: isDark,
-                isBusiness: isBusiness,
-                totalGet: totalGet,
-                totalGive: totalGive,
-                primaryColor: primaryColor,
-              ),
-
-              // 2. Search Bar
+              // 1. Search Bar
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+                padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 4.0),
                 child: TextField(
                   controller: _searchController,
                   onChanged: (v) => setState(() => _searchQuery = v.trim()),
@@ -218,6 +208,15 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
                     ),
                   ),
                 ),
+              ),
+
+              // 2. Summary Header & Total Outstanding (Below Search Bar)
+              _buildSummaryHeader(
+                isDark: isDark,
+                isBusiness: isBusiness,
+                totalGet: totalGet,
+                totalGive: totalGive,
+                primaryColor: primaryColor,
               ),
 
               // 3. Tab Bar
@@ -286,9 +285,12 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
     required double totalGive,
     required Color primaryColor,
   }) {
+    final netOutstanding = totalGet - totalGive;
+    final hasData = totalGet > 0 || totalGive > 0;
+
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 6),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E222D) : Colors.white,
         borderRadius: BorderRadius.circular(18),
@@ -303,94 +305,147 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          // You will get / Customer Udhar (Lent)
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          Row(
+            children: [
+              // You will get / Customer Udhar (Lent)
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: isBusiness ? Colors.green : const Color(0xFF00D09C),
-                        shape: BoxShape.circle,
-                      ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: isBusiness ? Colors.green : const Color(0xFF00D09C),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            isBusiness ? 'CUSTOMER UDHAR (LENA HAI)' : 'YOU WILL GET',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey,
+                              letterSpacing: 0.4,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(height: 6),
                     Text(
-                      isBusiness ? 'CUSTOMER UDHAR (LENA HAI)' : 'YOU WILL GET',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
+                      _currencyFormat.format(totalGet),
+                      style: GoogleFonts.outfit(
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                        letterSpacing: 0.4,
+                        color: isBusiness ? Colors.green : const Color(0xFF00D09C),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  _currencyFormat.format(totalGet),
-                  style: GoogleFonts.outfit(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: isBusiness ? Colors.green : const Color(0xFF00D09C),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            height: 36,
-            width: 1,
-            color: isDark ? Colors.white12 : Colors.black12,
-          ),
-          // You will give / Vendor Payable (Borrowed)
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+              ),
+              Container(
+                height: 36,
+                width: 1,
+                color: isDark ? Colors.white12 : Colors.black12,
+              ),
+              // You will give / Vendor Payable (Borrowed)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 14.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFEB5757),
-                          shape: BoxShape.circle,
-                        ),
+                      Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFEB5757),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              isBusiness ? 'VENDOR PAYABLE (DENA HAI)' : 'YOU WILL GIVE',
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                                letterSpacing: 0.4,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(height: 6),
                       Text(
-                        isBusiness ? 'VENDOR PAYABLE (DENA HAI)' : 'YOU WILL GIVE',
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
+                        _currencyFormat.format(totalGive),
+                        style: GoogleFonts.outfit(
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.grey,
-                          letterSpacing: 0.4,
+                          color: const Color(0xFFEB5757),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                ),
+              ),
+            ],
+          ),
+          if (hasData) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withValues(alpha: 0.04) : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isDark ? Colors.white12 : Colors.black12,
+                  width: 0.8,
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.account_balance_wallet_outlined,
+                        size: 14,
+                        color: netOutstanding >= 0 ? (isBusiness ? Colors.green : const Color(0xFF00D09C)) : const Color(0xFFEB5757),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Total Outstanding Balance:',
+                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: isDark ? Colors.white70 : Colors.black87),
+                      ),
+                    ],
+                  ),
                   Text(
-                    _currencyFormat.format(totalGive),
+                    '${netOutstanding >= 0 ? "+" : ""}${_currencyFormat.format(netOutstanding)}',
                     style: GoogleFonts.outfit(
-                      fontSize: 18,
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFFEB5757),
+                      color: netOutstanding >= 0 ? (isBusiness ? Colors.green : const Color(0xFF00D09C)) : const Color(0xFFEB5757),
                     ),
                   ),
                 ],
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
