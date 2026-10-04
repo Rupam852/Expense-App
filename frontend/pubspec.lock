@@ -177,22 +177,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.0"
-  contact_picker_platform_interface:
-    dependency: transitive
-    description:
-      name: contact_picker_platform_interface
-      sha256: "40847ffa0f6e6755c0047e8ef35c4b622a2b053f41ef175d22c19f03984a9ed1"
-      url: "https://pub.dev"
-    source: hosted
-    version: "4.7.0"
-  contact_picker_web:
-    dependency: transitive
-    description:
-      name: contact_picker_web
-      sha256: "13e739a6ce8f3286e441028dec5967b90fd2d5ceaec53045ae054b030877fe31"
-      url: "https://pub.dev"
-    source: hosted
-    version: "4.7.0"
   convert:
     dependency: transitive
     description:
@@ -467,6 +451,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_native_contact_picker:
+    dependency: "direct main"
+    description:
+      name: flutter_native_contact_picker
+      sha256: ce2339cbaf22324541d818b5818d45ad1629ae2146f6e09a29fe78411d43d825
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.12"
   flutter_plugin_android_lifecycle:
     dependency: transitive
     description:
@@ -533,14 +525,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  fluttercontactpicker:
-    dependency: "direct main"
-    description:
-      name: fluttercontactpicker
-      sha256: cddd2ba4631f97927adb59c53a529ee8f965e8685eded66a6d5988347aef6ec4
-      url: "https://pub.dev"
-    source: hosted
-    version: "4.7.0"
   functions_client:
     dependency: transitive
     description:

@@ -19,7 +19,8 @@ import '../services/expense_provider.dart';
 import '../utils/pdf_unicode_helper.dart';
 import '../widgets/custom_toast.dart';
 import '../widgets/barcode_scanner_modal.dart';
-import 'package:fluttercontactpicker/fluttercontactpicker.dart';
+import 'package:flutter_native_contact_picker/flutter_native_contact_picker.dart';
+import 'package:flutter_native_contact_picker/model/contact.dart';
 import 'business_catalog_screen.dart';
 
 class AddBusinessSaleScreen extends StatefulWidget {
@@ -719,24 +720,28 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
     );
   }
 
+  final FlutterNativeContactPicker _contactPicker = FlutterNativeContactPicker();
+
   Future<void> _pickCustomerContact() async {
     try {
-      final PhoneContact contact = await FlutterContactPicker.pickPhoneContact();
-      if (contact.fullName != null && contact.fullName!.isNotEmpty) {
-        setState(() {
-          _isWalkIn = false;
-          _customerNameController.text = contact.fullName!;
-        });
-      }
-      if (contact.phoneNumber?.number != null) {
-        String raw = contact.phoneNumber!.number!;
-        String clean = raw.replaceAll(RegExp(r'[^\d+]'), '');
-        setState(() {
-          _customerPhoneController.text = clean;
-        });
-      }
-      if (mounted) {
-        CustomToast.show(context, '👤 Selected: ${_customerNameController.text}');
+      final Contact? contact = await _contactPicker.selectContact();
+      if (contact != null) {
+        if (contact.fullName != null && contact.fullName!.isNotEmpty) {
+          setState(() {
+            _isWalkIn = false;
+            _customerNameController.text = contact.fullName!;
+          });
+        }
+        if (contact.phoneNumbers != null && contact.phoneNumbers!.isNotEmpty) {
+          String raw = contact.phoneNumbers!.first;
+          String clean = raw.replaceAll(RegExp(r'[^\d+]'), '');
+          setState(() {
+            _customerPhoneController.text = clean;
+          });
+        }
+        if (mounted) {
+          CustomToast.show(context, '👤 Selected: ${_customerNameController.text}');
+        }
       }
     } catch (_) {}
   }
@@ -905,7 +910,7 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
 
       if (mounted) {
         final expProvider = Provider.of<ExpenseProvider>(context, listen: false);
-        await expProvider.deductStockForSale(items);
+        await expProvider.deductStockForSale(items.map((it) => it.toMap()).toList());
         expProvider.loadLocalData();
         expProvider.triggerQuietSync();
       }

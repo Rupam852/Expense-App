@@ -8,7 +8,8 @@ import '../services/user_provider.dart';
 import '../widgets/custom_toast.dart';
 import '../widgets/payment_reminder_modal.dart';
 import '../utils/app_strings.dart';
-import 'package:fluttercontactpicker/fluttercontactpicker.dart';
+import 'package:flutter_native_contact_picker/flutter_native_contact_picker.dart';
+import 'package:flutter_native_contact_picker/model/contact.dart';
 
 class KhataScreen extends StatefulWidget {
   const KhataScreen({super.key});
@@ -796,23 +797,27 @@ class _KhataEntrySheetState extends State<_KhataEntrySheet> {
     super.dispose();
   }
 
+  final FlutterNativeContactPicker _contactPicker = FlutterNativeContactPicker();
+
   Future<void> _pickContact() async {
     try {
-      final PhoneContact contact = await FlutterContactPicker.pickPhoneContact();
-      if (contact.fullName != null && contact.fullName!.isNotEmpty) {
-        setState(() {
-          _nameController.text = contact.fullName!;
-        });
-      }
-      if (contact.phoneNumber?.number != null) {
-        String raw = contact.phoneNumber!.number!;
-        String clean = raw.replaceAll(RegExp(r'[^\d+]'), '');
-        setState(() {
-          _phoneController.text = clean;
-        });
-      }
-      if (mounted) {
-        CustomToast.show(context, '👤 Selected: ${_nameController.text}');
+      final Contact? contact = await _contactPicker.selectContact();
+      if (contact != null) {
+        if (contact.fullName != null && contact.fullName!.isNotEmpty) {
+          setState(() {
+            _nameController.text = contact.fullName!;
+          });
+        }
+        if (contact.phoneNumbers != null && contact.phoneNumbers!.isNotEmpty) {
+          String raw = contact.phoneNumbers!.first;
+          String clean = raw.replaceAll(RegExp(r'[^\d+]'), '');
+          setState(() {
+            _phoneController.text = clean;
+          });
+        }
+        if (mounted) {
+          CustomToast.show(context, '👤 Selected: ${_nameController.text}');
+        }
       }
     } catch (_) {}
   }

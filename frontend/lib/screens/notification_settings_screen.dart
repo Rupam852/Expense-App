@@ -685,7 +685,7 @@ class NotificationSettingsScreen extends StatelessWidget {
                               onTestTap: () async {
                                 final sampleUpdate = AppUpdateInfo(
                                   hasUpdate: true,
-                                  currentVersion: 'v1.0.0',
+                                  currentVersion: AppUpdateService.currentAppVersion,
                                   latestVersion: 'v2.1.0',
                                   fileName: 'GrowExpense-v2.1.0.apk',
                                   downloadUrl: AppUpdateService.defaultDownloadWebUrl,

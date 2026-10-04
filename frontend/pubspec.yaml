@@ -2,7 +2,7 @@ name: expense_app
 description: "A secure, offline-first expense tracker app with Groww-inspired UI."
 publish_to: 'none'
 
-version: 1.3.0+4
+version: 1.4.0+5
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -62,7 +62,7 @@ dependencies:
   firebase_messaging: ^16.7.0
   printing: ^5.14.3
   mobile_scanner: ^7.4.2
-  fluttercontactpicker: ^4.7.0
+  flutter_native_contact_picker: ^0.0.8
 
 dev_dependencies:
   flutter_test:
