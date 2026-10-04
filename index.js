@@ -673,4 +673,26 @@ document.addEventListener('DOMContentLoaded', () => {
     calculateProjections();
   }
 
+  // 12. Dual-Mode (Personal vs Business) Tab Switcher
+  const modeTabBtns = document.querySelectorAll('.mode-tab-btn');
+  const personalPanel = document.getElementById('mode-panel-personal');
+  const businessPanel = document.getElementById('mode-panel-business');
+
+  modeTabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      modeTabBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const mode = btn.getAttribute('data-mode');
+      if (mode === 'personal') {
+        if (personalPanel) personalPanel.classList.add('active');
+        if (businessPanel) businessPanel.classList.remove('active');
+      } else {
+        if (personalPanel) personalPanel.classList.remove('active');
+        if (businessPanel) businessPanel.classList.add('active');
+      }
+      playHaptic('click');
+    });
+  });
+
 });

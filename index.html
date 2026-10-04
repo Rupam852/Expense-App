@@ -58,7 +58,9 @@
         <span class="nav-brand">Grow Expense</span>
       </div>
       <nav class="nav-links">
+        <a href="#dual-modes">Modes</a>
         <a href="#features">Features</a>
+        <a href="#business-hub">Business</a>
         <a href="#ai-hub">AI Hub</a>
         <a href="#calculators">Calculators</a>
         <a href="#how-it-works">How It Works</a>
@@ -367,6 +369,99 @@
     </div>
   </section>
 
+  <!-- Dual-Mode (Personal & Business) Showcase Section -->
+  <section id="dual-modes" class="dual-modes-section">
+    <div class="section-header">
+      <div class="mode-pill-badge">
+        <span class="pulse-dot"></span> 2 POWERFUL MODES IN 1 APP
+      </div>
+      <h2>Personal Finance & Business Operations</h2>
+      <p>Switch between daily personal wealth tracking and full-fledged business bookkeeping with just a single tap.</p>
+      
+      <!-- Interactive Mode Tabs -->
+      <div class="mode-tab-buttons">
+        <button class="mode-tab-btn active personal-btn" id="mode-tab-personal-btn" data-mode="personal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="tab-btn-icon"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Personal Mode
+        </button>
+        <button class="mode-tab-btn business-btn" id="mode-tab-business-btn" data-mode="business">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="tab-btn-icon"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          Business Mode
+        </button>
+      </div>
+    </div>
+
+    <div class="mode-container">
+      <!-- Personal Mode Showcase Panel -->
+      <div class="mode-panel active" id="mode-panel-personal">
+        <div class="mode-grid">
+          <div class="mode-feature-card">
+            <div class="mode-card-icon green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            </div>
+            <h3>Multi-Model AI Advisor</h3>
+            <p>Smart conversational finance coach powered by Google Gemini 2.5 Flash, DeepSeek & Groq. Get personalized budgeting insights.</p>
+          </div>
+          <div class="mode-feature-card">
+            <div class="mode-card-icon blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            </div>
+            <h3>Payment Cards & Dynamic UPI QR</h3>
+            <p>Visual wallet for credit & debit cards with auto-generated live UPI QR codes to collect payments directly on your phone.</p>
+          </div>
+          <div class="mode-feature-card">
+            <div class="mode-card-icon orange">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+            </div>
+            <h3>Mandi Voice & OCR Scanner</h3>
+            <p>Speak trades in Hindi/English or snap receipts with camera. Voice arithmetic and OCR log expenses instantly into local database.</p>
+          </div>
+          <div class="mode-feature-card">
+            <div class="mode-card-icon purple">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+            </div>
+            <h3>Khata & Group Split Bills</h3>
+            <p>Track personal Udhaar, split dining or travel bills with friends, and send friendly WhatsApp payment reminders in 1 click.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Business Mode Showcase Panel -->
+      <div class="mode-panel" id="mode-panel-business">
+        <div class="mode-grid">
+          <div class="mode-feature-card business-card">
+            <div class="mode-card-icon blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </div>
+            <h3>GST & Non-GST Invoicing</h3>
+            <p>Generate professional PDF invoices with shop logo, GSTIN, custom terms, tax auto-calculation, and direct thermal print sharing.</p>
+          </div>
+          <div class="mode-feature-card business-card">
+            <div class="mode-card-icon green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            </div>
+            <h3>Product Catalog & Inventory</h3>
+            <p>Maintain your product catalog with buy price, selling price, and GST tax slabs for fast 1-tap billing during customer checkout.</p>
+          </div>
+          <div class="mode-feature-card business-card">
+            <div class="mode-card-icon purple">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            </div>
+            <h3>Customer Khata & Ledger</h3>
+            <p>Manage customer credit ledgers (Udhar Given & Taken), credit limits, payment history, and auto payment reminders on WhatsApp.</p>
+          </div>
+          <div class="mode-feature-card business-card">
+            <div class="mode-card-icon orange">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            </div>
+            <h3>Shop Profile & UPI QR on Bills</h3>
+            <p>Set up your shop name, address, GST number, and business UPI QR code so customers can scan and pay right off their invoices.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Bento Grid Features Section -->
   <section id="features" class="features">
     <div class="section-header">
@@ -408,6 +503,18 @@
           <div class="feature-tag-badge">NEW • VOICE ARITHMETIC</div>
           <h3>Mandi Voice Calc & Financial Tools</h3>
           <p>Speak wholesale trades (<em>"50 kg potato at 22 rupee plus 10 kg onion at 35"</em>) for instant itemized calculation! Plus Loan EMI, SIP Wealth Planner, and GST/Tax Calculators in one place.</p>
+        </div>
+      </div>
+
+      <!-- Card: GST Invoicing & Product Catalog (Business Mode) -->
+      <div class="bento-card bento-wide" id="business-hub">
+        <div class="feature-icon-wrapper">
+          <svg class="feature-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#38bdf8;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <div class="bento-content">
+          <div class="feature-tag-badge">BUSINESS SUITE • GST READY</div>
+          <h3>GST Invoicing, Fast Billing & Product Catalog</h3>
+          <p>Create professional, printable GST and non-GST sales invoices with automatic tax and discount calculations. Manage item inventory with custom buy/sell prices, customer ledgers, and UPI QR codes printed directly on bills for swift customer payments.</p>
         </div>
       </div>
 

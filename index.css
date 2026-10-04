@@ -3464,5 +3464,202 @@ section[id] {
   border-color: rgba(56, 189, 248, 0.2);
 }
 
+/* -----------------------------------------
+   Dual-Mode (Personal & Business) Styles
+   ----------------------------------------- */
+.dual-modes-section {
+  padding: 100px 0 80px 0;
+  position: relative;
+  z-index: 10;
+}
+
+.mode-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: rgba(0, 208, 156, 0.08);
+  border: 1px solid rgba(0, 208, 156, 0.25);
+  border-radius: 30px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--primary-green);
+  margin-bottom: 16px;
+}
+
+.mode-tab-buttons {
+  display: inline-flex;
+  background: rgba(24, 27, 34, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px;
+  border-radius: 40px;
+  gap: 8px;
+  margin-top: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.mode-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: 30px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-bounce);
+}
+
+.tab-btn-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.mode-tab-btn:hover {
+  color: #fff;
+}
+
+.mode-tab-btn.personal-btn.active {
+  background: linear-gradient(135deg, #00d09c 0%, #05f2a8 100%);
+  color: #000;
+  font-weight: 700;
+  box-shadow: 0 4px 20px rgba(0, 208, 156, 0.35);
+}
+
+.mode-tab-btn.business-btn.active {
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.35);
+}
+
+.mode-container {
+  max-width: 1200px;
+  margin: 40px auto 0 auto;
+  padding: 0 24px;
+}
+
+.mode-panel {
+  display: none;
+  opacity: 0;
+  transform: translateY(15px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.mode-panel.active {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.mode-feature-card {
+  background: rgba(24, 27, 34, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  padding: 26px 22px;
+  backdrop-filter: blur(16px);
+  transition: var(--transition-smooth);
+  display: flex;
+  flex-direction: column;
+}
+
+.mode-feature-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(0, 208, 156, 0.3);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 208, 156, 0.08);
+}
+
+.mode-feature-card.business-card:hover {
+  border-color: rgba(59, 130, 246, 0.35);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), 0 0 20px rgba(59, 130, 246, 0.1);
+}
+
+.mode-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.mode-card-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.mode-card-icon.green {
+  background: rgba(0, 208, 156, 0.12);
+  color: var(--primary-green);
+  border: 1px solid rgba(0, 208, 156, 0.2);
+}
+
+.mode-card-icon.blue {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.mode-card-icon.orange {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.mode-card-icon.purple {
+  background: rgba(168, 85, 247, 0.12);
+  color: #a855f7;
+  border: 1px solid rgba(168, 85, 247, 0.2);
+}
+
+.mode-feature-card h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: #fff;
+}
+
+.mode-feature-card p {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+@media (max-width: 1024px) {
+  .mode-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .dual-modes-section {
+    padding: 70px 0 50px 0;
+  }
+  .mode-tab-buttons {
+    width: 100%;
+    justify-content: center;
+  }
+  .mode-tab-btn {
+    padding: 9px 16px;
+    font-size: 0.85rem;
+  }
+  .mode-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
 
 
