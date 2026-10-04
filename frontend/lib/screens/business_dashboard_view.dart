@@ -37,7 +37,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
   List<BusinessSale> _sales = [];
   List<Expense> _businessExpenses = [];
   Map<String, double> _metrics = {};
-  double _todayExpenses = 0.0;
+  double _periodExpensesTotal = 0.0;
   double _totalLenaHai = 0.0;
   double _totalDenaHai = 0.0;
 
@@ -67,40 +67,46 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
 
       final now = DateTime.now();
       DateTime start;
-      DateTime end = DateTime(now.year, now.month, now.day, 23, 59, 59);
+      DateTime end;
 
       if (_filterPeriod == 'Today') {
-        start = DateTime(now.year, now.month, now.day);
+        start = DateTime(now.year, now.month, now.day, 0, 0, 0, 0);
+        end = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
       } else if (_filterPeriod == 'This Week') {
-        start = now.subtract(Duration(days: now.weekday - 1));
-        start = DateTime(start.year, start.month, start.day);
+        final monday = now.subtract(Duration(days: now.weekday - 1));
+        start = DateTime(monday.year, monday.month, monday.day, 0, 0, 0, 0);
+        final sunday = monday.add(const Duration(days: 6));
+        end = DateTime(sunday.year, sunday.month, sunday.day, 23, 59, 59, 999);
       } else if (_filterPeriod == 'This Month') {
-        start = DateTime(now.year, now.month, 1);
-        end = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+        start = DateTime(now.year, now.month, 1, 0, 0, 0, 0);
+        end = DateTime(now.year, now.month + 1, 0, 23, 59, 59, 999);
       } else if (_filterPeriod == 'Last Month') {
-        final prevMonth = DateTime(now.year, now.month - 1, 1);
-        start = prevMonth;
-        end = DateTime(now.year, now.month, 0, 23, 59, 59);
+        start = DateTime(now.year, now.month - 1, 1, 0, 0, 0, 0);
+        end = DateTime(now.year, now.month, 0, 23, 59, 59, 999);
       } else if (_filterPeriod == 'This Quarter') {
         final quarterMonth = ((now.month - 1) ~/ 3) * 3 + 1;
-        start = DateTime(now.year, quarterMonth, 1);
-        end = DateTime(now.year, quarterMonth + 3, 0, 23, 59, 59);
+        start = DateTime(now.year, quarterMonth, 1, 0, 0, 0, 0);
+        end = DateTime(now.year, quarterMonth + 3, 0, 23, 59, 59, 999);
       } else if (_filterPeriod == 'This FY') {
-        final fyYear = now.month >= 4 ? now.year : now.year - 1;
-        start = DateTime(fyYear, 4, 1);
-        end = DateTime(fyYear + 1, 3, 31, 23, 59, 59);
+        final fyStartYear = now.month >= 4 ? now.year : now.year - 1;
+        start = DateTime(fyStartYear, 4, 1, 0, 0, 0, 0);
+        end = DateTime(fyStartYear + 1, 3, 31, 23, 59, 59, 999);
       } else if (_customSelectedRange != null) {
-        start = _customSelectedRange!.start;
-        end = _customSelectedRange!.end;
+        start = DateTime(_customSelectedRange!.start.year, _customSelectedRange!.start.month, _customSelectedRange!.start.day, 0, 0, 0, 0);
+        end = DateTime(_customSelectedRange!.end.year, _customSelectedRange!.end.month, _customSelectedRange!.end.day, 23, 59, 59, 999);
       } else {
-        start = DateTime(2020, 1, 1);
-        end = DateTime(2099, 12, 31, 23, 59, 59);
+        // All Time
+        start = DateTime(2000, 1, 1, 0, 0, 0, 0);
+        end = DateTime(2099, 12, 31, 23, 59, 59, 999);
       }
 
-      final periodSales = allSales.where((s) =>
-        s.saleDate.isAfter(start.subtract(const Duration(seconds: 1))) &&
-        s.saleDate.isBefore(end.add(const Duration(seconds: 1)))
-      ).toList();
+      bool isWithinRange(DateTime dt) {
+        final localDt = dt.toLocal();
+        return (localDt.isAfter(start) || localDt.isAtSameMomentAs(start)) &&
+               (localDt.isBefore(end) || localDt.isAtSameMomentAs(end));
+      }
+
+      final periodSales = allSales.where((s) => isWithinRange(s.saleDate)).toList();
 
       final metrics = await DatabaseHelper.instance.getBusinessMetrics(start: start, end: end);
 
@@ -109,9 +115,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
       final List<Expense> periodExpenses = [];
       double bExp = 0.0;
       for (var e in expRows) {
-        if (!e.isDeleted &&
-            e.transactionDate.isAfter(start.subtract(const Duration(seconds: 1))) &&
-            e.transactionDate.isBefore(end.add(const Duration(seconds: 1)))) {
+        if (!e.isDeleted && isWithinRange(e.transactionDate)) {
           bExp += e.amount;
           periodExpenses.add(e);
         }
@@ -138,7 +142,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
           _sales = periodSales;
           _businessExpenses = periodExpenses;
           _metrics = metrics;
-          _todayExpenses = bExp;
+          _periodExpensesTotal = bExp;
           _totalLenaHai = lenaHai;
           _totalDenaHai = denaHai;
           _isLoading = false;
@@ -518,8 +522,8 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
       totalGoodsCost += s.totalPurchaseCost;
     }
     final netProfit = totalGoodsCost > 0
-        ? (totalSales - totalGoodsCost - _todayExpenses)
-        : (totalSales - _todayExpenses);
+        ? (totalSales - totalGoodsCost - _periodExpensesTotal)
+        : (totalSales - _periodExpensesTotal);
     final marginPercent = totalSales > 0 ? ((netProfit / totalSales) * 100) : 0.0;
 
     return SafeArea(
@@ -834,9 +838,9 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                     },
                     child: _buildMetricCard(
                       isDark: isDark,
-                      title: 'Business Expense',
-                      amount: '₹${_todayExpenses.toStringAsFixed(0)}',
-                      subtitle: 'Tap to log (+)',
+                      title: 'Expenses ($_filterPeriod)',
+                      amount: '₹${_periodExpensesTotal.toStringAsFixed(0)}',
+                      subtitle: '${_businessExpenses.length} entries • Tap (+)',
                       icon: Icons.trending_down_rounded,
                       iconColor: Colors.orangeAccent,
                       accentColor: Colors.orangeAccent,
@@ -929,13 +933,24 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                           children: [
                             const Icon(Icons.arrow_downward_rounded, size: 16, color: Colors.green),
                             const SizedBox(width: 4),
-                            Text('To Receive (Lena Hai)', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
+                            Expanded(
+                              child: Text(
+                                'To Receive (Lena Hai)',
+                                style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '₹${_totalLenaHai.toStringAsFixed(0)}',
                           style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.green),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Total Outstanding',
+                          style: GoogleFonts.inter(fontSize: 9.5, color: Colors.grey),
                         ),
                       ],
                     ),
@@ -957,13 +972,24 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                           children: [
                             const Icon(Icons.arrow_upward_rounded, size: 16, color: Colors.redAccent),
                             const SizedBox(width: 4),
-                            Text('To Pay (Dena Hai)', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
+                            Expanded(
+                              child: Text(
+                                'To Pay (Dena Hai)',
+                                style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '₹${_totalDenaHai.toStringAsFixed(0)}',
                           style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.redAccent),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Total Outstanding',
+                          style: GoogleFonts.inter(fontSize: 9.5, color: Colors.grey),
                         ),
                       ],
                     ),
@@ -1131,7 +1157,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                     children: [
                       Icon(Icons.receipt_outlined, size: 48, color: Colors.grey.withValues(alpha: 0.5)),
                       const SizedBox(height: 8),
-                      Text('No Sales Recorded Yet', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text('No Sales in $_filterPeriod', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
                       const SizedBox(height: 4),
                       Text('Tap "+ New Sale" above to record your first customer bill!', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center),
                     ],
