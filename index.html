@@ -128,262 +128,332 @@
             <div class="phone-camera"></div>
             <div class="phone-screen" id="sim-screen-container">
               
-              <!-- App Interface Inside Simulator -->
+              <!-- App Interface Inside Simulator (Pixel-Perfect Match to Flutter App) -->
               <div class="simulator-app" id="simulator-app">
-                <!-- App Status Bar / Header -->
-                <div class="sim-header">
-                  <div class="sim-header-user">
-                    <div class="sim-avatar">R</div>
-                    <div class="sim-user-info">
-                      <span class="sim-greeting">Hello, Rupam</span>
-                      <div class="sim-mode-badge-pill" id="sim-mode-badge" title="Tap to toggle mode">
-                        <span class="sim-mode-dot"></span>
-                        <span class="sim-mode-text" id="sim-mode-text">PERSONAL MODE</span>
+
+                <!-- 1. PERSONAL MODE VIEW -->
+                <div class="sim-mode-view active" id="sim-view-personal">
+                  <!-- Header -->
+                  <div class="real-sim-header">
+                    <div class="real-sim-user">
+                      <div class="real-avatar-circle">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="avatar-svg"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      </div>
+                      <div class="real-user-details">
+                        <span class="real-greeting-title">Hello, Rupam</span>
+                      </div>
+                    </div>
+                    <div class="real-sim-actions">
+                      <div class="real-action-icon-btn sim-sync-trigger" id="sim-sync-trigger" title="Cloud Sync">
+                        <svg class="sim-cloud-icon" id="sim-cloud-icon" viewBox="0 0 24 24" fill="none" stroke="#00d09c" stroke-width="2.3"><path d="M17.5 19A3.5 3.5 0 0 0 21 15.5c0-2.79-2.54-4.5-5-4.5-.47 0-.89.09-1.3.27A7 7 0 1 0 2 12h2a5 5 0 0 1 9.8-1.5 1 1 0 0 0 .8.8c2.22 0 4 1.8 4 4a3.5 3.5 0 0 0 3.5 3.7h-4.6"/></svg>
+                      </div>
+                      <div class="real-action-icon-btn" title="Guide & Rules">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#00d09c" stroke-width="2.3"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                      </div>
+                      <div class="real-action-icon-btn" id="sim-header-settings-personal" title="Settings">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                       </div>
                     </div>
                   </div>
-                  <div class="sim-header-actions">
-                    <div class="sim-icon-btn" id="sim-ai-shortcut" title="AI Advisor">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:16px;height:16px;color:#00d09c;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-                    </div>
-                    <div class="sim-sync-trigger" id="sim-sync-trigger" title="Cloud Sync">
-                      <svg class="sim-cloud-icon" id="sim-cloud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M17.5 19A3.5 3.5 0 0 0 21 15.5c0-2.79-2.54-4.5-5-4.5-.47 0-.89.09-1.3.27A7 7 0 1 0 2 12h2a5 5 0 0 1 9.8-1.5 1 1 0 0 0 .8.8c2.22 0 4 1.8 4 4a3.5 3.5 0 0 0 3.5 3.7h-4.6"/>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
 
-                <!-- Simulator Tab Content: Home Dashboard -->
-                <div class="sim-tab-content active" id="sim-tab-home">
-                  <div class="sim-body">
-                    <!-- Personal Mode Main Overview Card -->
-                    <div class="sim-spent-card personal-view" id="sim-card-personal">
-                      <div class="sim-card-header-row">
-                        <span class="sim-spent-title">TOTAL EXPENSES (THIS MONTH)</span>
-                        <span class="sim-period-badge">OCTOBER ▾</span>
-                      </div>
-                      <h2 class="sim-spent-value" id="sim-spent-total">₹14,850.00</h2>
-                      
-                      <!-- Budget Progress Bar -->
-                      <div class="sim-budget-bar-area">
-                        <div class="sim-budget-labels">
-                          <span>Budget: ₹14,850 / ₹35,000</span>
-                          <span>42% Used</span>
-                        </div>
-                        <div class="sim-budget-track">
-                          <div class="sim-budget-fill" style="width: 42%;"></div>
-                        </div>
-                      </div>
-
-                      <div class="sim-spent-pills">
-                        <span class="sim-spent-pill">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-pill-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  <!-- Scrollable Body Content -->
+                  <div class="real-sim-body">
+                    <!-- Vibrant Emerald Spent Card -->
+                    <div class="real-spent-green-card">
+                      <span class="real-spent-header-title">TOTAL SPENT THIS MONTH</span>
+                      <h2 class="real-spent-amount" id="sim-spent-total">₹ 14,850.00</h2>
+                      <div class="real-spent-pills-row">
+                        <span class="real-spent-pill">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="pill-svg"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
                           <span id="sim-records-count">18 Records</span>
                         </span>
-                        <span class="sim-spent-pill">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-pill-icon"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                          <span>Offline AES</span>
+                        <span class="real-spent-pill">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="pill-svg"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                          <span>4 OCTOBER 2026 ▾</span>
                         </span>
                       </div>
                     </div>
 
-                    <!-- Business Mode Main Overview Card (Hidden in personal) -->
-                    <div class="sim-spent-card business-view" id="sim-card-business" style="display: none;">
-                      <div class="sim-card-header-row">
-                        <span class="sim-spent-title">TOTAL BUSINESS SALES</span>
-                        <span class="sim-period-badge business">OCTOBER ▾</span>
-                      </div>
-                      <h2 class="sim-spent-value text-blue" id="sim-business-sales">₹94,200.00</h2>
-                      
-                      <!-- Profit Bar -->
-                      <div class="sim-budget-bar-area">
-                        <div class="sim-budget-labels">
-                          <span>Net Profit: ₹28,500.00</span>
-                          <span class="text-green">+18.5% Margin</span>
+                    <!-- 4 Quick Action Cards Grid -->
+                    <div class="real-quick-grid">
+                      <div class="real-quick-card" id="sim-quick-khata">
+                        <div class="real-quick-icon-circle bg-amber">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                         </div>
-                        <div class="sim-budget-track">
-                          <div class="sim-budget-fill business" style="width: 65%;"></div>
-                        </div>
+                        <h4 class="real-quick-title">Khata Book</h4>
+                        <span class="real-quick-sub">Credit & Debt</span>
                       </div>
-
-                      <div class="sim-spent-pills">
-                        <span class="sim-spent-pill business">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-pill-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
-                          <span>32 Invoices</span>
-                        </span>
-                        <span class="sim-spent-pill business">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-pill-icon"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-                          <span>Catalog: 14 Items</span>
-                        </span>
-                      </div>
-                    </div>
-
-                    <!-- Quick Action Grid (4 round modern buttons) -->
-                    <div class="sim-quick-actions">
-                      <div class="sim-action-card" id="sim-quick-voice">
-                        <div class="sim-action-icon green">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                      <div class="real-quick-card" id="sim-quick-split">
+                        <div class="real-quick-icon-circle bg-purple">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
                         </div>
-                        <span class="sim-action-title">Mandi Voice</span>
+                        <h4 class="real-quick-title">Split Bills</h4>
+                        <span class="real-quick-sub">UPI QR Split</span>
                       </div>
-                      <div class="sim-action-card" id="sim-quick-scan">
-                        <div class="sim-action-icon blue">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                      <div class="real-quick-card" id="sim-quick-subs">
+                        <div class="real-quick-icon-circle bg-pink">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
                         </div>
-                        <span class="sim-action-title">AI OCR</span>
+                        <h4 class="real-quick-title">Subscriptions</h4>
+                        <span class="real-quick-sub">Renewals</span>
                       </div>
-                      <div class="sim-action-card" id="sim-quick-invoices">
-                        <div class="sim-action-icon orange">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                      <div class="real-quick-card" id="sim-quick-more">
+                        <div class="real-quick-icon-circle bg-teal">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="#00d09c" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                         </div>
-                        <span class="sim-action-title">Invoices</span>
-                      </div>
-                      <div class="sim-action-card" id="sim-quick-qr">
-                        <div class="sim-action-icon purple">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
-                        </div>
-                        <span class="sim-action-title">Cards & QR</span>
+                        <h4 class="real-quick-title text-teal">More Options</h4>
+                        <span class="real-quick-sub">Extra Utilities</span>
                       </div>
                     </div>
 
-                    <!-- Feed Section: Personal Transactions List -->
-                    <div class="sim-ledger" id="sim-feed-personal">
-                      <div class="sim-section-title-row">
-                        <span class="sim-section-title">RECENT TRANSACTIONS</span>
-                        <span class="sim-see-all">See All ▾</span>
+                    <!-- Financial Calculators Hub Card -->
+                    <div class="real-calc-hub-card">
+                      <div class="real-calc-hub-header">
+                        <div class="real-calc-icon-box">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="#00d09c" stroke-width="2.5"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="8" y2="10"/><line x1="12" y1="10" x2="12" y2="10"/><line x1="16" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/></svg>
+                        </div>
+                        <div class="real-calc-info">
+                          <h4 class="real-calc-title">Financial Calculators Hub</h4>
+                          <span class="real-calc-sub">Mandi Rate • EMI Loan • GST • SIP Wealth</span>
+                        </div>
+                        <div class="real-calc-arrow">›</div>
                       </div>
-                      <div class="sim-tx-list" id="sim-tx-list">
-                        <div class="sim-tx-item" data-id="1">
-                          <span class="sim-tx-category-icon bg-orange-dim">🍔</span>
-                          <div class="sim-tx-details">
-                            <h4 class="sim-tx-merchant">McDonald's Burger & Meal</h4>
-                            <span class="sim-tx-date"><span class="sim-tx-category text-orange">Food & Dining</span> • HDFC UPI</span>
-                          </div>
-                          <span class="sim-tx-value expense">-₹380.00</span>
-                        </div>
-                        <div class="sim-tx-item" data-id="2">
-                          <span class="sim-tx-category-icon bg-green-dim">🛒</span>
-                          <div class="sim-tx-details">
-                            <h4 class="sim-tx-merchant">Reliance Fresh Mart</h4>
-                            <span class="sim-tx-date"><span class="sim-tx-category text-green">Groceries</span> • GPay QR</span>
-                          </div>
-                          <span class="sim-tx-value expense">-₹1,840.00</span>
-                        </div>
-                        <div class="sim-tx-item" data-id="3">
-                          <span class="sim-tx-category-icon bg-blue-dim">💼</span>
-                          <div class="sim-tx-details">
-                            <h4 class="sim-tx-merchant">UI Design Client Project</h4>
-                            <span class="sim-tx-date"><span class="sim-tx-category text-blue">Salary & Income</span> • Bank Transfer</span>
-                          </div>
-                          <span class="sim-tx-value income">+₹25,000.00</span>
-                        </div>
+                      <div class="real-calc-chips-row">
+                        <span class="real-calc-chip teal">⊞ Standard</span>
+                        <span class="real-calc-chip amber">🏪 Mandi Rate</span>
+                        <span class="real-calc-chip blue">🏛️ EMI Loan</span>
+                        <span class="real-calc-chip pink">📈 GST & SIP</span>
                       </div>
                     </div>
 
-                    <!-- Feed Section: Business Invoices & Sales List -->
-                    <div class="sim-ledger" id="sim-feed-business" style="display: none;">
-                      <div class="sim-section-title-row">
-                        <span class="sim-section-title">RECENT SALES & INVOICES</span>
-                        <span class="sim-see-all">Manage ▾</span>
+                    <!-- Recent Transactions Section -->
+                    <div class="real-tx-section">
+                      <div class="real-tx-header-row">
+                        <span class="real-tx-title">RECENT TRANSACTIONS</span>
+                        <span class="real-tx-swipe-hint">Swipe left to delete 🗑️</span>
                       </div>
-                      <div class="sim-tx-list">
-                        <div class="sim-tx-item">
-                          <span class="sim-tx-category-icon bg-blue-dim">📄</span>
-                          <div class="sim-tx-details">
-                            <h4 class="sim-tx-merchant">Sharma Electronics</h4>
-                            <span class="sim-tx-date"><span class="sim-tx-category text-blue">GST Inv #108</span> • 18% GST</span>
+                      <div class="real-tx-list" id="sim-tx-list">
+                        <div class="real-tx-card">
+                          <div class="real-tx-circle-icon bg-purple-soft">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2.5"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
                           </div>
-                          <div class="sim-invoice-status-col">
-                            <span class="sim-tx-value income">+₹18,500.00</span>
-                            <span class="sim-status-pill paid">PAID</span>
+                          <div class="real-tx-info">
+                            <h4 class="real-tx-name">Repayments</h4>
+                            <span class="real-tx-meta"><span class="text-purple-meta">Repayments</span> • 03 Oct</span>
                           </div>
+                          <span class="real-tx-amount expense">-₹50.00</span>
                         </div>
-                        <div class="sim-tx-item">
-                          <span class="sim-tx-category-icon bg-purple-dim">📕</span>
-                          <div class="sim-tx-details">
-                            <h4 class="sim-tx-merchant">Rohan Verma (Khata)</h4>
-                            <span class="sim-tx-date"><span class="sim-tx-category text-purple">Customer Credit</span> • Due 10 Oct</span>
+
+                        <div class="real-tx-card">
+                          <div class="real-tx-circle-icon bg-amber-soft">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                           </div>
-                          <div class="sim-invoice-status-col">
-                            <span class="sim-tx-value expense">₹2,500.00</span>
-                            <span class="sim-status-pill pending">PENDING</span>
+                          <div class="real-tx-info">
+                            <h4 class="real-tx-name">Personal</h4>
+                            <span class="real-tx-meta"><span class="text-amber-meta">Personal</span> • 03 Oct</span>
                           </div>
+                          <span class="real-tx-amount expense">-₹20.00</span>
                         </div>
                       </div>
                     </div>
-
                   </div>
-                </div>
 
-                <!-- Simulator Tab Content: AI Advisor View -->
-                <div class="sim-tab-content" id="sim-tab-ai">
-                  <div class="sim-ai-view">
-                    <div class="sim-ai-badge">🤖 Gemini 2.5 Flash Financial Advisor</div>
-                    <div class="sim-ai-chat-bubble bot">
-                      <span class="ai-role">AI Advisor</span>
-                      <p>Aapne is mahine food & dining par <strong>₹3,400</strong> kharch kiya hai, jo aapke target budget se 12% kam hai! Good job! 🎯</p>
+                  <!-- Floating AI & Action Buttons -->
+                  <div class="real-floating-chat-fab" id="sim-floating-ai-btn" title="AI Advisor">
+                    <svg viewBox="0 0 24 24" fill="#00d09c"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  </div>
+                  <div class="real-main-fab" id="sim-fab-btn" title="Add Expense">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  </div>
+
+                  <!-- Bottom Navigation Bar (Personal) -->
+                  <div class="real-sim-bottom-nav">
+                    <div class="real-nav-tab active">
+                      <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+                      <span>Home</span>
                     </div>
-                    <div class="sim-ai-chat-bubble bot tip">
-                      <span class="ai-role">Smart Tip</span>
-                      <p>Aap ₹2,000 monthly SIP shuru karke 3 saal me ~₹85,000 generate kar sakte hain.</p>
+                    <div class="real-nav-tab">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 3v9h9"/></svg>
+                      <span>Budgets</span>
                     </div>
-                    <div class="sim-ai-health-pill">
-                      <span class="health-dot green"></span> AI Models Active (Gemini / DeepSeek / Groq)
+                    <div class="real-nav-tab">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                      <span>Analytics</span>
+                    </div>
+                    <div class="real-nav-tab">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                      <span>Invoices</span>
+                    </div>
+                    <div class="real-nav-tab">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="21" x2="21" y2="21"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="5 6 12 3 19 6"/><line x1="4" y1="10" x2="4" y2="21"/><line x1="20" y1="10" x2="20" y2="21"/><line x1="8" y1="14" x2="8" y2="17"/><line x1="12" y1="14" x2="12" y2="17"/><line x1="16" y1="14" x2="16" y2="17"/></svg>
+                      <span>Payments</span>
                     </div>
                   </div>
                 </div>
 
-                <!-- Simulator Tab Content: Payment Cards & QR View -->
-                <div class="sim-tab-content" id="sim-tab-cards">
-                  <div class="sim-cards-view">
-                    <div class="sim-credit-card">
-                      <div class="sim-cc-top">
-                        <span class="sim-cc-bank">SBI Cashback Credit Card</span>
-                        <span class="sim-cc-chip">💳</span>
+                <!-- 2. BUSINESS MODE VIEW -->
+                <div class="sim-mode-view" id="sim-view-business" style="display: none;">
+                  <!-- Business Header -->
+                  <div class="real-sim-header">
+                    <div class="real-sim-user">
+                      <div class="real-avatar-circle business">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="avatar-svg"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <span class="shop-badge-icon">🏪</span>
                       </div>
-                      <div class="sim-cc-num">4532 •••• •••• 9102</div>
-                      <div class="sim-cc-bottom">
-                        <div>
-                          <span class="sim-cc-label">CARD HOLDER</span>
-                          <span class="sim-cc-val">RUPAM BAIRAGYA</span>
+                      <div class="real-user-details">
+                        <span class="real-greeting-title">Rupam Bairagya</span>
+                        <span class="real-user-shop-sub">🏪 Nexora Group ✏️</span>
+                      </div>
+                    </div>
+                    <div class="real-sim-actions">
+                      <div class="real-action-icon-btn sim-sync-trigger">
+                        <svg class="sim-cloud-icon" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.3"><path d="M17.5 19A3.5 3.5 0 0 0 21 15.5c0-2.79-2.54-4.5-5-4.5-.47 0-.89.09-1.3.27A7 7 0 1 0 2 12h2a5 5 0 0 1 9.8-1.5 1 1 0 0 0 .8.8c2.22 0 4 1.8 4 4a3.5 3.5 0 0 0 3.5 3.7h-4.6"/></svg>
+                      </div>
+                      <div class="real-action-icon-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.3"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                      </div>
+                      <div class="real-action-icon-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.3"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      </div>
+                      <div class="real-action-icon-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Scrollable Body Content (Business) -->
+                  <div class="real-sim-body">
+                    <!-- Period Filter Tabs -->
+                    <div class="real-time-filter-row">
+                      <span class="real-time-chip">Today</span>
+                      <span class="real-time-chip">This Week</span>
+                      <span class="real-time-chip active">✓ This Month</span>
+                      <span class="real-time-chip">Last Month</span>
+                    </div>
+
+                    <!-- 2-Col Sales & Expense Metrics -->
+                    <div class="real-biz-stats-grid">
+                      <div class="real-biz-stat-card">
+                        <div class="real-biz-stat-header">
+                          <span class="real-biz-stat-label">Sales (This Month)</span>
+                          <span class="real-biz-stat-arrow green">↗</span>
                         </div>
-                        <span class="sim-cc-brand">VISA</span>
+                        <h3 class="real-biz-stat-val text-green">₹19000</h3>
+                        <span class="real-biz-stat-sub">1 bills generated</span>
+                      </div>
+                      <div class="real-biz-stat-card">
+                        <div class="real-biz-stat-header">
+                          <span class="real-biz-stat-label">Business Expense</span>
+                          <span class="real-biz-stat-arrow orange">↘</span>
+                        </div>
+                        <h3 class="real-biz-stat-val text-amber">₹0</h3>
+                        <span class="real-biz-stat-sub">Tap to log (+)</span>
                       </div>
                     </div>
-                    <div class="sim-qr-box">
-                      <div class="sim-qr-code-placeholder">
-                        <div class="qr-pattern"></div>
+
+                    <!-- Net Profit & Margin Navy Card -->
+                    <div class="real-net-profit-card">
+                      <div class="real-profit-top-row">
+                        <span class="real-profit-label">NET PROFIT & MARGIN</span>
+                        <span class="real-margin-pill">10.5% Margin</span>
                       </div>
-                      <span class="sim-qr-caption">Scan to Pay via any UPI App</span>
-                      <span class="sim-qr-upi">expensetracker@ybl</span>
+                      <h2 class="real-profit-val">₹2000.00</h2>
+                      <span class="real-profit-sub">Includes ₹17000 item cost</span>
+                    </div>
+
+                    <!-- To Receive & To Pay 2-Col -->
+                    <div class="real-dues-grid">
+                      <div class="real-due-card receive">
+                        <span class="real-due-label text-green">↓ To Receive (Lena Hai)</span>
+                        <h4 class="real-due-val text-green">₹200</h4>
+                      </div>
+                      <div class="real-due-card pay">
+                        <span class="real-due-label text-red">↑ To Pay (Dena Hai)</span>
+                        <h4 class="real-due-val text-red">₹0</h4>
+                      </div>
+                    </div>
+
+                    <!-- Business Quick Actions -->
+                    <div class="real-biz-section-title">Business Quick Actions</div>
+                    <div class="real-biz-quick-grid">
+                      <div class="real-biz-action-card blue">
+                        <div class="real-biz-action-icon blue">⊕</div>
+                        <h4 class="real-biz-action-title">Add Entry</h4>
+                        <span class="real-biz-action-sub">Sale / Exp</span>
+                      </div>
+                      <div class="real-biz-action-card purple">
+                        <div class="real-biz-action-icon purple">🧾</div>
+                        <h4 class="real-biz-action-title">Invoices</h4>
+                        <span class="real-biz-action-sub">Bills & Tax</span>
+                      </div>
+                      <div class="real-biz-action-card amber">
+                        <div class="real-biz-action-icon amber">📖</div>
+                        <h4 class="real-biz-action-title">Khata Book</h4>
+                        <span class="real-biz-action-sub">Udhar & Dues</span>
+                      </div>
+                      <div class="real-biz-action-card teal">
+                        <div class="real-biz-action-icon teal">🧮</div>
+                        <h4 class="real-biz-action-title">Mandi Calc</h4>
+                        <span class="real-biz-action-sub">Rates & Crop</span>
+                      </div>
+                    </div>
+
+                    <!-- Recent Transactions (Business Invoices) -->
+                    <div class="real-tx-section">
+                      <div class="real-tx-header-row">
+                        <span class="real-tx-title">Recent Transactions</span>
+                        <span class="real-tx-swipe-hint">Cash Flow Activity</span>
+                      </div>
+                      <div class="real-biz-tx-filter-row">
+                        <span class="real-biz-tab active">🖩 Sales (1)</span>
+                        <span class="real-biz-tab">📋 Expenses (0)</span>
+                      </div>
+                      <div class="real-tx-list">
+                        <div class="real-biz-invoice-card">
+                          <div class="real-invoice-check">✓</div>
+                          <div class="real-invoice-info">
+                            <h4 class="real-invoice-customer">Walk-in Customer</h4>
+                            <span class="real-invoice-meta">#INV-8761899 • 03 Oct, 11:01 PM</span>
+                          </div>
+                          <div class="real-invoice-amount-col">
+                            <span class="real-invoice-amount">₹19000.00</span>
+                            <span class="real-invoice-paid">PAID</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <!-- Floating Action Button (Center Add) -->
-                <div class="sim-fab" id="sim-fab-btn" title="Add Expense">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="width: 20px; height: 20px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                </div>
+                  <!-- Floating Analytics & Plus FABs -->
+                  <div class="real-floating-analytics-fab" title="Analytics">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                  </div>
+                  <div class="real-main-fab" title="Add Business Entry">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  </div>
 
-                <!-- In-app Bottom Navigation Bar (5 Items matching Flutter app) -->
-                <div class="sim-bottom-nav">
-                  <div class="sim-nav-item active" data-tab="sim-tab-home">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-nav-icon"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
-                    <span>Home</span>
-                  </div>
-                  <div class="sim-nav-item" data-tab="sim-tab-ai">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-nav-icon"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-                    <span>AI Advisor</span>
-                  </div>
-                  <div class="sim-nav-item center-spacer"></div>
-                  <div class="sim-nav-item" data-tab="sim-tab-cards">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-nav-icon"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-                    <span>Cards & QR</span>
-                  </div>
-                  <div class="sim-nav-item" id="sim-nav-toggle-mode">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-nav-icon"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                    <span>Settings</span>
+                  <!-- Bottom Navigation Bar (Business) -->
+                  <div class="real-sim-bottom-nav">
+                    <div class="real-nav-tab active">
+                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                      <span>Business</span>
+                    </div>
+                    <div class="real-nav-tab">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      <span>Invoices</span>
+                    </div>
+                    <div class="real-nav-tab">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                      <span>Khata</span>
+                    </div>
+                    <div class="real-nav-tab">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                      <span>Analytics</span>
+                    </div>
+                    <div class="real-nav-tab">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="21" x2="21" y2="21"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="5 6 12 3 19 6"/><line x1="4" y1="10" x2="4" y2="21"/><line x1="20" y1="10" x2="20" y2="21"/></svg>
+                      <span>Payments</span>
+                    </div>
                   </div>
                 </div>
 
@@ -431,9 +501,9 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
               Mandi Voice
             </button>
-            <button class="sim-btn btn-khata" id="sim-action-cards-qr" aria-label="Simulate Dynamic Payment Cards & QR">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-              Cards & QR
+            <button class="sim-btn btn-sync" id="sim-action-sync" aria-label="Simulate Encrypted Cloud Sync">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg"><path d="M17.5 19A3.5 3.5 0 0 0 21 15.5c0-2.79-2.54-4.5-5-4.5-.47 0-.89.09-1.3.27A7 7 0 1 0 2 12h2a5 5 0 0 1 9.8-1.5 1 1 0 0 0 .8.8c2.22 0 4 1.8 4 4a3.5 3.5 0 0 0 3.5 3.7h-4.6"/></svg>
+              Cloud Sync
             </button>
           </div>
 

@@ -491,35 +491,27 @@ document.addEventListener('DOMContentLoaded', () => {
     simRecordsCount += 1;
     
     const newTx = document.createElement('div');
-    newTx.className = 'sim-tx-item';
+    newTx.className = 'real-tx-card';
     
-    let iconHTML = '';
-    let bgClass = 'bg-orange-dim';
-    
-    if (iconType === 'services') {
-      bgClass = 'bg-blue-dim';
-      iconHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #3b82f6;"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`;
-    } else if (iconType === 'food') {
-      bgClass = 'bg-orange-dim';
-      iconHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #f97316;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`;
-    } else {
-      bgClass = 'bg-purple-dim';
-      iconHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="sim-category-svg" style="color: #a78bfa;"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="12" y1="4" x2="12" y2="20"/></svg>`;
+    let bgClass = 'bg-purple-soft';
+    let iconColor = '#8b5cf6';
+    let iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2.5"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>`;
+
+    if (iconType === 'food') {
+      bgClass = 'bg-amber-soft';
+      iconColor = '#f59e0b';
+      iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`;
     }
-    
-    let catClass = 'text-purple';
-    if (iconType === 'services') catClass = 'text-blue';
-    else if (iconType === 'food') catClass = 'text-orange';
 
     newTx.innerHTML = `
-      <span class="sim-tx-category-icon ${bgClass}">
-        ${iconHTML}
-      </span>
-      <div class="sim-tx-details">
-        <h4 class="sim-tx-merchant">${merchant}</h4>
-        <span class="sim-tx-date"><span class="sim-tx-category ${catClass}">${category}</span> • Just now</span>
+      <div class="real-tx-circle-icon ${bgClass}">
+        ${iconSvg}
       </div>
-      <span class="sim-tx-value">₹${amount.toFixed(2)}</span>
+      <div class="real-tx-info">
+        <h4 class="real-tx-name">${merchant}</h4>
+        <span class="real-tx-meta"><span style="color:${iconColor}; font-weight:600;">${category}</span> • Just now</span>
+      </div>
+      <span class="real-tx-amount expense">-₹${amount.toFixed(2)}</span>
     `;
     
     if (simTxListEl.children.length >= 3) {
@@ -529,7 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (simCloudIcon && simSyncTrigger) {
       simSyncTrigger.classList.add('syncing');
-      simCloudIcon.style.color = '#ef4444';
+      simCloudIcon.style.stroke = '#ef4444';
     }
     
     updateSimUI();
@@ -540,7 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
     simSyncOverlay.classList.add('active');
     if (simSyncTrigger && simCloudIcon) {
       simSyncTrigger.classList.add('syncing');
-      simCloudIcon.style.color = '#fbbf24';
+      simCloudIcon.style.stroke = '#fbbf24';
     }
     
     const steps = [
@@ -562,7 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (simSyncTrigger && simCloudIcon) {
           simSyncTrigger.classList.remove('syncing');
-          simCloudIcon.style.color = '';
+          simCloudIcon.style.stroke = '#00d09c';
         }
         playHaptic('success');
       }
@@ -571,32 +563,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Dual-Mode Toggling inside Simulator
   let currentSimMode = 'personal';
-  const simModeBadge = document.getElementById('sim-mode-badge');
-  const simModeText = document.getElementById('sim-mode-text');
-  const simCardPersonal = document.getElementById('sim-card-personal');
-  const simCardBusiness = document.getElementById('sim-card-business');
-  const simFeedPersonal = document.getElementById('sim-feed-personal');
-  const simFeedBusiness = document.getElementById('sim-feed-business');
+  const simViewPersonal = document.getElementById('sim-view-personal');
+  const simViewBusiness = document.getElementById('sim-view-business');
   const btnToggleMode = document.getElementById('sim-action-toggle-mode');
-  const simNavToggleMode = document.getElementById('sim-nav-toggle-mode');
-  const quickInvoices = document.getElementById('sim-quick-invoices');
 
   const setSimulatorMode = (mode) => {
     currentSimMode = mode;
     if (mode === 'business') {
-      if (simModeBadge) simModeBadge.classList.add('business');
-      if (simModeText) simModeText.textContent = 'BUSINESS MODE';
-      if (simCardPersonal) simCardPersonal.style.display = 'none';
-      if (simCardBusiness) simCardBusiness.style.display = 'block';
-      if (simFeedPersonal) simFeedPersonal.style.display = 'none';
-      if (simFeedBusiness) simFeedBusiness.style.display = 'block';
+      if (simViewPersonal) simViewPersonal.style.display = 'none';
+      if (simViewBusiness) simViewBusiness.style.display = 'flex';
     } else {
-      if (simModeBadge) simModeBadge.classList.remove('business');
-      if (simModeText) simModeText.textContent = 'PERSONAL MODE';
-      if (simCardPersonal) simCardPersonal.style.display = 'block';
-      if (simCardBusiness) simCardBusiness.style.display = 'none';
-      if (simFeedPersonal) simFeedPersonal.style.display = 'block';
-      if (simFeedBusiness) simFeedBusiness.style.display = 'none';
+      if (simViewPersonal) simViewPersonal.style.display = 'flex';
+      if (simViewBusiness) simViewBusiness.style.display = 'none';
     }
     playHaptic('double');
   };
@@ -605,13 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setSimulatorMode(currentSimMode === 'personal' ? 'business' : 'personal');
   };
 
-  if (simModeBadge) simModeBadge.addEventListener('click', toggleSimulatorMode);
   if (btnToggleMode) btnToggleMode.addEventListener('click', toggleSimulatorMode);
-  if (simNavToggleMode) simNavToggleMode.addEventListener('click', toggleSimulatorMode);
-  if (quickInvoices) quickInvoices.addEventListener('click', () => {
-    setSimulatorMode('business');
-    switchSimTab('sim-tab-home');
-  });
 
   const btnScan = document.getElementById('sim-action-scan');
   const btnVoice = document.getElementById('sim-action-voice');
