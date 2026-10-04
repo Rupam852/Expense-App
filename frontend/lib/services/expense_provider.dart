@@ -137,6 +137,7 @@ class ExpenseProvider with ChangeNotifier {
   List<SplitBill> get splitBills => _splitBills;
   List<SubscriptionItem> get subscriptions => _subscriptions;
   List<BusinessItem> get businessItems => _businessItems;
+  List<BusinessItem> get lowStockBusinessItems => _businessItems.where((it) => it.isLowStock || it.isOutOfStock).toList();
   
   double get totalYouWillGet => _khataEntries
       .where((k) => !k.isDeleted && !k.isSettled && k.isLent)
@@ -1249,6 +1250,21 @@ class ExpenseProvider with ChangeNotifier {
 
   Future<void> deleteBusinessItem(String id) async {
     await _dbHelper.deleteBusinessItem(id);
+    _businessItems = await _dbHelper.getBusinessItems();
+    notifyListeners();
+    triggerQuietSync();
+  }
+
+  Future<void> updateBusinessItemStock(String id, double newStock) async {
+    await _dbHelper.updateItemStockDirectly(id, newStock);
+    _businessItems = await _dbHelper.getBusinessItems();
+    notifyListeners();
+    triggerQuietSync();
+  }
+
+  Future<void> deductStockForSale(List<Map<String, dynamic>> items) async {
+    if (items.isEmpty) return;
+    await _dbHelper.deductStockForItems(items);
     _businessItems = await _dbHelper.getBusinessItems();
     notifyListeners();
     triggerQuietSync();

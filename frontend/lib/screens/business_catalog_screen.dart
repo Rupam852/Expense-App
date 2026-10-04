@@ -4,9 +4,15 @@ import 'package:provider/provider.dart';
 import '../models/business_item.dart';
 import '../services/expense_provider.dart';
 import '../widgets/custom_toast.dart';
+import '../widgets/barcode_scanner_modal.dart';
 
 class BusinessCatalogScreen extends StatefulWidget {
-  const BusinessCatalogScreen({super.key});
+  final bool initialFilterLowStock;
+
+  const BusinessCatalogScreen({
+    super.key,
+    this.initialFilterLowStock = false,
+  });
 
   @override
   State<BusinessCatalogScreen> createState() => _BusinessCatalogScreenState();
@@ -15,6 +21,7 @@ class BusinessCatalogScreen extends StatefulWidget {
 class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  bool _filterOnlyLowStock = false;
 
   static const Color _businessBlue = Color(0xFF1E88E5);
   static const Color _darkBg = Color(0xFF0F172A);
@@ -70,6 +77,12 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
     ],
   };
 
+  @override
+  void initState() {
+    super.initState();
+    _filterOnlyLowStock = widget.initialFilterLowStock;
+  }
+
   void _openUnitPickerSheet(BuildContext context, String currentUnit, ValueChanged<String> onSelected) {
     showModalBottomSheet(
       context: context,
@@ -90,7 +103,7 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
+                color: Colors.black.withValues(alpha: 0.2),
                 blurRadius: 20,
                 offset: const Offset(0, -4),
               ),
@@ -105,7 +118,7 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                   width: 44,
                   height: 4.5,
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.35),
+                    color: Colors.grey.withValues(alpha: 0.35),
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ),
@@ -117,7 +130,7 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: primaryColor.withOpacity(0.12),
+                        color: primaryColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(Icons.straighten_rounded, color: primaryColor, size: 20),
@@ -178,8 +191,8 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                             margin: const EdgeInsets.only(bottom: 6),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? primaryColor.withOpacity(0.12)
-                                  : (isDark ? Colors.white.withOpacity(0.04) : Colors.grey.shade50),
+                                  ? primaryColor.withValues(alpha: 0.12)
+                                  : (isDark ? Colors.white.withValues(alpha: 0.04) : Colors.grey.shade50),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: isSelected ? primaryColor : (isDark ? Colors.white12 : Colors.black12),
@@ -264,7 +277,7 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
+                color: Colors.black.withValues(alpha: 0.2),
                 blurRadius: 20,
                 offset: const Offset(0, -4),
               ),
@@ -279,7 +292,7 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.35),
+                    color: Colors.grey.withValues(alpha: 0.35),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -290,7 +303,7 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.12),
+                      color: primaryColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(Icons.receipt_long_rounded, color: primaryColor, size: 20),
@@ -319,8 +332,8 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                   margin: const EdgeInsets.only(bottom: 8),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? primaryColor.withOpacity(0.12)
-                        : (isDark ? Colors.white.withOpacity(0.04) : Colors.grey.shade50),
+                        ? primaryColor.withValues(alpha: 0.12)
+                        : (isDark ? Colors.white.withValues(alpha: 0.04) : Colors.grey.shade50),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: isSelected ? primaryColor : (isDark ? Colors.white12 : Colors.black12),
@@ -384,11 +397,18 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final expProvider = Provider.of<ExpenseProvider>(context);
     final allItems = expProvider.businessItems;
+    final lowStockCount = expProvider.lowStockBusinessItems.length;
 
     final filteredItems = allItems.where((it) {
+      if (_filterOnlyLowStock && !(it.isLowStock || it.isOutOfStock)) {
+        return false;
+      }
       if (_searchQuery.isEmpty) return true;
-      return it.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          (it.category?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
+      final q = _searchQuery.toLowerCase();
+      final matchesName = it.name.toLowerCase().contains(q);
+      final matchesCategory = it.category?.toLowerCase().contains(q) ?? false;
+      final matchesBarcode = it.barcode?.toLowerCase().contains(q) ?? false;
+      return matchesName || matchesCategory || matchesBarcode;
     }).toList();
 
     return Scaffold(
@@ -443,7 +463,7 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
         children: [
           // Search & Filter Bar
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
             child: Container(
               decoration: BoxDecoration(
                 color: isDark ? _darkCard : Colors.white,
@@ -456,7 +476,7 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                 controller: _searchController,
                 style: GoogleFonts.inter(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
                 decoration: InputDecoration(
-                  hintText: 'Search items by name or category...',
+                  hintText: 'Search items, category or barcode...',
                   hintStyle: GoogleFonts.inter(fontSize: 13, color: isDark ? Colors.white38 : Colors.black38),
                   prefixIcon: Icon(Icons.search, color: isDark ? Colors.white60 : Colors.black45, size: 20),
                   suffixIcon: _searchQuery.isNotEmpty
@@ -473,6 +493,49 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                 ),
                 onChanged: (val) => setState(() => _searchQuery = val.trim()),
               ),
+            ),
+          ),
+
+          // Filter Chips (All vs Low Stock)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Row(
+              children: [
+                ChoiceChip(
+                  label: Text('All (${allItems.length})'),
+                  selected: !_filterOnlyLowStock,
+                  onSelected: (val) {
+                    if (val) setState(() => _filterOnlyLowStock = false);
+                  },
+                  selectedColor: _businessBlue.withValues(alpha: 0.18),
+                  labelStyle: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: !_filterOnlyLowStock ? FontWeight.bold : FontWeight.normal,
+                    color: !_filterOnlyLowStock ? _businessBlue : (isDark ? Colors.white70 : Colors.black87),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.warning_amber_rounded, size: 14, color: Colors.orange),
+                      const SizedBox(width: 4),
+                      Text('Low Stock ($lowStockCount)'),
+                    ],
+                  ),
+                  selected: _filterOnlyLowStock,
+                  onSelected: (val) {
+                    setState(() => _filterOnlyLowStock = val);
+                  },
+                  selectedColor: Colors.orange.withValues(alpha: 0.2),
+                  labelStyle: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: _filterOnlyLowStock ? FontWeight.bold : FontWeight.normal,
+                    color: _filterOnlyLowStock ? Colors.orange : (isDark ? Colors.white70 : Colors.black87),
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -512,7 +575,7 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              noItemsAtAll ? 'No Catalog Items Yet' : 'No matching items found',
+              noItemsAtAll ? 'No Catalog Items Yet' : (_filterOnlyLowStock ? 'No Low Stock Items 🎉' : 'No matching items found'),
               style: GoogleFonts.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -523,7 +586,7 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
             Text(
               noItemsAtAll
                   ? 'Add your products, goods, or services here so you can quickly add them to bills without typing prices every time.'
-                  : 'Try searching with a different keyword.',
+                  : (_filterOnlyLowStock ? 'All your inventory stocks are healthy and above minimum thresholds.' : 'Try searching with a different keyword.'),
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                 fontSize: 13,
@@ -555,12 +618,19 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
     final profit = item.profitMargin;
     final marginPct = item.profitMarginPercent;
 
+    final hasBarcode = item.barcode != null && item.barcode!.trim().isNotEmpty;
+    final stockFormatted = item.stockQuantity.toStringAsFixed(item.stockQuantity.truncateToDouble() == item.stockQuantity ? 0 : 2);
+
     return Container(
       decoration: BoxDecoration(
         color: isDark ? _darkCard : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06),
+          color: item.isOutOfStock
+              ? Colors.red.withValues(alpha: 0.4)
+              : (item.isLowStock
+                  ? Colors.orange.withValues(alpha: 0.4)
+                  : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06))),
         ),
         boxShadow: [
           BoxShadow(
@@ -581,10 +651,16 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: _businessBlue.withValues(alpha: 0.12),
+                  color: item.isOutOfStock
+                      ? Colors.red.withValues(alpha: 0.12)
+                      : (item.isLowStock ? Colors.orange.withValues(alpha: 0.12) : _businessBlue.withValues(alpha: 0.12)),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.inventory_2, color: _businessBlue, size: 20),
+                child: Icon(
+                  item.isOutOfStock ? Icons.error_outline_rounded : (item.isLowStock ? Icons.warning_amber_rounded : Icons.inventory_2),
+                  color: item.isOutOfStock ? Colors.redAccent : (item.isLowStock ? Colors.orange : _businessBlue),
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -642,6 +718,25 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                               style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.orange),
                             ),
                           ),
+                        if (hasBarcode)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.indigo.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.qr_code_2, size: 11, color: Colors.indigoAccent),
+                                const SizedBox(width: 3),
+                                Text(
+                                  item.barcode!,
+                                  style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w600, color: Colors.indigoAccent),
+                                ),
+                              ],
+                            ),
+                          ),
                       ],
                     ),
                   ],
@@ -650,13 +745,25 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
               PopupMenuButton<String>(
                 icon: Icon(Icons.more_vert, color: isDark ? Colors.white60 : Colors.black54, size: 20),
                 onSelected: (val) {
-                  if (val == 'edit') {
+                  if (val == 'refill') {
+                    _showRefillStockDialog(context, item);
+                  } else if (val == 'edit') {
                     _showItemEditorSheet(context, existingItem: item);
                   } else if (val == 'delete') {
                     _confirmDeleteItem(context, item);
                   }
                 },
                 itemBuilder: (ctx) => [
+                  const PopupMenuItem(
+                    value: 'refill',
+                    child: Row(
+                      children: [
+                        Icon(Icons.add_shopping_cart, size: 18, color: Colors.teal),
+                        SizedBox(width: 8),
+                        Text('Refill / Update Stock'),
+                      ],
+                    ),
+                  ),
                   const PopupMenuItem(
                     value: 'edit',
                     child: Row(
@@ -682,7 +789,71 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
             ],
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
+
+          // Inventory Stock Row
+          if (item.trackStock)
+            Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: item.isOutOfStock
+                    ? Colors.red.withValues(alpha: 0.08)
+                    : (item.isLowStock ? Colors.orange.withValues(alpha: 0.08) : Colors.green.withValues(alpha: 0.06)),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: item.isOutOfStock
+                      ? Colors.red.withValues(alpha: 0.25)
+                      : (item.isLowStock ? Colors.orange.withValues(alpha: 0.25) : Colors.green.withValues(alpha: 0.2)),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    item.isOutOfStock ? Icons.cancel_outlined : (item.isLowStock ? Icons.warning_amber_rounded : Icons.check_circle_outline),
+                    size: 14,
+                    color: item.isOutOfStock ? Colors.redAccent : (item.isLowStock ? Colors.orange : Colors.green),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      item.isOutOfStock
+                          ? 'Out of Stock (0 ${item.unit})'
+                          : (item.isLowStock
+                              ? 'Low Stock Alert: $stockFormatted ${item.unit} left (Limit: ${item.lowStockLimit.toStringAsFixed(0)})'
+                              : 'In Stock: $stockFormatted ${item.unit} available'),
+                      style: GoogleFonts.inter(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: item.isOutOfStock ? Colors.redAccent : (item.isLowStock ? Colors.orange : Colors.green),
+                      ),
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => _showRefillStockDialog(context, item),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: _businessBlue.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.add, size: 12, color: _businessBlue),
+                          const SizedBox(width: 2),
+                          Text(
+                            'Refill',
+                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: _businessBlue),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           const Divider(height: 1),
           const SizedBox(height: 10),
 
@@ -776,6 +947,105 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
     );
   }
 
+  void _showRefillStockDialog(BuildContext context, BusinessItem item) {
+    final qtyCtrl = TextEditingController();
+    bool isAdding = true; // true = Add to existing, false = Set exact stock
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) {
+          return AlertDialog(
+            backgroundColor: isDark ? _darkCard : Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                const Icon(Icons.add_shopping_cart, color: _businessBlue),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Refill Stock: ${item.name}',
+                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Current Stock: ${item.stockQuantity.toStringAsFixed(item.stockQuantity.truncateToDouble() == item.stockQuantity ? 0 : 2)} ${item.unit}',
+                  style: GoogleFonts.inter(fontSize: 13, color: Colors.grey),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    ChoiceChip(
+                      label: const Text('+ Add Quantity'),
+                      selected: isAdding,
+                      onSelected: (val) {
+                        if (val) setDialogState(() => isAdding = true);
+                      },
+                      selectedColor: _businessBlue.withValues(alpha: 0.2),
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: const Text('Set Total Count'),
+                      selected: !isAdding,
+                      onSelected: (val) {
+                        if (val) setDialogState(() => isAdding = false);
+                      },
+                      selectedColor: _businessBlue.withValues(alpha: 0.2),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: qtyCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    labelText: isAdding ? 'Quantity to add (${item.unit})' : 'New total stock (${item.unit})',
+                    hintText: isAdding ? 'e.g. 50' : 'e.g. 100',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _businessBlue,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () async {
+                  final entered = double.tryParse(qtyCtrl.text.trim());
+                  if (entered == null || entered <= 0) {
+                    CustomToast.show(context, 'Please enter a valid quantity', isError: true);
+                    return;
+                  }
+                  final newStock = isAdding ? (item.stockQuantity + entered) : entered;
+                  await Provider.of<ExpenseProvider>(context, listen: false).updateBusinessItemStock(item.id, newStock);
+                  if (context.mounted) {
+                    Navigator.of(ctx).pop();
+                    CustomToast.show(context, '📦 Stock updated: $newStock ${item.unit}');
+                  }
+                },
+                child: const Text('Update Stock'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   void _confirmDeleteItem(BuildContext context, BusinessItem item) {
     showDialog(
       context: context,
@@ -813,6 +1083,17 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
       text: (existingItem?.purchasePrice ?? 0.0) > 0 ? existingItem!.purchasePrice.toStringAsFixed(2) : '',
     );
     final categoryCtrl = TextEditingController(text: existingItem?.category ?? '');
+    final barcodeCtrl = TextEditingController(text: existingItem?.barcode ?? '');
+    final stockQtyCtrl = TextEditingController(
+      text: (existingItem?.stockQuantity ?? 0.0) > 0
+          ? existingItem!.stockQuantity.toStringAsFixed(existingItem.stockQuantity.truncateToDouble() == existingItem.stockQuantity ? 0 : 2)
+          : '0',
+    );
+    final lowStockLimitCtrl = TextEditingController(
+      text: (existingItem?.lowStockLimit ?? 5.0).toStringAsFixed(0),
+    );
+    bool trackStock = existingItem?.trackStock ?? true;
+
     String selectedUnit = existingItem?.unit.toLowerCase() ?? 'pcs';
     if (!_unitOptions.contains(selectedUnit)) {
       selectedUnit = 'pcs';
@@ -900,6 +1181,43 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                         decoration: InputDecoration(
                           hintText: 'e.g., Engine Oil 1L, Haircut, Sugar 1kg...',
                           hintStyle: GoogleFonts.inter(fontSize: 13, color: Colors.grey),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Barcode Scan / Enter Field
+                      Text(
+                        'Product Barcode (Optional for Fast Billing)',
+                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.indigoAccent),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: barcodeCtrl,
+                        style: GoogleFonts.inter(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
+                        decoration: InputDecoration(
+                          hintText: 'Scan packet barcode or enter code...',
+                          hintStyle: GoogleFonts.inter(fontSize: 13, color: Colors.grey),
+                          prefixIcon: const Icon(Icons.qr_code, size: 20, color: Colors.indigoAccent),
+                          suffixIcon: IconButton(
+                            tooltip: 'Open Camera Barcode Scanner',
+                            icon: const Icon(Icons.qr_code_scanner, color: Colors.indigoAccent),
+                            onPressed: () async {
+                              final scanned = await BarcodeScannerModal.scan(
+                                context,
+                                title: 'Scan Barcode for ${nameCtrl.text.isNotEmpty ? nameCtrl.text : "Item"}',
+                              );
+                              if (scanned != null && scanned.isNotEmpty) {
+                                setModalState(() {
+                                  barcodeCtrl.text = scanned;
+                                });
+                                if (context.mounted) {
+                                  CustomToast.show(context, '📷 Barcode scanned: $scanned');
+                                }
+                              }
+                            },
+                          ),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         ),
@@ -1116,7 +1434,100 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                       }),
                       const SizedBox(height: 14),
 
-                      // 4. Category / Group
+                      // 4. Inventory & Stock Tracking Section
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.inventory_2_outlined, size: 18, color: _businessBlue),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Track Inventory Stock',
+                                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                                Switch.adaptive(
+                                  value: trackStock,
+                                  activeColor: _businessBlue,
+                                  onChanged: (val) {
+                                    setModalState(() => trackStock = val);
+                                  },
+                                ),
+                              ],
+                            ),
+                            if (trackStock) ...[
+                              const Divider(height: 16),
+                              Row(
+                                children: [
+                                  // Initial Stock Quantity
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Available Stock ($selectedUnit)',
+                                          style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: Colors.grey),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        TextField(
+                                          controller: stockQtyCtrl,
+                                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                          style: GoogleFonts.inter(fontSize: 13.5, color: isDark ? Colors.white : Colors.black87),
+                                          decoration: InputDecoration(
+                                            hintText: '0',
+                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+
+                                  // Low Stock Limit Threshold
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Low Stock Alert Limit',
+                                          style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: Colors.orange),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        TextField(
+                                          controller: lowStockLimitCtrl,
+                                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                          style: GoogleFonts.inter(fontSize: 13.5, color: isDark ? Colors.white : Colors.black87),
+                                          decoration: InputDecoration(
+                                            hintText: '5',
+                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // 5. Category / Group
                       Text(
                         'Category / Group (Optional)',
                         style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey),
@@ -1154,6 +1565,9 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                             final sellPrice = double.tryParse(sellPriceCtrl.text.trim()) ?? 0.0;
                             final buyPrice = double.tryParse(buyPriceCtrl.text.trim()) ?? 0.0;
                             final category = categoryCtrl.text.trim();
+                            final barcode = barcodeCtrl.text.trim();
+                            final stockQty = double.tryParse(stockQtyCtrl.text.trim()) ?? 0.0;
+                            final lowStockLimit = double.tryParse(lowStockLimitCtrl.text.trim()) ?? 5.0;
 
                             final provider = Provider.of<ExpenseProvider>(context, listen: false);
 
@@ -1165,6 +1579,10 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                                 unit: selectedUnit,
                                 taxRate: selectedTax,
                                 category: category.isNotEmpty ? category : null,
+                                barcode: barcode.isNotEmpty ? barcode : null,
+                                stockQuantity: stockQty,
+                                lowStockLimit: lowStockLimit,
+                                trackStock: trackStock,
                                 updatedAt: DateTime.now(),
                               );
                               await provider.updateBusinessItem(updated);
@@ -1181,6 +1599,10 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                                 unit: selectedUnit,
                                 taxRate: selectedTax,
                                 category: category.isNotEmpty ? category : null,
+                                barcode: barcode.isNotEmpty ? barcode : null,
+                                stockQuantity: stockQty,
+                                lowStockLimit: lowStockLimit,
+                                trackStock: trackStock,
                               );
                               await provider.addBusinessItem(newItem);
                               if (context.mounted) {

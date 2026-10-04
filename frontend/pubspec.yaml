@@ -61,6 +61,8 @@ dependencies:
   firebase_core: ^4.15.0
   firebase_messaging: ^16.7.0
   printing: ^5.14.3
+  mobile_scanner: ^7.4.2
+  fluttercontactpicker: ^4.7.0
 
 dev_dependencies:
   flutter_test:

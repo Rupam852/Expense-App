@@ -18,6 +18,8 @@ import '../services/database_helper.dart';
 import '../services/expense_provider.dart';
 import '../utils/pdf_unicode_helper.dart';
 import '../widgets/custom_toast.dart';
+import '../widgets/barcode_scanner_modal.dart';
+import 'package:fluttercontactpicker/fluttercontactpicker.dart';
 import 'business_catalog_screen.dart';
 
 class AddBusinessSaleScreen extends StatefulWidget {
@@ -717,6 +719,48 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
     );
   }
 
+  Future<void> _pickCustomerContact() async {
+    try {
+      final PhoneContact contact = await FlutterContactPicker.pickPhoneContact();
+      if (contact.fullName != null && contact.fullName!.isNotEmpty) {
+        setState(() {
+          _isWalkIn = false;
+          _customerNameController.text = contact.fullName!;
+        });
+      }
+      if (contact.phoneNumber?.number != null) {
+        String raw = contact.phoneNumber!.number!;
+        String clean = raw.replaceAll(RegExp(r'[^\d+]'), '');
+        setState(() {
+          _customerPhoneController.text = clean;
+        });
+      }
+      if (mounted) {
+        CustomToast.show(context, '👤 Selected: ${_customerNameController.text}');
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _scanBarcodeAndAddItem() async {
+    final scannedBarcode = await BarcodeScannerModal.scan(
+      context,
+      title: 'Scan Barcode to Add Item',
+    );
+    if (scannedBarcode == null || scannedBarcode.isEmpty) return;
+
+    final catalogItem = await DatabaseHelper.instance.getBusinessItemByBarcode(scannedBarcode);
+    if (catalogItem != null) {
+      _addItemFromCatalog(catalogItem);
+      if (mounted) {
+        CustomToast.show(context, '⚡ Added "${catalogItem.name}" (₹${catalogItem.sellingPrice.toStringAsFixed(2)})');
+      }
+    } else {
+      if (mounted) {
+        CustomToast.show(context, '⚠️ Barcode "$scannedBarcode" not found in catalog.', isError: true);
+      }
+    }
+  }
+
   double get _subtotal {
     double total = 0.0;
     for (var row in _itemRows) {
@@ -861,6 +905,7 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
 
       if (mounted) {
         final expProvider = Provider.of<ExpenseProvider>(context, listen: false);
+        await expProvider.deductStockForSale(items);
         expProvider.loadLocalData();
         expProvider.triggerQuietSync();
       }
@@ -1375,10 +1420,15 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                     TextFormField(
                       controller: _customerPhoneController,
                       keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Mobile Number (for WhatsApp Bill)',
-                        prefixIcon: Icon(Icons.phone_android),
-                        border: OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.phone_android),
+                        suffixIcon: IconButton(
+                          tooltip: 'Pick from Contacts',
+                          icon: const Icon(Icons.contacts_rounded, color: Color(0xFF1E88E5)),
+                          onPressed: _pickCustomerContact,
+                        ),
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -1439,6 +1489,18 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                       Text('Billing Items (${_itemRows.length})', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
                       Row(
                         children: [
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF10B981),
+                              side: const BorderSide(color: Color(0xFF10B981), width: 1.2),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed: _scanBarcodeAndAddItem,
+                            icon: const Icon(Icons.qr_code_scanner, size: 16),
+                            label: Text('Scan Barcode', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                          const SizedBox(width: 8),
                           OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF1E88E5),

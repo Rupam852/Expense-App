@@ -23,6 +23,7 @@ import 'khata_screen.dart';
 import 'invoice_screen.dart';
 import 'calculator_hub_screen.dart';
 import 'settings_screen.dart';
+import 'business_catalog_screen.dart';
 import '../utils/app_strings.dart';
 
 class BusinessDashboardView extends StatefulWidget {
@@ -807,7 +808,80 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                 ],
               ),
             ),
-            const SizedBox(height: 14),
+            // ── LOW STOCK ALERT BANNER ────────────────────────
+            Consumer<ExpenseProvider>(
+              builder: (context, expProv, _) {
+                final lowItems = expProv.lowStockBusinessItems;
+                if (lowItems.isEmpty) return const SizedBox.shrink();
+
+                final outOfStockCount = lowItems.where((it) => it.isOutOfStock).length;
+                final lowStockCount = lowItems.where((it) => it.isLowStock).length;
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: outOfStockCount > 0 ? Colors.red.withValues(alpha: 0.12) : Colors.orange.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: outOfStockCount > 0 ? Colors.red.withValues(alpha: 0.35) : Colors.orange.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const BusinessCatalogScreen(initialFilterLowStock: true),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: outOfStockCount > 0 ? Colors.red.withValues(alpha: 0.2) : Colors.orange.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              outOfStockCount > 0 ? Icons.error_outline_rounded : Icons.warning_amber_rounded,
+                              color: outOfStockCount > 0 ? Colors.redAccent : Colors.orange,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  outOfStockCount > 0
+                                      ? '⚠️ $outOfStockCount Out of Stock, $lowStockCount Low Stock'
+                                      : '⚠️ $lowStockCount Items Running Low on Stock',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: outOfStockCount > 0 ? Colors.redAccent : Colors.orange,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Tap to view and refill catalog inventory before it runs out.',
+                                  style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
 
             // ── HERO METRICS CARDS ─────────────────────────────
             Row(

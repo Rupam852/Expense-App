@@ -8,6 +8,7 @@ import '../services/user_provider.dart';
 import '../widgets/custom_toast.dart';
 import '../widgets/payment_reminder_modal.dart';
 import '../utils/app_strings.dart';
+import 'package:fluttercontactpicker/fluttercontactpicker.dart';
 
 class KhataScreen extends StatefulWidget {
   const KhataScreen({super.key});
@@ -795,6 +796,27 @@ class _KhataEntrySheetState extends State<_KhataEntrySheet> {
     super.dispose();
   }
 
+  Future<void> _pickContact() async {
+    try {
+      final PhoneContact contact = await FlutterContactPicker.pickPhoneContact();
+      if (contact.fullName != null && contact.fullName!.isNotEmpty) {
+        setState(() {
+          _nameController.text = contact.fullName!;
+        });
+      }
+      if (contact.phoneNumber?.number != null) {
+        String raw = contact.phoneNumber!.number!;
+        String clean = raw.replaceAll(RegExp(r'[^\d+]'), '');
+        setState(() {
+          _phoneController.text = clean;
+        });
+      }
+      if (mounted) {
+        CustomToast.show(context, '👤 Selected: ${_nameController.text}');
+      }
+    } catch (_) {}
+  }
+
   void _submit() {
     final name = _nameController.text.trim();
     final amountText = _amountController.text.trim();
@@ -959,6 +981,11 @@ class _KhataEntrySheetState extends State<_KhataEntrySheet> {
                 labelText: widget.isBusiness ? 'Customer / Vendor Name *' : 'Person Name *',
                 hintText: widget.isBusiness ? 'e.g. Ramesh Kumar' : 'e.g. Rahul Sharma',
                 prefixIcon: const Icon(Icons.person_outline_rounded),
+                suffixIcon: IconButton(
+                  tooltip: 'Pick from Contacts',
+                  icon: Icon(Icons.contacts_rounded, color: primaryColor),
+                  onPressed: _pickContact,
+                ),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
@@ -972,6 +999,11 @@ class _KhataEntrySheetState extends State<_KhataEntrySheet> {
                 labelText: 'Mobile Number (Optional)',
                 hintText: 'e.g. 9876543210',
                 prefixIcon: const Icon(Icons.phone_android_rounded),
+                suffixIcon: IconButton(
+                  tooltip: 'Pick from Contacts',
+                  icon: Icon(Icons.contacts_rounded, color: primaryColor),
+                  onPressed: _pickContact,
+                ),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),

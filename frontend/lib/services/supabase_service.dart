@@ -1130,6 +1130,14 @@ class SupabaseService {
         'unit': it['unit']?.toString() ?? 'pcs',
         'category': it['category']?.toString(),
         'notes': it['notes']?.toString(),
+        'barcode': it['barcode']?.toString() ?? '',
+        'stock_quantity': (it['stock_quantity'] is num)
+            ? (it['stock_quantity'] as num).toDouble()
+            : (double.tryParse(it['stock_quantity']?.toString() ?? '0') ?? 0.0),
+        'low_stock_limit': (it['low_stock_limit'] is num)
+            ? (it['low_stock_limit'] as num).toDouble()
+            : (double.tryParse(it['low_stock_limit']?.toString() ?? '5') ?? 5.0),
+        'track_stock': it['track_stock'] == 1 || it['track_stock'] == true || it['track_stock'] == '1' || it['track_stock'] == null ? true : false,
         'updated_at': it['updated_at']?.toString() ?? DateTime.now().toIso8601String(),
       };
     }).toList();

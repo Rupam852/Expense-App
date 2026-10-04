@@ -419,6 +419,18 @@ class DatabaseHelper {
     try {
       await db.execute('ALTER TABLE business_items ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0');
     } catch (_) {}
+    try {
+      await db.execute("ALTER TABLE business_items ADD COLUMN barcode TEXT DEFAULT ''");
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE business_items ADD COLUMN stock_quantity REAL DEFAULT 0.0');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE business_items ADD COLUMN low_stock_limit REAL DEFAULT 5.0');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE business_items ADD COLUMN track_stock INTEGER DEFAULT 1');
+    } catch (_) {}
   }
 
   Future<Database> _initDB(String filePath) async {
@@ -813,6 +825,10 @@ class DatabaseHelper {
         unit TEXT NOT NULL DEFAULT 'pcs',
         category TEXT,
         notes TEXT,
+        barcode TEXT DEFAULT '',
+        stock_quantity REAL NOT NULL DEFAULT 0.0,
+        low_stock_limit REAL NOT NULL DEFAULT 5.0,
+        track_stock INTEGER NOT NULL DEFAULT 1,
         sync_status INTEGER NOT NULL DEFAULT 0,
         is_synced INTEGER NOT NULL DEFAULT 0,
         is_deleted INTEGER NOT NULL DEFAULT 0,
@@ -2431,6 +2447,72 @@ class DatabaseHelper {
       return BusinessItem.fromMap(rows.first);
     }
     return null;
+  }
+
+  Future<BusinessItem?> getBusinessItemByBarcode(String barcode) async {
+    if (barcode.trim().isEmpty) return null;
+    final db = await instance.database;
+    final rows = await db.query(
+      'business_items',
+      where: 'barcode = ? AND is_deleted = 0',
+      whereArgs: [barcode.trim()],
+      limit: 1,
+    );
+    if (rows.isNotEmpty) {
+      return BusinessItem.fromMap(rows.first);
+    }
+    return null;
+  }
+
+  Future<void> deductStockForItems(List<Map<String, dynamic>> items) async {
+    final db = await instance.database;
+    await db.transaction((txn) async {
+      for (final it in items) {
+        final name = (it['name'] ?? it['title'] ?? '').toString().trim();
+        final qty = (it['quantity'] ?? it['qty'] ?? 1.0) as num;
+        if (name.isEmpty || qty <= 0) continue;
+
+        final matching = await txn.query(
+          'business_items',
+          where: 'LOWER(name) = ? AND is_deleted = 0',
+          whereArgs: [name.toLowerCase()],
+          limit: 1,
+        );
+
+        if (matching.isNotEmpty) {
+          final item = BusinessItem.fromMap(matching.first);
+          if (item.trackStock) {
+            final newStock = (item.stockQuantity - qty.toDouble()).clamp(-999999.0, 999999.0);
+            await txn.update(
+              'business_items',
+              {
+                'stock_quantity': newStock,
+                'sync_status': 0,
+                'is_synced': 0,
+                'updated_at': DateTime.now().toIso8601String(),
+              },
+              where: 'id = ?',
+              whereArgs: [item.id],
+            );
+          }
+        }
+      }
+    });
+  }
+
+  Future<int> updateItemStockDirectly(String id, double newStock) async {
+    final db = await instance.database;
+    return await db.update(
+      'business_items',
+      {
+        'stock_quantity': newStock,
+        'sync_status': 0,
+        'is_synced': 0,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   Future<List<Map<String, dynamic>>> getUnsyncedBusinessItems() async {
