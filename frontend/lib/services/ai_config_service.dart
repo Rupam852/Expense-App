@@ -256,7 +256,6 @@ class AiConfigService with ChangeNotifier {
     } catch (e) {
       debugPrint('[AiConfigService] Error saving response language: $e');
     }
-    _backupToCloudQuietly();
     notifyListeners();
   }
 
@@ -400,16 +399,6 @@ class AiConfigService with ChangeNotifier {
         changed = true;
       }
 
-      final cloudLang = profile['response_language']?.toString().trim();
-      if (cloudLang != null && cloudLang.isNotEmpty) {
-        _responseLanguage = cloudLang;
-        await prefs.setString(_keyResponseLanguage, cloudLang);
-        changed = true;
-      } else if (_responseLanguage.isNotEmpty && _responseLanguage != 'English') {
-        // If cloud profile has no language set yet, back up current user choice to cloud
-        _backupToCloudQuietly();
-      }
-
       if (changed) {
         notifyListeners();
       }
@@ -418,7 +407,7 @@ class AiConfigService with ChangeNotifier {
     }
   }
 
-  /// Quietly sync AI configuration to Supabase Cloud profile
+  /// Quietly sync AI configuration to Supabase Cloud profile (API keys and model choices only, language stays strictly local)
   Future<void> _backupToCloudQuietly() async {
     try {
       final supabase = SupabaseService.instance;
@@ -430,7 +419,6 @@ class AiConfigService with ChangeNotifier {
           'gemini_model': _geminiModel,
           'nvidia_model': _nvidiaModel,
           'primary_provider': _primaryProvider,
-          'response_language': _responseLanguage,
         });
         debugPrint('[AiConfigService] AI profile (NVIDIA & Gemini) synced to Supabase successfully for user ${supabase.currentUser!.id}');
       }
