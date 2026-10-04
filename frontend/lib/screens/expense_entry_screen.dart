@@ -248,6 +248,439 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
     super.dispose();
   }
 
+  IconData _getCategoryIcon(String category) {
+    final cat = category.toLowerCase().trim();
+    if (cat.contains('shopping') || cat.contains('cloth') || cat.contains('dress')) {
+      return Icons.shopping_bag_rounded;
+    } else if (cat.contains('grocer') || cat.contains('supermarket') || cat.contains('kirana') || cat.contains('ration')) {
+      return Icons.local_grocery_store_rounded;
+    } else if (cat.contains('food') || cat.contains('dining') || cat.contains('drink') || cat.contains('restaur') || cat.contains('snack') || cat.contains('tea') || cat.contains('chai')) {
+      return Icons.restaurant_rounded;
+    } else if (cat.contains('transport') || cat.contains('fuel') || cat.contains('petrol') || cat.contains('diesel') || cat.contains('auto') || cat.contains('cab') || cat.contains('uber') || cat.contains('ola')) {
+      return Icons.directions_car_rounded;
+    } else if (cat.contains('bill') || cat.contains('recharge') || cat.contains('electric') || cat.contains('utility') || cat.contains('power')) {
+      return Icons.receipt_long_rounded;
+    } else if (cat.contains('transfer') || cat.contains('send') || cat.contains('remit')) {
+      return Icons.swap_horiz_rounded;
+    } else if (cat.contains('medic') || cat.contains('health') || cat.contains('doctor') || cat.contains('pharma') || cat.contains('hospital')) {
+      return Icons.medical_services_rounded;
+    } else if (cat.contains('travel') || cat.contains('flight') || cat.contains('train') || cat.contains('hotel') || cat.contains('tour')) {
+      return Icons.flight_takeoff_rounded;
+    } else if (cat.contains('repay') || cat.contains('loan') || cat.contains('emi') || cat.contains('debt')) {
+      return Icons.account_balance_wallet_rounded;
+    } else if (cat.contains('personal') || cat.contains('self') || cat.contains('salon') || cat.contains('hair')) {
+      return Icons.person_rounded;
+    } else if (cat.contains('service') || cat.contains('labor') || cat.contains('maid')) {
+      return Icons.home_repair_service_rounded;
+    } else if (cat.contains('insuran') || cat.contains('policy') || cat.contains('lic')) {
+      return Icons.shield_rounded;
+    } else if (cat.contains('entertain') || cat.contains('movie') || cat.contains('cinema') || cat.contains('ott')) {
+      return Icons.movie_rounded;
+    } else if (cat.contains('game') || cat.contains('gaming') || cat.contains('play')) {
+      return Icons.sports_esports_rounded;
+    } else if (cat.contains('small shop') || cat.contains('store') || cat.contains('shop rent') || cat.contains('rent')) {
+      return Icons.storefront_rounded;
+    } else if (cat.contains('salary') || cat.contains('staff') || cat.contains('wage')) {
+      return Icons.badge_rounded;
+    } else if (cat.contains('inventory') || cat.contains('stock') || cat.contains('item')) {
+      return Icons.inventory_2_rounded;
+    } else if (cat.contains('packag') || cat.contains('box') || cat.contains('supply')) {
+      return Icons.all_inbox_rounded;
+    } else if (cat.contains('market') || cat.contains('ad') || cat.contains('promot')) {
+      return Icons.campaign_rounded;
+    } else if (cat.contains('tax') || cat.contains('gst') || cat.contains('ca') || cat.contains('legal')) {
+      return Icons.gavel_rounded;
+    } else if (cat.contains('machine') || cat.contains('equip') || cat.contains('tool')) {
+      return Icons.precision_manufacturing_rounded;
+    } else if (cat.contains('internet') || cat.contains('wifi') || cat.contains('telecom')) {
+      return Icons.wifi_rounded;
+    } else if (cat.contains('repair') || cat.contains('maint')) {
+      return Icons.build_rounded;
+    } else if (cat.contains('subscript') || cat.contains('ott') || cat.contains('member')) {
+      return Icons.subscriptions_rounded;
+    } else if (cat.contains('invest') || cat.contains('share') || cat.contains('mutual') || cat.contains('sip') || cat.contains('gold')) {
+      return Icons.trending_up_rounded;
+    } else if (cat.contains('fit') || cat.contains('gym') || cat.contains('yoga')) {
+      return Icons.fitness_center_rounded;
+    } else if (cat.contains('pet') || cat.contains('dog') || cat.contains('cat')) {
+      return Icons.pets_rounded;
+    } else {
+      return Icons.category_rounded;
+    }
+  }
+
+  Color _getCategoryColor(String category) {
+    final cat = category.toLowerCase().trim();
+    if (cat.contains('shopping')) return const Color(0xFFEC4899);
+    if (cat.contains('grocer')) return const Color(0xFF10B981);
+    if (cat.contains('food') || cat.contains('dining') || cat.contains('tea') || cat.contains('chai')) return const Color(0xFFF97316);
+    if (cat.contains('transport') || cat.contains('fuel') || cat.contains('petrol')) return const Color(0xFF0284C7);
+    if (cat.contains('bill') || cat.contains('recharge') || cat.contains('electric')) return const Color(0xFF06B6D4);
+    if (cat.contains('transfer')) return const Color(0xFF64748B);
+    if (cat.contains('medic') || cat.contains('health')) return const Color(0xFFEF4444);
+    if (cat.contains('travel')) return const Color(0xFF3B82F6);
+    if (cat.contains('repay') || cat.contains('loan') || cat.contains('emi')) return const Color(0xFF8B5CF6);
+    if (cat.contains('personal')) return const Color(0xFFF59E0B);
+    if (cat.contains('service')) return const Color(0xFF6366F1);
+    if (cat.contains('insuran')) return const Color(0xFF475569);
+    if (cat.contains('entertain') || cat.contains('movie')) return const Color(0xFFA855F7);
+    if (cat.contains('gaming')) return const Color(0xFFD946EF);
+    if (cat.contains('rent') || cat.contains('shop')) return const Color(0xFF14B8A6);
+    if (cat.contains('salary') || cat.contains('staff')) return const Color(0xFF059669);
+    if (cat.contains('inventory') || cat.contains('stock')) return const Color(0xFFEAB308);
+    if (cat.contains('packag')) return const Color(0xFF7C3AED);
+    if (cat.contains('tax') || cat.contains('gst')) return const Color(0xFF475569);
+    if (cat.contains('repair')) return const Color(0xFFF43F5E);
+    if (cat.contains('subscript')) return const Color(0xFF8B5CF6);
+    if (cat.contains('invest')) return const Color(0xFF10B981);
+    if (cat.contains('fit')) return const Color(0xFF0EA5E9);
+    if (cat.contains('pet')) return const Color(0xFFF97316);
+    return const Color(0xFF6B7280);
+  }
+
+  void _showCategoryPickerBottomSheet(BuildContext context, {ValueChanged<String>? onCategorySelected}) {
+    HapticFeedback.lightImpact();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isBusiness = _ledgerType == 'business';
+    final accentColor = isBusiness ? const Color(0xFF2563EB) : const Color(0xFF00D09C);
+    final allCategories = _activeCategories;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        String searchQuery = '';
+        return StatefulBuilder(
+          builder: (modalContext, setModalState) {
+            final query = searchQuery.trim().toLowerCase();
+            final filteredCategories = allCategories.where((c) {
+              if (query.isEmpty) return true;
+              return c.toLowerCase().contains(query);
+            }).toList();
+
+            final bool isCustomCategory = query.isNotEmpty &&
+                !allCategories.any((c) => c.toLowerCase() == query);
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.78,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 20,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  // Handle Bar
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 44,
+                    height: 4.5,
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white24 : Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Modal Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isBusiness ? 'Select Business Category' : 'Select Expense Category',
+                              style: GoogleFonts.outfit(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              isBusiness
+                                  ? 'Organize shop & operating expenses'
+                                  : 'Categorize for budget & smart insights',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: isDark ? Colors.white60 : Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.close_rounded, color: isDark ? Colors.white70 : Colors.grey.shade700),
+                          onPressed: () => Navigator.of(modalContext).pop(),
+                          tooltip: 'Close',
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Search Bar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: query.isNotEmpty ? accentColor : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06)),
+                        ),
+                      ),
+                      child: TextField(
+                        autofocus: false,
+                        onChanged: (val) => setModalState(() => searchQuery = val),
+                        style: GoogleFonts.inter(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
+                        decoration: InputDecoration(
+                          hintText: isBusiness
+                              ? 'Search rent, salary, stock, tax...'
+                              : 'Search food, shopping, fuel, bills...',
+                          hintStyle: GoogleFonts.inter(fontSize: 13, color: isDark ? Colors.white38 : Colors.grey.shade500),
+                          prefixIcon: Icon(Icons.search_rounded, color: accentColor, size: 20),
+                          suffixIcon: searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear_rounded, size: 18),
+                                  onPressed: () => setModalState(() => searchQuery = ''),
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Quick Suggestion Chips (when search is empty)
+                  if (searchQuery.isEmpty) ...[
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 36,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        children: (isBusiness
+                                ? ['Shop Rent', 'Staff Salary & Wages', 'Inventory & Stock Purchase', 'Electricity & Utilities', 'Transport & Logistics']
+                                : ['Food & dining', 'Groceries', 'Shopping', 'Transport', 'Bills & recharges', 'Medical'])
+                            .map((quickCat) {
+                          final isSelected = _selectedCategory == quickCat;
+                          final color = _getCategoryColor(quickCat);
+                          final icon = _getCategoryIcon(quickCat);
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: InkWell(
+                              onTap: () {
+                                HapticFeedback.mediumImpact();
+                                setState(() => _selectedCategory = quickCat);
+                                onCategorySelected?.call(quickCat);
+                                Navigator.of(modalContext).pop();
+                              },
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? color.withValues(alpha: 0.2)
+                                      : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: isSelected ? color : (isDark ? Colors.white12 : Colors.grey.shade300),
+                                    width: isSelected ? 1.5 : 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(icon, size: 14, color: color),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      quickCat,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11.5,
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                        color: isSelected ? (isDark ? Colors.white : color) : (isDark ? Colors.white70 : Colors.grey.shade800),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 10),
+                  const Divider(height: 1),
+
+                  // Categories Grid / List
+                  Expanded(
+                    child: filteredCategories.isEmpty && !isCustomCategory
+                        ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.search_off_rounded, size: 48, color: Colors.grey.withValues(alpha: 0.4)),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'No category found',
+                                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                            children: [
+                              // Option to add custom category if searching for something new
+                              if (isCustomCategory) ...[
+                                Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        accentColor.withValues(alpha: 0.12),
+                                        accentColor.withValues(alpha: 0.04),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: accentColor.withValues(alpha: 0.4)),
+                                  ),
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: accentColor,
+                                      child: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                                    ),
+                                    title: Text(
+                                      'Add "$searchQuery"',
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: isDark ? Colors.white : Colors.black87,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      'Use as custom category',
+                                      style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.white60 : Colors.grey.shade600),
+                                    ),
+                                    trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: accentColor),
+                                    onTap: () {
+                                      HapticFeedback.mediumImpact();
+                                      final formatted = searchQuery.trim();
+                                      setState(() {
+                                        _selectedCategory = formatted;
+                                      });
+                                      onCategorySelected?.call(formatted);
+                                      Navigator.of(modalContext).pop();
+                                    },
+                                  ),
+                                ),
+                              ],
+
+                              // 2-Column Grid of Categories
+                              GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  childAspectRatio: 2.5,
+                                  crossAxisSpacing: 10,
+                                  mainAxisSpacing: 10,
+                                ),
+                                itemCount: filteredCategories.length,
+                                itemBuilder: (context, index) {
+                                  final cat = filteredCategories[index];
+                                  final isSelected = _selectedCategory == cat;
+                                  final catColor = _getCategoryColor(cat);
+                                  final catIcon = _getCategoryIcon(cat);
+
+                                  return InkWell(
+                                    onTap: () {
+                                      HapticFeedback.mediumImpact();
+                                      setState(() => _selectedCategory = cat);
+                                      onCategorySelected?.call(cat);
+                                      Navigator.of(modalContext).pop();
+                                    },
+                                    borderRadius: BorderRadius.circular(14),
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 180),
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? catColor.withValues(alpha: isDark ? 0.22 : 0.12)
+                                            : (isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC)),
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? catColor
+                                              : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06)),
+                                          width: isSelected ? 1.8 : 1.0,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 36,
+                                            height: 36,
+                                            decoration: BoxDecoration(
+                                              color: catColor.withValues(alpha: isDark ? 0.25 : 0.15),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Icon(catIcon, color: catColor, size: 18),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  cat,
+                                                  style: GoogleFonts.outfit(
+                                                    fontSize: 12.5,
+                                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                                    color: isSelected
+                                                        ? (isDark ? Colors.white : catColor)
+                                                        : (isDark ? Colors.white : const Color(0xFF1E293B)),
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          if (isSelected)
+                                            Icon(Icons.check_circle_rounded, color: catColor, size: 16),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showApiErrorDialog(BuildContext context, String actualError, UserProvider userProvider) {
     final aiService = AiConfigService.instance;
     if (aiService.isServerBusyError(actualError)) {
@@ -751,33 +1184,122 @@ class _ExpenseEntryScreenState extends State<ExpenseEntryScreen> {
               ),
               const SizedBox(height: 16),
 
-              // ─── Category Selector ───
-              DropdownButtonFormField<String>(
-                value: _selectedCategory,
-                decoration: InputDecoration(
-                  labelText: isBusiness ? 'Business Expense Category' : 'Category',
-                  prefixIcon: Icon(
-                    isBusiness ? Icons.category_rounded : Icons.label_outline,
-                    color: accentColor,
-                  ),
-                ),
-                hint: Text(isBusiness ? 'Select Business Category' : 'Select Category'),
-                items: _activeCategories.map((c) => DropdownMenuItem(
-                  value: c,
-                  child: Text(c, style: GoogleFonts.inter(fontSize: 13)),
-                )).toList(),
-                onChanged: (val) {
-                  if (val != null) {
-                    setState(() {
-                      _selectedCategory = val;
-                    });
-                  }
-                },
+              // ─── Modern Category Selector Tile ───
+              FormField<String>(
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  if (_selectedCategory == null || _selectedCategory!.trim().isEmpty) {
                     return 'Please select a category';
                   }
                   return null;
+                },
+                builder: (field) {
+                  final hasSelection = _selectedCategory != null && _selectedCategory!.isNotEmpty;
+                  final selectedColor = hasSelection ? _getCategoryColor(_selectedCategory!) : accentColor;
+                  final selectedIcon = hasSelection ? _getCategoryIcon(_selectedCategory!) : (isBusiness ? Icons.category_rounded : Icons.label_outline);
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      InkWell(
+                        onTap: () {
+                          _showCategoryPickerBottomSheet(
+                            context,
+                            onCategorySelected: (cat) => field.didChange(cat),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: field.hasError
+                                  ? Colors.redAccent
+                                  : (hasSelection
+                                      ? selectedColor.withValues(alpha: 0.5)
+                                      : (isDark ? Colors.white12 : Colors.black12)),
+                              width: hasSelection ? 1.5 : 1.0,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.02),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: selectedColor.withValues(alpha: isDark ? 0.25 : 0.12),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  selectedIcon,
+                                  color: selectedColor,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      isBusiness ? 'Business Expense Category' : 'Category',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                        color: isDark ? Colors.white60 : Colors.grey.shade600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      hasSelection ? _selectedCategory! : (isBusiness ? 'Select Business Category' : 'Select Category'),
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 14.5,
+                                        fontWeight: hasSelection ? FontWeight.bold : FontWeight.w500,
+                                        color: hasSelection
+                                            ? (isDark ? Colors.white : const Color(0xFF0F172A))
+                                            : (isDark ? Colors.white38 : Colors.grey.shade400),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.shade100,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  color: isDark ? Colors.white70 : Colors.grey.shade700,
+                                  size: 20,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (field.hasError)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 14, top: 6),
+                          child: Text(
+                            field.errorText ?? '',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: Colors.redAccent,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
                 },
               ),
               const SizedBox(height: 16),
