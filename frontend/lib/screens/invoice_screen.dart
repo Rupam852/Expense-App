@@ -767,23 +767,35 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
 
     final now = DateTime.now();
     DateTime start;
-    DateTime end = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    DateTime end = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
 
-    if (_reportPeriod == 'This Month') {
-      start = DateTime(now.year, now.month, 1);
+    if (_reportPeriod == 'Today') {
+      start = DateTime(now.year, now.month, now.day, 0, 0, 0);
+      end = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
+    } else if (_reportPeriod == 'This Week') {
+      final monday = now.subtract(Duration(days: now.weekday - 1));
+      start = DateTime(monday.year, monday.month, monday.day, 0, 0, 0);
+      final sunday = monday.add(const Duration(days: 6));
+      end = DateTime(sunday.year, sunday.month, sunday.day, 23, 59, 59, 999);
+    } else if (_reportPeriod == 'This Month') {
+      start = DateTime(now.year, now.month, 1, 0, 0, 0);
+      end = DateTime(now.year, now.month + 1, 0, 23, 59, 59, 999);
     } else if (_reportPeriod == 'Last Month') {
-      final prevMonth = DateTime(now.year, now.month - 1, 1);
+      final prevMonth = DateTime(now.year, now.month - 1, 1, 0, 0, 0);
       start = prevMonth;
-      end = DateTime(now.year, now.month, 0, 23, 59, 59);
+      end = DateTime(now.year, now.month, 0, 23, 59, 59, 999);
     } else if (_reportPeriod == 'This Quarter') {
       final quarterMonth = ((now.month - 1) ~/ 3) * 3 + 1;
-      start = DateTime(now.year, quarterMonth, 1);
+      start = DateTime(now.year, quarterMonth, 1, 0, 0, 0);
+      end = DateTime(now.year, quarterMonth + 3, 0, 23, 59, 59, 999);
     } else if (_reportPeriod == 'This FY') {
       // Indian Financial Year: April 1 to March 31
       final fyYear = now.month >= 4 ? now.year : now.year - 1;
-      start = DateTime(fyYear, 4, 1);
+      start = DateTime(fyYear, 4, 1, 0, 0, 0);
+      end = DateTime(fyYear + 1, 3, 31, 23, 59, 59, 999);
     } else {
-      start = DateTime(2020, 1, 1);
+      start = DateTime(2020, 1, 1, 0, 0, 0);
+      end = DateTime(2099, 12, 31, 23, 59, 59, 999);
     }
 
     return DateTimeRange(start: start, end: end);
