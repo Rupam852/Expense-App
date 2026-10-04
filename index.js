@@ -569,6 +569,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 550);
   };
 
+  // Dual-Mode Toggling inside Simulator
+  let currentSimMode = 'personal';
+  const simModeBadge = document.getElementById('sim-mode-badge');
+  const simModeText = document.getElementById('sim-mode-text');
+  const simCardPersonal = document.getElementById('sim-card-personal');
+  const simCardBusiness = document.getElementById('sim-card-business');
+  const simFeedPersonal = document.getElementById('sim-feed-personal');
+  const simFeedBusiness = document.getElementById('sim-feed-business');
+  const btnToggleMode = document.getElementById('sim-action-toggle-mode');
+  const simNavToggleMode = document.getElementById('sim-nav-toggle-mode');
+  const quickInvoices = document.getElementById('sim-quick-invoices');
+
+  const setSimulatorMode = (mode) => {
+    currentSimMode = mode;
+    if (mode === 'business') {
+      if (simModeBadge) simModeBadge.classList.add('business');
+      if (simModeText) simModeText.textContent = 'BUSINESS MODE';
+      if (simCardPersonal) simCardPersonal.style.display = 'none';
+      if (simCardBusiness) simCardBusiness.style.display = 'block';
+      if (simFeedPersonal) simFeedPersonal.style.display = 'none';
+      if (simFeedBusiness) simFeedBusiness.style.display = 'block';
+    } else {
+      if (simModeBadge) simModeBadge.classList.remove('business');
+      if (simModeText) simModeText.textContent = 'PERSONAL MODE';
+      if (simCardPersonal) simCardPersonal.style.display = 'block';
+      if (simCardBusiness) simCardBusiness.style.display = 'none';
+      if (simFeedPersonal) simFeedPersonal.style.display = 'block';
+      if (simFeedBusiness) simFeedBusiness.style.display = 'none';
+    }
+    playHaptic('double');
+  };
+
+  const toggleSimulatorMode = () => {
+    setSimulatorMode(currentSimMode === 'personal' ? 'business' : 'personal');
+  };
+
+  if (simModeBadge) simModeBadge.addEventListener('click', toggleSimulatorMode);
+  if (btnToggleMode) btnToggleMode.addEventListener('click', toggleSimulatorMode);
+  if (simNavToggleMode) simNavToggleMode.addEventListener('click', toggleSimulatorMode);
+  if (quickInvoices) quickInvoices.addEventListener('click', () => {
+    setSimulatorMode('business');
+    switchSimTab('sim-tab-home');
+  });
+
   const btnScan = document.getElementById('sim-action-scan');
   const btnVoice = document.getElementById('sim-action-voice');
   const btnCardsQr = document.getElementById('sim-action-cards-qr');
