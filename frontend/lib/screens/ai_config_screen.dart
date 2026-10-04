@@ -868,6 +868,7 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
                 items: availableModels.map((m) {
                   final tag = _getModelTag(m);
                   final tagColor = _getModelTagColor(m);
+                  final isRecommended = m == 'gemini-2.5-flash';
                   return DropdownMenuItem<String>(
                     value: m,
                     child: Row(
@@ -899,6 +900,33 @@ class _AiConfigScreenState extends State<AiConfigScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        if (isRecommended) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withOpacity(0.18),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFF10B981).withOpacity(0.4), width: 1),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.star_rounded, size: 11, color: Color(0xFF10B981)),
+                                const SizedBox(width: 2),
+                                Text(
+                                  'RECOMMENDED',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF10B981),
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   );
