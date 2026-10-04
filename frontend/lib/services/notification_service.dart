@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/subscription_item.dart';
 import '../models/budget.dart';
@@ -18,6 +19,7 @@ import '../screens/analytics_screen.dart';
 import '../screens/invoice_screen.dart';
 import 'app_update_service.dart';
 import 'supabase_service.dart';
+import 'user_provider.dart';
 
 class NotificationService with ChangeNotifier {
   static final NotificationService instance = NotificationService._internal();
@@ -513,6 +515,26 @@ class NotificationService with ChangeNotifier {
     }
 
     try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+      // Business payloads auto-switch context to Business mode if not already
+      final isBusinessPayload = payload.startsWith('biz_') ||
+          payload.startsWith('invoice') ||
+          payload.startsWith('vendor_payable') ||
+          payload.startsWith('gst_filing');
+
+      // Personal specific payloads auto-switch context to Personal mode if not already
+      final isPersonalPayload = payload.startsWith('budget') ||
+          payload.startsWith('subscription') ||
+          payload.startsWith('split_bill') ||
+          payload == 'daily_reminder';
+
+      if (isBusinessPayload && !userProvider.isBusinessMode) {
+        userProvider.toggleAppMode(true);
+      } else if (isPersonalPayload && userProvider.isBusinessMode) {
+        userProvider.toggleAppMode(false);
+      }
+
       if (payload == 'app_update') {
         Navigator.of(context).push(
           MaterialPageRoute(builder: (context) => const AppUpdateScreen()),
