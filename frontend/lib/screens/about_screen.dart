@@ -9,6 +9,7 @@ import '../widgets/app_logo.dart';
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
 
+  static const String officialWebsite = 'https://growexpense.vercel.app/';
   static const String devWebsite = 'https://link-flow-program.vercel.app/rupam-bairagya';
   static const String devGitHub = 'https://github.com/Rupam852';
   static const String devInstagram = 'https://instagram.com/_rupambairagya_';
@@ -182,7 +183,30 @@ class AboutScreen extends StatelessWidget {
             const SizedBox(height: 24),
 
             // ══════════════════════════════════════════════════════
-            // 2. DEVELOPER SECTION (Website, GitHub, Instagram, LinkedIn)
+            // 2. OFFICIAL WEBSITE SECTION
+            // ══════════════════════════════════════════════════════
+            _buildSectionHeader('Official Website', isDark),
+            const SizedBox(height: 8),
+            _buildCard(
+              isDark: isDark,
+              cardBg: cardBg,
+              borderColor: borderColor,
+              children: [
+                _buildActionTile(
+                  isDark: isDark,
+                  icon: Icons.public_rounded,
+                  iconColor: const Color(0xFF00D09C),
+                  title: 'Official App Website',
+                  subtitle: 'growexpense.vercel.app • Tap to visit',
+                  onTap: () => _launchUrlHelper(context, officialWebsite),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
+            // ══════════════════════════════════════════════════════
+            // 3. DEVELOPER SECTION (Website, GitHub, Instagram, LinkedIn)
             // ══════════════════════════════════════════════════════
             _buildSectionHeader('Developer', isDark),
             const SizedBox(height: 8),
