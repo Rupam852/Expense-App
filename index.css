@@ -262,6 +262,7 @@ a {
   font-family: var(--font-display);
   font-size: 1.25rem;
   font-weight: 800;
+  white-space: nowrap;
   background: linear-gradient(135deg, #ffffff 0%, var(--text-muted) 100%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -326,6 +327,7 @@ a {
   font-size: 0.85rem !important;
   transition: var(--transition-bounce) !important;
   box-shadow: 0 4px 15px rgba(0, 208, 156, 0.2);
+  white-space: nowrap;
 }
 
 .download-btn-small:hover {
@@ -338,11 +340,37 @@ a {
 }
 
 @media (max-width: 768px) {
+  .navbar {
+    height: 64px;
+  }
+  .navbar.scrolled {
+    height: 60px;
+  }
+  .nav-container {
+    padding: 0 16px;
+  }
+  .logo-area {
+    gap: 10px;
+  }
+  .nav-logo {
+    width: 32px;
+    height: 32px;
+  }
+  .nav-brand {
+    font-size: 1.1rem;
+    white-space: nowrap;
+  }
   .nav-links a:not(.download-btn-small), .nav-link-btn {
     display: none;
   }
   .nav-links {
-    gap: 12px;
+    gap: 8px;
+  }
+  .download-btn-small {
+    padding: 6px 14px;
+    font-size: 0.8rem !important;
+    border-radius: 20px;
+    gap: 5px;
   }
 }
 
