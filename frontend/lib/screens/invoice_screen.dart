@@ -51,6 +51,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
   List<BusinessSale> _businessSales = [];
   List<Expense> _businessExpenses = [];
   BusinessProfile _businessProfile = BusinessProfile(id: 'default', businessName: 'My Business');
+  int _lastKnownBusinessVersion = -1;
 
   String _saleSearchQuery = '';
   String _saleStatusFilter = 'All'; // All, Paid, Partial, Unpaid
@@ -79,8 +80,15 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final expProv = Provider.of<ExpenseProvider>(context);
+    if (_lastKnownBusinessVersion != expProv.businessDataVersion) {
+      _lastKnownBusinessVersion = expProv.businessDataVersion;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadBusinessData(isQuiet: true);
+      });
+    }
+
     if (!_initializedPersonalMonth) {
-      final expProv = Provider.of<ExpenseProvider>(context, listen: false);
       _personalSelectedMonthYear = expProv.selectedMonthYear;
       final pickedStr = DateFormat('yyyy-MM').format(_personalSelectedMonthYear);
       final monthExpenses = expProv.expenses.where((e) =>
@@ -98,8 +106,10 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
     super.dispose();
   }
 
-  Future<void> _loadBusinessData() async {
-    setState(() => _isLoadingBusinessData = true);
+  Future<void> _loadBusinessData({bool isQuiet = false}) async {
+    if (!isQuiet) {
+      setState(() => _isLoadingBusinessData = true);
+    }
     try {
       final prof = await DatabaseHelper.instance.getBusinessProfile();
       final sales = await DatabaseHelper.instance.getBusinessSales();
@@ -733,8 +743,11 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
 
     if (confirmed == true) {
       await DatabaseHelper.instance.deleteBusinessSale(sale.id);
-      CustomToast.show(context, 'Sale deleted');
-      _loadBusinessData();
+      if (mounted) {
+        Provider.of<ExpenseProvider>(context, listen: false).notifyBusinessDataChanged();
+        CustomToast.show(context, 'Sale deleted');
+        _loadBusinessData(isQuiet: true);
+      }
     }
   }
 
@@ -1472,7 +1485,10 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
                   );
                   if (conf == true) {
                     await DatabaseHelper.instance.deleteExpense(exp.id);
-                    _loadBusinessData();
+                    if (mounted) {
+                      Provider.of<ExpenseProvider>(context, listen: false).notifyBusinessDataChanged();
+                      _loadBusinessData(isQuiet: true);
+                    }
                   }
                 },
               ),

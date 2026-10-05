@@ -47,6 +47,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
   String _filterPeriod = 'This Month'; // Today, This Week, This Month, Last Month, This Quarter, This FY, All Time, Custom Range
   DateTimeRange? _customSelectedRange;
   String _recentTab = 'sales'; // 'sales' or 'expenses'
+  int _lastKnownBusinessVersion = -1;
 
   @override
   void initState() {
@@ -57,7 +58,13 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _loadDashboardData(isQuiet: true);
+    final expProv = Provider.of<ExpenseProvider>(context);
+    if (_lastKnownBusinessVersion != expProv.businessDataVersion) {
+      _lastKnownBusinessVersion = expProv.businessDataVersion;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadDashboardData(isQuiet: true);
+      });
+    }
   }
 
   Future<void> _loadDashboardData({bool isQuiet = false}) async {
@@ -1935,8 +1942,9 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
     if (confirmed == true) {
       await DatabaseHelper.instance.deleteBusinessSale(sale.id);
       if (mounted) {
+        Provider.of<ExpenseProvider>(context, listen: false).notifyBusinessDataChanged();
         CustomToast.show(context, 'Sale deleted');
-        _loadDashboardData();
+        _loadDashboardData(isQuiet: true);
       }
     }
   }
@@ -2053,8 +2061,9 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
       onDismissed: (direction) async {
         await DatabaseHelper.instance.deleteBusinessSale(sale.id);
         if (mounted) {
+          Provider.of<ExpenseProvider>(context, listen: false).notifyBusinessDataChanged();
           CustomToast.show(context, '🗑️ Invoice #${sale.invoiceNo} deleted');
-          _loadDashboardData();
+          _loadDashboardData(isQuiet: true);
         }
       },
       background: Container(
@@ -2195,8 +2204,9 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
     if (confirmed == true) {
       await DatabaseHelper.instance.deleteExpense(expense.id);
       if (mounted) {
+        Provider.of<ExpenseProvider>(context, listen: false).notifyBusinessDataChanged();
         CustomToast.show(context, 'Expense deleted');
-        _loadDashboardData();
+        _loadDashboardData(isQuiet: true);
       }
     }
   }
@@ -2303,8 +2313,9 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
       onDismissed: (direction) async {
         await DatabaseHelper.instance.deleteExpense(expense.id);
         if (mounted) {
+          Provider.of<ExpenseProvider>(context, listen: false).notifyBusinessDataChanged();
           CustomToast.show(context, '🗑️ Expense deleted');
-          _loadDashboardData();
+          _loadDashboardData(isQuiet: true);
         }
       },
       background: Container(

@@ -28,6 +28,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   List<BusinessSale> _allBusinessSales = [];
   List<BusinessSale> _businessSales = [];
   List<Expense> _businessExpenses = [];
+  int _lastKnownBusinessVersion = -1;
 
   final List<String> _periodOptions = [
     'Today',
@@ -47,7 +48,18 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _loadData();
+    final expProv = Provider.of<ExpenseProvider>(context);
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    if (userProvider.isBusinessMode) {
+      if (_lastKnownBusinessVersion != expProv.businessDataVersion) {
+        _lastKnownBusinessVersion = expProv.businessDataVersion;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _loadBusinessAnalytics();
+        });
+      }
+    } else {
+      _loadData();
+    }
   }
 
   DateTimeRange _getDateRange(String period) {

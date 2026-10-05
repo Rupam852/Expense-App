@@ -195,6 +195,14 @@ class ExpenseProvider with ChangeNotifier {
     }
   }
 
+  int _businessDataVersion = 0;
+  int get businessDataVersion => _businessDataVersion;
+
+  void notifyBusinessDataChanged() {
+    _businessDataVersion++;
+    notifyListeners();
+  }
+
   // ──────────────────────────────────────────────────────
   // LOAD LOCAL DATA
   // ──────────────────────────────────────────────────────
@@ -212,6 +220,7 @@ class ExpenseProvider with ChangeNotifier {
       _subscriptions = await _dbHelper.getSubscriptions();
       _businessItems = await _dbHelper.getBusinessItems();
       _syncErrorMessage = null;
+      _businessDataVersion++;
 
       // Check subscriptions, budgets and khata reminders on app load
       NotificationService.instance.checkAndNotifyDueSubscriptions(_subscriptions);
@@ -264,7 +273,7 @@ class ExpenseProvider with ChangeNotifier {
         currentMonth: _selectedMonthYear,
       );
     } else {
-      notifyListeners();
+      notifyBusinessDataChanged();
     }
     // Silent background sync after adding
     triggerQuietSync();
@@ -282,6 +291,7 @@ class ExpenseProvider with ChangeNotifier {
         currentMonth: _selectedMonthYear,
       );
     }
+    notifyBusinessDataChanged();
     // Silent background sync after editing
     triggerQuietSync();
   }
@@ -290,6 +300,13 @@ class ExpenseProvider with ChangeNotifier {
     await _dbHelper.deleteExpense(id);
     _expenses.removeWhere((e) => e.id == id);
     notifyListeners();
+    notifyBusinessDataChanged();
+    triggerQuietSync();
+  }
+
+  Future<void> deleteBusinessSale(String id) async {
+    await _dbHelper.deleteBusinessSale(id);
+    notifyBusinessDataChanged();
     triggerQuietSync();
   }
 
