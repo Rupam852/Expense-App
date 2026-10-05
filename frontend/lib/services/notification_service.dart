@@ -689,6 +689,12 @@ class NotificationService with ChangeNotifier {
     try {
       if (!_isInitialized) await initialize();
 
+      // Guard against corrupted or raw encrypted base64 ciphertext
+      final isEncryptedName = RegExp(r'^[A-Za-z0-9+/=]{16,}={0,2}$').hasMatch(item.name.trim());
+      if (isEncryptedName || item.name.trim().isEmpty) {
+        return;
+      }
+
       final days = item.daysUntilRenewal;
       final amt = '₹${item.amount.toStringAsFixed(0)}';
       String title;

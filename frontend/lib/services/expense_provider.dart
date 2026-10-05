@@ -222,15 +222,20 @@ class ExpenseProvider with ChangeNotifier {
       _syncErrorMessage = null;
       _businessDataVersion++;
 
-      // Check subscriptions, budgets and khata reminders on app load
-      NotificationService.instance.checkAndNotifyDueSubscriptions(_subscriptions);
-      NotificationService.instance.checkAndNotifyBudgetLimits(
-        budgets: _budgets,
-        expenses: _expenses,
-        currentMonth: _selectedMonthYear,
-      );
-      NotificationService.instance.checkAndNotifyKhataEntries(_khataEntries);
-      NotificationService.instance.checkAndNotifyMonthEndAndNewMonth(expenses: _expenses);
+      // Check subscriptions, budgets and khata reminders on app load only if authenticated
+      final currentUser = _supabase.currentUser;
+      final cachedProfile = prefs.getString('cached_user_profile');
+      final isGuest = cachedProfile != null && cachedProfile.contains('guest-user-uuid');
+      if (currentUser != null || isGuest) {
+        NotificationService.instance.checkAndNotifyDueSubscriptions(_subscriptions);
+        NotificationService.instance.checkAndNotifyBudgetLimits(
+          budgets: _budgets,
+          expenses: _expenses,
+          currentMonth: _selectedMonthYear,
+        );
+        NotificationService.instance.checkAndNotifyKhataEntries(_khataEntries);
+        NotificationService.instance.checkAndNotifyMonthEndAndNewMonth(expenses: _expenses);
+      }
     } catch (_) {}
     _isLoading = false;
     notifyListeners();
