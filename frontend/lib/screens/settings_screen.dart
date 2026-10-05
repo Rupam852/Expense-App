@@ -14,6 +14,7 @@ import 'cloud_backup_screen.dart';
 import 'notification_settings_screen.dart';
 import '../widgets/report_issue_modal.dart';
 import 'business_settings_screen.dart';
+import 'appearance_settings_screen.dart';
 import '../utils/app_strings.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -1136,126 +1137,82 @@ class SettingsScreen extends StatelessWidget {
                   borderColor: borderColor,
                   children: [
                     ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                       leading: Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(9),
                         decoration: BoxDecoration(
-                          color: themeIconColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF8B5CF6), Color(0xFF3B82F6)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF8B5CF6).withValues(alpha: 0.25),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
                         ),
-                        child: Icon(themeIcon, color: themeIconColor, size: 22),
+                        child: const Icon(Icons.palette_rounded, color: Colors.white, size: 22),
                       ),
                       title: Text(
-                        AppStrings.tr(context, 'app_theme'),
+                        AppStrings.tr(context, 'appearance_settings'),
                         style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
                       ),
-                      subtitle: Text(
-                        currentThemeMode == ThemeMode.dark 
-                            ? AppStrings.tr(context, 'theme_dark') 
-                            : (currentThemeMode == ThemeMode.light 
-                                ? AppStrings.tr(context, 'theme_light') 
-                                : AppStrings.tr(context, 'theme_system')),
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: primaryColor,
-                        ),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: primaryColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
-                            ),
-                            child: Text(
-                              AppStrings.tr(context, 'change'),
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: primaryColor,
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: themeIconColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                currentThemeMode == ThemeMode.dark 
+                                    ? AppStrings.tr(context, 'theme_dark') 
+                                    : (currentThemeMode == ThemeMode.light 
+                                        ? AppStrings.tr(context, 'theme_light') 
+                                        : AppStrings.tr(context, 'theme_system')),
+                                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: themeIconColor),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
-                        ],
-                      ),
-                      onTap: () => _showThemeSelectionBottomSheet(context, userProvider),
-                    ),
-                    Divider(height: 1, color: borderColor),
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF6366F1).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.language_rounded, color: Color(0xFF6366F1), size: 22),
-                      ),
-                      title: Text(
-                        AppStrings.tr(context, 'app_language'),
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        AppStrings.getLanguageLabel(userProvider.appLanguage),
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: primaryColor,
-                        ),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: primaryColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
-                            ),
-                            child: Text(
-                              AppStrings.tr(context, 'change'),
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: primaryColor,
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF6366F1).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                AppStrings.getLanguageLabel(userProvider.appLanguage),
+                                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF6366F1)),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
-                        ],
-                      ),
-                      onTap: () => _showLanguageSelectionBottomSheet(context, userProvider),
-                    ),
-                    Divider(height: 1, color: borderColor),
-                    SwitchListTile(
-                      activeColor: primaryColor,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      secondary: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                userProvider.highRefreshRateEnabled ? '120Hz' : '60Hz',
+                                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF10B981)),
+                              ),
+                            ),
+                          ],
                         ),
-                        child: const Icon(Icons.speed_rounded, color: Color(0xFF10B981), size: 22),
                       ),
-                      title: Text(
-                        AppStrings.tr(context, 'max_refresh_rate'),
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        AppStrings.tr(context, 'max_refresh_rate_sub'),
-                        style: GoogleFonts.inter(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
-                      ),
-                      value: userProvider.highRefreshRateEnabled,
-                      onChanged: (val) => userProvider.toggleHighRefreshRate(val),
+                      trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const AppearanceSettingsScreen()),
+                        );
+                      },
                     ),
                   ],
                 ),
