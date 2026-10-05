@@ -15,6 +15,9 @@ class ConnectivityService extends ChangeNotifier {
   bool _isOffline = false;
   bool get isOffline => _isOffline;
 
+  bool _isDismissed = false;
+  bool get isDismissed => _isDismissed;
+
   bool _wasOffline = false;
   bool get wasOffline => _wasOffline;
 
@@ -25,6 +28,11 @@ class ConnectivityService extends ChangeNotifier {
     _checkInitialConnectivity();
     _subscription?.cancel();
     _subscription = _connectivity.onConnectivityChanged.listen(_handleConnectivityChanged);
+  }
+
+  void dismissBanner() {
+    _isDismissed = true;
+    notifyListeners();
   }
 
   Future<void> _checkInitialConnectivity() async {
@@ -50,6 +58,7 @@ class ConnectivityService extends ChangeNotifier {
         (results.length == 1 && results.first == ConnectivityResult.none);
 
     if (_isOffline != offline) {
+      _isDismissed = false;
       if (offline) {
         _wasOffline = true;
       }

@@ -262,59 +262,68 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
               ),
 
               // ══════════════════════════════════════════════════════
-              // OFFLINE MODE TOP PILL (Live Network Connection Indicator)
+              // OFFLINE MODE BOTTOM PILL (Live Network Connection Indicator)
               // ══════════════════════════════════════════════════════
               ListenableBuilder(
                 listenable: ConnectivityService.instance,
                 builder: (context, _) {
-                  final isOffline = ConnectivityService.instance.isOffline;
-                  if (!isOffline) return const SizedBox.shrink();
-                  return SafeArea(
-                    child: Align(
-                      alignment: Alignment.topCenter,
-                      child: Container(
-                        margin: const EdgeInsets.only(top: 8, left: 16, right: 16),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0F172A).withValues(alpha: 0.94),
-                          borderRadius: BorderRadius.circular(30),
-                          border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.6), width: 1.2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.35),
-                              blurRadius: 14,
-                              offset: const Offset(0, 4),
+                  final service = ConnectivityService.instance;
+                  if (!service.isOffline || service.isDismissed) return const SizedBox.shrink();
+                  return Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8, left: 16, right: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A).withValues(alpha: 0.95),
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.6), width: 1.2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.4),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color(0xFFF59E0B),
                             ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Color(0xFFF59E0B),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.cloud_off_rounded, color: Color(0xFFF59E0B), size: 16),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              'Offline Mode: Data saved locally • Auto-syncs on reconnect',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(width: 8),
-                            const Icon(Icons.cloud_off_rounded, color: Color(0xFFF59E0B), size: 16),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                'Offline Mode: Data saved locally • Auto-syncs on reconnect',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                          ),
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              service.dismissBanner();
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.only(left: 4),
+                              child: Icon(Icons.close_rounded, color: Colors.white70, size: 16),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   );
