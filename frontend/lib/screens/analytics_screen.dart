@@ -67,7 +67,20 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     DateTime start;
     DateTime end;
 
-    if (period == 'Today') {
+    if (_customDateRange != null && (period == 'Custom' || period.contains('202') || period.contains('203') || period.contains('204'))) {
+      start = DateTime(
+        _customDateRange!.start.year,
+        _customDateRange!.start.month,
+        _customDateRange!.start.day,
+        0, 0, 0, 0,
+      );
+      end = DateTime(
+        _customDateRange!.end.year,
+        _customDateRange!.end.month,
+        _customDateRange!.end.day,
+        23, 59, 59, 999,
+      );
+    } else if (period == 'Today') {
       start = DateTime(now.year, now.month, now.day, 0, 0, 0, 0);
       end = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
     } else if (period == 'This Week') {
@@ -81,19 +94,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     } else if (period == 'Last Month') {
       start = DateTime(now.year, now.month - 1, 1, 0, 0, 0, 0);
       end = DateTime(now.year, now.month, 0, 23, 59, 59, 999);
-    } else if (period == 'Custom' && _customDateRange != null) {
-      start = DateTime(
-        _customDateRange!.start.year,
-        _customDateRange!.start.month,
-        _customDateRange!.start.day,
-        0, 0, 0, 0,
-      );
-      end = DateTime(
-        _customDateRange!.end.year,
-        _customDateRange!.end.month,
-        _customDateRange!.end.day,
-        23, 59, 59, 999,
-      );
     } else {
       // All Time
       start = DateTime(2000, 1, 1, 0, 0, 0, 0);
@@ -189,8 +189,113 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     }
   }
 
+  Future<void> _showMonthYearPicker() async {
+    final now = DateTime.now();
+    int selectedYear = _customDateRange != null ? _customDateRange!.start.year : now.year;
+    int selectedMonth = _customDateRange != null ? _customDateRange!.start.month : now.month;
+
+    final months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.calendar_month_rounded, color: Color(0xFF3B82F6), size: 22),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Select Month & Year',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_rounded, size: 18),
+                    onPressed: () => setDlgState(() => selectedYear--),
+                  ),
+                  Text(
+                    '$selectedYear',
+                    style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
+                    onPressed: () => setDlgState(() => selectedYear++),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: List.generate(12, (index) {
+                  final mIndex = index + 1;
+                  final isSel = selectedMonth == mIndex;
+                  return ChoiceChip(
+                    label: Text(months[index].substring(0, 3)),
+                    selected: isSel,
+                    selectedColor: const Color(0xFF3B82F6).withValues(alpha: 0.2),
+                    onSelected: (val) {
+                      if (val) setDlgState(() => selectedMonth = mIndex);
+                    },
+                  );
+                }),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF3B82F6),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                final start = DateTime(selectedYear, selectedMonth, 1, 0, 0, 0, 0);
+                final end = DateTime(selectedYear, selectedMonth + 1, 0, 23, 59, 59, 999);
+                setState(() {
+                  _customDateRange = DateTimeRange(start: start, end: end);
+                  _selectedPeriod = '${months[selectedMonth - 1]} $selectedYear';
+                });
+                final userProvider = Provider.of<UserProvider>(context, listen: false);
+                if (userProvider.isBusinessMode) {
+                  _loadBusinessAnalytics();
+                }
+              },
+              child: const Text('Apply Month'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   String _getPeriodSubtitle(DateTimeRange range) {
-    if (_selectedPeriod == 'Today') {
+    if (_selectedPeriod.contains('202') || _selectedPeriod.contains('203')) {
+      return 'Month Filter • $_selectedPeriod';
+    } else if (_selectedPeriod == 'Today') {
       return 'Today • ${DateFormat('dd MMMM yyyy').format(range.start)}';
     } else if (_selectedPeriod == 'This Week') {
       return 'This Week • ${DateFormat('dd MMM').format(range.start)} - ${DateFormat('dd MMM yyyy').format(range.end)}';
@@ -330,53 +435,137 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
-            children: _periodOptions.map((opt) {
-              final isSel = _selectedPeriod == opt;
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  label: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (opt == 'Custom') ...[
-                        Icon(
-                          Icons.date_range_rounded,
-                          size: 14,
-                          color: isSel ? Colors.white : Colors.grey,
-                        ),
-                        const SizedBox(width: 4),
-                      ],
-                      Text(opt),
-                    ],
-                  ),
-                  selected: isSel,
-                  selectedColor: activeColor,
-                  labelStyle: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: isSel ? FontWeight.bold : FontWeight.w600,
-                    color: isSel ? Colors.white : (isDark ? Colors.grey[300] : const Color(0xFF334155)),
-                  ),
-                  backgroundColor: isDark ? const Color(0xFF181B22) : Colors.white,
-                  side: BorderSide(
-                    color: isSel ? activeColor : borderColor,
-                    width: isSel ? 1.5 : 1,
-                  ),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  onSelected: (_) {
-                    HapticFeedback.selectionClick();
-                    if (opt == 'Custom') {
-                      _pickCustomDateRange();
-                    } else {
-                      setState(() => _selectedPeriod = opt);
+            children: [
+              ...['Today', 'This Week', 'This Month', 'Last Month'].map((opt) {
+                final isSel = _selectedPeriod == opt;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(opt),
+                    selected: isSel,
+                    selectedColor: activeColor,
+                    labelStyle: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: isSel ? FontWeight.bold : FontWeight.w600,
+                      color: isSel ? Colors.white : (isDark ? Colors.grey[300] : const Color(0xFF334155)),
+                    ),
+                    backgroundColor: isDark ? const Color(0xFF181B22) : Colors.white,
+                    side: BorderSide(
+                      color: isSel ? activeColor : borderColor,
+                      width: isSel ? 1.5 : 1,
+                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    onSelected: (_) {
+                      HapticFeedback.selectionClick();
+                      setState(() {
+                        _selectedPeriod = opt;
+                        _customDateRange = null;
+                      });
                       final userProvider = Provider.of<UserProvider>(context, listen: false);
                       if (userProvider.isBusinessMode) {
                         _loadBusinessAnalytics();
                       }
+                    },
+                  ),
+                );
+              }),
+
+              // 🗓️ Month & Year Picker Chip (Identical to Business Dashboard)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ActionChip(
+                  avatar: const Icon(Icons.calendar_month_rounded, size: 15, color: Color(0xFF3B82F6)),
+                  label: Text(
+                    _selectedPeriod.contains('202') || _selectedPeriod.contains('203')
+                        ? '🗓️ $_selectedPeriod'
+                        : 'Month & Year 🗓️',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: (_selectedPeriod.contains('202') || _selectedPeriod.contains('203')) ? FontWeight.bold : FontWeight.w600,
+                      color: (_selectedPeriod.contains('202') || _selectedPeriod.contains('203')) ? const Color(0xFF3B82F6) : (isDark ? Colors.grey[300] : const Color(0xFF334155)),
+                    ),
+                  ),
+                  backgroundColor: (_selectedPeriod.contains('202') || _selectedPeriod.contains('203'))
+                      ? const Color(0xFF3B82F6).withValues(alpha: 0.18)
+                      : (isDark ? const Color(0xFF181B22) : Colors.white),
+                  side: BorderSide(
+                    color: (_selectedPeriod.contains('202') || _selectedPeriod.contains('203'))
+                        ? const Color(0xFF3B82F6)
+                        : borderColor,
+                    width: (_selectedPeriod.contains('202') || _selectedPeriod.contains('203')) ? 1.5 : 1,
+                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    _showMonthYearPicker();
+                  },
+                ),
+              ),
+
+              // 📅 Custom Range Picker Chip
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ActionChip(
+                  avatar: const Icon(Icons.date_range_rounded, size: 15, color: Color(0xFF3B82F6)),
+                  label: Text(
+                    _customDateRange != null && !_selectedPeriod.contains('202') && !_selectedPeriod.contains('203')
+                        ? '${DateFormat('dd MMM').format(_customDateRange!.start)} - ${DateFormat('dd MMM').format(_customDateRange!.end)}'
+                        : 'Custom Range 📅',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: (_customDateRange != null && !_selectedPeriod.contains('202') && !_selectedPeriod.contains('203')) ? FontWeight.bold : FontWeight.w600,
+                      color: (_customDateRange != null && !_selectedPeriod.contains('202') && !_selectedPeriod.contains('203')) ? const Color(0xFF3B82F6) : (isDark ? Colors.grey[300] : const Color(0xFF334155)),
+                    ),
+                  ),
+                  backgroundColor: (_customDateRange != null && !_selectedPeriod.contains('202') && !_selectedPeriod.contains('203'))
+                      ? const Color(0xFF3B82F6).withValues(alpha: 0.18)
+                      : (isDark ? const Color(0xFF181B22) : Colors.white),
+                  side: BorderSide(
+                    color: (_customDateRange != null && !_selectedPeriod.contains('202') && !_selectedPeriod.contains('203'))
+                        ? const Color(0xFF3B82F6)
+                        : borderColor,
+                    width: (_customDateRange != null && !_selectedPeriod.contains('202') && !_selectedPeriod.contains('203')) ? 1.5 : 1,
+                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    _pickCustomDateRange();
+                  },
+                ),
+              ),
+
+              // All Time Chip
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: const Text('All Time'),
+                  selected: _selectedPeriod == 'All Time',
+                  selectedColor: activeColor,
+                  labelStyle: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: _selectedPeriod == 'All Time' ? FontWeight.bold : FontWeight.w600,
+                    color: _selectedPeriod == 'All Time' ? Colors.white : (isDark ? Colors.grey[300] : const Color(0xFF334155)),
+                  ),
+                  backgroundColor: isDark ? const Color(0xFF181B22) : Colors.white,
+                  side: BorderSide(
+                    color: _selectedPeriod == 'All Time' ? activeColor : borderColor,
+                    width: _selectedPeriod == 'All Time' ? 1.5 : 1,
+                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  onSelected: (_) {
+                    HapticFeedback.selectionClick();
+                    setState(() {
+                      _selectedPeriod = 'All Time';
+                      _customDateRange = null;
+                    });
+                    final userProvider = Provider.of<UserProvider>(context, listen: false);
+                    if (userProvider.isBusinessMode) {
+                      _loadBusinessAnalytics();
                     }
                   },
                 ),
-              );
-            }).toList(),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 8),
