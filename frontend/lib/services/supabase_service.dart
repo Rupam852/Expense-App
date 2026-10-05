@@ -102,6 +102,18 @@ class SupabaseService {
     );
   }
 
+  /// Update auth user metadata (cloud-backed per user account)
+  Future<UserResponse?> updateUserMetadata(Map<String, dynamic> data) async {
+    try {
+      return await _client.auth.updateUser(
+        UserAttributes(data: data),
+      );
+    } catch (e) {
+      print('[Supabase] updateUserMetadata error: $e');
+      return null;
+    }
+  }
+
   // ══════════════════════════════════════════════════════
   // USER PROFILE
   // ══════════════════════════════════════════════════════

@@ -117,19 +117,27 @@ class UserProvider with ChangeNotifier {
     _isBusinessMode = isBusiness;
     notifyListeners();
     try {
+      final modeStr = isBusiness ? 'business' : 'personal';
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('app_working_mode', isBusiness ? 'business' : 'personal');
+      await prefs.setString('app_working_mode', modeStr);
 
       if (_userProfile != null) {
-        _userProfile!['app_mode'] = isBusiness ? 'business' : 'personal';
+        _userProfile!['app_mode'] = modeStr;
         await _saveProfileLocally();
       }
 
       if (_isAuthenticated) {
+        // 1. Sync directly to Supabase Auth userMetadata (guaranteed to persist with auth account)
+        _supabase.updateUserMetadata({'app_mode': modeStr}).catchError((e) {
+          debugPrint('[UserProvider] Error updating auth metadata app_mode: $e');
+          return null;
+        });
+
+        // 2. Also sync to users_profile table
         _supabase.upsertProfile({
-          'app_mode': isBusiness ? 'business' : 'personal',
+          'app_mode': modeStr,
         }).catchError((e) {
-          debugPrint('[UserProvider] Error syncing app_mode to cloud: $e');
+          debugPrint('[UserProvider] Error syncing app_mode to users_profile: $e');
         });
       }
     } catch (e) {
@@ -199,6 +207,10 @@ class UserProvider with ChangeNotifier {
     // Check Supabase session - only authenticate if a real active session exists or guest profile
     final session = _supabase.currentSession;
     if (session != null) {
+      final metaMode = session.user.userMetadata?['app_mode']?.toString().trim();
+      if (metaMode != null && (metaMode == 'business' || metaMode == 'personal')) {
+        _isBusinessMode = (metaMode == 'business');
+      }
       _isAuthenticated = true;
       _fetchProfileQuietly();
     } else if (_userProfile != null && _userProfile!['id'] == 'guest-user-uuid') {
@@ -212,6 +224,10 @@ class UserProvider with ChangeNotifier {
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       final event = data.event;
       if (event == AuthChangeEvent.signedIn || event == AuthChangeEvent.tokenRefreshed) {
+        final metaMode = data.session?.user.userMetadata?['app_mode']?.toString().trim();
+        if (metaMode != null && (metaMode == 'business' || metaMode == 'personal')) {
+          _isBusinessMode = (metaMode == 'business');
+        }
         _isAuthenticated = true;
         _fetchProfileQuietly();
       } else if (event == AuthChangeEvent.signedOut) {
@@ -244,9 +260,9 @@ class UserProvider with ChangeNotifier {
       if (user == null) return;
 
       final prefs = await SharedPreferences.getInstance();
-      final cloudAppMode = profile?['app_mode']?.toString().trim();
+      final cloudAppMode = (profile?['app_mode'] ?? user.userMetadata?['app_mode'])?.toString().trim();
       if (cloudAppMode != null && (cloudAppMode == 'business' || cloudAppMode == 'personal')) {
-        _isBusinessMode = cloudAppMode == 'business';
+        _isBusinessMode = (cloudAppMode == 'business');
         await prefs.setString('app_working_mode', cloudAppMode);
       }
 
@@ -312,6 +328,12 @@ class UserProvider with ChangeNotifier {
         // If session is already present → Supabase "Confirm Email" is OFF
         // User is logged in directly, no OTP screen needed
         if (response.session != null) {
+          final metaMode = response.user?.userMetadata?['app_mode']?.toString().trim();
+          if (metaMode != null && (metaMode == 'business' || metaMode == 'personal')) {
+            _isBusinessMode = (metaMode == 'business');
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('app_working_mode', metaMode);
+          }
           await _fetchProfileQuietly();
           _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
           _isLoading = false;
@@ -362,6 +384,12 @@ class UserProvider with ChangeNotifier {
         password: password,
       );
       if (response.user != null) {
+        final metaMode = response.user!.userMetadata?['app_mode']?.toString().trim();
+        if (metaMode != null && (metaMode == 'business' || metaMode == 'personal')) {
+          _isBusinessMode = (metaMode == 'business');
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('app_working_mode', metaMode);
+        }
         await _fetchProfileQuietly();
         _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
         _isLoading = false;
@@ -423,6 +451,12 @@ class UserProvider with ChangeNotifier {
       );
 
       if (response.user != null) {
+        final metaMode = response.user!.userMetadata?['app_mode']?.toString().trim();
+        if (metaMode != null && (metaMode == 'business' || metaMode == 'personal')) {
+          _isBusinessMode = (metaMode == 'business');
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('app_working_mode', metaMode);
+        }
         await _fetchProfileQuietly();
         _showApiKeyPrompt = (_userGeminiApiKey == null || _userGeminiApiKey!.isEmpty);
         _isLoading = false;
@@ -510,6 +544,13 @@ class UserProvider with ChangeNotifier {
     }
 
     try {
+      if (appMode != null) {
+        _isBusinessMode = (appMode == 'business');
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('app_working_mode', appMode);
+        _supabase.updateUserMetadata({'app_mode': appMode}).catchError((_) => null);
+      }
+
       await _supabase.upsertProfile({
         'name': name,
         if (photoUrl != null) 'photo_url': photoUrl,
