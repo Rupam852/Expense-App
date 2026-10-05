@@ -1210,42 +1210,58 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
           const SizedBox(height: 24),
 
           // ── 3. ACTION BUTTONS ─────────────────────────────────────
-          Row(
+          Column(
             children: [
-              // 1. Preview Button (In-app viewer without saving)
-              Expanded(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    side: BorderSide(color: borderColor),
+              // Secondary Actions Row
+              Row(
+                children: [
+                  // 1. Preview Button (In-app viewer without saving)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        side: BorderSide(color: isDark ? Colors.white24 : Colors.grey.shade400),
+                        foregroundColor: isDark ? Colors.white : const Color(0xFF1F2937),
+                      ),
+                      onPressed: _isGenerating ? null : _handlePreviewOnly,
+                      icon: const Icon(Icons.visibility_outlined, size: 18, color: Color(0xFF00D09C)),
+                      label: Text(
+                        'Preview Sheet',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
-                  onPressed: _isGenerating ? null : _handlePreviewOnly,
-                  icon: const Icon(Icons.visibility_outlined, size: 18),
-                  label: Text(AppStrings.tr(context, 'barcode_preview_btn'), style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
-                ),
-              ),
-              const SizedBox(width: 8),
+                  const SizedBox(width: 10),
 
-              // 2. Save Only Button (Saves to History & Catalog without downloading)
-              Expanded(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    side: BorderSide(color: const Color(0xFF1E88E5).withValues(alpha: 0.6)),
-                    foregroundColor: const Color(0xFF1E88E5),
+                  // 2. Save Only Button (Saves to History & Catalog without downloading)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        side: BorderSide(color: const Color(0xFF1E88E5).withValues(alpha: 0.5)),
+                        foregroundColor: const Color(0xFF1E88E5),
+                      ),
+                      onPressed: _isGenerating ? null : _handleDirectSaveOnly,
+                      icon: const Icon(Icons.bookmark_add_outlined, size: 18),
+                      label: Text(
+                        'Save to History',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
-                  onPressed: _isGenerating ? null : _handleDirectSaveOnly,
-                  icon: const Icon(Icons.bookmark_add_outlined, size: 18),
-                  label: Text(AppStrings.tr(context, 'barcode_save_history'), style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
-                ),
+                ],
               ),
-              const SizedBox(width: 8),
+              const SizedBox(height: 10),
 
-              // 3. Print / Export PDF Button
-              Expanded(
-                flex: 2,
+              // Main Primary Action: Print / Export as PDF
+              SizedBox(
+                width: double.infinity,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00D09C),
@@ -1257,10 +1273,10 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
                   onPressed: _isGenerating ? null : _handleDirectPrintExport,
                   icon: _isGenerating
                       ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Icon(Icons.print_rounded, size: 18),
+                      : const Icon(Icons.print_rounded, size: 20),
                   label: Text(
                     _isGenerating ? 'Processing...' : AppStrings.tr(context, 'barcode_print_pdf'),
-                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13.5),
+                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14.5),
                   ),
                 ),
               ),
