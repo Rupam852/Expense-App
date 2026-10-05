@@ -2390,7 +2390,8 @@ class DatabaseHelper {
         final rawDate = row['sale_date']?.toString();
         final dt = rawDate != null ? DateTime.tryParse(rawDate) : null;
         if (dt != null) {
-          final localMs = dt.toLocal().millisecondsSinceEpoch;
+          final local = dt.isUtc ? dt.toLocal() : dt;
+          final localMs = local.millisecondsSinceEpoch;
           if (localMs < startMs || localMs > endMs) {
             continue;
           }

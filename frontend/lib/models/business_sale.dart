@@ -125,13 +125,13 @@ class BusinessSale {
       'balance_due': balanceDue,
       'payment_mode': paymentMode,
       'payment_status': paymentStatus,
-      'sale_date': saleDate.toIso8601String(),
+      'sale_date': (saleDate.isUtc ? saleDate : saleDate.toUtc()).toIso8601String(),
       'invoice_no': invoiceNo,
       'notes': notes,
       'items_json': json.encode(items.map((i) => i.toMap()).toList()),
       'sync_status': syncStatus,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'created_at': (createdAt.isUtc ? createdAt : createdAt.toUtc()).toIso8601String(),
+      'updated_at': (updatedAt.isUtc ? updatedAt : updatedAt.toUtc()).toIso8601String(),
     };
   }
 
@@ -144,6 +144,13 @@ class BusinessSale {
           parsedItems = decoded.map((i) => BusinessSaleItem.fromMap(Map<String, dynamic>.from(i))).toList();
         }
       } catch (_) {}
+    }
+
+    DateTime parseDate(dynamic raw) {
+      if (raw == null) return DateTime.now();
+      final dt = DateTime.tryParse(raw.toString());
+      if (dt == null) return DateTime.now();
+      return dt.isUtc ? dt.toLocal() : dt;
     }
 
     return BusinessSale(
@@ -161,13 +168,13 @@ class BusinessSale {
       balanceDue: (map['balance_due'] as num?)?.toDouble() ?? 0.0,
       paymentMode: map['payment_mode']?.toString() ?? map['payment_method']?.toString() ?? 'cash',
       paymentStatus: map['payment_status']?.toString() ?? 'paid',
-      saleDate: DateTime.tryParse(map['sale_date']?.toString() ?? '') ?? DateTime.now(),
+      saleDate: parseDate(map['sale_date']),
       invoiceNo: map['invoice_no']?.toString() ?? '',
       notes: map['notes']?.toString(),
       items: parsedItems,
       syncStatus: (map['sync_status'] as num?)?.toInt() ?? (map['is_synced'] as num?)?.toInt() ?? 0,
-      createdAt: DateTime.tryParse(map['created_at']?.toString() ?? '') ?? DateTime.now(),
-      updatedAt: DateTime.tryParse(map['updated_at']?.toString() ?? '') ?? DateTime.now(),
+      createdAt: parseDate(map['created_at']),
+      updatedAt: parseDate(map['updated_at']),
     );
   }
 }

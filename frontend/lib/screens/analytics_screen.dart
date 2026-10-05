@@ -92,7 +92,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   bool _isWithin(DateTime dt, DateTimeRange range) {
-    final local = dt.toLocal();
+    final local = dt.isUtc ? dt.toLocal() : dt;
+    if (_selectedPeriod == 'Today') {
+      final now = DateTime.now();
+      return local.year == now.year && local.month == now.month && local.day == now.day;
+    }
     final ms = local.millisecondsSinceEpoch;
     return ms >= range.start.millisecondsSinceEpoch && ms <= range.end.millisecondsSinceEpoch;
   }

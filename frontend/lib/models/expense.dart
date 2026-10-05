@@ -73,40 +73,41 @@ class Expense {
       'currency': currency,
       'category': category,
       'description': description,
-      'transaction_date': transactionDate.toIso8601String(),
+      'transaction_date': (transactionDate.isUtc ? transactionDate : transactionDate.toUtc()).toIso8601String(),
       'receipt_url': receiptUrl,
       'is_recurring': isRecurring ? 1 : 0,
       'recurrence_period': recurrencePeriod,
       'ledger_type': ledgerType,
       'is_deleted': isDeleted ? 1 : 0,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'created_at': (createdAt.isUtc ? createdAt : createdAt.toUtc()).toIso8601String(),
+      'updated_at': (updatedAt.isUtc ? updatedAt : updatedAt.toUtc()).toIso8601String(),
     };
     return map;
   }
 
   // Create from Map from SQLite or Backend JSON
   factory Expense.fromMap(Map<String, dynamic> map) {
+    DateTime parseDate(dynamic raw) {
+      if (raw == null) return DateTime.now();
+      final dt = DateTime.tryParse(raw.toString());
+      if (dt == null) return DateTime.now();
+      return dt.isUtc ? dt.toLocal() : dt;
+    }
+
     return Expense(
       id: map['id'],
       amount: double.tryParse(map['amount'].toString()) ?? 0.0,
       currency: map['currency'] ?? 'INR',
       category: map['category'] ?? 'Others',
       description: map['description'] ?? '',
-      transactionDate: map['transaction_date'] != null
-          ? DateTime.parse(map['transaction_date'])
-          : DateTime.now(),
+      transactionDate: parseDate(map['transaction_date']),
       receiptUrl: map['receipt_url'],
       isRecurring: map['is_recurring'] == 1 || map['is_recurring'] == true,
       recurrencePeriod: map['recurrence_period'] ?? 'none',
       ledgerType: map['ledger_type']?.toString() ?? 'personal',
       isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true,
-      createdAt: map['created_at'] != null
-          ? DateTime.parse(map['created_at'])
-          : DateTime.now(),
-      updatedAt: map['updated_at'] != null
-          ? DateTime.parse(map['updated_at'])
-          : DateTime.now(),
+      createdAt: parseDate(map['created_at']),
+      updatedAt: parseDate(map['updated_at']),
     );
   }
 

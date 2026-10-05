@@ -1486,8 +1486,16 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
   // ── TAB 3: TAX & P&L REPORT & ACCOUNTS EXPORT ──────────────────────
   Widget _buildTaxAndPnLTab(bool isDark, Color primaryColor) {
     final range = _getReportDateRange();
-    final filteredSales = _businessSales.where((s) => s.saleDate.isAfter(range.start.subtract(const Duration(seconds: 1))) && s.saleDate.isBefore(range.end.add(const Duration(days: 1)))).toList();
-    final filteredExpenses = _businessExpenses.where((e) => e.transactionDate.isAfter(range.start.subtract(const Duration(seconds: 1))) && e.transactionDate.isBefore(range.end.add(const Duration(days: 1)))).toList();
+    final startMs = range.start.millisecondsSinceEpoch;
+    final endMs = range.end.millisecondsSinceEpoch;
+    final filteredSales = _businessSales.where((s) {
+      final ms = (s.saleDate.isUtc ? s.saleDate.toLocal() : s.saleDate).millisecondsSinceEpoch;
+      return ms >= startMs && ms <= endMs;
+    }).toList();
+    final filteredExpenses = _businessExpenses.where((e) {
+      final ms = (e.transactionDate.isUtc ? e.transactionDate.toLocal() : e.transactionDate).millisecondsSinceEpoch;
+      return ms >= startMs && ms <= endMs;
+    }).toList();
 
     final totalSales = filteredSales.fold<double>(0.0, (sum, s) => sum + s.finalAmount);
     final totalGst = filteredSales.fold<double>(0.0, (sum, s) => sum + s.taxAmount);

@@ -86,34 +86,48 @@ class KhataEntry {
       'phone_number': phoneNumber,
       'amount': amount,
       'type': type,
-      'entry_date': entryDate.toIso8601String(),
-      'due_date': dueDate?.toIso8601String(),
+      'entry_date': (entryDate.isUtc ? entryDate : entryDate.toUtc()).toIso8601String(),
+      'due_date': dueDate != null ? (dueDate!.isUtc ? dueDate! : dueDate!.toUtc()).toIso8601String() : null,
       'note': note,
       'ledger_type': ledgerType,
       'is_settled': isSettled ? 1 : 0,
-      'settled_at': settledAt?.toIso8601String(),
+      'settled_at': settledAt != null ? (settledAt!.isUtc ? settledAt! : settledAt!.toUtc()).toIso8601String() : null,
       'is_deleted': isDeleted ? 1 : 0,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'created_at': (createdAt.isUtc ? createdAt : createdAt.toUtc()).toIso8601String(),
+      'updated_at': (updatedAt.isUtc ? updatedAt : updatedAt.toUtc()).toIso8601String(),
     };
   }
 
   factory KhataEntry.fromMap(Map<String, dynamic> map) {
+    DateTime parseDate(dynamic raw) {
+      if (raw == null) return DateTime.now();
+      final dt = DateTime.tryParse(raw.toString());
+      if (dt == null) return DateTime.now();
+      return dt.isUtc ? dt.toLocal() : dt;
+    }
+
+    DateTime? parseNullableDate(dynamic raw) {
+      if (raw == null) return null;
+      final dt = DateTime.tryParse(raw.toString());
+      if (dt == null) return null;
+      return dt.isUtc ? dt.toLocal() : dt;
+    }
+
     return KhataEntry(
       id: map['id'] ?? '',
       personName: map['person_name'] ?? 'Unknown',
       phoneNumber: map['phone_number'],
       amount: double.tryParse(map['amount'].toString()) ?? 0.0,
       type: map['type'] ?? 'lent',
-      entryDate: map['entry_date'] != null ? DateTime.parse(map['entry_date']) : DateTime.now(),
-      dueDate: map['due_date'] != null ? DateTime.parse(map['due_date']) : null,
+      entryDate: parseDate(map['entry_date']),
+      dueDate: parseNullableDate(map['due_date']),
       note: map['note'],
       ledgerType: map['ledger_type']?.toString() ?? 'personal',
       isSettled: map['is_settled'] == 1 || map['is_settled'] == true,
-      settledAt: map['settled_at'] != null ? DateTime.parse(map['settled_at']) : null,
+      settledAt: parseNullableDate(map['settled_at']),
       isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true,
-      createdAt: map['created_at'] != null ? DateTime.parse(map['created_at']) : DateTime.now(),
-      updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at']) : DateTime.now(),
+      createdAt: parseDate(map['created_at']),
+      updatedAt: parseDate(map['updated_at']),
     );
   }
 

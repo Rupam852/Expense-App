@@ -107,7 +107,11 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
       }
 
       bool isWithinRange(DateTime dt) {
-        final localMs = dt.toLocal().millisecondsSinceEpoch;
+        final local = dt.isUtc ? dt.toLocal() : dt;
+        if (_filterPeriod == 'Today') {
+          return local.year == now.year && local.month == now.month && local.day == now.day;
+        }
+        final localMs = local.millisecondsSinceEpoch;
         return localMs >= start.millisecondsSinceEpoch && localMs <= end.millisecondsSinceEpoch;
       }
 
@@ -2022,7 +2026,8 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
     required bool isDark,
     required Color primaryColor,
   }) {
-    final dateStr = DateFormat('dd MMM, hh:mm a').format(sale.saleDate);
+    final localDate = sale.saleDate.isUtc ? sale.saleDate.toLocal() : sale.saleDate;
+    final dateStr = DateFormat('dd MMM, hh:mm a').format(localDate);
     final isPaid = sale.balanceDue <= 0;
 
     return Dismissible(
@@ -2272,7 +2277,8 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
     required Expense expense,
     required bool isDark,
   }) {
-    final dateStr = DateFormat('dd MMM, hh:mm a').format(expense.transactionDate);
+    final localDate = expense.transactionDate.isUtc ? expense.transactionDate.toLocal() : expense.transactionDate;
+    final dateStr = DateFormat('dd MMM, hh:mm a').format(localDate);
 
     return Dismissible(
       key: ValueKey(expense.id),
