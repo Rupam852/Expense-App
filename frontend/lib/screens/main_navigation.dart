@@ -56,20 +56,28 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
       ),
     );
 
-    // Auto-sync in background when session resumes (covers reinstall + cold start)
+    // Auto-sync in background when session resumes (covers login + reinstall + cold start)
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
       // Initialize Offline-first Connectivity listener & auto-sync trigger
       ConnectivityService.instance.initialize(expenseProvider);
 
-      if (expenseProvider.expenses.isEmpty &&
-          expenseProvider.budgets.isEmpty &&
-          expenseProvider.khataEntries.isEmpty &&
-          expenseProvider.splitBills.isEmpty &&
-          expenseProvider.subscriptions.isEmpty) {
-        await expenseProvider.restoreFromCloud();
-      } else {
-        await expenseProvider.triggerQuietSync();
+      await expenseProvider.loadLocalData();
+      if (userProvider.isAuthenticated && !userProvider.isGuest) {
+        final prefs = await SharedPreferences.getInstance();
+        final lastSync = prefs.getString('last_sync_time');
+        if (lastSync == null ||
+            (expenseProvider.expenses.isEmpty &&
+             expenseProvider.budgets.isEmpty &&
+             expenseProvider.khataEntries.isEmpty &&
+             expenseProvider.splitBills.isEmpty &&
+             expenseProvider.subscriptions.isEmpty &&
+             expenseProvider.businessItems.isEmpty)) {
+          await expenseProvider.restoreFromCloud();
+        } else {
+          await expenseProvider.triggerQuietSync();
+        }
       }
 
       // Check and trigger smart dual-mode Monthly Rollover if new month started

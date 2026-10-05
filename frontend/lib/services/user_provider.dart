@@ -52,6 +52,7 @@ class UserProvider with ChangeNotifier {
   String? get unverifiedEmail => _unverifiedEmail;
   ThemeMode get themeMode => _themeMode;
   String get appLanguage => _appLanguage;
+  bool get isGuest => _userProfile != null && _userProfile!['id'] == 'guest-user-uuid';
   String get themeModeString {
     switch (_themeMode) {
       case ThemeMode.light:

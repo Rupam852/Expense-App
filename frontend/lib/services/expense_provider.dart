@@ -1251,6 +1251,7 @@ class ExpenseProvider with ChangeNotifier {
       _subscriptions = await _dbHelper.getSubscriptions();
       _splitBills = await _dbHelper.getSplitBills();
       _businessItems = await _dbHelper.getBusinessItems();
+      _businessDataVersion++;
       notifyListeners();
       return syncResult != null;
     } catch (e) {
@@ -1466,6 +1467,8 @@ class ExpenseProvider with ChangeNotifier {
         _subscriptions = await _dbHelper.getSubscriptions();
         _splitBills = await _dbHelper.getSplitBills();
         _businessItems = await _dbHelper.getBusinessItems();
+        _businessDataVersion++;
+        notifyListeners();
         return true;
       } else {
         _syncErrorMessage = 'Cloud backup restore failed. Please check your internet connection.';
@@ -1481,6 +1484,8 @@ class ExpenseProvider with ChangeNotifier {
       _khataEntries = await _dbHelper.getKhataEntries();
       _subscriptions = await _dbHelper.getSubscriptions();
       _splitBills = await _dbHelper.getSplitBills();
+      _businessItems = await _dbHelper.getBusinessItems();
+      _businessDataVersion++;
       return false;
     } finally {
       _isSyncing = false;
