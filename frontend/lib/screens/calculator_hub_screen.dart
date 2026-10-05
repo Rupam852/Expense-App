@@ -1014,6 +1014,15 @@ class _CalculatorHubScreenState extends State<CalculatorHubScreen>
     final saved = prefs.getString(kPrefCalcVoiceLang);
     if (saved != null && mounted) {
       setState(() => _selectedLangCode = saved);
+    } else if (mounted) {
+      final appLang = Provider.of<UserProvider>(context, listen: false).appLanguage;
+      if (appLang == 'hi') {
+        setState(() => _selectedLangCode = 'hi_IN');
+      } else if (appLang == 'bn') {
+        setState(() => _selectedLangCode = 'bn_IN');
+      } else {
+        setState(() => _selectedLangCode = 'en_IN');
+      }
     }
   }
 
