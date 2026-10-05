@@ -771,13 +771,29 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                 children: [
                   ...['Today', 'This Week', 'This Month', 'Last Month'].map((p) {
                     final isSelected = _filterPeriod == p && _customSelectedRange == null;
+                    final activeColor = primaryColor;
+                    final borderColor = isDark ? Colors.white12 : Colors.black12;
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: ChoiceChip(
-                        label: Text(p, style: TextStyle(fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                        showCheckmark: false,
+                        label: Text(p),
                         selected: isSelected,
-                        selectedColor: primaryColor.withValues(alpha: 0.2),
+                        selectedColor: activeColor,
+                        labelStyle: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                          color: isSelected ? Colors.white : (isDark ? Colors.grey[300] : const Color(0xFF334155)),
+                        ),
+                        backgroundColor: isDark ? const Color(0xFF181B22) : Colors.white,
+                        side: BorderSide(
+                          color: isSelected ? activeColor : borderColor,
+                          width: isSelected ? 1.5 : 1,
+                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                         onSelected: (val) {
+                          HapticFeedback.selectionClick();
                           setState(() {
                             _filterPeriod = p;
                             _customSelectedRange = null;
@@ -796,16 +812,27 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                         _filterPeriod.contains('202') || _filterPeriod.contains('203')
                             ? _filterPeriod
                             : 'Month & Year',
-                        style: TextStyle(
+                        style: GoogleFonts.inter(
                           fontSize: 12,
-                          fontWeight: (_filterPeriod.contains('202') || _filterPeriod.contains('203')) ? FontWeight.bold : FontWeight.normal,
-                          color: (_filterPeriod.contains('202') || _filterPeriod.contains('203')) ? const Color(0xFF3B82F6) : null,
+                          fontWeight: (_filterPeriod.contains('202') || _filterPeriod.contains('203')) ? FontWeight.bold : FontWeight.w600,
+                          color: (_filterPeriod.contains('202') || _filterPeriod.contains('203')) ? const Color(0xFF3B82F6) : (isDark ? Colors.grey[300] : const Color(0xFF334155)),
                         ),
                       ),
                       backgroundColor: (_filterPeriod.contains('202') || _filterPeriod.contains('203'))
-                          ? const Color(0xFF3B82F6).withValues(alpha: 0.15)
-                          : null,
-                      onPressed: _showMonthYearPicker,
+                          ? const Color(0xFF3B82F6).withValues(alpha: 0.18)
+                          : (isDark ? const Color(0xFF181B22) : Colors.white),
+                      side: BorderSide(
+                        color: (_filterPeriod.contains('202') || _filterPeriod.contains('203'))
+                            ? const Color(0xFF3B82F6)
+                            : (isDark ? Colors.white12 : Colors.black12),
+                        width: (_filterPeriod.contains('202') || _filterPeriod.contains('203')) ? 1.5 : 1,
+                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      onPressed: () {
+                        HapticFeedback.selectionClick();
+                        _showMonthYearPicker();
+                      },
                     ),
                   ),
 
@@ -817,16 +844,25 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                         _customSelectedRange != null && !_filterPeriod.contains('202') && !_filterPeriod.contains('203')
                             ? '${DateFormat('dd MMM').format(_customSelectedRange!.start)} - ${DateFormat('dd MMM').format(_customSelectedRange!.end)}'
                             : 'Custom Range',
-                        style: TextStyle(
+                        style: GoogleFonts.inter(
                           fontSize: 12,
-                          fontWeight: (_customSelectedRange != null && !_filterPeriod.contains('202') && !_filterPeriod.contains('203')) ? FontWeight.bold : FontWeight.normal,
-                          color: (_customSelectedRange != null && !_filterPeriod.contains('202') && !_filterPeriod.contains('203')) ? const Color(0xFF3B82F6) : null,
+                          fontWeight: (_customSelectedRange != null && !_filterPeriod.contains('202') && !_filterPeriod.contains('203')) ? FontWeight.bold : FontWeight.w600,
+                          color: (_customSelectedRange != null && !_filterPeriod.contains('202') && !_filterPeriod.contains('203')) ? const Color(0xFF3B82F6) : (isDark ? Colors.grey[300] : const Color(0xFF334155)),
                         ),
                       ),
                       backgroundColor: (_customSelectedRange != null && !_filterPeriod.contains('202') && !_filterPeriod.contains('203'))
-                          ? const Color(0xFF3B82F6).withValues(alpha: 0.15)
-                          : null,
+                          ? const Color(0xFF3B82F6).withValues(alpha: 0.18)
+                          : (isDark ? const Color(0xFF181B22) : Colors.white),
+                      side: BorderSide(
+                        color: (_customSelectedRange != null && !_filterPeriod.contains('202') && !_filterPeriod.contains('203'))
+                            ? const Color(0xFF3B82F6)
+                            : (isDark ? Colors.white12 : Colors.black12),
+                        width: (_customSelectedRange != null && !_filterPeriod.contains('202') && !_filterPeriod.contains('203')) ? 1.5 : 1,
+                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                       onPressed: () async {
+                        HapticFeedback.selectionClick();
                         final picked = await showDateRangePicker(
                           context: context,
                           firstDate: DateTime(2020, 1, 1),
@@ -850,13 +886,29 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
 
                   ...['This Quarter', 'This FY', 'All Time'].map((p) {
                     final isSelected = _filterPeriod == p && _customSelectedRange == null;
+                    final activeColor = primaryColor;
+                    final borderColor = isDark ? Colors.white12 : Colors.black12;
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: ChoiceChip(
-                        label: Text(p, style: TextStyle(fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                        showCheckmark: false,
+                        label: Text(p),
                         selected: isSelected,
-                        selectedColor: primaryColor.withValues(alpha: 0.2),
+                        selectedColor: activeColor,
+                        labelStyle: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                          color: isSelected ? Colors.white : (isDark ? Colors.grey[300] : const Color(0xFF334155)),
+                        ),
+                        backgroundColor: isDark ? const Color(0xFF181B22) : Colors.white,
+                        side: BorderSide(
+                          color: isSelected ? activeColor : borderColor,
+                          width: isSelected ? 1.5 : 1,
+                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                         onSelected: (val) {
+                          HapticFeedback.selectionClick();
                           setState(() {
                             _filterPeriod = p;
                             _customSelectedRange = null;
