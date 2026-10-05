@@ -64,7 +64,8 @@ class UserProvider with ChangeNotifier {
   }
 
   Future<void> setAppLanguage(String langCode) async {
-    if (langCode != 'en' && langCode != 'hi' && langCode != 'bn') return;
+    const validCodes = {'en', 'hi', 'bn', 'mr', 'gu', 'ta', 'te', 'kn'};
+    if (!validCodes.contains(langCode)) return;
     _appLanguage = langCode;
     notifyListeners();
     try {
@@ -74,7 +75,32 @@ class UserProvider with ChangeNotifier {
       await NotificationService.instance.setNotificationLanguage(langCode);
 
       // Synchronize AI Chat response language
-      final aiLang = langCode == 'hi' ? 'Hindi' : (langCode == 'bn' ? 'Bengali' : 'English');
+      String aiLang = 'English';
+      switch (langCode) {
+        case 'hi':
+          aiLang = 'Hindi';
+          break;
+        case 'bn':
+          aiLang = 'Bengali';
+          break;
+        case 'mr':
+          aiLang = 'Marathi';
+          break;
+        case 'gu':
+          aiLang = 'Gujarati';
+          break;
+        case 'ta':
+          aiLang = 'Tamil';
+          break;
+        case 'te':
+          aiLang = 'Telugu';
+          break;
+        case 'kn':
+          aiLang = 'Kannada';
+          break;
+        default:
+          aiLang = 'English';
+      }
       await AiConfigService.instance.setResponseLanguage(aiLang);
     } catch (e) {
       debugPrint('[UserProvider] Error saving app language: $e');
