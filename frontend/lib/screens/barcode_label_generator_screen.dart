@@ -438,6 +438,9 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
 
       await DatabaseHelper.instance.insertBarcodeLabelBatch(batch);
       await _loadHistoryBatches();
+      if (mounted) {
+        Provider.of<ExpenseProvider>(context, listen: false).triggerQuietSync();
+      }
 
       // C. Export File or Toast
       if (exportFile) {
@@ -1404,7 +1407,10 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
                     onPressed: () async {
                       await DatabaseHelper.instance.deleteBarcodeLabelBatch(batch.id);
                       _loadHistoryBatches();
-                      CustomToast.show(context, 'Batch deleted from history');
+                      if (context.mounted) {
+                        Provider.of<ExpenseProvider>(context, listen: false).triggerQuietSync();
+                        CustomToast.show(context, 'Batch deleted from history');
+                      }
                     },
                   ),
                 ],

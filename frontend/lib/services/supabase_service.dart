@@ -1169,6 +1169,78 @@ class SupabaseService {
   }
 
   // ══════════════════════════════════════════════════════
+  // BARCODE LABEL BATCHES
+  // ══════════════════════════════════════════════════════
+
+  Future<List<Map<String, dynamic>>> fetchBarcodeLabelBatches() async {
+    final uid = currentUser?.id;
+    if (uid == null) return [];
+    try {
+      final data = await _client
+          .from('barcode_label_batches')
+          .select()
+          .eq('user_id', uid)
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('[Supabase] fetchBarcodeLabelBatches error: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchBarcodeLabelBatchesSince(String? lastSyncTime) async {
+    final uid = currentUser?.id;
+    if (uid == null) return [];
+    try {
+      if (lastSyncTime != null && lastSyncTime.isNotEmpty) {
+        final data = await _client
+            .from('barcode_label_batches')
+            .select()
+            .eq('user_id', uid)
+            .gte('created_at', lastSyncTime)
+            .order('created_at', ascending: false);
+        return List<Map<String, dynamic>>.from(data);
+      } else {
+        final data = await _client
+            .from('barcode_label_batches')
+            .select()
+            .eq('user_id', uid)
+            .order('created_at', ascending: false);
+        return List<Map<String, dynamic>>.from(data);
+      }
+    } catch (e) {
+      print('[Supabase] fetchBarcodeLabelBatchesSince error: $e');
+      return [];
+    }
+  }
+
+  Future<void> upsertBarcodeLabelBatches(List<Map<String, dynamic>> batches) async {
+    if (batches.isEmpty) return;
+    final uid = currentUser?.id;
+    if (uid == null) return;
+    final rows = batches.map((b) {
+      return <String, dynamic>{
+        'id': b['id']?.toString(),
+        'user_id': uid,
+        'item_id': b['item_id']?.toString(),
+        'product_name': b['product_name']?.toString() ?? '',
+        'barcode_data': b['barcode_data']?.toString() ?? '',
+        'barcode_type': b['barcode_type']?.toString() ?? 'barcode',
+        'price': (b['price'] is num) ? (b['price'] as num).toDouble() : (double.tryParse(b['price']?.toString() ?? '0') ?? 0.0),
+        'quantity': (b['quantity'] is num) ? (b['quantity'] as num).toInt() : (int.tryParse(b['quantity']?.toString() ?? '24') ?? 24),
+        'columns_count': (b['columns_count'] is num) ? (b['columns_count'] as num).toInt() : (int.tryParse(b['columns_count']?.toString() ?? '3') ?? 3),
+        'shop_name': b['shop_name']?.toString(),
+        'created_at': b['created_at']?.toString() ?? DateTime.now().toIso8601String(),
+      };
+    }).toList();
+    await _client.from('barcode_label_batches').upsert(rows);
+  }
+
+  Future<void> deleteBarcodeLabelBatch(String id) async {
+    await _client.from('barcode_label_batches').delete().eq('id', id);
+  }
+
+  // ══════════════════════════════════════════════════════
   // SYNC (Pull + Push with local SQLite)
   // ══════════════════════════════════════════════════════
 
@@ -1182,6 +1254,7 @@ class SupabaseService {
     List<Map<String, dynamic>> unsyncedSplitBills = const [],
     List<Map<String, dynamic>> unsyncedBusinessSales = const [],
     List<Map<String, dynamic>> unsyncedBusinessItems = const [],
+    List<Map<String, dynamic>> unsyncedBarcodeLabelBatches = const [],
     Map<String, dynamic>? unsyncedBusinessProfile,
     required List<String> deletedExpenseIds,
     required List<String> deletedBudgetIds,
@@ -1191,6 +1264,7 @@ class SupabaseService {
     List<String> deletedSplitBillIds = const [],
     List<String> deletedBusinessSaleIds = const [],
     List<String> deletedBusinessItemIds = const [],
+    List<String> deletedBarcodeLabelBatchIds = const [],
     String? lastSyncTime,
   }) async {
     try {
@@ -1218,6 +1292,8 @@ class SupabaseService {
           upsertBusinessSales(unsyncedBusinessSales).catchError((e) => print('[Sync Error] BusinessSales push failed: $e')),
         if (unsyncedBusinessItems.isNotEmpty)
           upsertBusinessItems(unsyncedBusinessItems).catchError((e) => print('[Sync Error] BusinessItems push failed: $e')),
+        if (unsyncedBarcodeLabelBatches.isNotEmpty)
+          upsertBarcodeLabelBatches(unsyncedBarcodeLabelBatches).catchError((e) => print('[Sync Error] BarcodeLabelBatches push failed: $e')),
         if (unsyncedBusinessProfile != null)
           upsertBusinessProfile(unsyncedBusinessProfile).catchError((e) => print('[Sync Error] BusinessProfile push failed: $e')),
       ]).timeout(const Duration(seconds: 12));
@@ -1240,6 +1316,8 @@ class SupabaseService {
           _client.from('business_sales').delete().inFilter('id', deletedBusinessSaleIds).eq('user_id', uid).catchError((e) => null),
         if (deletedBusinessItemIds.isNotEmpty)
           _client.from('business_items').delete().inFilter('id', deletedBusinessItemIds).eq('user_id', uid).catchError((e) => null),
+        if (deletedBarcodeLabelBatchIds.isNotEmpty)
+          _client.from('barcode_label_batches').delete().inFilter('id', deletedBarcodeLabelBatchIds).eq('user_id', uid).catchError((e) => null),
       ]).timeout(const Duration(seconds: 8));
 
       // 3. PULL fresh server data concurrently with timeout
@@ -1252,6 +1330,7 @@ class SupabaseService {
         fetchSplitBillsSince(lastSyncTime),
         fetchBusinessSalesSince(lastSyncTime),
         fetchBusinessItemsSince(lastSyncTime),
+        fetchBarcodeLabelBatchesSince(lastSyncTime),
         fetchBusinessProfile(),
       ]).timeout(const Duration(seconds: 15));
 
@@ -1263,6 +1342,7 @@ class SupabaseService {
       final delSplitSet = deletedSplitBillIds.toSet();
       final delSaleSet = deletedBusinessSaleIds.toSet();
       final delItemSet = deletedBusinessItemIds.toSet();
+      final delBatchSet = deletedBarcodeLabelBatchIds.toSet();
 
       final serverExpenses = (pullResults[0] as List<Map<String, dynamic>>)
           .where((e) => !delExpSet.contains(e['id']?.toString()))
@@ -1288,7 +1368,10 @@ class SupabaseService {
       final serverBusinessItems = (pullResults[7] as List<Map<String, dynamic>>)
           .where((i) => !delItemSet.contains(i['id']?.toString()))
           .toList();
-      final serverBusinessProfile = pullResults[8] as Map<String, dynamic>?;
+      final serverBarcodeBatches = (pullResults[8] as List<Map<String, dynamic>>)
+          .where((b) => !delBatchSet.contains(b['id']?.toString()))
+          .toList();
+      final serverBusinessProfile = pullResults[9] as Map<String, dynamic>?;
 
       // Store new server time
       final prefs = await SharedPreferences.getInstance();
@@ -1303,6 +1386,7 @@ class SupabaseService {
         'splitBills': serverSplits,
         'businessSales': serverBusinessSales,
         'businessItems': serverBusinessItems,
+        'barcodeLabelBatches': serverBarcodeBatches,
         'businessProfile': serverBusinessProfile,
       };
     } catch (e) {

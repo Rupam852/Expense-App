@@ -18,6 +18,7 @@ import '../models/subscription_item.dart';
 import '../models/business_sale.dart';
 import '../models/business_profile.dart';
 import '../models/business_item.dart';
+import '../models/barcode_label_batch.dart';
 import 'ai_config_service.dart';
 import 'notification_service.dart';
 import 'package:intl/intl.dart';
@@ -1135,6 +1136,7 @@ class ExpenseProvider with ChangeNotifier {
       final unsyncedSplits = await _dbHelper.getUnsyncedSplitBills();
       final unsyncedBusinessSales = await _dbHelper.getUnsyncedBusinessSales();
       final unsyncedBusinessItems = await _dbHelper.getUnsyncedBusinessItems();
+      final unsyncedBarcodeBatches = await _dbHelper.getUnsyncedBarcodeLabelBatches();
       final unsyncedBusinessProfile = (await _dbHelper.getBusinessProfile()).toMap();
       final unsyncedDeletes = await _dbHelper.getUnsyncedDeletions();
       final prefs = await SharedPreferences.getInstance();
@@ -1172,6 +1174,10 @@ class ExpenseProvider with ChangeNotifier {
           .where((d) => d['table_name'] == 'business_items')
           .map((d) => d['id'] as String)
           .toList();
+      final deletedBarcodeBatchIds = unsyncedDeletes
+          .where((d) => d['table_name'] == 'barcode_label_batches')
+          .map((d) => d['id'] as String)
+          .toList();
 
       final syncResult = await _supabase.sync(
         unsyncedExpenses: unsyncedExps,
@@ -1182,6 +1188,7 @@ class ExpenseProvider with ChangeNotifier {
         unsyncedSplitBills: unsyncedSplits,
         unsyncedBusinessSales: unsyncedBusinessSales,
         unsyncedBusinessItems: unsyncedBusinessItems,
+        unsyncedBarcodeLabelBatches: unsyncedBarcodeBatches,
         unsyncedBusinessProfile: unsyncedBusinessProfile,
         deletedExpenseIds: deletedExpIds,
         deletedBudgetIds: deletedBudIds,
@@ -1191,6 +1198,7 @@ class ExpenseProvider with ChangeNotifier {
         deletedSplitBillIds: deletedSplitIds,
         deletedBusinessSaleIds: deletedBusinessSaleIds,
         deletedBusinessItemIds: deletedBusinessItemIds,
+        deletedBarcodeLabelBatchIds: deletedBarcodeBatchIds,
         lastSyncTime: lastSync,
       );
 
@@ -1204,6 +1212,7 @@ class ExpenseProvider with ChangeNotifier {
         await _dbHelper.markSplitBillsSynced(unsyncedSplits.map((sb) => sb['id'] as String).toList());
         await _dbHelper.markBusinessSalesSynced(unsyncedBusinessSales.map((bs) => bs['id'] as String).toList());
         await _dbHelper.markBusinessItemsSynced(unsyncedBusinessItems.map((bi) => bi['id'] as String).toList());
+        await _dbHelper.markBarcodeLabelBatchesSynced(unsyncedBarcodeBatches.map((b) => b['id'] as String).toList());
         await _dbHelper.clearSyncedDeletions(unsyncedDeletes.map((d) => d['id'] as String).toList());
 
         // Extract server data returned from the sync payload
@@ -1215,6 +1224,7 @@ class ExpenseProvider with ChangeNotifier {
         final List<dynamic> serverSplits = syncResult['splitBills'] ?? [];
         final List<dynamic> serverBusinessSales = syncResult['businessSales'] ?? [];
         final List<dynamic> serverBusinessItems = syncResult['businessItems'] ?? [];
+        final List<dynamic> serverBarcodeBatches = syncResult['barcodeLabelBatches'] ?? [];
         final Map<String, dynamic>? serverBusinessProf = syncResult['businessProfile'] as Map<String, dynamic>?;
 
         await _dbHelper.syncDownExpenses(serverExpenses.map((e) => Expense.fromMap(Map<String, dynamic>.from(e))).toList());
@@ -1225,6 +1235,7 @@ class ExpenseProvider with ChangeNotifier {
         await _dbHelper.syncDownSplitBills(serverSplits.map((sb) => SplitBill.fromMap(Map<String, dynamic>.from(sb))).toList());
         await _dbHelper.syncDownBusinessSales(serverBusinessSales.map((bs) => BusinessSale.fromMap(Map<String, dynamic>.from(bs))).toList());
         await _dbHelper.syncDownBusinessItems(serverBusinessItems.map((bi) => BusinessItem.fromMap(Map<String, dynamic>.from(bi))).toList());
+        await _dbHelper.syncDownBarcodeLabelBatches(serverBarcodeBatches.map((bb) => BarcodeLabelBatch.fromMap(Map<String, dynamic>.from(bb))).toList());
         if (serverBusinessProf != null) {
           await _dbHelper.syncDownBusinessProfile(BusinessProfile.fromMap(serverBusinessProf));
         }
@@ -1381,6 +1392,7 @@ class ExpenseProvider with ChangeNotifier {
         unsyncedSplitBills: [],
         unsyncedBusinessSales: [],
         unsyncedBusinessItems: [],
+        unsyncedBarcodeLabelBatches: [],
         deletedExpenseIds: [],
         deletedBudgetIds: [],
         deletedPaymentDetailIds: [],
@@ -1389,6 +1401,7 @@ class ExpenseProvider with ChangeNotifier {
         deletedSplitBillIds: [],
         deletedBusinessSaleIds: [],
         deletedBusinessItemIds: [],
+        deletedBarcodeLabelBatchIds: [],
         lastSyncTime: null,
       );
 
@@ -1406,6 +1419,7 @@ class ExpenseProvider with ChangeNotifier {
         final List<dynamic> serverSplits = syncResult['splitBills'] ?? [];
         final List<dynamic> serverBusinessSales = syncResult['businessSales'] ?? [];
         final List<dynamic> serverBusinessItems = syncResult['businessItems'] ?? [];
+        final List<dynamic> serverBarcodeBatches = syncResult['barcodeLabelBatches'] ?? [];
         final Map<String, dynamic>? serverBusinessProf = syncResult['businessProfile'] as Map<String, dynamic>?;
 
         // Insert fetched items into local database
@@ -1417,6 +1431,7 @@ class ExpenseProvider with ChangeNotifier {
         await _dbHelper.syncDownSplitBills(serverSplits.map((sb) => SplitBill.fromMap(Map<String, dynamic>.from(sb))).toList());
         await _dbHelper.syncDownBusinessSales(serverBusinessSales.map((bs) => BusinessSale.fromMap(Map<String, dynamic>.from(bs))).toList());
         await _dbHelper.syncDownBusinessItems(serverBusinessItems.map((bi) => BusinessItem.fromMap(Map<String, dynamic>.from(bi))).toList());
+        await _dbHelper.syncDownBarcodeLabelBatches(serverBarcodeBatches.map((bb) => BarcodeLabelBatch.fromMap(Map<String, dynamic>.from(bb))).toList());
         if (serverBusinessProf != null) {
           await _dbHelper.syncDownBusinessProfile(BusinessProfile.fromMap(serverBusinessProf));
         }
@@ -1430,6 +1445,7 @@ class ExpenseProvider with ChangeNotifier {
         final splitIds = serverSplits.map((sb) => sb['id'] as String).toList();
         final businessSaleIds = serverBusinessSales.map((bs) => bs['id'] as String).toList();
         final businessItemIds = serverBusinessItems.map((bi) => bi['id'] as String).toList();
+        final barcodeBatchIds = serverBarcodeBatches.map((bb) => bb['id'] as String).toList();
         await _dbHelper.markExpensesSynced(expenseIds);
         await _dbHelper.markBudgetsSynced(budgetIds);
         await _dbHelper.markPaymentDetailsSynced(paymentIds);
@@ -1438,6 +1454,7 @@ class ExpenseProvider with ChangeNotifier {
         await _dbHelper.markSplitBillsSynced(splitIds);
         await _dbHelper.markBusinessSalesSynced(businessSaleIds);
         await _dbHelper.markBusinessItemsSynced(businessItemIds);
+        await _dbHelper.markBarcodeLabelBatchesSynced(barcodeBatchIds);
 
         _lastSyncTime = prefs.getString('last_sync_time');
 

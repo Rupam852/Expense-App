@@ -1512,7 +1512,10 @@ class DatabaseHelper {
             tableName == 'payment_details' ||
             tableName == 'khata_entries' ||
             tableName == 'subscriptions' ||
-            tableName == 'split_bills') {
+            tableName == 'split_bills' ||
+            tableName == 'business_sales' ||
+            tableName == 'business_items' ||
+            tableName == 'barcode_label_batches') {
           await txn.delete(tableName, where: 'id = ?', whereArgs: [id]);
         }
       }
@@ -1905,6 +1908,9 @@ class DatabaseHelper {
     try { await db.delete('khata_entries'); } catch (_) {}
     try { await db.delete('split_bills'); } catch (_) {}
     try { await db.delete('subscriptions'); } catch (_) {}
+    try { await db.delete('business_sales'); } catch (_) {}
+    try { await db.delete('business_items'); } catch (_) {}
+    try { await db.delete('barcode_label_batches'); } catch (_) {}
   }
 
   // Clear entire local databases for user sign-out safety
@@ -1917,6 +1923,9 @@ class DatabaseHelper {
     try { await db.delete('khata_entries'); } catch (_) {}
     try { await db.delete('split_bills'); } catch (_) {}
     try { await db.delete('subscriptions'); } catch (_) {}
+    try { await db.delete('business_sales'); } catch (_) {}
+    try { await db.delete('business_items'); } catch (_) {}
+    try { await db.delete('barcode_label_batches'); } catch (_) {}
     if (!preserveLocalChatAndCalc) {
       try { await db.delete('ai_chat_sessions'); } catch (_) {}
       try { await db.delete('ai_chat_messages'); } catch (_) {}
@@ -2677,6 +2686,15 @@ class DatabaseHelper {
 
   Future<int> deleteBarcodeLabelBatch(String id) async {
     final db = await instance.database;
+    await db.insert(
+      'deleted_records',
+      {
+        'id': id,
+        'table_name': 'barcode_label_batches',
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
     return await db.delete(
       'barcode_label_batches',
       where: 'id = ?',
