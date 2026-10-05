@@ -252,7 +252,12 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
     ],
   };
 
-  void _openUnitPickerSheet(BuildContext context, String currentUnit, ValueChanged<String> onSelected) {
+  void _openUnitPickerSheet(
+    BuildContext context,
+    String currentUnit,
+    ValueChanged<String> onSelected, {
+    String? catalogStockUnit,
+  }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -262,6 +267,7 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
         final bg = isDark ? const Color(0xFF1E2430) : Colors.white;
         final textColor = isDark ? Colors.white : const Color(0xFF212121);
         final primaryColor = const Color(0xFF00D09C);
+        final hasStockUnit = catalogStockUnit != null && catalogStockUnit.trim().isNotEmpty;
 
         return Container(
           constraints: BoxConstraints(
@@ -318,7 +324,9 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                             ),
                           ),
                           Text(
-                            'Tap to apply unit for this item',
+                            hasStockUnit
+                                ? 'Item is tracked in ${catalogStockUnit.toUpperCase()}'
+                                : 'Tap to apply unit for this item',
                             style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
                           ),
                         ],
@@ -331,6 +339,28 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                   ],
                 ),
               ),
+              if (hasStockUnit)
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.auto_awesome, size: 16, color: Color(0xFF10B981)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Stock unit is ${catalogStockUnit.toUpperCase()}. Compatible units auto-convert stock deduction.',
+                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF10B981)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               const Divider(height: 1, thickness: 0.8),
               Flexible(
                 child: ListView(
@@ -360,11 +390,47 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                             final code = u['code']!;
                             final name = u['name']!;
                             final isSelected = currentUnit.toLowerCase() == code.toLowerCase();
+                            final isCompatible = !hasStockUnit || UnitConversionHelper.areUnitsCompatible(code, catalogStockUnit);
 
                             return InkWell(
                               onTap: () {
-                                onSelected(code);
-                                Navigator.pop(sheetCtx);
+                                if (hasStockUnit && !isCompatible) {
+                                  showDialog(
+                                    context: context,
+                                    builder: (dlgCtx) => AlertDialog(
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      title: Row(
+                                        children: [
+                                          const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                                          const SizedBox(width: 8),
+                                          const Text('Unit Mismatch'),
+                                        ],
+                                      ),
+                                      content: Text(
+                                        'This item is tracked in "${catalogStockUnit.toUpperCase()}". Selling in "${code.toUpperCase()}" is incompatible and will not auto-deduct catalog stock.\n\nDo you want to proceed?',
+                                        style: const TextStyle(fontSize: 13),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(dlgCtx),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        ElevatedButton(
+                                          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
+                                          onPressed: () {
+                                            Navigator.pop(dlgCtx);
+                                            Navigator.pop(sheetCtx);
+                                            onSelected(code);
+                                          },
+                                          child: const Text('Change Anyway'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                } else {
+                                  onSelected(code);
+                                  Navigator.pop(sheetCtx);
+                                }
                               },
                               borderRadius: BorderRadius.circular(12),
                               child: Container(
@@ -372,12 +438,16 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                                 decoration: BoxDecoration(
                                   color: isSelected
                                       ? primaryColor.withOpacity(0.12)
-                                      : (isDark ? const Color(0xFF272F3E) : const Color(0xFFF4F6F8)),
+                                      : (!isCompatible
+                                          ? (isDark ? Colors.black26 : Colors.grey.shade100)
+                                          : (isDark ? const Color(0xFF272F3E) : const Color(0xFFF4F6F8))),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: isSelected
                                         ? primaryColor
-                                        : (isDark ? Colors.white10 : Colors.black.withOpacity(0.06)),
+                                        : (!isCompatible
+                                            ? Colors.orange.withValues(alpha: 0.3)
+                                            : (isDark ? Colors.white10 : Colors.black.withOpacity(0.06))),
                                     width: isSelected ? 1.5 : 1.0,
                                   ),
                                 ),
@@ -389,7 +459,9 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                                       style: GoogleFonts.inter(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w700,
-                                        color: isSelected ? primaryColor : textColor,
+                                        color: isSelected
+                                            ? primaryColor
+                                            : (!isCompatible ? Colors.orange.shade700 : textColor),
                                       ),
                                     ),
                                     const SizedBox(width: 6),
@@ -397,12 +469,17 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                                       name,
                                       style: GoogleFonts.inter(
                                         fontSize: 11.5,
-                                        color: isSelected ? primaryColor : Colors.grey,
+                                        color: isSelected
+                                            ? primaryColor
+                                            : (!isCompatible ? Colors.orange.shade400 : Colors.grey),
                                       ),
                                     ),
                                     if (isSelected) ...[
                                       const SizedBox(width: 6),
                                       Icon(Icons.check_circle_rounded, size: 15, color: primaryColor),
+                                    ] else if (hasStockUnit && isCompatible) ...[
+                                      const SizedBox(width: 6),
+                                      const Icon(Icons.check, size: 12, color: Color(0xFF10B981)),
                                     ],
                                   ],
                                 ),
@@ -1747,7 +1824,17 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                                             ),
                                           ],
                                         ),
-                                        if (stockRes.isConverted) ...[
+                                        if (stockRes.isIncompatible) ...[
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '⚠️ Unit Mismatch: Item is stocked in "${matchedItem.unit.toUpperCase()}". Selling in "${sellUnit.toUpperCase()}" won\'t deduct catalog stock.',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              color: isDark ? Colors.orangeAccent : Colors.orange.shade800,
+                                            ),
+                                          ),
+                                        ] else if (stockRes.isConverted) ...[
                                           const SizedBox(height: 2),
                                           Text(
                                             '⚖️ Auto-converted: ${UnitConversionHelper.formatQuantity(stockRes.sellQty, stockRes.sellUnit)} = ${UnitConversionHelper.formatQuantity(stockRes.deductionInStockUnit, stockRes.stockUnit)} deducted from catalog',
@@ -1799,6 +1886,7 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                                       (newUnit) {
                                         setState(() => row['unit'] = newUnit);
                                       },
+                                      catalogStockUnit: hasMatchedStock ? matchedItem.unit : null,
                                     );
                                   },
                                   borderRadius: BorderRadius.circular(4),

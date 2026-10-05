@@ -277,6 +277,28 @@ class UnitConversionHelper {
     return formatted;
   }
 
+  // Get all compatible units for a given base unit
+  static List<String> getCompatibleUnits(String rawUnit) {
+    final u = normalizeUnit(rawUnit);
+    final family = getUnitFamily(u);
+    if (family == null) return [u];
+
+    switch (family) {
+      case 'weight':
+        return ['kg', 'g', 'mg', 'quintal', 'ton', 'lb', 'oz'];
+      case 'length':
+        return ['m', 'cm', 'mm', 'km', 'ft', 'inch', 'yd'];
+      case 'volume':
+        return ['ltr', 'ml', 'cl', 'gal'];
+      case 'area':
+        return ['sq.ft', 'sq.m', 'acre'];
+      case 'count':
+        return ['pcs', 'pair', 'doz', 'box', 'pkt', 'set', 'nos'];
+      default:
+        return [u];
+    }
+  }
+
   // Calculate live remaining stock & deduction info
   static StockDeductionResult calculateRemainingStock({
     required double currentStock,
@@ -287,12 +309,17 @@ class UnitConversionHelper {
     final normStockUnit = normalizeUnit(stockUnit);
     final normSellUnit = normalizeUnit(sellUnit);
 
-    final isDifferentUnit = normStockUnit != normSellUnit && areUnitsCompatible(sellUnit, stockUnit);
-    final deductionInStockUnit = convertQuantity(
-      quantity: sellQty,
-      fromUnit: sellUnit,
-      toUnit: stockUnit,
-    );
+    final isCompatible = areUnitsCompatible(sellUnit, stockUnit);
+    final isDifferentUnit = normStockUnit != normSellUnit && isCompatible;
+
+    double deductionInStockUnit = 0.0;
+    if (isCompatible) {
+      deductionInStockUnit = convertQuantity(
+        quantity: sellQty,
+        fromUnit: sellUnit,
+        toUnit: stockUnit,
+      );
+    }
 
     final remainingStock = currentStock - deductionInStockUnit;
 
@@ -304,6 +331,7 @@ class UnitConversionHelper {
       deductionInStockUnit: deductionInStockUnit,
       remainingStock: remainingStock,
       isConverted: isDifferentUnit,
+      isIncompatible: !isCompatible,
     );
   }
 }
@@ -316,6 +344,7 @@ class StockDeductionResult {
   final double deductionInStockUnit;
   final double remainingStock;
   final bool isConverted;
+  final bool isIncompatible;
 
   StockDeductionResult({
     required this.currentStock,
@@ -325,12 +354,16 @@ class StockDeductionResult {
     required this.deductionInStockUnit,
     required this.remainingStock,
     required this.isConverted,
+    this.isIncompatible = false,
   });
 
   bool get isOutOfStock => remainingStock <= 0;
   bool get isOverSelling => remainingStock < 0;
 
   String get deductionPreview {
+    if (isIncompatible) {
+      return '⚠️ Incompatible Unit ($sellUnit vs $stockUnit)';
+    }
     if (isConverted) {
       final fromStr = UnitConversionHelper.formatQuantity(sellQty, sellUnit);
       final toStr = UnitConversionHelper.formatQuantity(deductionInStockUnit, stockUnit);
@@ -339,3 +372,4 @@ class StockDeductionResult {
     return '${UnitConversionHelper.formatQuantity(deductionInStockUnit, stockUnit)} deducted';
   }
 }
+

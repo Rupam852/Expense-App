@@ -2563,6 +2563,13 @@ class DatabaseHelper {
         if (matching.isNotEmpty) {
           final item = BusinessItem.fromMap(matching.first);
           if (item.trackStock) {
+            final isCompatible = UnitConversionHelper.areUnitsCompatible(soldUnit, item.unit);
+            if (!isCompatible) {
+              // Units are completely incompatible (e.g. sold in kg vs item in pcs)
+              // Do NOT corrupt the stock or deduct 1:1 if incompatible!
+              debugPrint('[StockDeduction] Skipped incompatible deduction for ${item.name}: soldUnit=$soldUnit vs itemUnit=${item.unit}');
+              continue;
+            }
             final deductionInItemUnit = UnitConversionHelper.convertQuantity(
               quantity: qty,
               fromUnit: soldUnit,
