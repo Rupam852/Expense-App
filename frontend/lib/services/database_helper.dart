@@ -13,6 +13,7 @@ import '../models/business_sale.dart';
 import '../models/business_profile.dart';
 import '../models/business_item.dart';
 import '../models/barcode_label_batch.dart';
+import '../utils/unit_conversion_helper.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -2495,6 +2496,7 @@ class DatabaseHelper {
         final name = (it['item_name'] ?? it['itemName'] ?? it['name'] ?? it['title'] ?? '').toString().trim();
         final rawQty = it['quantity'] ?? it['qty'];
         final double qty = rawQty is num ? rawQty.toDouble() : (double.tryParse(rawQty?.toString() ?? '1') ?? 1.0);
+        final String soldUnit = (it['unit'] ?? 'pcs').toString().trim();
         if (name.isEmpty || qty <= 0) continue;
 
         final matching = await txn.query(
@@ -2507,7 +2509,12 @@ class DatabaseHelper {
         if (matching.isNotEmpty) {
           final item = BusinessItem.fromMap(matching.first);
           if (item.trackStock) {
-            final newStock = (item.stockQuantity - qty).clamp(-999999.0, 999999.0);
+            final deductionInItemUnit = UnitConversionHelper.convertQuantity(
+              quantity: qty,
+              fromUnit: soldUnit,
+              toUnit: item.unit,
+            );
+            final newStock = (item.stockQuantity - deductionInItemUnit).clamp(-999999.0, 999999.0);
             await txn.update(
               'business_items',
               {

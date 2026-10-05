@@ -22,6 +22,7 @@ import '../widgets/barcode_scanner_modal.dart';
 import 'package:flutter_native_contact_picker/flutter_native_contact_picker.dart';
 import 'package:flutter_native_contact_picker/model/contact.dart';
 import 'business_catalog_screen.dart';
+import '../utils/unit_conversion_helper.dart';
 
 class AddBusinessSaleScreen extends StatefulWidget {
   final BusinessSale? existingSale;
@@ -77,17 +78,28 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
     'pcs',
     'kg',
     'g',
+    'mg',
+    'quintal',
+    'ton',
     'ltr',
     'ml',
+    'cl',
+    'm',
+    'cm',
+    'mm',
+    'km',
+    'ft',
+    'inch',
+    'yd',
     'box',
     'pkt',
-    'm',
     'nos',
     'doz',
     'pair',
     'set',
-    'quintal',
     'sq.ft',
+    'sq.m',
+    'acre',
     'service',
   ];
 
@@ -98,13 +110,33 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
       case 'g':
       case 'grams':
         return 'Weight (g)';
+      case 'mg':
+        return 'Weight (mg)';
+      case 'quintal':
+        return 'Weight (qtl)';
+      case 'ton':
+        return 'Weight (ton)';
       case 'ltr':
         return 'Volume (ltr)';
       case 'ml':
         return 'Volume (ml)';
+      case 'cl':
+        return 'Volume (cl)';
       case 'm':
       case 'meter':
         return 'Length (m)';
+      case 'cm':
+        return 'Length (cm)';
+      case 'mm':
+        return 'Length (mm)';
+      case 'km':
+        return 'Length (km)';
+      case 'ft':
+        return 'Length (ft)';
+      case 'inch':
+        return 'Length (in)';
+      case 'yd':
+        return 'Length (yd)';
       case 'box':
         return 'Qty (box)';
       case 'pkt':
@@ -115,10 +147,14 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
         return 'Qty (doz)';
       case 'nos':
         return 'Qty (nos)';
-      case 'quintal':
-        return 'Weight (qtl)';
+      case 'pair':
+        return 'Qty (pair)';
       case 'sq.ft':
         return 'Area (sq.ft)';
+      case 'sq.m':
+        return 'Area (sq.m)';
+      case 'acre':
+        return 'Area (acre)';
       case 'service':
         return 'Service Units';
       default:
@@ -143,12 +179,28 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
       case 'g':
       case 'grams':
         return ['50g', '100g', '250g', '500g', '1000g'];
+      case 'ml':
+        return ['50ml', '100ml', '200ml', '250ml', '500ml', '1000ml'];
       case 'doz':
       case 'dozen':
         return ['0.5 doz', '1 doz', '2 doz', '5 doz'];
       case 'm':
       case 'meter':
         return ['0.5m', '1m', '2m', '5m', '10m'];
+      case 'cm':
+        return ['10 cm', '25 cm', '50 cm', '100 cm', '250 cm', '500 cm'];
+      case 'mm':
+        return ['5 mm', '10 mm', '25 mm', '50 mm', '100 mm'];
+      case 'ft':
+        return ['1 ft', '2 ft', '5 ft', '10 ft', '20 ft'];
+      case 'inch':
+        return ['1 in', '6 in', '12 in', '24 in', '36 in'];
+      case 'quintal':
+        return ['0.5 qtl', '1 qtl', '2 qtl', '5 qtl', '10 qtl'];
+      case 'ton':
+        return ['0.5 ton', '1 ton', '2 ton', '5 ton'];
+      case 'pair':
+        return ['1 pair', '2 pair', '5 pair', '10 pair'];
       case 'pcs':
       case 'nos':
       case 'pkt':
@@ -165,22 +217,35 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
       {'code': 'box', 'name': 'Box'},
       {'code': 'pkt', 'name': 'Packet'},
       {'code': 'nos', 'name': 'Numbers'},
-      {'code': 'doz', 'name': 'Dozen'},
+      {'code': 'doz', 'name': 'Dozen (12 pcs)'},
+      {'code': 'pair', 'name': 'Pair (2 pcs)'},
       {'code': 'set', 'name': 'Set'},
-      {'code': 'pair', 'name': 'Pair'},
     ],
     '⚖️ Weight & Mass': [
-      {'code': 'kg', 'name': 'Kilogram'},
+      {'code': 'kg', 'name': 'Kilogram (1000 g)'},
       {'code': 'g', 'name': 'Gram'},
-      {'code': 'quintal', 'name': 'Quintal'},
+      {'code': 'mg', 'name': 'Milligram'},
+      {'code': 'quintal', 'name': 'Quintal (100 kg)'},
+      {'code': 'ton', 'name': 'Metric Ton (1000 kg)'},
     ],
     '🧪 Volume & Liquid': [
-      {'code': 'ltr', 'name': 'Liter'},
+      {'code': 'ltr', 'name': 'Liter (1000 ml)'},
       {'code': 'ml', 'name': 'Milliliter'},
+      {'code': 'cl', 'name': 'Centiliter (10 ml)'},
     ],
-    '📐 Length & Area': [
-      {'code': 'm', 'name': 'Meter'},
+    '📐 Length & Distance': [
+      {'code': 'm', 'name': 'Meter (100 cm)'},
+      {'code': 'cm', 'name': 'Centimeter (10 mm)'},
+      {'code': 'mm', 'name': 'Millimeter'},
+      {'code': 'km', 'name': 'Kilometer (1000 m)'},
+      {'code': 'ft', 'name': 'Feet (12 in)'},
+      {'code': 'inch', 'name': 'Inch'},
+      {'code': 'yd', 'name': 'Yard (3 ft)'},
+    ],
+    '🗺️ Area': [
       {'code': 'sq.ft', 'name': 'Square Feet'},
+      {'code': 'sq.m', 'name': 'Square Meter'},
+      {'code': 'acre', 'name': 'Acre'},
     ],
     '💼 Services & Other': [
       {'code': 'service', 'name': 'Service Unit'},
@@ -1179,6 +1244,7 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = const Color(0xFF3B82F6); // Sapphire Blue for Business
+    final expProv = Provider.of<ExpenseProvider>(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -1555,6 +1621,23 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                   ..._itemRows.asMap().entries.map((entry) {
                     final idx = entry.key;
                     final row = entry.value;
+                    final rowName = row['name'].text.trim().toLowerCase();
+                    final matchedItem = expProv.businessItems.firstWhere(
+                      (bi) => bi.name.trim().toLowerCase() == rowName,
+                      orElse: () => BusinessItem(id: '', name: ''),
+                    );
+                    final hasMatchedStock = matchedItem.id.isNotEmpty && matchedItem.trackStock;
+                    final sellQty = double.tryParse(row['qty'].text.trim()) ?? 0.0;
+                    final sellUnit = (row['unit'] ?? 'pcs').toString();
+                    final stockRes = hasMatchedStock
+                        ? UnitConversionHelper.calculateRemainingStock(
+                            currentStock: matchedItem.stockQuantity,
+                            stockUnit: matchedItem.unit,
+                            sellQty: sellQty,
+                            sellUnit: sellUnit,
+                          )
+                        : null;
+
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(10),
@@ -1596,6 +1679,93 @@ class _AddBusinessSaleScreenState extends State<AddBusinessSaleScreen> {
                               ),
                             ],
                           ),
+
+                          // ── LIVE CATALOG INVENTORY & CONVERSION STATUS BADGE ──
+                          if (hasMatchedStock && stockRes != null) ...[
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: stockRes.isOverSelling
+                                    ? Colors.red.withValues(alpha: 0.12)
+                                    : (stockRes.remainingStock <= matchedItem.lowStockLimit
+                                        ? Colors.orange.withValues(alpha: 0.12)
+                                        : const Color(0xFF10B981).withValues(alpha: 0.12)),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: stockRes.isOverSelling
+                                      ? Colors.red.withValues(alpha: 0.35)
+                                      : (stockRes.remainingStock <= matchedItem.lowStockLimit
+                                          ? Colors.orange.withValues(alpha: 0.35)
+                                          : const Color(0xFF10B981).withValues(alpha: 0.35)),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    stockRes.isOverSelling
+                                        ? Icons.error_outline_rounded
+                                        : (stockRes.remainingStock <= matchedItem.lowStockLimit
+                                            ? Icons.warning_amber_rounded
+                                            : Icons.inventory_2_outlined),
+                                    size: 15,
+                                    color: stockRes.isOverSelling
+                                        ? Colors.redAccent
+                                        : (stockRes.remainingStock <= matchedItem.lowStockLimit
+                                            ? Colors.orange
+                                            : const Color(0xFF10B981)),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Current Stock: ${UnitConversionHelper.formatQuantity(matchedItem.stockQuantity, matchedItem.unit)}',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                                color: isDark ? Colors.grey[300] : const Color(0xFF334155),
+                                              ),
+                                            ),
+                                            Text(
+                                              stockRes.isOverSelling
+                                                  ? '⚠️ Over-selling by ${UnitConversionHelper.formatQuantity(-stockRes.remainingStock, matchedItem.unit)}'
+                                                  : '${UnitConversionHelper.formatQuantity(stockRes.remainingStock, matchedItem.unit)} left after bill',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: stockRes.isOverSelling
+                                                    ? Colors.redAccent
+                                                    : (stockRes.remainingStock <= matchedItem.lowStockLimit
+                                                        ? Colors.orange
+                                                        : const Color(0xFF10B981)),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (stockRes.isConverted) ...[
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '⚖️ Auto-converted: ${UnitConversionHelper.formatQuantity(stockRes.sellQty, stockRes.sellUnit)} = ${UnitConversionHelper.formatQuantity(stockRes.deductionInStockUnit, stockRes.stockUnit)} deducted from catalog',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              color: const Color(0xFF3B82F6),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+
                           const SizedBox(height: 8),
                           // ── ROW 1: QUANTITY & UNIT ──
                           Row(
@@ -2364,6 +2534,7 @@ class _CatalogPickerBottomSheetState extends State<_CatalogPickerBottomSheet> {
                                     const SizedBox(height: 3),
                                     Wrap(
                                       spacing: 6,
+                                      runSpacing: 4,
                                       children: [
                                         Text(
                                           'Unit: ${it.unit.toUpperCase()}',
@@ -2381,6 +2552,23 @@ class _CatalogPickerBottomSheetState extends State<_CatalogPickerBottomSheet> {
                                           Text('•', style: GoogleFonts.inter(fontSize: 10.5, color: Colors.grey)),
                                           Text('Cost: ₹${it.purchasePrice.toStringAsFixed(0)} 🔒',
                                               style: GoogleFonts.inter(fontSize: 10.5, color: Colors.amber)),
+                                        ],
+                                        if (it.trackStock) ...[
+                                          Text('•', style: GoogleFonts.inter(fontSize: 10.5, color: Colors.grey)),
+                                          Text(
+                                            it.isOutOfStock
+                                                ? '🔴 Out of Stock (${UnitConversionHelper.formatQuantity(it.stockQuantity, it.unit)})'
+                                                : (it.isLowStock
+                                                    ? '⚠️ Low: ${UnitConversionHelper.formatQuantity(it.stockQuantity, it.unit)}'
+                                                    : '📦 Stock: ${UnitConversionHelper.formatQuantity(it.stockQuantity, it.unit)}'),
+                                            style: GoogleFonts.inter(
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.bold,
+                                              color: it.isOutOfStock
+                                                  ? Colors.redAccent
+                                                  : (it.isLowStock ? Colors.orange : const Color(0xFF10B981)),
+                                            ),
+                                          ),
                                         ],
                                       ],
                                     ),
