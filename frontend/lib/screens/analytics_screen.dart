@@ -440,22 +440,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 final isSel = _selectedPeriod == opt;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(opt),
-                    selected: isSel,
-                    selectedColor: activeColor,
-                    labelStyle: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: isSel ? FontWeight.bold : FontWeight.w600,
-                      color: isSel ? Colors.white : (isDark ? Colors.grey[300] : const Color(0xFF334155)),
-                    ),
-                    backgroundColor: isDark ? const Color(0xFF181B22) : Colors.white,
-                    side: BorderSide(
-                      color: isSel ? activeColor : borderColor,
-                      width: isSel ? 1.5 : 1,
-                    ),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    onSelected: (_) {
+                  child: InkWell(
+                    onTap: () {
                       HapticFeedback.selectionClick();
                       setState(() {
                         _selectedPeriod = opt;
@@ -466,6 +452,26 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         _loadBusinessAnalytics();
                       }
                     },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: isSel ? activeColor : (isDark ? const Color(0xFF181B22) : Colors.white),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isSel ? activeColor : borderColor,
+                          width: isSel ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Text(
+                        opt,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: isSel ? FontWeight.bold : FontWeight.w600,
+                          color: isSel ? Colors.white : (isDark ? Colors.grey[300] : const Color(0xFF334155)),
+                        ),
+                      ),
+                    ),
                   ),
                 );
               }),
@@ -473,84 +479,82 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               // Month & Year Picker Chip (Clean - No Icons/Emojis)
               Padding(
                 padding: const EdgeInsets.only(right: 8),
-                child: ActionChip(
-                  label: Text(
-                    _selectedPeriod.contains('202') || _selectedPeriod.contains('203')
-                        ? _selectedPeriod
-                        : 'Month & Year',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: (_selectedPeriod.contains('202') || _selectedPeriod.contains('203')) ? FontWeight.bold : FontWeight.w600,
-                      color: (_selectedPeriod.contains('202') || _selectedPeriod.contains('203')) ? const Color(0xFF3B82F6) : (isDark ? Colors.grey[300] : const Color(0xFF334155)),
-                    ),
-                  ),
-                  backgroundColor: (_selectedPeriod.contains('202') || _selectedPeriod.contains('203'))
-                      ? const Color(0xFF3B82F6).withValues(alpha: 0.18)
-                      : (isDark ? const Color(0xFF181B22) : Colors.white),
-                  side: BorderSide(
-                    color: (_selectedPeriod.contains('202') || _selectedPeriod.contains('203'))
-                        ? const Color(0xFF3B82F6)
-                        : borderColor,
-                    width: (_selectedPeriod.contains('202') || _selectedPeriod.contains('203')) ? 1.5 : 1,
-                  ),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  onPressed: () {
+                child: InkWell(
+                  onTap: () {
                     HapticFeedback.selectionClick();
                     _showMonthYearPicker();
                   },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: (_selectedPeriod.contains('202') || _selectedPeriod.contains('203'))
+                          ? const Color(0xFF3B82F6).withValues(alpha: 0.18)
+                          : (isDark ? const Color(0xFF181B22) : Colors.white),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: (_selectedPeriod.contains('202') || _selectedPeriod.contains('203'))
+                            ? const Color(0xFF3B82F6)
+                            : borderColor,
+                        width: (_selectedPeriod.contains('202') || _selectedPeriod.contains('203')) ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Text(
+                      _selectedPeriod.contains('202') || _selectedPeriod.contains('203')
+                          ? _selectedPeriod
+                          : 'Month & Year',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: (_selectedPeriod.contains('202') || _selectedPeriod.contains('203')) ? FontWeight.bold : FontWeight.w600,
+                        color: (_selectedPeriod.contains('202') || _selectedPeriod.contains('203')) ? const Color(0xFF3B82F6) : (isDark ? Colors.grey[300] : const Color(0xFF334155)),
+                      ),
+                    ),
+                  ),
                 ),
               ),
 
               // Custom Range Picker Chip (Clean - No Icons/Emojis)
               Padding(
                 padding: const EdgeInsets.only(right: 8),
-                child: ActionChip(
-                  label: Text(
-                    _customDateRange != null && !_selectedPeriod.contains('202') && !_selectedPeriod.contains('203')
-                        ? '${DateFormat('dd MMM').format(_customDateRange!.start)} - ${DateFormat('dd MMM').format(_customDateRange!.end)}'
-                        : 'Custom Range',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: (_customDateRange != null && !_selectedPeriod.contains('202') && !_selectedPeriod.contains('203')) ? FontWeight.bold : FontWeight.w600,
-                      color: (_customDateRange != null && !_selectedPeriod.contains('202') && !_selectedPeriod.contains('203')) ? const Color(0xFF3B82F6) : (isDark ? Colors.grey[300] : const Color(0xFF334155)),
-                    ),
-                  ),
-                  backgroundColor: (_customDateRange != null && !_selectedPeriod.contains('202') && !_selectedPeriod.contains('203'))
-                      ? const Color(0xFF3B82F6).withValues(alpha: 0.18)
-                      : (isDark ? const Color(0xFF181B22) : Colors.white),
-                  side: BorderSide(
-                    color: (_customDateRange != null && !_selectedPeriod.contains('202') && !_selectedPeriod.contains('203'))
-                        ? const Color(0xFF3B82F6)
-                        : borderColor,
-                    width: (_customDateRange != null && !_selectedPeriod.contains('202') && !_selectedPeriod.contains('203')) ? 1.5 : 1,
-                  ),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  onPressed: () {
+                child: InkWell(
+                  onTap: () {
                     HapticFeedback.selectionClick();
                     _pickCustomDateRange();
                   },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: (_customDateRange != null && !_selectedPeriod.contains('202') && !_selectedPeriod.contains('203'))
+                          ? const Color(0xFF3B82F6).withValues(alpha: 0.18)
+                          : (isDark ? const Color(0xFF181B22) : Colors.white),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: (_customDateRange != null && !_selectedPeriod.contains('202') && !_selectedPeriod.contains('203'))
+                            ? const Color(0xFF3B82F6)
+                            : borderColor,
+                        width: (_customDateRange != null && !_selectedPeriod.contains('202') && !_selectedPeriod.contains('203')) ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Text(
+                      _customDateRange != null && !_selectedPeriod.contains('202') && !_selectedPeriod.contains('203')
+                          ? '${DateFormat('dd MMM').format(_customDateRange!.start)} - ${DateFormat('dd MMM').format(_customDateRange!.end)}'
+                          : 'Custom Range',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: (_customDateRange != null && !_selectedPeriod.contains('202') && !_selectedPeriod.contains('203')) ? FontWeight.bold : FontWeight.w600,
+                        color: (_customDateRange != null && !_selectedPeriod.contains('202') && !_selectedPeriod.contains('203')) ? const Color(0xFF3B82F6) : (isDark ? Colors.grey[300] : const Color(0xFF334155)),
+                      ),
+                    ),
+                  ),
                 ),
               ),
 
               // All Time Chip
               Padding(
                 padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  label: const Text('All Time'),
-                  selected: _selectedPeriod == 'All Time',
-                  selectedColor: activeColor,
-                  labelStyle: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: _selectedPeriod == 'All Time' ? FontWeight.bold : FontWeight.w600,
-                    color: _selectedPeriod == 'All Time' ? Colors.white : (isDark ? Colors.grey[300] : const Color(0xFF334155)),
-                  ),
-                  backgroundColor: isDark ? const Color(0xFF181B22) : Colors.white,
-                  side: BorderSide(
-                    color: _selectedPeriod == 'All Time' ? activeColor : borderColor,
-                    width: _selectedPeriod == 'All Time' ? 1.5 : 1,
-                  ),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  onSelected: (_) {
+                child: InkWell(
+                  onTap: () {
                     HapticFeedback.selectionClick();
                     setState(() {
                       _selectedPeriod = 'All Time';
@@ -561,6 +565,26 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       _loadBusinessAnalytics();
                     }
                   },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: _selectedPeriod == 'All Time' ? activeColor : (isDark ? const Color(0xFF181B22) : Colors.white),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: _selectedPeriod == 'All Time' ? activeColor : borderColor,
+                        width: _selectedPeriod == 'All Time' ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Text(
+                      'All Time',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: _selectedPeriod == 'All Time' ? FontWeight.bold : FontWeight.w600,
+                        color: _selectedPeriod == 'All Time' ? Colors.white : (isDark ? Colors.grey[300] : const Color(0xFF334155)),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],

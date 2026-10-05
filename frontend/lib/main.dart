@@ -150,6 +150,24 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     return Consumer<UserProvider>(
       builder: (context, userProvider, _) {
+        // CASE 0: Still checking authentication & session state on startup
+        if (!userProvider.isInitialized) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          return Scaffold(
+            backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+            body: const Center(
+              child: SizedBox(
+                width: 30,
+                height: 30,
+                child: CircularProgressIndicator(
+                  color: Color(0xFF00D09C),
+                  strokeWidth: 2.5,
+                ),
+              ),
+            ),
+          );
+        }
+
         // CASE A: User is not logged in: Route to Login/Register screen
         if (!userProvider.isAuthenticated) {
           return const LoginScreen();

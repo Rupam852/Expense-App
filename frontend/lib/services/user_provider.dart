@@ -33,7 +33,10 @@ class UserProvider with ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.system;
   String _appLanguage = 'en'; // 'en', 'hi', 'bn'
 
+  bool _isInitialized = false;
+
   Map<String, dynamic>? get userProfile => _userProfile;
+  bool get isInitialized => _isInitialized;
   bool get isAuthenticated => _isAuthenticated;
   bool get isLoading => _isLoading;
   bool get biometricsEnabled => _biometricsEnabled;
@@ -190,15 +193,19 @@ class UserProvider with ChangeNotifier {
       final cachedProfileStr = prefs.getString('cached_user_profile');
       if (cachedProfileStr != null) {
         _userProfile = Map<String, dynamic>.from(json.decode(cachedProfileStr));
-        _isAuthenticated = true;
       }
     } catch (_) {}
 
-    // Check Supabase session
+    // Check Supabase session - only authenticate if a real active session exists or guest profile
     final session = _supabase.currentSession;
     if (session != null) {
       _isAuthenticated = true;
       _fetchProfileQuietly();
+    } else if (_userProfile != null && _userProfile!['id'] == 'guest-user-uuid') {
+      _isAuthenticated = true;
+    } else {
+      _isAuthenticated = false;
+      _userProfile = null;
     }
 
     // Listen for auth state changes (login/logout/token-refresh)
@@ -214,6 +221,7 @@ class UserProvider with ChangeNotifier {
       }
     });
 
+    _isInitialized = true;
     notifyListeners();
   }
 
