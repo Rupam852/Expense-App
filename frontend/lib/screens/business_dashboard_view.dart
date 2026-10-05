@@ -769,7 +769,7 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  ...['Today', 'This Week', 'This Month', 'Last Month', 'This Quarter', 'This FY', 'All Time'].map((p) {
+                  ...['Today', 'This Week', 'This Month', 'Last Month'].map((p) {
                     final isSelected = _filterPeriod == p && _customSelectedRange == null;
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
@@ -787,44 +787,43 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                       ),
                     );
                   }),
-                  // Month & Year Picker Chip
+
+                  // Month & Year Picker Chip (Clean - No Icons/Emojis)
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ActionChip(
-                      avatar: const Icon(Icons.calendar_month_rounded, size: 16, color: Color(0xFF3B82F6)),
                       label: Text(
-                        _filterPeriod.contains('202') // If month year formatted like "October 2026"
-                            ? '🗓️ $_filterPeriod'
-                            : 'Month & Year 🗓️',
+                        _filterPeriod.contains('202') || _filterPeriod.contains('203')
+                            ? _filterPeriod
+                            : 'Month & Year',
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: _filterPeriod.contains('202') ? FontWeight.bold : FontWeight.normal,
-                          color: _filterPeriod.contains('202') ? const Color(0xFF3B82F6) : null,
+                          fontWeight: (_filterPeriod.contains('202') || _filterPeriod.contains('203')) ? FontWeight.bold : FontWeight.normal,
+                          color: (_filterPeriod.contains('202') || _filterPeriod.contains('203')) ? const Color(0xFF3B82F6) : null,
                         ),
                       ),
-                      backgroundColor: _filterPeriod.contains('202')
+                      backgroundColor: (_filterPeriod.contains('202') || _filterPeriod.contains('203'))
                           ? const Color(0xFF3B82F6).withValues(alpha: 0.15)
                           : null,
                       onPressed: _showMonthYearPicker,
                     ),
                   ),
 
-                  // Custom Range Picker Chip
+                  // Custom Range Picker Chip (Clean - No Icons/Emojis)
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ActionChip(
-                      avatar: const Icon(Icons.date_range_rounded, size: 16, color: Color(0xFF3B82F6)),
                       label: Text(
-                        _customSelectedRange != null && !_filterPeriod.contains('202')
+                        _customSelectedRange != null && !_filterPeriod.contains('202') && !_filterPeriod.contains('203')
                             ? '${DateFormat('dd MMM').format(_customSelectedRange!.start)} - ${DateFormat('dd MMM').format(_customSelectedRange!.end)}'
-                            : 'Custom Range 📅',
+                            : 'Custom Range',
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: _customSelectedRange != null && !_filterPeriod.contains('202') ? FontWeight.bold : FontWeight.normal,
-                          color: _customSelectedRange != null && !_filterPeriod.contains('202') ? const Color(0xFF3B82F6) : null,
+                          fontWeight: (_customSelectedRange != null && !_filterPeriod.contains('202') && !_filterPeriod.contains('203')) ? FontWeight.bold : FontWeight.normal,
+                          color: (_customSelectedRange != null && !_filterPeriod.contains('202') && !_filterPeriod.contains('203')) ? const Color(0xFF3B82F6) : null,
                         ),
                       ),
-                      backgroundColor: _customSelectedRange != null && !_filterPeriod.contains('202')
+                      backgroundColor: (_customSelectedRange != null && !_filterPeriod.contains('202') && !_filterPeriod.contains('203'))
                           ? const Color(0xFF3B82F6).withValues(alpha: 0.15)
                           : null,
                       onPressed: () async {
@@ -848,6 +847,25 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                       },
                     ),
                   ),
+
+                  ...['This Quarter', 'This FY', 'All Time'].map((p) {
+                    final isSelected = _filterPeriod == p && _customSelectedRange == null;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(p, style: TextStyle(fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                        selected: isSelected,
+                        selectedColor: primaryColor.withValues(alpha: 0.2),
+                        onSelected: (val) {
+                          setState(() {
+                            _filterPeriod = p;
+                            _customSelectedRange = null;
+                          });
+                          _loadDashboardData(isQuiet: true);
+                        },
+                      ),
+                    );
+                  }),
                 ],
               ),
             ),

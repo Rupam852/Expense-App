@@ -470,15 +470,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 );
               }),
 
-              // 🗓️ Month & Year Picker Chip (Identical to Business Dashboard)
+              // Month & Year Picker Chip (Clean - No Icons/Emojis)
               Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: ActionChip(
-                  avatar: const Icon(Icons.calendar_month_rounded, size: 15, color: Color(0xFF3B82F6)),
                   label: Text(
                     _selectedPeriod.contains('202') || _selectedPeriod.contains('203')
-                        ? '🗓️ $_selectedPeriod'
-                        : 'Month & Year 🗓️',
+                        ? _selectedPeriod
+                        : 'Month & Year',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: (_selectedPeriod.contains('202') || _selectedPeriod.contains('203')) ? FontWeight.bold : FontWeight.w600,
@@ -502,15 +501,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 ),
               ),
 
-              // 📅 Custom Range Picker Chip
+              // Custom Range Picker Chip (Clean - No Icons/Emojis)
               Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: ActionChip(
-                  avatar: const Icon(Icons.date_range_rounded, size: 15, color: Color(0xFF3B82F6)),
                   label: Text(
                     _customDateRange != null && !_selectedPeriod.contains('202') && !_selectedPeriod.contains('203')
                         ? '${DateFormat('dd MMM').format(_customDateRange!.start)} - ${DateFormat('dd MMM').format(_customDateRange!.end)}'
-                        : 'Custom Range 📅',
+                        : 'Custom Range',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: (_customDateRange != null && !_selectedPeriod.contains('202') && !_selectedPeriod.contains('203')) ? FontWeight.bold : FontWeight.w600,
