@@ -1940,9 +1940,8 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
     );
 
     if (confirmed == true) {
-      await DatabaseHelper.instance.deleteBusinessSale(sale.id);
       if (mounted) {
-        Provider.of<ExpenseProvider>(context, listen: false).notifyBusinessDataChanged();
+        await Provider.of<ExpenseProvider>(context, listen: false).deleteBusinessSale(sale.id);
         CustomToast.show(context, 'Sale deleted');
         _loadDashboardData(isQuiet: true);
       }
@@ -2059,9 +2058,8 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
         );
       },
       onDismissed: (direction) async {
-        await DatabaseHelper.instance.deleteBusinessSale(sale.id);
         if (mounted) {
-          Provider.of<ExpenseProvider>(context, listen: false).notifyBusinessDataChanged();
+          await Provider.of<ExpenseProvider>(context, listen: false).deleteBusinessSale(sale.id);
           CustomToast.show(context, '🗑️ Invoice #${sale.invoiceNo} deleted');
           _loadDashboardData(isQuiet: true);
         }
@@ -2202,9 +2200,8 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
     );
 
     if (confirmed == true) {
-      await DatabaseHelper.instance.deleteExpense(expense.id);
       if (mounted) {
-        Provider.of<ExpenseProvider>(context, listen: false).notifyBusinessDataChanged();
+        await Provider.of<ExpenseProvider>(context, listen: false).deleteExpense(expense.id);
         CustomToast.show(context, 'Expense deleted');
         _loadDashboardData(isQuiet: true);
       }
@@ -2311,9 +2308,8 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
         );
       },
       onDismissed: (direction) async {
-        await DatabaseHelper.instance.deleteExpense(expense.id);
         if (mounted) {
-          Provider.of<ExpenseProvider>(context, listen: false).notifyBusinessDataChanged();
+          await Provider.of<ExpenseProvider>(context, listen: false).deleteExpense(expense.id);
           CustomToast.show(context, '🗑️ Expense deleted');
           _loadDashboardData(isQuiet: true);
         }

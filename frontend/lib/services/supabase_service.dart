@@ -197,6 +197,7 @@ class SupabaseService {
             .from('expenses')
             .select()
             .eq('user_id', uid)
+            .eq('is_deleted', false)
             .gte('updated_at', lastSyncTime)
             .order('updated_at');
         return List<Map<String, dynamic>>.from(data);
@@ -205,6 +206,7 @@ class SupabaseService {
             .from('expenses')
             .select()
             .eq('user_id', uid)
+            .eq('is_deleted', false)
             .order('updated_at');
         return List<Map<String, dynamic>>.from(data);
       }
@@ -732,6 +734,7 @@ class SupabaseService {
             .from('khata_entries')
             .select()
             .eq('user_id', uid)
+            .eq('is_deleted', false)
             .gte('updated_at', lastSyncTime)
             .order('updated_at');
         return List<Map<String, dynamic>>.from(data);
@@ -740,6 +743,7 @@ class SupabaseService {
             .from('khata_entries')
             .select()
             .eq('user_id', uid)
+            .eq('is_deleted', false)
             .order('updated_at');
         return List<Map<String, dynamic>>.from(data);
       }
@@ -809,6 +813,7 @@ class SupabaseService {
             .from('subscriptions')
             .select()
             .eq('user_id', uid)
+            .eq('is_deleted', false)
             .gte('updated_at', lastSyncTime)
             .order('updated_at');
         return List<Map<String, dynamic>>.from(data);
@@ -817,6 +822,7 @@ class SupabaseService {
             .from('subscriptions')
             .select()
             .eq('user_id', uid)
+            .eq('is_deleted', false)
             .order('updated_at');
         return List<Map<String, dynamic>>.from(data);
       }
@@ -886,6 +892,7 @@ class SupabaseService {
             .from('split_bills')
             .select()
             .eq('user_id', uid)
+            .eq('is_deleted', false)
             .gte('updated_at', lastSyncTime)
             .order('updated_at');
         return List<Map<String, dynamic>>.from(data);
@@ -894,6 +901,7 @@ class SupabaseService {
             .from('split_bills')
             .select()
             .eq('user_id', uid)
+            .eq('is_deleted', false)
             .order('updated_at');
         return List<Map<String, dynamic>>.from(data);
       }
@@ -1235,14 +1243,39 @@ class SupabaseService {
         fetchBusinessProfile(),
       ]).timeout(const Duration(seconds: 15));
 
-      final serverExpenses = pullResults[0] as List<Map<String, dynamic>>;
-      final serverBudgets = pullResults[1] as List<Map<String, dynamic>>;
-      final serverPayments = pullResults[2] as List<Map<String, dynamic>>;
-      final serverKhata = pullResults[3] as List<Map<String, dynamic>>;
-      final serverSubs = pullResults[4] as List<Map<String, dynamic>>;
-      final serverSplits = pullResults[5] as List<Map<String, dynamic>>;
-      final serverBusinessSales = pullResults[6] as List<Map<String, dynamic>>;
-      final serverBusinessItems = pullResults[7] as List<Map<String, dynamic>>;
+      final delExpSet = deletedExpenseIds.toSet();
+      final delBudSet = deletedBudgetIds.toSet();
+      final delPaySet = deletedPaymentDetailIds.toSet();
+      final delKhataSet = deletedKhataIds.toSet();
+      final delSubSet = deletedSubscriptionIds.toSet();
+      final delSplitSet = deletedSplitBillIds.toSet();
+      final delSaleSet = deletedBusinessSaleIds.toSet();
+      final delItemSet = deletedBusinessItemIds.toSet();
+
+      final serverExpenses = (pullResults[0] as List<Map<String, dynamic>>)
+          .where((e) => !delExpSet.contains(e['id']?.toString()))
+          .toList();
+      final serverBudgets = (pullResults[1] as List<Map<String, dynamic>>)
+          .where((b) => !delBudSet.contains(b['id']?.toString()))
+          .toList();
+      final serverPayments = (pullResults[2] as List<Map<String, dynamic>>)
+          .where((p) => !delPaySet.contains(p['id']?.toString()))
+          .toList();
+      final serverKhata = (pullResults[3] as List<Map<String, dynamic>>)
+          .where((k) => !delKhataSet.contains(k['id']?.toString()))
+          .toList();
+      final serverSubs = (pullResults[4] as List<Map<String, dynamic>>)
+          .where((s) => !delSubSet.contains(s['id']?.toString()))
+          .toList();
+      final serverSplits = (pullResults[5] as List<Map<String, dynamic>>)
+          .where((s) => !delSplitSet.contains(s['id']?.toString()))
+          .toList();
+      final serverBusinessSales = (pullResults[6] as List<Map<String, dynamic>>)
+          .where((s) => !delSaleSet.contains(s['id']?.toString()))
+          .toList();
+      final serverBusinessItems = (pullResults[7] as List<Map<String, dynamic>>)
+          .where((i) => !delItemSet.contains(i['id']?.toString()))
+          .toList();
       final serverBusinessProfile = pullResults[8] as Map<String, dynamic>?;
 
       // Store new server time

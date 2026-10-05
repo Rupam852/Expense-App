@@ -1612,9 +1612,17 @@ class DatabaseHelper {
 
   Future<void> syncDownKhataEntries(List<KhataEntry> entries) async {
     final db = await instance.database;
+    final deletedRecords = await db.query(
+      'deleted_records',
+      columns: ['id'],
+      where: 'table_name = ?',
+      whereArgs: ['khata_entries'],
+    );
+    final deletedIds = deletedRecords.map((r) => r['id'] as String).toSet();
+
     await db.transaction((txn) async {
       for (final entry in entries) {
-        if (entry.isDeleted) {
+        if (entry.isDeleted || deletedIds.contains(entry.id)) {
           await txn.delete('khata_entries', where: 'id = ?', whereArgs: [entry.id]);
         } else {
           final map = entry.toMap();
@@ -1664,9 +1672,17 @@ class DatabaseHelper {
 
   Future<void> syncDownSubscriptions(List<SubscriptionItem> items) async {
     final db = await instance.database;
+    final deletedRecords = await db.query(
+      'deleted_records',
+      columns: ['id'],
+      where: 'table_name = ?',
+      whereArgs: ['subscriptions'],
+    );
+    final deletedIds = deletedRecords.map((r) => r['id'] as String).toSet();
+
     await db.transaction((txn) async {
       for (final item in items) {
-        if (item.isDeleted) {
+        if (item.isDeleted || deletedIds.contains(item.id)) {
           await txn.delete('subscriptions', where: 'id = ?', whereArgs: [item.id]);
         } else {
           final map = item.toMap();
@@ -1715,9 +1731,17 @@ class DatabaseHelper {
 
   Future<void> syncDownSplitBills(List<SplitBill> bills) async {
     final db = await instance.database;
+    final deletedRecords = await db.query(
+      'deleted_records',
+      columns: ['id'],
+      where: 'table_name = ?',
+      whereArgs: ['split_bills'],
+    );
+    final deletedIds = deletedRecords.map((r) => r['id'] as String).toSet();
+
     await db.transaction((txn) async {
       for (final bill in bills) {
-        if (bill.isDeleted) {
+        if (bill.isDeleted || deletedIds.contains(bill.id)) {
           await txn.delete('split_bills', where: 'id = ?', whereArgs: [bill.id]);
         } else {
           final map = bill.toMap();
@@ -1746,6 +1770,15 @@ class DatabaseHelper {
   Future<void> syncDownExpenses(List<Expense> expenses) async {
     final db = await instance.database;
     
+    // Check locally deleted records to prevent resurrecting deleted expenses
+    final deletedRecords = await db.query(
+      'deleted_records',
+      columns: ['id'],
+      where: 'table_name = ?',
+      whereArgs: ['expenses'],
+    );
+    final deletedIds = deletedRecords.map((r) => r['id'] as String).toSet();
+
     // Optimisation: load existing synced IDs and their updated_at values to avoid redundant encryption and db writes
     final List<Map<String, dynamic>> localItems = await db.query('expenses', columns: ['id', 'updated_at', 'is_synced']);
     final Map<String, String> existingSynced = {};
@@ -1757,7 +1790,7 @@ class DatabaseHelper {
 
     await db.transaction((txn) async {
       for (final exp in expenses) {
-        if (exp.isDeleted) {
+        if (exp.isDeleted || deletedIds.contains(exp.id)) {
           await txn.delete('expenses', where: 'id = ?', whereArgs: [exp.id]);
         } else {
           // Skip if it exists locally, is marked synced, and has the same updated_at
@@ -1782,6 +1815,14 @@ class DatabaseHelper {
   Future<void> syncDownBudgets(List<Budget> budgets) async {
     final db = await instance.database;
     
+    final deletedRecords = await db.query(
+      'deleted_records',
+      columns: ['id'],
+      where: 'table_name = ?',
+      whereArgs: ['budgets'],
+    );
+    final deletedIds = deletedRecords.map((r) => r['id'] as String).toSet();
+
     // Optimisation: load existing synced IDs and their updated_at values
     final List<Map<String, dynamic>> localItems = await db.query('budgets', columns: ['id', 'updated_at', 'is_synced']);
     final Map<String, String> existingSynced = {};
@@ -1793,7 +1834,7 @@ class DatabaseHelper {
 
     await db.transaction((txn) async {
       for (final bud in budgets) {
-        if (bud.isDeleted) {
+        if (bud.isDeleted || deletedIds.contains(bud.id)) {
           await txn.delete('budgets', where: 'id = ?', whereArgs: [bud.id]);
         } else {
           // Skip if it exists locally, is marked synced, and has the same updated_at
@@ -2348,16 +2389,28 @@ class DatabaseHelper {
 
   Future<void> syncDownBusinessSales(List<BusinessSale> sales) async {
     final db = await instance.database;
+    final deletedRecords = await db.query(
+      'deleted_records',
+      columns: ['id'],
+      where: 'table_name = ?',
+      whereArgs: ['business_sales'],
+    );
+    final deletedIds = deletedRecords.map((r) => r['id'] as String).toSet();
+
     await db.transaction((txn) async {
       for (final s in sales) {
-        final map = s.toMap();
-        map['is_synced'] = 1;
-        map['sync_status'] = 1;
-        await txn.insert(
-          'business_sales',
-          map,
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
+        if (deletedIds.contains(s.id)) {
+          await txn.delete('business_sales', where: 'id = ?', whereArgs: [s.id]);
+        } else {
+          final map = s.toMap();
+          map['is_synced'] = 1;
+          map['sync_status'] = 1;
+          await txn.insert(
+            'business_sales',
+            map,
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
       }
     });
   }
@@ -2569,16 +2622,28 @@ class DatabaseHelper {
 
   Future<void> syncDownBusinessItems(List<BusinessItem> items) async {
     final db = await instance.database;
+    final deletedRecords = await db.query(
+      'deleted_records',
+      columns: ['id'],
+      where: 'table_name = ?',
+      whereArgs: ['business_items'],
+    );
+    final deletedIds = deletedRecords.map((r) => r['id'] as String).toSet();
+
     await db.transaction((txn) async {
       for (final it in items) {
-        final map = it.toMap();
-        map['sync_status'] = 1;
-        map['is_synced'] = 1;
-        await txn.insert(
-          'business_items',
-          map,
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
+        if (deletedIds.contains(it.id)) {
+          await txn.delete('business_items', where: 'id = ?', whereArgs: [it.id]);
+        } else {
+          final map = it.toMap();
+          map['sync_status'] = 1;
+          map['is_synced'] = 1;
+          await txn.insert(
+            'business_items',
+            map,
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
       }
     });
   }

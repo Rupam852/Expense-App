@@ -323,7 +323,7 @@ class _CloudBackupScreenState extends State<CloudBackupScreen> {
                                     .where((s) => DateFormat('yyyy-MM').format(s.saleDate) == monthStr)
                                     .toList();
                                 for (var sale in salesToDelete) {
-                                  await DatabaseHelper.instance.deleteBusinessSale(sale.id);
+                                  await expenseProvider.deleteBusinessSale(sale.id);
                                 }
                                 if (context.mounted) {
                                   CustomToast.show(

@@ -743,9 +743,8 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
     );
 
     if (confirmed == true) {
-      await DatabaseHelper.instance.deleteBusinessSale(sale.id);
       if (mounted) {
-        Provider.of<ExpenseProvider>(context, listen: false).notifyBusinessDataChanged();
+        await Provider.of<ExpenseProvider>(context, listen: false).deleteBusinessSale(sale.id);
         CustomToast.show(context, 'Sale deleted');
         _loadBusinessData(isQuiet: true);
       }
@@ -1485,9 +1484,8 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
                     ),
                   );
                   if (conf == true) {
-                    await DatabaseHelper.instance.deleteExpense(exp.id);
                     if (mounted) {
-                      Provider.of<ExpenseProvider>(context, listen: false).notifyBusinessDataChanged();
+                      await Provider.of<ExpenseProvider>(context, listen: false).deleteExpense(exp.id);
                       _loadBusinessData(isQuiet: true);
                     }
                   }
