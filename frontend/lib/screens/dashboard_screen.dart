@@ -298,26 +298,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     // Check and trigger month rollover dialog if needed
-    final bool rolloverPrompted = await _checkMonthRolloverAndPrompt();
-    if (!mounted) return;
-
-    // If rollover was prompted, we skip the API prompt to avoid stacked overlapping dialogs.
-    // If not, we check and trigger the Gemini API Key prompt.
-    if (!rolloverPrompted) {
-      // Auto-check for updates on launch if enabled
-      final updateService = AppUpdateService.instance;
-      if (updateService.autoCheckEnabled) {
-        final updateInfo = await updateService.checkForUpdates();
-        if (mounted && updateInfo != null && updateInfo.hasUpdate) {
-          // 1. Show phone status bar notification with App Logo
-          await NotificationService.instance.showUpdateNotification(updateInfo);
-          // 2. Show in-app update prompt dialog
-          if (mounted) {
-            showAppUpdatePromptDialog(context, updateInfo);
-          }
-        }
-      }
-    }
+    await _checkMonthRolloverAndPrompt();
   }
 
   void _showMonthRolloverDialog(

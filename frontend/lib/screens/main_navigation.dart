@@ -18,6 +18,9 @@ import 'ai_advisor_screen.dart';
 import '../widgets/voice_expense_dialog.dart';
 import '../widgets/monthly_rollover_dialog.dart';
 import '../services/connectivity_service.dart';
+import '../services/app_update_service.dart';
+import 'app_update_screen.dart';
+import '../services/notification_service.dart';
 import '../utils/app_strings.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -73,6 +76,22 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
       if (mounted) {
         await MonthlyRolloverDialog.checkAndShowRollover(context);
       }
+
+      // Auto-check for updates on launch (Runs seamlessly in BOTH Personal & Business Mode!)
+      try {
+        final updateService = AppUpdateService.instance;
+        if (updateService.autoCheckEnabled) {
+          final updateInfo = await updateService.checkForUpdates();
+          if (mounted && updateInfo != null && updateInfo.hasUpdate) {
+            // 1. Show phone status bar notification with App Logo
+            await NotificationService.instance.showUpdateNotification(updateInfo);
+            // 2. Show in-app update prompt dialog
+            if (mounted) {
+              showAppUpdatePromptDialog(context, updateInfo);
+            }
+          }
+        }
+      } catch (_) {}
     });
   }
 
