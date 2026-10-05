@@ -90,6 +90,21 @@ class _VoiceExpenseDialogState extends State<VoiceExpenseDialog>
         setState(() {
           _selectedLocale = saved;
         });
+      } else if (mounted) {
+        final appLang = Provider.of<UserProvider>(context, listen: false).appLanguage;
+        final localeMap = {
+          'hi': 'hi_IN',
+          'bn': 'bn_IN',
+          'en': 'en_IN',
+          'gu': 'gu_IN',
+          'mr': 'mr_IN',
+          'ta': 'ta_IN',
+          'te': 'te_IN',
+          'kn': 'kn_IN',
+        };
+        setState(() {
+          _selectedLocale = localeMap[appLang] ?? 'en_IN';
+        });
       }
     } catch (_) {}
   }

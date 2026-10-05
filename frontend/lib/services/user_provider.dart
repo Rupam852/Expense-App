@@ -75,34 +75,45 @@ class UserProvider with ChangeNotifier {
       // Synchronize notification language
       await NotificationService.instance.setNotificationLanguage(langCode);
 
-      // Synchronize AI Chat response language
+      // Synchronize AI Chat response language and speech locale
       String aiLang = 'English';
+      String localeCode = 'en_IN';
       switch (langCode) {
         case 'hi':
           aiLang = 'Hindi';
+          localeCode = 'hi_IN';
           break;
         case 'bn':
           aiLang = 'Bengali';
+          localeCode = 'bn_IN';
           break;
         case 'mr':
           aiLang = 'Marathi';
+          localeCode = 'mr_IN';
           break;
         case 'gu':
           aiLang = 'Gujarati';
+          localeCode = 'gu_IN';
           break;
         case 'ta':
           aiLang = 'Tamil';
+          localeCode = 'ta_IN';
           break;
         case 'te':
           aiLang = 'Telugu';
+          localeCode = 'te_IN';
           break;
         case 'kn':
           aiLang = 'Kannada';
+          localeCode = 'kn_IN';
           break;
         default:
           aiLang = 'English';
+          localeCode = 'en_IN';
       }
       await AiConfigService.instance.setResponseLanguage(aiLang);
+      await prefs.setString('calc_hub_voice_lang_code', localeCode);
+      await prefs.setString('preferred_voice_stt_locale', localeCode);
     } catch (e) {
       debugPrint('[UserProvider] Error saving app language: $e');
     }
@@ -223,6 +234,35 @@ class UserProvider with ChangeNotifier {
 
       _appLanguage = prefs.getString('app_display_language') ?? 'en';
       NotificationService.instance.setNotificationLanguage(_appLanguage);
+
+      // Auto-sync AI response language on boot
+      String aiLang = 'English';
+      switch (_appLanguage) {
+        case 'hi':
+          aiLang = 'Hindi';
+          break;
+        case 'bn':
+          aiLang = 'Bengali';
+          break;
+        case 'mr':
+          aiLang = 'Marathi';
+          break;
+        case 'gu':
+          aiLang = 'Gujarati';
+          break;
+        case 'ta':
+          aiLang = 'Tamil';
+          break;
+        case 'te':
+          aiLang = 'Telugu';
+          break;
+        case 'kn':
+          aiLang = 'Kannada';
+          break;
+        default:
+          aiLang = 'English';
+      }
+      AiConfigService.instance.setResponseLanguage(aiLang);
 
       _userGeminiApiKey = prefs.getString('user_gemini_api_key');
       final cachedProfileStr = prefs.getString('cached_user_profile');

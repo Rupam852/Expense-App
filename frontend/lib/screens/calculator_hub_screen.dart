@@ -1009,20 +1009,43 @@ class _CalculatorHubScreenState extends State<CalculatorHubScreen>
     );
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final appLang = Provider.of<UserProvider>(context).appLanguage;
+    final localeMap = {
+      'hi': 'hi_IN',
+      'bn': 'bn_IN',
+      'en': 'en_IN',
+      'mr': 'mr_IN',
+      'gu': 'gu_IN',
+      'ta': 'ta_IN',
+      'te': 'te_IN',
+      'kn': 'kn_IN',
+    };
+    final expected = localeMap[appLang] ?? 'en_IN';
+    if (_selectedLangCode != expected) {
+      _selectedLangCode = expected;
+    }
+  }
+
   Future<void> _loadLanguagePreference() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString(kPrefCalcVoiceLang);
-    if (saved != null && mounted) {
-      setState(() => _selectedLangCode = saved);
-    } else if (mounted) {
-      final appLang = Provider.of<UserProvider>(context, listen: false).appLanguage;
-      if (appLang == 'hi') {
-        setState(() => _selectedLangCode = 'hi_IN');
-      } else if (appLang == 'bn') {
-        setState(() => _selectedLangCode = 'bn_IN');
-      } else {
-        setState(() => _selectedLangCode = 'en_IN');
-      }
+    final appLang = Provider.of<UserProvider>(context, listen: false).appLanguage;
+    final localeMap = {
+      'hi': 'hi_IN',
+      'bn': 'bn_IN',
+      'en': 'en_IN',
+      'mr': 'mr_IN',
+      'gu': 'gu_IN',
+      'ta': 'ta_IN',
+      'te': 'te_IN',
+      'kn': 'kn_IN',
+    };
+    final defaultCode = localeMap[appLang] ?? 'en_IN';
+    if (mounted) {
+      setState(() => _selectedLangCode = saved ?? defaultCode);
     }
   }
 
@@ -1036,6 +1059,21 @@ class _CalculatorHubScreenState extends State<CalculatorHubScreen>
         orElse: () => kSupportedCalcVoiceLanguages.first,
       );
       CustomToast.show(context, 'Language set to ${lang.name} (${lang.nativeName}) ${lang.flag}');
+      
+      // Also synchronize app language if mapped
+      final revMap = {
+        'hi_IN': 'hi',
+        'bn_IN': 'bn',
+        'en_IN': 'en',
+        'mr_IN': 'mr',
+        'gu_IN': 'gu',
+        'ta_IN': 'ta',
+        'te_IN': 'te',
+        'kn_IN': 'kn',
+      };
+      if (revMap.containsKey(newCode)) {
+        Provider.of<UserProvider>(context, listen: false).setAppLanguage(revMap[newCode]!);
+      }
     }
   }
 
