@@ -18,6 +18,11 @@ class NotificationSettingsScreen extends StatelessWidget {
       {'code': 'en', 'title': 'English', 'native': 'Default English', 'icon': '🇮🇳'},
       {'code': 'hi', 'title': 'Hindi', 'native': 'हिंदी (Hindi)', 'icon': '🇮🇳'},
       {'code': 'bn', 'title': 'Bengali', 'native': 'বাংলা (Bengali)', 'icon': '🇮🇳'},
+      {'code': 'mr', 'title': 'Marathi', 'native': 'मराठी (Marathi)', 'icon': '🇮🇳'},
+      {'code': 'gu', 'title': 'Gujarati', 'native': 'ગુજરાતી (Gujarati)', 'icon': '🇮🇳'},
+      {'code': 'ta', 'title': 'Tamil', 'native': 'தமிழ் (Tamil)', 'icon': '🇮🇳'},
+      {'code': 'te', 'title': 'Telugu', 'native': 'తెలుగు (Telugu)', 'icon': '🇮🇳'},
+      {'code': 'kn', 'title': 'Kannada', 'native': 'ಕನ್ನಡ (Kannada)', 'icon': '🇮🇳'},
       {'code': 'hinglish', 'title': 'Hinglish', 'native': 'Hindi in English Script', 'icon': '🇮🇳'},
     ];
 

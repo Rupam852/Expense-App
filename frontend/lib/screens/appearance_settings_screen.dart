@@ -257,6 +257,101 @@ class AppearanceSettingsScreen extends StatelessWidget {
               borderColor: borderColor,
               primaryColor: primaryColor,
             ),
+            const SizedBox(height: 10),
+
+            _buildLanguageCard(
+              context: context,
+              title: 'मराठी (Marathi)',
+              nativeTitle: 'संपूर्ण ॲप मराठी भाषेत',
+              flagEmoji: '🇮🇳',
+              code: 'mr',
+              isSelected: currentLang == 'mr',
+              onTap: () {
+                HapticFeedback.selectionClick();
+                userProvider.setAppLanguage('mr');
+                CustomToast.show(context, 'ॲपची भाषा मराठी सेट केली आहे 🇮🇳');
+              },
+              isDark: isDark,
+              cardBg: cardBg,
+              borderColor: borderColor,
+              primaryColor: primaryColor,
+            ),
+            const SizedBox(height: 10),
+
+            _buildLanguageCard(
+              context: context,
+              title: 'ગુજરાતી (Gujarati)',
+              nativeTitle: 'સંપૂર્ણ એપ ગુજરાતી ભાષામાં',
+              flagEmoji: '🇮🇳',
+              code: 'gu',
+              isSelected: currentLang == 'gu',
+              onTap: () {
+                HapticFeedback.selectionClick();
+                userProvider.setAppLanguage('gu');
+                CustomToast.show(context, 'ઍપની ભાષા ગુજરાતી સેટ થઈ ગઈ 🇮🇳');
+              },
+              isDark: isDark,
+              cardBg: cardBg,
+              borderColor: borderColor,
+              primaryColor: primaryColor,
+            ),
+            const SizedBox(height: 10),
+
+            _buildLanguageCard(
+              context: context,
+              title: 'தமிழ் (Tamil)',
+              nativeTitle: 'முழு பயன்பாடும் தமிழில்',
+              flagEmoji: '🇮🇳',
+              code: 'ta',
+              isSelected: currentLang == 'ta',
+              onTap: () {
+                HapticFeedback.selectionClick();
+                userProvider.setAppLanguage('ta');
+                CustomToast.show(context, 'பயன்பாட்டு மொழி தமிழில் அமைக்கப்பட்டது 🇮🇳');
+              },
+              isDark: isDark,
+              cardBg: cardBg,
+              borderColor: borderColor,
+              primaryColor: primaryColor,
+            ),
+            const SizedBox(height: 10),
+
+            _buildLanguageCard(
+              context: context,
+              title: 'తెలుగు (Telugu)',
+              nativeTitle: 'పూర్తి యాప్ తెలుగు భాషలో',
+              flagEmoji: '🇮🇳',
+              code: 'te',
+              isSelected: currentLang == 'te',
+              onTap: () {
+                HapticFeedback.selectionClick();
+                userProvider.setAppLanguage('te');
+                CustomToast.show(context, 'యాప్ భాష తెలుగుగా సెట్ చేయబడింది 🇮🇳');
+              },
+              isDark: isDark,
+              cardBg: cardBg,
+              borderColor: borderColor,
+              primaryColor: primaryColor,
+            ),
+            const SizedBox(height: 10),
+
+            _buildLanguageCard(
+              context: context,
+              title: 'ಕನ್ನಡ (Kannada)',
+              nativeTitle: 'ಸಂಪೂರ್ಣ ಅಪ್ಲಿಕೇಶನ್ ಕನ್ನಡದಲ್ಲಿ',
+              flagEmoji: '🇮🇳',
+              code: 'kn',
+              isSelected: currentLang == 'kn',
+              onTap: () {
+                HapticFeedback.selectionClick();
+                userProvider.setAppLanguage('kn');
+                CustomToast.show(context, 'ಅಪ್ಲಿಕೇಶನ್ ಭಾಷೆಯನ್ನು ಕನ್ನಡಕ್ಕೆ ಹೊಂದಿಸಲಾಗಿದೆ 🇮🇳');
+              },
+              isDark: isDark,
+              cardBg: cardBg,
+              borderColor: borderColor,
+              primaryColor: primaryColor,
+            ),
 
             const SizedBox(height: 28),
 

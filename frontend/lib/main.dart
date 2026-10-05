@@ -76,6 +76,11 @@ class GrowExpenseApp extends StatelessWidget {
             Locale('en', 'US'),
             Locale('hi', 'IN'),
             Locale('bn', 'IN'),
+            Locale('mr', 'IN'),
+            Locale('gu', 'IN'),
+            Locale('ta', 'IN'),
+            Locale('te', 'IN'),
+            Locale('kn', 'IN'),
           ],
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,

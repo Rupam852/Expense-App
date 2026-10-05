@@ -485,6 +485,81 @@ class SettingsScreen extends StatelessWidget {
                 isDark: isDark,
                 primaryColor: primaryColor,
               ),
+              const SizedBox(height: 8),
+              _buildLanguageOptionTile(
+                context: ctx,
+                title: '🇮🇳 मराठी (Marathi)',
+                subtitle: 'मराठी इंटरफेस आणि AI प्रतिसाद',
+                code: 'mr',
+                isSelected: currentLang == 'mr',
+                onTap: () {
+                  userProvider.setAppLanguage('mr');
+                  Navigator.of(ctx).pop();
+                  CustomToast.show(context, 'ॲपची भाषा मराठी सेट केली आहे 🇮🇳');
+                },
+                isDark: isDark,
+                primaryColor: primaryColor,
+              ),
+              const SizedBox(height: 8),
+              _buildLanguageOptionTile(
+                context: ctx,
+                title: '🇮🇳 ગુજરાતી (Gujarati)',
+                subtitle: 'ગુજરાતી ઇન્ટરફેસ અને AI પ્રતિસાદ',
+                code: 'gu',
+                isSelected: currentLang == 'gu',
+                onTap: () {
+                  userProvider.setAppLanguage('gu');
+                  Navigator.of(ctx).pop();
+                  CustomToast.show(context, 'ઍપની ભાષા ગુજરાતી સેટ થઈ ગઈ 🇮🇳');
+                },
+                isDark: isDark,
+                primaryColor: primaryColor,
+              ),
+              const SizedBox(height: 8),
+              _buildLanguageOptionTile(
+                context: ctx,
+                title: '🇮🇳 தமிழ் (Tamil)',
+                subtitle: 'தமிழ் இடைமுகம் மற்றும் AI பதில்கள்',
+                code: 'ta',
+                isSelected: currentLang == 'ta',
+                onTap: () {
+                  userProvider.setAppLanguage('ta');
+                  Navigator.of(ctx).pop();
+                  CustomToast.show(context, 'பயன்பாட்டு மொழி தமிழில் அமைக்கப்பட்டது 🇮🇳');
+                },
+                isDark: isDark,
+                primaryColor: primaryColor,
+              ),
+              const SizedBox(height: 8),
+              _buildLanguageOptionTile(
+                context: ctx,
+                title: '🇮🇳 తెలుగు (Telugu)',
+                subtitle: 'తెలుగు ఇంటర్‌ఫేస్ మరియు AI స్పందనలు',
+                code: 'te',
+                isSelected: currentLang == 'te',
+                onTap: () {
+                  userProvider.setAppLanguage('te');
+                  Navigator.of(ctx).pop();
+                  CustomToast.show(context, 'యాప్ భాష తెలుగుగా సెట్ చేయబడింది 🇮🇳');
+                },
+                isDark: isDark,
+                primaryColor: primaryColor,
+              ),
+              const SizedBox(height: 8),
+              _buildLanguageOptionTile(
+                context: ctx,
+                title: '🇮🇳 ಕನ್ನಡ (Kannada)',
+                subtitle: 'ಕನ್ನಡ ಇಂಟರ್‌ಫೇಸ್ ಮತ್ತು AI ಪ್ರತಿಕ್ರಿಯೆಗಳು',
+                code: 'kn',
+                isSelected: currentLang == 'kn',
+                onTap: () {
+                  userProvider.setAppLanguage('kn');
+                  Navigator.of(ctx).pop();
+                  CustomToast.show(context, 'ಅಪ್ಲಿಕೇಶನ್ ಭಾಷೆಯನ್ನು ಕನ್ನಡಕ್ಕೆ ಹೊಂದಿಸಲಾಗಿದೆ 🇮🇳');
+                },
+                isDark: isDark,
+                primaryColor: primaryColor,
+              ),
               const SizedBox(height: 12),
             ],
           ),
