@@ -852,7 +852,7 @@ class AppStrings {
         return '🇮🇳 বাংলা (Bengali)';
       case 'en':
       default:
-        return '🇬🇧 English (Default)';
+        return '🇮🇳 English (Default)';
     }
   }
 }

@@ -206,13 +206,13 @@ class AppearanceSettingsScreen extends StatelessWidget {
               context: context,
               title: 'English (Default)',
               nativeTitle: 'English Interface & AI',
-              flagEmoji: '🇬🇧',
+              flagEmoji: '🇮🇳',
               code: 'en',
               isSelected: currentLang == 'en',
               onTap: () {
                 HapticFeedback.selectionClick();
                 userProvider.setAppLanguage('en');
-                CustomToast.show(context, 'App language set to English 🇬🇧');
+                CustomToast.show(context, 'App language set to English 🇮🇳');
               },
               isDark: isDark,
               cardBg: cardBg,

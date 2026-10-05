@@ -15,7 +15,7 @@ class NotificationSettingsScreen extends StatelessWidget {
     final currentLang = notifService.notificationLanguage;
 
     final languages = [
-      {'code': 'en', 'title': 'English', 'native': 'Default English', 'icon': '🇬🇧'},
+      {'code': 'en', 'title': 'English', 'native': 'Default English', 'icon': '🇮🇳'},
       {'code': 'hi', 'title': 'Hindi', 'native': 'हिंदी (Hindi)', 'icon': '🇮🇳'},
       {'code': 'bn', 'title': 'Bengali', 'native': 'বাংলা (Bengali)', 'icon': '🇮🇳'},
       {'code': 'hinglish', 'title': 'Hinglish', 'native': 'Hindi in English Script', 'icon': '🇮🇳'},

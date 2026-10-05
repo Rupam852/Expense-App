@@ -443,14 +443,14 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 16),
               _buildLanguageOptionTile(
                 context: ctx,
-                title: '🇬🇧 English (Default)',
+                title: '🇮🇳 English (Default)',
                 subtitle: 'Standard English interface & AI responses',
                 code: 'en',
                 isSelected: currentLang == 'en',
                 onTap: () {
                   userProvider.setAppLanguage('en');
                   Navigator.of(ctx).pop();
-                  CustomToast.show(context, 'App language set to English 🇬🇧');
+                  CustomToast.show(context, 'App language set to English 🇮🇳');
                 },
                 isDark: isDark,
                 primaryColor: primaryColor,
