@@ -100,7 +100,7 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          isBusiness ? '🏢 Business Khata & Udhar Ledger' : 'Personal Khata Book',
+          isBusiness ? '🏢 ${AppStrings.tr(context, 'khata_title')}' : AppStrings.tr(context, 'tab_khata'),
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         elevation: 0,
@@ -274,7 +274,7 @@ class _KhataScreenState extends State<KhataScreen> with SingleTickerProviderStat
         backgroundColor: primaryColor,
         icon: const Icon(Icons.add_rounded, color: Colors.white),
         label: Text(
-          isBusiness ? 'Add Customer Udhar' : 'Add Khata',
+          isBusiness ? AppStrings.tr(context, 'khata_add_udhar') : AppStrings.tr(context, 'add'),
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
         ),
       ),

@@ -1139,21 +1139,21 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
             const SizedBox(height: 18),
 
             // ── QUICK ACTIONS GRID ─────────────────────────────
-            Text('Business Quick Actions', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(AppStrings.tr(context, 'quick_actions'), style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
             Row(
               children: [
                 _buildActionButton(
-                  label: 'Add Entry',
-                  subtitle: 'Sale / Exp',
+                  label: AppStrings.tr(context, 'biz_add_entry'),
+                  subtitle: AppStrings.tr(context, 'biz_entry_sub'),
                   icon: Icons.add_circle_outline_rounded,
                   color: primaryColor,
                   onTap: _showAddEntryBottomSheet,
                 ),
                 const SizedBox(width: 8),
                 _buildActionButton(
-                  label: 'Invoices',
-                  subtitle: 'Bills & Tax',
+                  label: AppStrings.tr(context, 'biz_invoices'),
+                  subtitle: AppStrings.tr(context, 'biz_invoices_sub'),
                   icon: Icons.receipt_long_rounded,
                   color: const Color(0xFF8B5CF6),
                   onTap: () async {
@@ -1165,8 +1165,8 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                 ),
                 const SizedBox(width: 8),
                 _buildActionButton(
-                  label: 'Khata Book',
-                  subtitle: 'Udhar & Dues',
+                  label: AppStrings.tr(context, 'biz_khata_book'),
+                  subtitle: AppStrings.tr(context, 'biz_khata_sub'),
                   icon: Icons.menu_book_rounded,
                   color: const Color(0xFFF59E0B),
                   onTap: () async {
@@ -1178,8 +1178,8 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
                 ),
                 const SizedBox(width: 8),
                 _buildActionButton(
-                  label: 'More Tools',
-                  subtitle: 'Labels & Calc',
+                  label: AppStrings.tr(context, 'biz_more_tools'),
+                  subtitle: AppStrings.tr(context, 'biz_tools_sub'),
                   icon: Icons.grid_view_rounded,
                   color: const Color(0xFF10B981),
                   onTap: _showMoreBusinessToolsModal,
@@ -1192,8 +1192,8 @@ class _BusinessDashboardViewState extends State<BusinessDashboardView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Recent Transactions', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
-                Text('Cash Flow Activity', style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey)),
+                Text(AppStrings.tr(context, 'recent_transactions'), style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
+                Text(AppStrings.tr(context, 'biz_cash_flow_activity'), style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey)),
               ],
             ),
             const SizedBox(height: 10),

@@ -16,6 +16,7 @@ import '../services/expense_provider.dart';
 import '../services/barcode_label_service.dart';
 import '../widgets/custom_toast.dart';
 import '../widgets/barcode_scanner_modal.dart';
+import '../utils/app_strings.dart';
 
 class BarcodeLabelGeneratorScreen extends StatefulWidget {
   final BusinessItem? initialItem;
@@ -722,7 +723,7 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
       backgroundColor: isDark ? const Color(0xFF0F1115) : const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Text(
-          'Barcode & QR Label Maker',
+          AppStrings.tr(context, 'barcode_generator_title'),
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         elevation: 0,
@@ -734,10 +735,10 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
           unselectedLabelColor: Colors.grey,
           labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
           tabs: [
-            const Tab(icon: Icon(Icons.qr_code_2_rounded, size: 20), text: 'Create Labels'),
+            Tab(icon: const Icon(Icons.qr_code_2_rounded, size: 20), text: AppStrings.tr(context, 'barcode_tab_generate')),
             Tab(
               icon: const Icon(Icons.history_rounded, size: 20),
-              text: 'History (${_savedBatches.length})',
+              text: '${AppStrings.tr(context, 'barcode_tab_history')} (${_savedBatches.length})',
             ),
           ],
         ),
@@ -1175,7 +1176,7 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 dense: true,
-                title: const Text('Show Shop Name on label', style: TextStyle(fontSize: 13)),
+                title: Text(AppStrings.tr(context, 'barcode_show_shop_toggle'), style: const TextStyle(fontSize: 13)),
                 value: _showShopName,
                 activeColor: const Color(0xFF00D09C),
                 onChanged: (val) => setState(() => _showShopName = val),
@@ -1183,7 +1184,7 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 dense: true,
-                title: const Text('Show Selling Price (MRP: ₹XXX)', style: TextStyle(fontSize: 13)),
+                title: Text(AppStrings.tr(context, 'barcode_show_price_toggle'), style: const TextStyle(fontSize: 13)),
                 value: _showPrice,
                 activeColor: const Color(0xFF00D09C),
                 onChanged: (val) => setState(() => _showPrice = val),
@@ -1191,7 +1192,7 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 dense: true,
-                title: const Text('Show Barcode Number digits under code', style: TextStyle(fontSize: 13)),
+                title: Text(AppStrings.tr(context, 'barcode_show_code_toggle'), style: const TextStyle(fontSize: 13)),
                 value: _showBarcodeText,
                 activeColor: const Color(0xFF00D09C),
                 onChanged: (val) => setState(() => _showBarcodeText = val),
@@ -1199,7 +1200,7 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 dense: true,
-                title: const Text('Show Dashed Scissors Cutting Borders', style: TextStyle(fontSize: 13)),
+                title: Text(AppStrings.tr(context, 'barcode_show_cut_toggle'), style: const TextStyle(fontSize: 13)),
                 value: _showCutBorders,
                 activeColor: const Color(0xFF00D09C),
                 onChanged: (val) => setState(() => _showCutBorders = val),
@@ -1221,7 +1222,7 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
                   ),
                   onPressed: _isGenerating ? null : _handlePreviewOnly,
                   icon: const Icon(Icons.visibility_outlined, size: 18),
-                  label: Text('Preview', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
+                  label: Text(AppStrings.tr(context, 'barcode_preview_btn'), style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
                 ),
               ),
               const SizedBox(width: 8),
@@ -1237,7 +1238,7 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
                   ),
                   onPressed: _isGenerating ? null : _handleDirectSaveOnly,
                   icon: const Icon(Icons.bookmark_add_outlined, size: 18),
-                  label: Text('Save Only', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
+                  label: Text(AppStrings.tr(context, 'barcode_save_history'), style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13)),
                 ),
               ),
               const SizedBox(width: 8),
@@ -1258,7 +1259,7 @@ class _BarcodeLabelGeneratorScreenState extends State<BarcodeLabelGeneratorScree
                       ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                       : const Icon(Icons.print_rounded, size: 18),
                   label: Text(
-                    _isGenerating ? 'Processing...' : 'Print / Export',
+                    _isGenerating ? 'Processing...' : AppStrings.tr(context, 'barcode_print_pdf'),
                     style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13.5),
                   ),
                 ),

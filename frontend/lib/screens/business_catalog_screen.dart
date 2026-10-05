@@ -5,6 +5,7 @@ import '../models/business_item.dart';
 import '../services/expense_provider.dart';
 import '../widgets/custom_toast.dart';
 import '../widgets/barcode_scanner_modal.dart';
+import '../utils/app_strings.dart';
 import 'barcode_label_generator_screen.dart';
 
 class BusinessCatalogScreen extends StatefulWidget {
@@ -449,7 +450,7 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Sales Items & Catalog',
+              AppStrings.tr(context, 'catalog_title'),
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -476,7 +477,7 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
             },
           ),
           IconButton(
-            tooltip: 'Add New Item',
+            tooltip: AppStrings.tr(context, 'catalog_add_new'),
             icon: const Icon(Icons.add_circle_outline, color: _businessBlue, size: 26),
             onPressed: () => _showItemEditorSheet(context),
           ),
@@ -488,7 +489,7 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add, size: 20),
         label: Text(
-          'Add Item / Service',
+          AppStrings.tr(context, 'catalog_add_new'),
           style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
         ),
         onPressed: () => _showItemEditorSheet(context),
@@ -510,7 +511,7 @@ class _BusinessCatalogScreenState extends State<BusinessCatalogScreen> {
                 controller: _searchController,
                 style: GoogleFonts.inter(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
                 decoration: InputDecoration(
-                  hintText: 'Search items, category or barcode...',
+                  hintText: AppStrings.tr(context, 'catalog_search'),
                   hintStyle: GoogleFonts.inter(fontSize: 13, color: isDark ? Colors.white38 : Colors.black38),
                   prefixIcon: Icon(Icons.search, color: isDark ? Colors.white60 : Colors.black45, size: 20),
                   suffixIcon: _searchQuery.isNotEmpty

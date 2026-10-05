@@ -14,6 +14,7 @@ import '../models/business_sale.dart';
 import '../models/business_profile.dart';
 import '../utils/business_export_helper.dart';
 import '../widgets/custom_toast.dart';
+import '../utils/app_strings.dart';
 import 'add_business_sale_screen.dart';
 import 'expense_entry_screen.dart';
 
@@ -1059,7 +1060,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Invoices & Tax Reports', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20)),
+        title: Text(AppStrings.tr(context, 'tab_invoices'), style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20)),
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: primaryColor,
@@ -1067,10 +1068,10 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
           labelColor: primaryColor,
           unselectedLabelColor: Colors.grey,
           labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
-          tabs: const [
-            Tab(icon: Icon(Icons.receipt_long_rounded, size: 20), text: 'Sales Bills'),
-            Tab(icon: Icon(Icons.payment_rounded, size: 20), text: 'Expense Vouchers'),
-            Tab(icon: Icon(Icons.assessment_rounded, size: 20), text: 'Tax & P&L Report'),
+          tabs: [
+            Tab(icon: const Icon(Icons.receipt_long_rounded, size: 20), text: AppStrings.tr(context, 'inv_sales_invoices')),
+            Tab(icon: const Icon(Icons.payment_rounded, size: 20), text: AppStrings.tr(context, 'inv_expense_vouchers')),
+            Tab(icon: const Icon(Icons.assessment_rounded, size: 20), text: AppStrings.tr(context, 'inv_tax_pnl')),
           ],
         ),
       ),
@@ -1120,7 +1121,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
                     if (res == true) _loadBusinessData();
                   },
                   icon: const Icon(Icons.add_shopping_cart_rounded, size: 18),
-                  label: const Text('New Customer Bill / Invoice'),
+                  label: Text(AppStrings.tr(context, 'inv_new_bill')),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     foregroundColor: Colors.white,
@@ -1137,7 +1138,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
           TextField(
             onChanged: (v) => setState(() => _saleSearchQuery = v),
             decoration: InputDecoration(
-              hintText: 'Search by customer, invoice #, phone...',
+              hintText: AppStrings.tr(context, 'inv_search_hint'),
               prefixIcon: const Icon(Icons.search, size: 20),
               isDense: true,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -1263,7 +1264,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
                   OutlinedButton.icon(
                     onPressed: () => _viewCustomerInvoicePdf(sale),
                     icon: const Icon(Icons.picture_as_pdf_rounded, size: 16, color: Colors.blueAccent),
-                    label: const Text('View PDF', style: TextStyle(fontSize: 11)),
+                    label: Text(AppStrings.tr(context, 'inv_view_pdf'), style: const TextStyle(fontSize: 11)),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       minimumSize: Size.zero,
@@ -1274,7 +1275,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
                   OutlinedButton.icon(
                     onPressed: () => _shareCustomerInvoiceWhatsApp(sale),
                     icon: const Icon(Icons.share_rounded, size: 16, color: Color(0xFF25D366)),
-                    label: const Text('WhatsApp', style: TextStyle(fontSize: 11, color: Color(0xFF25D366))),
+                    label: Text(AppStrings.tr(context, 'inv_whatsapp'), style: const TextStyle(fontSize: 11, color: Color(0xFF25D366))),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       minimumSize: Size.zero,
@@ -1287,7 +1288,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
                 children: [
                   IconButton(
                     icon: const Icon(Icons.edit_outlined, size: 18),
-                    tooltip: 'Edit Bill',
+                    tooltip: AppStrings.tr(context, 'inv_edit_bill'),
                     onPressed: () async {
                       final res = await Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => AddBusinessSaleScreen(existingSale: sale)),
@@ -1297,7 +1298,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> with SingleTickerProvider
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
-                    tooltip: 'Delete Bill',
+                    tooltip: AppStrings.tr(context, 'inv_delete_bill'),
                     onPressed: () => _deleteSale(sale),
                   ),
                 ],
